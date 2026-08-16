@@ -15,9 +15,8 @@ use russh::keys::{decode_secret_key, load_secret_key, PrivateKey};
 use russh::{Channel, ChannelId, ChannelMsg, Disconnect};
 use ssh_key::{HashAlg, PublicKey};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use tokio::task::JoinHandle;
 
-use crate::config::{AuthMethod, PortForward, Session};
+use crate::config::{AuthMethod, Session};
 use crate::i18n::t;
 
 use super::structs::*;
@@ -98,6 +97,7 @@ const ZMODEM_CANCEL: [u8; 16] = [
 
 const PROMPT_SETUP_PREFIX: &str = "test -z \"$FISH_VERSION\"";
 const PROMPT_SETUP_SUFFIX: &str = "__ms7'";
+#[cfg(test)]
 const PROMPT_SETUP_HISTORY_MARKER: &str = "__MEATSHELL_INTERNAL_SETUP_1";
 const PROMPT_SETUP_DONE: &str = "\u{1b}]699;ready\u{07}";
 const PROMPT_BODY: &str = "test -z \"$FISH_VERSION\" && eval '__msc(){ __c=\"$(fc -ln -1 2>/dev/null)\"; [ -n \"$__c\" ] && [ \"$__c\" != \"$__cl\" ] && { __cl=\"$__c\"; printf \"\\033]697;%s\\007\" \"$__c\"; }; }; __ms7(){ printf \"\\033]7;file://%s%s\\007\" \"$HOSTNAME\" \"$PWD\"; __msc; }; if [ -n \"$ZSH_VERSION\" ]; then autoload -Uz add-zsh-hook 2>/dev/null; add-zsh-hook precmd __ms7; else PROMPT_COMMAND=\"__ms7${PROMPT_COMMAND:+;$PROMPT_COMMAND}\"; fi; : __MEATSHELL_INTERNAL_SETUP_1; if [ -n \"$BASH_VERSION\" ]; then __md=\"$(history 2>/dev/null | { __md=\"\"; while read -r __mn __mr; do case \"$__mr\" in *\"__ms7()\"*\"PROMPT_COMMAND=\"*) __mn=\"${__mn%\\*}\"; __md=\"$__mn $__md\";; esac; done; printf \"%s\" \"$__md\"; })\"; for __mn in $__md; do history -d \"$__mn\" 2>/dev/null; done; unset __md __mn __mr; fi; __cl=\"$(fc -ln -1 2>/dev/null)\"; printf \"\\033]699;ready\\007\"; __ms7'";
@@ -646,9 +646,9 @@ pub fn spawn_session(
     runtime: &tokio::runtime::Handle,
     tab_id: String,
     session: Session,
-    jump: Option<Session>,
     initial_cols: u32,
     initial_rows: u32,
+    initial_resource_monitoring: bool,
 ) -> (SessionHandle, UnboundedReceiver<SessionEvent>) {
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<SessionCommand>();
     let (evt_tx, evt_rx) = mpsc::unbounded_channel::<SessionEvent>();
@@ -657,11 +657,11 @@ pub fn spawn_session(
     let join = runtime.spawn(async move {
         if let Err(err) = run_session(
             session,
-            jump,
             cmd_rx,
             evt_tx_for_task.clone(),
             initial_cols,
             initial_rows,
+            initial_resource_monitoring,
         )
         .await
         {
@@ -680,150 +680,25 @@ pub fn spawn_session(
     )
 }
 
-struct RuntimeForward {
-    info: RuntimeTunnelInfo,
-    task: Option<JoinHandle<()>>,
-}
-
-fn normalized_bind_addr(f: &PortForward) -> String {
-    let bind = f.bind_addr.trim();
-    if bind.is_empty() {
-        "127.0.0.1".to_string()
-    } else {
-        bind.to_string()
-    }
-}
-
-fn tunnel_label(f: &PortForward) -> String {
-    if !f.name.trim().is_empty() {
-        return f.name.trim().to_string();
-    }
-    match f.kind.as_str() {
-        "local" => format!("-L {}:{}", normalized_bind_addr(f), f.bind_port),
-        "remote" => format!("-R {}:{}", normalized_bind_addr(f), f.bind_port),
-        "dynamic" => format!("-D {}:{}", normalized_bind_addr(f), f.bind_port),
-        _ => format!("{} {}:{}", f.kind, normalized_bind_addr(f), f.bind_port),
-    }
-}
-
-fn tunnel_info(id: String, f: &PortForward, active: bool, status: &str) -> RuntimeTunnelInfo {
-    RuntimeTunnelInfo {
-        id,
-        name: tunnel_label(f),
-        kind: f.kind.clone(),
-        bind_addr: normalized_bind_addr(f),
-        bind_port: f.bind_port,
-        host: f.host.trim().to_string(),
-        host_port: f.host_port,
-        active,
-        status: status.to_string(),
-    }
-}
-
-fn emit_tunnel_update(
-    forwards: &std::collections::HashMap<String, RuntimeForward>,
-    events: &UnboundedSender<SessionEvent>,
-) {
-    let mut rows: Vec<RuntimeTunnelInfo> = forwards.values().map(|f| f.info.clone()).collect();
-    rows.sort_by(|a, b| a.name.cmp(&b.name).then_with(|| a.id.cmp(&b.id)));
-    let _ = events.send(SessionEvent::TunnelUpdate(rows));
-}
-
-fn start_runtime_forward(
-    handle: Arc<Handle<ClientHandler>>,
-    id: String,
-    forward: PortForward,
-    events: &UnboundedSender<SessionEvent>,
-) -> RuntimeForward {
-    let info = tunnel_info(id, &forward, true, t("运行中", "running"));
-    let task = match forward.kind.as_str() {
-        "local" => Some(crate::tunnel::spawn_local(
-            handle,
-            info.bind_addr.clone(),
-            info.bind_port,
-            info.host.clone(),
-            info.host_port,
-            events.clone(),
-        )),
-        "dynamic" => Some(crate::tunnel::spawn_dynamic(
-            handle,
-            info.bind_addr.clone(),
-            info.bind_port,
-            events.clone(),
-        )),
-        _ => None,
-    };
-    RuntimeForward { info, task }
-}
-
-/// Open an SSH transport to the session's host (directly or via a SOCKS5 / HTTP
-/// proxy) and return the russh handle, ready for authentication. Factored out so
-/// the keyboard-interactive fallback can reconnect on a *fresh* handle — russh
-/// hangs if a second auth method is attempted on a handle whose first attempt
-/// already failed (#86).
+/// Open an SSH transport to the session's host and return the russh handle,
+/// ready for authentication. Factored out so the keyboard-interactive fallback
+/// can reconnect on a *fresh* handle — russh hangs if a second auth method is
+/// attempted on a handle whose first attempt already failed (#86).
 async fn connect_ssh(
     session: &Session,
-    jump: Option<&Session>,
     config: Arc<client::Config>,
     events: &UnboundedSender<SessionEvent>,
-) -> Result<(Handle<ClientHandler>, Option<Handle<ClientHandler>>)> {
-    // Remote (-R) forwards are serviced inside the handler when the server opens
-    // channels back, so it needs the bind-port → local-target map up front (the
-    // handler is moved into `connect`) (#56).
-    let remote_forwards: std::collections::HashMap<u32, (String, u16)> = session
-        .forwards
-        .iter()
-        .filter(|f| f.kind == "remote")
-        .map(|f| (f.bind_port as u32, (f.host.clone(), f.host_port)))
-        .collect();
+) -> Result<Handle<ClientHandler>> {
     let handler = ClientHandler {
         host: session.host.clone(),
         port: session.port,
-        remote_forwards,
         events: events.clone(),
     };
     let addr = format!("{}:{}", session.host, session.port);
 
-    // SSH jump host (bastion): connect + authenticate the jump session, then open
-    // a direct-tcpip channel through it to this host and run the SSH handshake
-    // over that tunnel. The returned jump handle must be kept alive for the whole
-    // session (the tunnel lives on it) (#211).
-    if let Some(j) = jump {
-        let _ = events.send(SessionEvent::Status(format!(
-            "{} {}@{} → {}",
-            t("经跳板机连接", "via jump host"),
-            j.user,
-            j.host,
-            addr
-        )));
-        let (handle, jump_handle) =
-            connect_target_via_jump(j, &session.host, session.port, config, handler, events)
-                .await
-                .with_context(|| format!("connect {} via jump failed", addr))?;
-        return Ok((handle, Some(jump_handle)));
-    }
-
-    // Connect directly, or tunnel through a SOCKS5 / HTTP proxy (issue #7).
-    let handle = match crate::ssh::proxy::resolve(&session.proxy) {
-        Some(p) => {
-            let _ = events.send(SessionEvent::Status(format!(
-                "{} {} → {}",
-                t("经代理连接", "via proxy"),
-                crate::ssh::proxy::describe(&p),
-                addr
-            )));
-            let stream = crate::ssh::proxy::connect(&p, &session.host, session.port)
-                .await
-                .with_context(|| format!("proxy connect to {} failed", addr))?;
-            client::connect_stream(config, stream, handler)
-                .await
-                .with_context(|| format!("connect {} failed", addr))?
-        }
-        None => client::connect(config, addr.as_str(), handler)
-            .await
-            .with_context(|| format!("connect {} failed", addr))?,
-    };
-    Ok((handle, None))
+    client::connect(config, addr.as_str(), handler)
+        .await
+        .with_context(|| format!("connect {} failed", addr))
 }
 
 /// Outcome of authenticating an SSH session, so callers can distinguish a user
@@ -836,14 +711,12 @@ pub(crate) enum AuthResult {
 
 /// Authenticate an already-connected SSH handle using the session's method,
 /// prompting for missing credentials and supporting explicit / fallback
-/// `keyboard-interactive` auth (#86, #249). Shared by the shell, SFTP and
-/// jump-host paths. On the keyboard-interactive fallback it reconnects, updating
-/// both `handle` and `jump_handle` in place so the caller keeps the live tunnel.
+/// `keyboard-interactive` auth (#86, #249). Shared by the shell and SFTP paths.
+/// On the keyboard-interactive fallback it reconnects, updating `handle` in
+/// place so the caller keeps the live connection.
 pub(crate) async fn authenticate_session(
     handle: &mut Handle<ClientHandler>,
-    jump_handle: &mut Option<Handle<ClientHandler>>,
     session: &Session,
-    jump: Option<&Session>,
     config: Arc<client::Config>,
     events: &UnboundedSender<SessionEvent>,
 ) -> Result<AuthResult> {
@@ -863,9 +736,7 @@ pub(crate) async fn authenticate_session(
                 // already failed (it hangs), so reconnect on a fresh handle before
                 // trying keyboard-interactive (#86).
                 let _ = handle.disconnect(Disconnect::ByApplication, "", "").await;
-                let (h, jh) = Box::pin(connect_ssh(session, jump, config.clone(), events)).await?;
-                *handle = h;
-                *jump_handle = jh;
+                *handle = Box::pin(connect_ssh(session, config.clone(), events)).await?;
                 ok = keyboard_interactive_auth(
                     handle,
                     &user,
@@ -913,62 +784,7 @@ pub(crate) async fn authenticate_session(
     }
 }
 
-/// Connect + authenticate a jump/bastion session, open a `direct-tcpip` channel
-/// to `target_host:target_port`, and run the target's SSH handshake over it.
-/// Returns the target handle plus the jump handle, which the caller MUST keep
-/// alive for as long as the target session lives (the tunnel rides on it) (#211).
-pub(crate) async fn connect_target_via_jump<H>(
-    jump: &Session,
-    target_host: &str,
-    target_port: u16,
-    config: Arc<client::Config>,
-    handler: H,
-    events: &UnboundedSender<SessionEvent>,
-) -> Result<(Handle<H>, Handle<ClientHandler>)>
-where
-    H: client::Handler + 'static,
-    H::Error: std::error::Error + Send + Sync + 'static,
-{
-    // Single hop: the jump session itself never goes through another jump.
-    // `Box::pin` breaks the async recursion (connect_ssh → jump → connect_ssh).
-    let (mut jhandle, mut no_nested) = Box::pin(connect_ssh(jump, None, config.clone(), events))
-        .await
-        .with_context(|| format!("connect jump host {}:{} failed", jump.host, jump.port))?;
-    match authenticate_session(
-        &mut jhandle,
-        &mut no_nested,
-        jump,
-        None,
-        config.clone(),
-        events,
-    )
-    .await?
-    {
-        AuthResult::Success => {}
-        AuthResult::Cancelled => {
-            return Err(anyhow!(t("跳板机登录已取消", "jump host login cancelled")))
-        }
-        AuthResult::Failed => {
-            return Err(anyhow!(t(
-                "跳板机认证失败",
-                "jump host authentication failed"
-            )))
-        }
-    }
-    let channel = jhandle
-        .channel_open_direct_tcpip(
-            target_host.to_string(),
-            target_port as u32,
-            "127.0.0.1".to_string(),
-            0,
-        )
-        .await
-        .with_context(|| format!("open jump tunnel to {target_host}:{target_port}"))?;
-    let handle = client::connect_stream(config, channel.into_stream(), handler)
-        .await
-        .with_context(|| format!("SSH handshake to {target_host}:{target_port} via jump"))?;
-    Ok((handle, jhandle))
-}
+
 
 // Key-exchange algorithms offered to the server, strongest first. This is the
 // russh default set PLUS the ecdh-sha2-nistp* curves and the legacy
@@ -1026,53 +842,13 @@ fn ssh_client_config() -> Arc<client::Config> {
     })
 }
 
-/// Perform the same SSH handshake and authentication as a real terminal
-/// connection, but disconnect immediately after authentication succeeds.
-/// Prompt events are returned through `events` so the session dialog can reuse
-/// the normal host-key, missing-credential, and MFA UI (#276).
-pub async fn test_session_auth(
-    session: Session,
-    jump: Option<Session>,
-    events: UnboundedSender<SessionEvent>,
-) -> Result<()> {
-    let config = ssh_client_config();
-    let (mut handle, mut jump_handle) =
-        connect_ssh(&session, jump.as_ref(), config.clone(), &events).await?;
-
-    let auth = authenticate_session(
-        &mut handle,
-        &mut jump_handle,
-        &session,
-        jump.as_ref(),
-        config,
-        &events,
-    )
-    .await?;
-
-    let result = match auth {
-        AuthResult::Success => Ok(()),
-        AuthResult::Cancelled => Err(anyhow!("login cancelled")),
-        AuthResult::Failed => Err(anyhow!("authentication failed")),
-    };
-
-    let _ = handle
-        .disconnect(Disconnect::ByApplication, "connection test complete", "")
-        .await;
-    if let Some(jump_handle) = jump_handle {
-        let _ = jump_handle
-            .disconnect(Disconnect::ByApplication, "connection test complete", "")
-            .await;
-    }
-    result
-}
-
 async fn run_session(
     session: Session,
-    jump: Option<Session>,
     mut commands: UnboundedReceiver<SessionCommand>,
     events: UnboundedSender<SessionEvent>,
     initial_cols: u32,
     initial_rows: u32,
+    initial_resource_monitoring: bool,
 ) -> Result<()> {
     let session_started = std::time::Instant::now();
     let _ = events.send(SessionEvent::Status(format!(
@@ -1085,28 +861,18 @@ async fn run_session(
 
     let config = ssh_client_config();
 
-    let (mut handle, mut jump_handle) =
-        connect_ssh(&session, jump.as_ref(), config.clone(), &events).await?;
+    let mut handle = connect_ssh(&session, config.clone(), &events).await?;
     tracing::info!(
         "[SESSION_START] id={} stage=transport-ready elapsed_ms={}",
         session.id,
         session_started.elapsed().as_millis()
     );
 
-    // --- Auth (shared with SFTP + jump-host paths) ---------------------
+    // --- Auth (shared with SFTP) --------------------------------------
     // Try plain `password` first, then `keyboard-interactive` on a fresh handle —
     // many bastions (JumpServer) disable `password` (#86). Missing credentials
     // are prompted for (#110).
-    match authenticate_session(
-        &mut handle,
-        &mut jump_handle,
-        &session,
-        jump.as_ref(),
-        config.clone(),
-        &events,
-    )
-    .await?
-    {
+    match authenticate_session(&mut handle, &session, config.clone(), &events).await? {
         AuthResult::Success => {}
         AuthResult::Cancelled => {
             let _ = events.send(SessionEvent::Closed(
@@ -1137,10 +903,6 @@ async fn run_session(
         session.id,
         session_started.elapsed().as_millis()
     );
-
-    // Keep the jump-host connection alive for the whole session — the direct-tcpip
-    // tunnel that carries this session rides on it (#211).
-    let _jump_keepalive = jump_handle;
 
     // The integration body is Bash/Zsh-specific. Probe out-of-band before the
     // interactive channel exists, so ash/dash/fish/unknown shells never receive
@@ -1274,70 +1036,37 @@ async fn run_session(
     let mut sys_channel: Option<Channel<Msg>> = None;
     let mut proc_buf = String::new();
 
-    // --- Port forwarding / tunnels (#56) --------------------------------
-    // Remote (-R) first, while we still hold `handle` mutably (tcpip_forward
-    // takes &mut self); the server then opens channels back, serviced in the
-    // handler. Then wrap the handle in an Arc so the local/dynamic listener
+    // Wrap the handle in an Arc so the resource-monitor / process / system-info
     // tasks can share it (russh's Handle isn't Clone, but its methods are &self).
-    let mut runtime_forwards: std::collections::HashMap<String, RuntimeForward> =
-        std::collections::HashMap::new();
-    for (idx, f) in session
-        .forwards
-        .iter()
-        .enumerate()
-        .filter(|(_, f)| f.kind == "remote")
-    {
-        let bind = if f.bind_addr.trim().is_empty() {
-            "127.0.0.1".to_string()
-        } else {
-            f.bind_addr.trim().to_string()
-        };
-        let id = format!("config-{idx}");
-        match handle.tcpip_forward(bind.clone(), f.bind_port as u32).await {
-            Ok(_) => {
-                let _ = events.send(SessionEvent::Output(format!(
-                    "\r\n[meatshell] -R {bind}:{} → {}:{}\r\n",
-                    f.bind_port, f.host, f.host_port
-                )));
-                runtime_forwards.insert(
-                    id.clone(),
-                    RuntimeForward {
-                        info: tunnel_info(id, f, true, t("运行中", "running")),
-                        task: None,
-                    },
-                );
-            }
-            Err(e) => {
-                let _ = events.send(SessionEvent::Output(format!(
-                    "\r\n[meatshell] -R {bind}:{} 请求失败 / request failed: {e}\r\n",
-                    f.bind_port
-                )));
-                runtime_forwards.insert(
-                    id.clone(),
-                    RuntimeForward {
-                        info: tunnel_info(id, f, false, t("启动失败", "failed")),
-                        task: None,
-                    },
-                );
-            }
-        }
-    }
     let handle = Arc::new(handle);
 
     // Auxiliary channels are deliberately outside the terminal-ready critical
     // path. SFTP gets the first opportunity after Connected; lightweight
     // resources follow, and process/system enrichment starts last.
+    //
+    // When the status panel is collapsed / Zen mode is on, monitoring starts
+    // disabled. Do NOT open these channels and then immediately close them:
+    // that open/close pair has been observed to tear down the interactive PTY
+    // ~750ms after Connected. Resume opens them on demand instead (#340).
     let (mon_ready_tx, mut mon_ready_rx) = tokio::sync::oneshot::channel();
     let (proc_ready_tx, mut proc_ready_rx) = tokio::sync::oneshot::channel();
     let (sys_ready_tx, mut sys_ready_rx) = tokio::sync::oneshot::channel();
-    if session.disable_shell_integration {
+    let monitoring_gate = Arc::new(std::sync::atomic::AtomicBool::new(
+        initial_resource_monitoring && !session.disable_shell_integration,
+    ));
+    if session.disable_shell_integration || !initial_resource_monitoring {
         let _ = mon_ready_tx.send(None);
         let _ = proc_ready_tx.send(None);
         let _ = sys_ready_tx.send(None);
     } else {
         let mon_handle = handle.clone();
+        let mon_gate = monitoring_gate.clone();
         tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(750)).await;
+            if !mon_gate.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = mon_ready_tx.send(None);
+                return;
+            }
             let channel = match mon_handle.channel_open_session().await {
                 Ok(ch) => match ch.exec(true, MON_CMD).await {
                     Ok(()) => Some(ch),
@@ -1354,8 +1083,13 @@ async fn run_session(
             let _ = mon_ready_tx.send(channel);
         });
         let proc_handle = handle.clone();
+        let proc_gate = monitoring_gate.clone();
         tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            if !proc_gate.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = proc_ready_tx.send(None);
+                return;
+            }
             let channel = match proc_handle.channel_open_session().await {
                 Ok(ch) => match ch.exec(true, PROC_CMD).await {
                     Ok(()) => Some(ch),
@@ -1372,8 +1106,13 @@ async fn run_session(
             let _ = proc_ready_tx.send(channel);
         });
         let sys_handle = handle.clone();
+        let sys_gate = monitoring_gate.clone();
         tokio::spawn(async move {
             tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
+            if !sys_gate.load(std::sync::atomic::Ordering::Relaxed) {
+                let _ = sys_ready_tx.send(None);
+                return;
+            }
             let channel = match sys_handle.channel_open_session().await {
                 Ok(ch) => match ch.exec(true, SYS_CMD).await {
                     Ok(()) => Some(ch),
@@ -1393,23 +1132,8 @@ async fn run_session(
     let mut mon_start_pending = true;
     let mut proc_start_pending = true;
     let mut sys_start_pending = true;
-    let mut resource_monitoring = true;
+    let mut resource_monitoring = initial_resource_monitoring && !session.disable_shell_integration;
     let mut first_terminal_output = true;
-    // Local (-L) and dynamic (-D) listen client-side; their tasks are aborted
-    // on session exit.
-    for (idx, f) in session.forwards.iter().enumerate() {
-        match f.kind.as_str() {
-            "local" | "dynamic" => {
-                let id = format!("config-{idx}");
-                runtime_forwards.insert(
-                    id.clone(),
-                    start_runtime_forward(handle.clone(), id, f.clone(), &events),
-                );
-            }
-            _ => {}
-        }
-    }
-    emit_tunnel_update(&runtime_forwards, &events);
 
     let mut terminal_decoder = crate::terminal::TerminalEncoding::new(&session.encoding);
     let mut extended_decoder = crate::terminal::TerminalEncoding::new(&session.encoding);
@@ -1424,7 +1148,11 @@ async fn run_session(
                 if resource_monitoring {
                     mon_channel = ready_channel;
                 } else if let Some(channel) = ready_channel {
-                    let _ = channel.close().await;
+                    // Detach close off the session task: closing a brand-new
+                    // aux channel inline was correlated with PTY teardown.
+                    tokio::spawn(async move {
+                        let _ = channel.close().await;
+                    });
                 }
                 tracing::debug!(
                     "[SESSION_START] id={} stage=resources-started elapsed_ms={}",
@@ -1438,7 +1166,9 @@ async fn run_session(
                 if resource_monitoring {
                     proc_channel = ready_channel;
                 } else if let Some(channel) = ready_channel {
-                    let _ = channel.close().await;
+                    tokio::spawn(async move {
+                        let _ = channel.close().await;
+                    });
                 }
                 tracing::debug!(
                     "[SESSION_START] id={} stage=process-monitor-started elapsed_ms={}",
@@ -1475,12 +1205,17 @@ async fn run_session(
                             continue;
                         }
                         resource_monitoring = enabled;
+                        monitoring_gate.store(enabled, std::sync::atomic::Ordering::Relaxed);
                         if !enabled {
                             if let Some(monitor) = mon_channel.take() {
-                                let _ = monitor.close().await;
+                                tokio::spawn(async move {
+                                    let _ = monitor.close().await;
+                                });
                             }
                             if let Some(processes) = proc_channel.take() {
-                                let _ = processes.close().await;
+                                tokio::spawn(async move {
+                                    let _ = processes.close().await;
+                                });
                             }
                             mon_buf.clear();
                             proc_buf.clear();
@@ -1504,30 +1239,6 @@ async fn run_session(
                             prev_cpu = None;
                             prev_net.clear();
                             prev_net_at = std::time::Instant::now();
-                        }
-                    }
-                    Some(SessionCommand::AddTunnel { id, forward }) => {
-                        if forward.kind == "local" || forward.kind == "dynamic" {
-                            runtime_forwards.insert(
-                                id.clone(),
-                                start_runtime_forward(handle.clone(), id, forward, &events),
-                            );
-                            emit_tunnel_update(&runtime_forwards, &events);
-                        } else {
-                            let _ = events.send(SessionEvent::Output(format!(
-                                "\r\n[meatshell] {}\r\n",
-                                t("运行时暂不支持新增远程转发 -R", "runtime remote forwarding (-R) is not supported yet")
-                            )));
-                        }
-                    }
-                    Some(SessionCommand::StopTunnel(id)) => {
-                        if let Some(f) = runtime_forwards.get_mut(&id) {
-                            if let Some(task) = f.task.take() {
-                                task.abort();
-                            }
-                            f.info.active = false;
-                            f.info.status = t("已停止", "stopped").to_string();
-                            emit_tunnel_update(&runtime_forwards, &events);
                         }
                     }
                     Some(SessionCommand::KillProcess { pid, root_password, reply }) => {
@@ -1784,14 +1495,6 @@ async fn run_session(
                     _ => {}
                 }
             }
-        }
-    }
-
-    // Tear down any port-forward listeners (#56); -R forwards die with the
-    // session's disconnect below.
-    for f in runtime_forwards.into_values() {
-        if let Some(task) = f.task {
-            task.abort();
         }
     }
 
@@ -2382,13 +2085,9 @@ async fn ask_mfa_prompt(
 
 /// Client handler. Verifies the server host key against the known_hosts store,
 /// prompting the user on first contact / on a changed key (#109-5).
-///
-/// Carries the remote-forward (-R) map so we can service channels the server
-/// opens back to us: server bind-port → local `(host, port)` target (#56).
 pub(crate) struct ClientHandler {
     pub(crate) host: String,
     pub(crate) port: u16,
-    pub(crate) remote_forwards: std::collections::HashMap<u32, (String, u16)>,
     pub(crate) events: UnboundedSender<SessionEvent>,
 }
 
@@ -2491,41 +2190,6 @@ impl Handler for ClientHandler {
         _data: &[u8],
         _session: &mut client::Session,
     ) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    /// Remote forward (-R): the server opened a channel for a connection that
-    /// arrived on a port we asked it to listen on. Connect to the configured
-    /// local target and splice the two together (#56).
-    async fn server_channel_open_forwarded_tcpip(
-        &mut self,
-        channel: Channel<Msg>,
-        connected_address: &str,
-        connected_port: u32,
-        _originator_address: &str,
-        _originator_port: u32,
-        _session: &mut client::Session,
-    ) -> Result<(), Self::Error> {
-        let target = self.remote_forwards.get(&connected_port).cloned();
-        let events = self.events.clone();
-        let bind = connected_address.to_string();
-        tokio::spawn(async move {
-            let Some((host, port)) = target else {
-                tracing::warn!("forwarded-tcpip on {bind}:{connected_port} with no mapping");
-                return;
-            };
-            match tokio::net::TcpStream::connect((host.as_str(), port)).await {
-                Ok(mut tcp) => {
-                    let mut stream = channel.into_stream();
-                    let _ = tokio::io::copy_bidirectional(&mut tcp, &mut stream).await;
-                }
-                Err(e) => {
-                    let _ = events.send(SessionEvent::Output(format!(
-                        "\r\n[meatshell] -R {host}:{port} 连接失败 / connect failed: {e}\r\n"
-                    )));
-                }
-            }
-        });
         Ok(())
     }
 }

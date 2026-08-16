@@ -117,23 +117,9 @@ async fn run_telnet(
         addr
     )));
 
-    // Direct, or tunnel through a SOCKS5 / HTTP proxy (reuses issue #7 plumbing).
-    let stream = match crate::ssh::proxy::resolve(&session.proxy) {
-        Some(p) => {
-            let _ = events.send(SessionEvent::Status(format!(
-                "{} {} → {}",
-                t("经代理连接", "via proxy"),
-                crate::ssh::proxy::describe(&p),
-                addr
-            )));
-            crate::ssh::proxy::connect(&p, &host, port)
-                .await
-                .with_context(|| format!("proxy connect to {addr} failed"))?
-        }
-        None => TcpStream::connect(&addr)
-            .await
-            .with_context(|| format!("connect {addr} failed"))?,
-    };
+    let stream = TcpStream::connect(&addr)
+        .await
+        .with_context(|| format!("connect {addr} failed"))?;
     let _ = stream.set_nodelay(true);
 
     let _ = events.send(SessionEvent::Connected);
@@ -179,9 +165,7 @@ async fn run_telnet(
                         let _ = wr.write_all(&naws_subneg(cols, rows)).await;
                         let _ = wr.flush().await;
                     }
-                    Some(SessionCommand::AddTunnel { .. })
-                    | Some(SessionCommand::StopTunnel(_))
-                    | Some(SessionCommand::SetResourceMonitoring(_)) => {}
+                    Some(SessionCommand::SetResourceMonitoring(_)) => {}
                     Some(SessionCommand::KillProcess { reply, .. }) => {
                         let _ = reply.send(crate::ssh::ProcessKillResult {
                             success: false,

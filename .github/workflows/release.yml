@@ -198,7 +198,7 @@ jobs:
           elif [ "${{ runner.os }}" = "Windows" ]; then
             mkdir "$STAGE"
             cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "$STAGE/"
-            cp README.md README.en.md CHANGELOG.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
+            cp README.md README.en.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
             7z a "${STAGE}.zip" "$STAGE" >/dev/null
             echo "ASSET=${STAGE}.zip" >> "$GITHUB_ENV"
 
@@ -206,7 +206,7 @@ jobs:
             # Linux
             mkdir "$STAGE"
             cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "$STAGE/"
-            cp README.md README.en.md CHANGELOG.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
+            cp README.md README.en.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
             # Ship the desktop entry + installer + icon so the dock shows the icon.
             cp assets/meatshell.desktop assets/install-linux.sh "assets/icon@512.png" "$STAGE/" 2>/dev/null || true
             tar -czf "${STAGE}.tar.gz" "$STAGE"
@@ -342,7 +342,7 @@ jobs:
 
           mkdir "$STAGE"
           cp "target/aarch64-unknown-linux-gnu/release/meatshell" "$STAGE/"
-          cp README.md README.en.md CHANGELOG.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
+          cp README.md README.en.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
           cp assets/meatshell.desktop assets/install-linux.sh "assets/icon@512.png" "$STAGE/" 2>/dev/null || true
           tar -czf "${STAGE}.tar.gz" "$STAGE"
           echo "ASSET=${STAGE}.tar.gz" >> "$GITHUB_ENV"
@@ -431,7 +431,7 @@ jobs:
 
           mkdir "$STAGE"
           cp "target/x86_64-unknown-linux-gnu/release/meatshell" "$STAGE/"
-          cp README.md README.en.md CHANGELOG.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
+          cp README.md README.en.md THIRD_PARTY_NOTICES.md "$STAGE/" 2>/dev/null || true
           cp assets/meatshell.desktop assets/install-linux.sh "assets/icon@512.png" "$STAGE/" 2>/dev/null || true
           tar -czf "${STAGE}.tar.gz" "$STAGE"
           echo "ASSET=${STAGE}.tar.gz" >> "$GITHUB_ENV"

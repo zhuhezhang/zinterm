@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{OutputHighlightRule, QuickCommand, Secret, Session};
+use super::{OutputHighlightRule, QuickCommand, Session};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct WslProfile {
@@ -212,24 +212,6 @@ pub struct ConfigFile {
     /// Collapse the bottom SFTP panel on startup (#78).
     #[serde(default)]
     pub collapse_sftp_default: bool,
-    /// When session-sync is on, also mirror SFTP uploads to the other online
-    /// sessions (same path, falling back to each panel's current dir).
-    #[serde(default)]
-    pub sync_upload: bool,
-    /// WebDAV sync settings (#185). Password is encrypted at rest like session
-    /// passwords; remote_path is the JSON export object path under the endpoint.
-    #[serde(default)]
-    pub webdav_enabled: bool,
-    #[serde(default)]
-    pub webdav_url: String,
-    #[serde(default)]
-    pub webdav_username: String,
-    #[serde(default)]
-    pub webdav_password: Secret,
-    #[serde(default)]
-    pub webdav_remote_path: String,
-    #[serde(default)]
-    pub webdav_accept_invalid_certs: bool,
     /// Render the welcome page (session list) as a docked left sidebar instead of
     /// a "New tab" tab (v0.5). Persisted so the layout choice sticks.
     #[serde(default)]

@@ -1,11 +1,9 @@
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
-use crate::config::PortForward;
-
 use super::{
     CredentialResponder, HostKeyResponder, MfaResponder, ProcInfo, ProcessKillResult, RemoteEntry,
-    RemoteTreeNode, RuntimeTunnelInfo, SessionCommand, SystemDetails,
+    RemoteTreeNode, SessionCommand, SystemDetails,
 };
 
 /// Events emitted back to the UI thread.
@@ -67,8 +65,14 @@ pub enum SessionEvent {
         /// Per-filesystem (mount_point, available_bytes, total_bytes).
         disks: Vec<(String, u64, u64)>,
         /// Effective login name reported by the remote host (`id -un`).
+        /// Prefer [`SessionEvent::ProcessStats`] for UI updates; kept for
+        /// monitor-channel compatibility and tests.
+        #[allow(dead_code)]
         current_user: String,
         /// Top processes by CPU (#23). Empty if the host's `ps` is unusable.
+        /// Prefer [`SessionEvent::ProcessStats`] for UI updates; kept for
+        /// monitor-channel compatibility and tests.
+        #[allow(dead_code)]
         procs: Vec<ProcInfo>,
         /// Detailed system information for the detached system-info window.
         /// Detailed data is present only for the separately delayed one-shot
@@ -87,9 +91,6 @@ pub enum SessionEvent {
     /// A command the user ran in the terminal, captured via the shell hook
     /// (OSC 697) so it can join the command-box history (#113).
     CommandRan(String),
-
-    /// Runtime tunnel state changed (#206).
-    TunnelUpdate(Vec<RuntimeTunnelInfo>),
 
     // --- SFTP events -------------------------------------------------------
     /// The shell's current working directory changed (parsed from OSC 7).
@@ -150,16 +151,6 @@ impl SessionHandle {
         let _ = self
             .commands
             .send(SessionCommand::SetResourceMonitoring(enabled));
-    }
-
-    pub fn add_tunnel(&self, id: String, forward: PortForward) {
-        let _ = self
-            .commands
-            .send(SessionCommand::AddTunnel { id, forward });
-    }
-
-    pub fn stop_tunnel(&self, id: String) {
-        let _ = self.commands.send(SessionCommand::StopTunnel(id));
     }
 
     pub fn kill_process(

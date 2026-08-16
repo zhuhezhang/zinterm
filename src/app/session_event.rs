@@ -174,29 +174,6 @@ pub(super) fn apply_session_event_to_window(
                 refresh_process_model(win, statuses);
             }
         }
-        SessionEvent::TunnelUpdate(rows) => {
-            let items = rows
-                .into_iter()
-                .map(|r| TunnelInfo {
-                    id: r.id.into(),
-                    name: r.name.into(),
-                    kind: r.kind.clone().into(),
-                    bind: format!("{}:{}", r.bind_addr, r.bind_port).into(),
-                    target: if r.kind == "dynamic" {
-                        "SOCKS5".into()
-                    } else if r.host.is_empty() || r.host_port == 0 {
-                        "".into()
-                    } else {
-                        format!("{}:{}", r.host, r.host_port).into()
-                    },
-                    status: r.status.into(),
-                    active: r.active,
-                })
-                .collect::<Vec<_>>();
-            update_terminal(&|t| {
-                t.tunnels = ModelRc::from(std::rc::Rc::new(VecModel::from(items.clone())));
-            });
-        }
 
         // --- SFTP events ---------------------------------------------------
         SessionEvent::CwdChanged(path) => {

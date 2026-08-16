@@ -26,16 +26,6 @@ export struct SftpTreeNode {
     has-children: bool,
 }
 
-export struct TunnelInfo {
-    id: string,
-    name: string,
-    kind: string,
-    bind: string,
-    target: string,
-    status: string,
-    active: bool,
-}
-
 // One row of the file-list right-click context menu.
 component SftpMenuItem inherits Rectangle {
     in property <string> label;
@@ -74,7 +64,6 @@ export component SftpPanel inherits Rectangle {
     in property <[TabInfo]> transfer-targets: [];
     in property <string> sort-key: "";
     in property <int> sort-dir: 0; // 0 default / 1 asc / -1 desc
-    in property <[TunnelInfo]> tunnels: [];
     in property <bool> collapsed: false;   // when true only the toolbar shows
     in property <bool> show-tree: true;    // hide the directory tree when narrow (#dock)
     in property <bool> compact: false;     // side-docked + collapsed → render nothing but a clean strip (#dock)
@@ -102,13 +91,6 @@ export component SftpPanel inherits Rectangle {
     property <string> menu-target-name;
     property <bool>   menu-target-is-dir;
     property <int>    menu-target-mode;     // permission bits for the chmod dialog
-    property <string> panel-mode: "files";
-    property <string> tunnel-kind: "local";
-    property <string> tunnel-name: "";
-    property <string> tunnel-bind: "127.0.0.1";
-    property <string> tunnel-bind-port: "1080";
-    property <string> tunnel-host: "127.0.0.1";
-    property <string> tunnel-host-port: "80";
     // The full toolbar needs roughly 480px once a useful path field is included.
     // Below that, switch deliberately to a two-row compact layout instead of
     // allowing fixed-size controls to squeeze the path and each other (#285).
@@ -133,8 +115,6 @@ export component SftpPanel inherits Rectangle {
     callback edit-external(string);     // open externally + watch/re-upload (#81)
     callback sort-request(string /* name|size|modified */);
     callback clear-sort();
-    callback tunnel-add(string /* name */, string /* kind */, string /* bind */, string /* bind-port */, string /* host */, string /* host-port */);
-    callback tunnel-stop(string /* id */);
     // Context-menu extensions (#69). The *-request callbacks open dialogs in
     // the app shell; copy-path goes straight to the system clipboard.
     callback rename-request(string /* path */, string /* current name */);
@@ -182,7 +162,7 @@ export component SftpPanel inherits Rectangle {
 
         // --- Toolbar (full width) ------------------------------------------
         Rectangle {
-            height: root.narrow-toolbar && root.panel-mode == "files" ? 62px : 34px;
+            height: root.narrow-toolbar ? 62px : 34px;
             background: Theme.bg-panel-alt;
 
             VerticalLayout {
@@ -225,51 +205,10 @@ export component SftpPanel inherits Rectangle {
                     }
                 }
 
-                Rectangle {
-                    width: root.narrow-toolbar ? 28px : 48px;
-                    height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: root.panel-mode == "files" ? Theme.accent : (files-tab-ta.has-hover ? Theme.bg-hover : transparent);
-                    files-tab-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.panel-mode = "files"; }
-                    }
-                    Text {
-                        text: root.narrow-toolbar ? "\u{E2C7}" : @tr("Files");
-                        font-family: root.narrow-toolbar ? "Material Icons" : Theme.ui-font-family;
-                        color: root.panel-mode == "files" ? #ffffff : Theme.text-secondary;
-                        font-size: Theme.fs-xs;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                }
-                Rectangle {
-                    width: root.narrow-toolbar ? 28px : 58px;
-                    height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: root.panel-mode == "tunnels" ? Theme.accent : (tunnels-tab-ta.has-hover ? Theme.bg-hover : transparent);
-                    tunnels-tab-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.panel-mode = "tunnels"; }
-                    }
-                    Text {
-                        text: root.narrow-toolbar ? "\u{E0B6}" : @tr("Tunnels");
-                        font-family: root.narrow-toolbar ? "Material Icons" : Theme.ui-font-family;
-                        color: root.panel-mode == "tunnels" ? #ffffff : Theme.text-secondary;
-                        font-size: Theme.fs-xs;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                }
-
-                // In compact mode keep navigation tabs at the left and primary
-                // actions aligned at the right. The path gets the full second row.
-                if root.narrow-toolbar : Rectangle { horizontal-stretch: 1; }
-
                 // Keep parent navigation discoverable in the narrow layout
                 // instead of hiding this primary action in the overflow menu
                 // (#322). It stays beside the other compact toolbar actions.
-                if root.narrow-toolbar && root.panel-mode == "files" : Rectangle {
+                if root.narrow-toolbar : Rectangle {
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: compact-up-ta.has-hover ? Theme.bg-hover : transparent;
@@ -284,7 +223,7 @@ export component SftpPanel inherits Rectangle {
                 // Editable path bar: type or paste a path and press Enter to
                 // jump there; copy / paste-jump buttons sit right after it (#54).
                 Rectangle {
-                    visible: root.panel-mode == "files" && !root.narrow-toolbar;
+                    visible: !root.narrow-toolbar;
                     horizontal-stretch: 1;
                     height: 22px;
                     border-radius: Theme.radius-sm;
@@ -308,7 +247,7 @@ export component SftpPanel inherits Rectangle {
 
                 // Copy the current path to the clipboard.
                 Rectangle {
-                    visible: root.panel-mode == "files" && !root.narrow-toolbar;
+                    visible: !root.narrow-toolbar;
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: copy-ta.has-hover ? Theme.bg-hover : transparent;
@@ -327,7 +266,7 @@ export component SftpPanel inherits Rectangle {
 
                 // Paste a path from the clipboard and jump straight to it.
                 Rectangle {
-                    visible: root.panel-mode == "files" && !root.narrow-toolbar;
+                    visible: !root.narrow-toolbar;
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: pj-ta.has-hover ? Theme.bg-hover : transparent;
@@ -345,7 +284,7 @@ export component SftpPanel inherits Rectangle {
                 }
 
                 up-btn := Rectangle {
-                    visible: root.panel-mode == "files" && !root.narrow-toolbar;
+                    visible: !root.narrow-toolbar;
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: up-ta.has-hover ? Theme.bg-hover : transparent;
@@ -360,7 +299,7 @@ export component SftpPanel inherits Rectangle {
                 // Upload: a small menu offers file vs folder (#85). The remote
                 // SFTP upload handles both — only the local picker differs.
                 ul-btn := Rectangle {
-                    visible: root.panel-mode == "files";
+                    visible: true;
                     width: root.narrow-toolbar ? 24px : 52px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: ul-ta.has-hover ? Theme.accent-hover : Theme.accent;
@@ -400,7 +339,7 @@ export component SftpPanel inherits Rectangle {
                 // Secondary path actions move into an overflow menu in compact
                 // mode so they never compete with the path field for width.
                 compact-more-btn := Rectangle {
-                    visible: root.narrow-toolbar && root.panel-mode == "files";
+                    visible: root.narrow-toolbar;
                     width: 24px;
                     height: 22px;
                     border-radius: Theme.radius-sm;
@@ -458,13 +397,13 @@ export component SftpPanel inherits Rectangle {
                 }
 
                 // Batch actions on checked entries — only when something's checked (#100).
-                if root.panel-mode == "files" && root.selected-count > 0 && !root.narrow-toolbar : Text {
+                if root.selected-count > 0 && !root.narrow-toolbar : Text {
                     text: "✓" + root.selected-count;
                     color: Theme.accent;
                     font-size: Theme.fs-sm;
                     vertical-alignment: center;
                 }
-                if root.panel-mode == "files" && root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
+                if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: dls-ta.has-hover ? Theme.bg-hover : transparent;
@@ -472,7 +411,7 @@ export component SftpPanel inherits Rectangle {
                     Text { text: "\u{E2C4}"; font-family: "Material Icons"; color: Theme.text-secondary;
                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
                 }
-                if root.panel-mode == "files" && root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
+                if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: dels-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
@@ -482,7 +421,7 @@ export component SftpPanel inherits Rectangle {
                 }
 
                 Rectangle {
-                    visible: root.panel-mode == "files" && !root.narrow-toolbar;
+                    visible: !root.narrow-toolbar;
                     width: 24px; height: 22px;
                     border-radius: Theme.radius-sm;
                     background: ref-ta.has-hover ? Theme.bg-hover : transparent;
@@ -515,7 +454,7 @@ export component SftpPanel inherits Rectangle {
                 // moving it to a real second layout row. The layout spacing keeps
                 // a stable gutter regardless of first-row alignment/padding.
                 HorizontalLayout {
-                    visible: root.narrow-toolbar && root.panel-mode == "files";
+                    visible: root.narrow-toolbar;
                     height: self.visible ? 22px : 0px;
                     padding-left: 6px;
                     padding-right: 6px;
@@ -544,7 +483,7 @@ export component SftpPanel inherits Rectangle {
         }
 
         // --- Main area: tree (left) + file list (right) --------------------
-        if root.panel-mode == "files" : HorizontalLayout {
+        HorizontalLayout {
             vertical-stretch: 1;
             spacing: 0;
 
@@ -963,115 +902,6 @@ export component SftpPanel inherits Rectangle {
                                     enabled: root.sort-dir != 0;
                                     clicked => { root.clear-sort(); }
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if root.panel-mode == "tunnels" : Rectangle {
-            vertical-stretch: 1;
-            clip: true;
-            background: transparent;
-
-            ScrollView {
-                width: parent.width;
-                height: parent.height;
-                viewport-width: self.visible-width;
-                viewport-height: max(self.visible-height, tunnel-body.preferred-height);
-
-                tunnel-body := VerticalLayout {
-                    padding: 10px;
-                    spacing: 8px;
-
-                    HorizontalLayout {
-                        spacing: 6px;
-                        Rectangle {
-                            width: 54px; height: 24px; border-radius: Theme.radius-sm;
-                            background: root.tunnel-kind == "local" ? Theme.accent : (tl-ta.has-hover ? Theme.bg-hover : Theme.bg-root);
-                            tl-ta := TouchArea { mouse-cursor: pointer; clicked => { root.tunnel-kind = "local"; } }
-                            Text { text: "-L"; color: root.tunnel-kind == "local" ? #ffffff : Theme.text-primary; font-size: Theme.fs-sm; horizontal-alignment: center; vertical-alignment: center; }
-                        }
-                        Rectangle {
-                            width: 54px; height: 24px; border-radius: Theme.radius-sm;
-                            background: root.tunnel-kind == "dynamic" ? Theme.accent : (td-ta.has-hover ? Theme.bg-hover : Theme.bg-root);
-                            td-ta := TouchArea { mouse-cursor: pointer; clicked => { root.tunnel-kind = "dynamic"; } }
-                            Text { text: "-D"; color: root.tunnel-kind == "dynamic" ? #ffffff : Theme.text-primary; font-size: Theme.fs-sm; horizontal-alignment: center; vertical-alignment: center; }
-                        }
-                        Rectangle { horizontal-stretch: 1; }
-                        Rectangle {
-                            width: 72px; height: 24px; border-radius: Theme.radius-sm;
-                            background: add-tunnel-ta.has-hover ? Theme.accent-hover : Theme.accent;
-                            add-tunnel-ta := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => {
-                                    if (root.tunnel-bind-port != "" && (root.tunnel-kind == "dynamic" || (root.tunnel-host != "" && root.tunnel-host-port != ""))) {
-                                        root.tunnel-add(root.tunnel-name, root.tunnel-kind, root.tunnel-bind, root.tunnel-bind-port, root.tunnel-host, root.tunnel-host-port);
-                                    }
-                                }
-                            }
-                            Text { text: @tr("Add"); color: #ffffff; font-size: Theme.fs-sm; horizontal-alignment: center; vertical-alignment: center; }
-                        }
-                    }
-
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle {
-                            horizontal-stretch: 1; height: 24px; border-radius: Theme.radius-sm;
-                            background: Theme.bg-root; border-width: 1px; border-color: Theme.border-subtle;
-                            TextInput { x: 7px; width: parent.width - 14px; height: parent.height; text <=> root.tunnel-name; color: Theme.text-primary; font-family: Theme.ui-font-family; font-size: Theme.fs-sm; single-line: true; vertical-alignment: center; }
-                        }
-                        Rectangle {
-                            width: 128px; height: 24px; border-radius: Theme.radius-sm;
-                            background: Theme.bg-root; border-width: 1px; border-color: Theme.border-subtle;
-                            TextInput { x: 7px; width: parent.width - 14px; height: parent.height; text <=> root.tunnel-bind; color: Theme.text-primary; font-family: Theme.ui-font-family; font-size: Theme.fs-sm; single-line: true; vertical-alignment: center; }
-                        }
-                        Rectangle {
-                            width: 68px; height: 24px; border-radius: Theme.radius-sm;
-                            background: Theme.bg-root; border-width: 1px; border-color: Theme.border-subtle;
-                            TextInput { x: 7px; width: parent.width - 14px; height: parent.height; text <=> root.tunnel-bind-port; color: Theme.text-primary; font-family: Theme.ui-font-family; font-size: Theme.fs-sm; single-line: true; vertical-alignment: center; }
-                        }
-                    }
-
-                    if root.tunnel-kind == "local" : HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle {
-                            horizontal-stretch: 1; height: 24px; border-radius: Theme.radius-sm;
-                            background: Theme.bg-root; border-width: 1px; border-color: Theme.border-subtle;
-                            TextInput { x: 7px; width: parent.width - 14px; height: parent.height; text <=> root.tunnel-host; color: Theme.text-primary; font-family: Theme.ui-font-family; font-size: Theme.fs-sm; single-line: true; vertical-alignment: center; }
-                        }
-                        Rectangle {
-                            width: 76px; height: 24px; border-radius: Theme.radius-sm;
-                            background: Theme.bg-root; border-width: 1px; border-color: Theme.border-subtle;
-                            TextInput { x: 7px; width: parent.width - 14px; height: parent.height; text <=> root.tunnel-host-port; color: Theme.text-primary; font-family: Theme.ui-font-family; font-size: Theme.fs-sm; single-line: true; vertical-alignment: center; }
-                        }
-                    }
-
-                    Rectangle { height: 1px; background: Theme.border-subtle; }
-
-                    if root.tunnels.length == 0 : Rectangle {
-                        height: 36px;
-                        Text { text: @tr("No tunnels"); color: Theme.text-muted; font-size: Theme.fs-sm; horizontal-alignment: center; vertical-alignment: center; }
-                    }
-
-                    for tun in root.tunnels : Rectangle {
-                        height: 34px;
-                        border-radius: Theme.radius-sm;
-                        background: tunnel-row-ta.has-hover ? Theme.bg-hover : Theme.bg-root.with-alpha(0.42);
-                        tunnel-row-ta := TouchArea {}
-                        HorizontalLayout {
-                            padding-left: 8px; padding-right: 8px; spacing: 8px;
-                            Text { text: tun.active ? "●" : "○"; color: tun.active ? #28c76f : Theme.text-muted; width: 14px; font-size: Theme.fs-sm; vertical-alignment: center; horizontal-alignment: center; }
-                            Text { text: tun.kind == "dynamic" ? "-D" : (tun.kind == "remote" ? "-R" : "-L"); color: Theme.text-muted; width: 28px; font-size: Theme.fs-sm; vertical-alignment: center; horizontal-alignment: center; }
-                            Text { text: tun.name; color: Theme.text-primary; width: 120px; font-size: Theme.fs-sm; overflow: elide; vertical-alignment: center; }
-                            Text { text: tun.bind + (tun.target != "" ? " → " + tun.target : ""); color: Theme.text-secondary; horizontal-stretch: 1; font-size: Theme.fs-xs; overflow: elide; vertical-alignment: center; }
-                            Text { text: tun.status; color: tun.active ? Theme.accent : Theme.text-muted; width: 62px; font-size: Theme.fs-xs; overflow: elide; vertical-alignment: center; horizontal-alignment: right; }
-                            Rectangle {
-                                width: 48px; height: 22px; border-radius: Theme.radius-sm;
-                                background: tun.active ? (stop-ta.has-hover ? Theme.danger.with-alpha(0.24) : transparent) : transparent;
-                                stop-ta := TouchArea { mouse-cursor: tun.active ? pointer : default; clicked => { if (tun.active) { root.tunnel-stop(tun.id); } } }
-                                Text { text: @tr("Stop"); color: tun.active ? Theme.danger : Theme.text-muted; font-size: Theme.fs-xs; horizontal-alignment: center; vertical-alignment: center; }
                             }
                         }
                     }

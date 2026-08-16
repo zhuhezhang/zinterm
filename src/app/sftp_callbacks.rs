@@ -177,33 +177,11 @@ pub(super) fn wire_sftp_callbacks(
     // Upload a local file into the current remote directory.
     {
         let sftp_handles = sftp_handles.clone();
-        let weak = window.as_weak();
         window.on_sftp_upload_clicked(
             move |tab_id: SharedString, remote_dir: SharedString, folder: bool| {
                 let tab_id = tab_id.to_string();
                 let remote_dir = remote_dir.to_string();
                 let sftp_handles = sftp_handles.clone();
-                // Session-sync upload (#sync): when both the sync toggle and the
-                // "sync upload" setting are on, mirror the upload to every other
-                // online session — each into *that session's own* current SFTP
-                // directory (paths differ between sessions, e.g. /home/jeff vs
-                // /home/root, so the active session's path can't be reused).
-                // Gather targets on the UI thread (Slint models aren't Send).
-                let sync_targets: Vec<(String, String)> = weak
-                    .upgrade()
-                    .filter(|w| w.get_sync_input() && w.get_sync_upload_enabled())
-                    .map(|w| {
-                        let paths = terminal_sftp_paths(&w);
-                        let handles = sftp_handles.lock().ok();
-                        handles
-                            .iter()
-                            .flat_map(|h| h.keys())
-                            .filter(|id| *id != &tab_id)
-                            .filter_map(|id| paths.get(id).map(|dir| (id.clone(), dir.clone())))
-                            .filter(|(_, dir)| !dir.is_empty())
-                            .collect()
-                    })
-                    .unwrap_or_default();
                 std::thread::spawn(move || {
                     // The remote SFTP upload handles a file or a whole directory;
                     // only the local picker differs (#85). Folder uploads one dir;
@@ -226,15 +204,6 @@ pub(super) fn wire_sftp_callbacks(
                         if let Some(h) = handles.get(&tab_id) {
                             for local in &locals {
                                 h.upload(local.clone(), remote_dir.clone());
-                            }
-                        }
-                        // Mirror to the other online sessions, each into its own
-                        // current SFTP directory.
-                        for (id, dir) in &sync_targets {
-                            if let Some(h) = handles.get(id) {
-                                for local in &locals {
-                                    h.upload(local.clone(), dir.clone());
-                                }
                             }
                         }
                     }

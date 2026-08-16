@@ -2,17 +2,6 @@ import { Theme } from "theme.slint";
 import { ComboBox } from "std-widgets.slint";
 import { LabeledInput, PrimaryButton, GhostButton } from "widgets.slint";
 
-// One SSH port-forward row shown in the session dialog (#56). `summary` is a
-// ready-to-display line like "-L 127.0.0.1:8080 → host:80".
-export struct PortFwd {
-    kind: string,
-    name: string,
-    bind-addr: string,
-    bind-port: string,
-    host: string,
-    host-port: string,
-}
-
 export struct SessionDraft {
     id: string,
     name: string,
@@ -25,7 +14,6 @@ export struct SessionDraft {
     private-key-path: string,
     private-key-inline: string,
     private-key-inline-mode: bool,
-    proxy: string,     // "" | "socks5://host:port" | "http://host:port"
     group: string,     // folder/group name ("" = ungrouped)
     // Serial-only (ignored unless kind == "serial")
     serial-port: string,
@@ -40,9 +28,6 @@ export struct SessionDraft {
     disable-shell-integration: bool,
     // Free-form note (B站 suggestion).
     note: string,
-    // Id of another saved SSH session to use as a jump host / bastion, or "" for
-    // a direct connection (#211).
-    jump-session-id: string,
 }
 
 // A single segment in a segmented selector (auth toggle, baud presets, …).
@@ -66,125 +51,6 @@ component SegOption inherits Rectangle {
     TouchArea {
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
-    }
-}
-
-// Compact single-line input (no label) used in the port-forward add form (#56).
-component MiniInput inherits Rectangle {
-    in property <string> placeholder;
-    in-out property <string> value;
-    callback edited(string);
-    height: 30px;
-    horizontal-stretch: 1;
-    border-radius: Theme.radius-sm;
-    border-width: 1px;
-    border-color: mi.has-focus ? Theme.accent : Theme.border-subtle;
-    background: Theme.bg-root;
-    mi := TextInput {
-        x: 8px;
-        width: parent.width - 16px;
-        height: parent.height;
-        color: Theme.text-primary;
-        font-family: Theme.ui-font-family;
-        font-size: Theme.fs-md;
-        vertical-alignment: center;
-        single-line: true;
-        text <=> root.value;
-        edited => { root.edited(root.value); }
-    }
-    if root.value == "" : Text {
-        x: 8px;
-        height: parent.height;
-        text: root.placeholder;
-        color: Theme.text-muted;
-        font-size: Theme.fs-md;
-        vertical-alignment: center;
-    }
-}
-
-// Every forwarding rule stays editable in-place. "Add" creates another row
-// of this same form instead of converting the current form into a summary (#277).
-component PortForwardRow inherits VerticalLayout {
-    in property <PortFwd> forward;
-    in property <int> index;
-    callback updated(int, PortFwd);
-    callback remove(int);
-
-    property <string> kind: forward.kind;
-    property <string> name: forward.name;
-    property <string> bind-addr: forward.bind-addr;
-    property <string> bind-port: forward.bind-port;
-    property <string> host: forward.host;
-    property <string> host-port: forward.host-port;
-
-    function notify-updated() {
-        root.updated(root.index, {
-            kind: root.kind,
-            name: root.name,
-            bind-addr: root.bind-addr,
-            bind-port: root.bind-port,
-            host: root.host,
-            host-port: root.host-port,
-        });
-    }
-
-    spacing: 6px;
-    padding: 8px;
-
-    HorizontalLayout {
-        spacing: 6px;
-        SegOption { label: @tr("Local (-L)"); active: root.kind == "local"; clicked => { root.kind = "local"; root.notify-updated(); } }
-        SegOption { label: @tr("Remote (-R)"); active: root.kind == "remote"; clicked => { root.kind = "remote"; root.notify-updated(); } }
-        SegOption { label: @tr("Dynamic (-D)"); active: root.kind == "dynamic"; clicked => { root.kind = "dynamic"; root.notify-updated(); } }
-        Rectangle {
-            width: 30px;
-            height: 30px;
-            border-radius: Theme.radius-sm;
-            background: remove-area.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
-            remove-area := TouchArea {
-                mouse-cursor: pointer;
-                clicked => { root.remove(root.index); }
-            }
-            Text {
-                text: "\u{E5CD}";
-                font-family: "Material Icons";
-                color: Theme.danger;
-                font-size: Theme.fs-sm;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-        }
-    }
-    MiniInput {
-        placeholder: @tr("Name (optional)");
-        value <=> root.name;
-        edited(value) => { root.name = value; root.notify-updated(); }
-    }
-    HorizontalLayout {
-        spacing: 6px;
-        MiniInput {
-            placeholder: "127.0.0.1";
-            value <=> root.bind-addr;
-            edited(value) => { root.bind-addr = value; root.notify-updated(); }
-        }
-        MiniInput {
-            placeholder: @tr("Listen port");
-            value <=> root.bind-port;
-            edited(value) => { root.bind-port = value; root.notify-updated(); }
-        }
-    }
-    if root.kind != "dynamic" : HorizontalLayout {
-        spacing: 6px;
-        MiniInput {
-            placeholder: @tr("Target host");
-            value <=> root.host;
-            edited(value) => { root.host = value; root.notify-updated(); }
-        }
-        MiniInput {
-            placeholder: @tr("Target port");
-            value <=> root.host-port;
-            edited(value) => { root.host-port = value; root.notify-updated(); }
-        }
     }
 }
 
@@ -291,96 +157,6 @@ component GroupCombo inherits VerticalLayout {
     }
 }
 
-// Read-only dropdown picking an SSH jump host from a fixed list of saved
-// sessions (#211). Index-based: `choices[0]` is the "no jump host" entry, and
-// `selected-index` maps into the parallel `ids` list held by the caller.
-component JumpCombo inherits VerticalLayout {
-    in property <string> label;
-    in property <[string]> choices;      // display labels; index 0 = "no jump host"
-    in-out property <int> selected-index: 0;
-    spacing: 4px;
-
-    Text {
-        text: root.label;
-        color: Theme.text-secondary;
-        font-size: Theme.fs-sm;
-    }
-
-    Rectangle {
-        height: 32px;
-        border-radius: Theme.radius-sm;
-        border-width: 1px;
-    border-color: jump-ta.has-hover ? Theme.accent : Theme.border-strong;
-    background: Theme.bg-elevated;
-
-        jump-ta := TouchArea {
-            mouse-cursor: pointer;
-            clicked => { jump-popup.show(); }
-        }
-
-        Text {
-            x: 10px;
-            width: parent.width - 44px;
-            height: parent.height;
-            text: (root.selected-index >= 0 && root.selected-index < root.choices.length)
-                ? root.choices[root.selected-index] : "";
-            color: root.selected-index > 0 ? Theme.text-primary : Theme.text-muted;
-            font-size: Theme.fs-md;
-            vertical-alignment: center;
-            overflow: elide;
-        }
-
-        Rectangle {
-            x: parent.width - 36px;
-            width: 28px;
-            height: 28px;
-            border-radius: Theme.radius-sm;
-            background: jump-ta.has-hover ? Theme.bg-hover : transparent;
-            Text {
-                text: "▼";
-                color: Theme.text-secondary;
-                font-size: Theme.fs-xs;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-        }
-
-        jump-popup := PopupWindow {
-            x: 0;
-            y: parent.height + 3px;
-            width: parent.width;
-            Rectangle {
-                background: Theme.popup-bg-alt;
-                border-radius: Theme.radius-sm;
-                border-width: 1px;
-                border-color: Theme.border-subtle;
-                VerticalLayout {
-                    padding: 4px;
-                    spacing: 1px;
-                    for c[idx] in root.choices : Rectangle {
-                        height: 28px;
-                        border-radius: Theme.radius-sm;
-                        background: c-ta.has-hover ? Theme.bg-hover : transparent;
-                        c-ta := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { root.selected-index = idx; jump-popup.close(); }
-                        }
-                        Text {
-                            x: 10px;
-                            width: parent.width - 20px;
-                            text: c;
-                            color: Theme.text-primary;
-                            font-size: Theme.fs-md;
-                            vertical-alignment: center;
-                            overflow: elide;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // Modal dialog for creating / editing a session (SSH / Serial / Telnet).
 // The dialog is purely presentational — it stores values in mutable
 // properties and emits `submit` / `cancel` callbacks up to the main window.
@@ -400,15 +176,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-key-path;
     in-out property <string> draft-key-inline;
     in-out property <bool> draft-key-inline-mode: false;
-    in-out property <string> draft-proxy-type: "none";  // "none" | "socks5" | "http"
-    in-out property <string> draft-proxy-hostport;
     in-out property <string> draft-group;
     in property <[string]> session-groups;   // existing groups for the dropdown (#179)
-    // SSH jump host picker (#211): parallel label/id lists (index 0 = "none")
-    // plus the selected index. The id is resolved on submit via `jump-ids`.
-    in property <[string]> jump-choices;
-    in property <[string]> jump-ids;
-    in-out property <int> draft-jump-index: 0;
     in-out property <string> draft-serial-port;
     in-out property <string> draft-baud: "115200";
     in-out property <string> draft-data-bits: "8";
@@ -418,18 +187,11 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-encoding: "UTF-8";
     in-out property <bool> draft-disable-shell-integration: false;
     in-out property <string> draft-note;
-    in-out property <string> test-status;
 
-    // Port forwards / tunnels (#56). Every row is an editable form (#277).
-    in property <[PortFwd]> forwards;
-    property <bool> show-advanced: false;   // collapse proxy + forwarding (#56)
+    property <bool> show-advanced: false;   // collapse encoding / shell options
 
     callback submit(SessionDraft);
-    callback test-connection(SessionDraft);
     callback cancel();
-    callback add-forward();
-    callback update-forward(int /* index */, PortFwd);
-    callback delete-forward(int /* index */);
     callback pick-key-file();   // open a native file picker for the private key
 
     visible: is-open;
@@ -450,8 +212,7 @@ export component SessionDialog inherits Rectangle {
     Rectangle {
         width: 440px;
         // Height follows the content, but never exceeds the window — past that
-        // the body scrolls (the dialog grows with the advanced section / many
-        // port forwards) (#56).
+        // the body scrolls (the dialog grows with the advanced section).
         height: min(body.preferred-height + 53px, parent.height - 40px);
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -855,8 +616,8 @@ export component SessionDialog inherits Rectangle {
                 }
             }
 
-            // ── Advanced (collapsed by default): proxy + port forwarding ────
-            if root.draft-kind != "serial" : Rectangle {
+            // ── Advanced (collapsed by default): encoding / shell opts ─
+            if root.draft-kind == "ssh" : Rectangle {
                 height: 26px;
                 adv-ta := TouchArea {
                     mouse-cursor: pointer;
@@ -865,7 +626,7 @@ export component SessionDialog inherits Rectangle {
                 HorizontalLayout {
                     spacing: 4px;
                     Text {
-                        text: @tr("Advanced (encoding, proxy, tunnels)");
+                        text: @tr("Advanced (encoding)");
                         color: adv-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
                         font-size: Theme.fs-sm;
                         vertical-alignment: center;
@@ -902,52 +663,7 @@ export component SessionDialog inherits Rectangle {
                 Rectangle { height: 6px; }
             }
 
-            // ── Optional outbound proxy (SSH / Telnet only) ─────────────────
-            if root.show-advanced && root.draft-kind != "serial" : VerticalLayout {
-                spacing: 4px;
-                Text {
-                    text: @tr("Proxy (optional)");
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                }
-                HorizontalLayout {
-                    spacing: 6px;
-                    SegOption { label: @tr("None"); active: root.draft-proxy-type == "none"; clicked => { root.draft-proxy-type = "none"; } }
-                    SegOption { label: "SOCKS5"; active: root.draft-proxy-type == "socks5"; clicked => { root.draft-proxy-type = "socks5"; } }
-                    SegOption { label: "HTTP"; active: root.draft-proxy-type == "http"; clicked => { root.draft-proxy-type = "http"; } }
-                }
-                if root.draft-proxy-type != "none" : LabeledInput {
-                    input-background: Theme.bg-elevated;
-                    idle-border: Theme.border-strong;
-                    label: @tr("Proxy address");
-                    placeholder: "127.0.0.1:1080";
-                    value <=> root.draft-proxy-hostport;
-                }
-                Text {
-                    text: root.draft-proxy-type == "none"
-                        ? @tr("No proxy — use $ALL_PROXY or connect directly")
-                        : @tr("Format: host:port  (with auth: user:pass@host:port)");
-                    color: Theme.text-muted;
-                    font-size: Theme.fs-xs;
-                }
-            }
-
-            // ── SSH jump host / bastion (SSH only) (#211) ───────────────────
-            if root.show-advanced && root.draft-kind == "ssh" : VerticalLayout {
-                spacing: 4px;
-                JumpCombo {
-                    label: @tr("Jump host (optional)");
-                    choices: root.jump-choices;
-                    selected-index <=> root.draft-jump-index;
-                }
-                Text {
-                    text: @tr("Tunnel this connection through another saved SSH session.");
-                    color: Theme.text-muted;
-                    font-size: Theme.fs-xs;
-                }
-            }
-
-            // ── Port forwarding / tunnels (SSH only) (#56) ──────────────────
+            // ── Shell integration (SSH only) (#140) ─────────────────────────
             if root.show-advanced && root.draft-kind == "ssh" : VerticalLayout {
                 spacing: 6px;
 
@@ -983,88 +699,11 @@ export component SessionDialog inherits Rectangle {
                     text: @tr("Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell.");
                     color: Theme.text-muted; font-size: Theme.fs-xs; wrap: word-wrap;
                 }
-                Rectangle { height: 6px; }
-
-                Text {
-                    text: @tr("Port forwarding");
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                }
-
-                for f[i] in root.forwards : PortForwardRow {
-                    forward: f;
-                    index: i;
-                    updated(index, value) => { root.update-forward(index, value); }
-                    remove(index) => { root.delete-forward(index); }
-                }
-                HorizontalLayout {
-                    alignment: end;
-                    PrimaryButton {
-                        text: @tr("Add");
-                        clicked => { root.add-forward(); }
-                    }
-                }
-                Text {
-                    text: @tr("-L: local port → target reached from the server; -R: server port → target reached from here; -D: local SOCKS5 proxy");
-                    color: Theme.text-muted;
-                    font-size: Theme.fs-xs;
-                }
             }
 
             HorizontalLayout {
                 spacing: 8px;
-                GhostButton {
-                    text: @tr("Test connection");
-                    clicked => {
-                        if (root.draft-kind != "serial" && root.draft-host == "") {
-                            root.host-missing = true;
-                            return;
-                        }
-                        if (root.draft-kind == "serial" && root.draft-serial-port == "") {
-                            root.test-status = @tr("Please enter a serial port.");
-                            return;
-                        }
-                        root.host-missing = false;
-                        root.test-status = @tr("Testing...");
-                        root.test-connection({
-                            id: root.draft-id,
-                            name: root.draft-name,
-                            kind: root.draft-kind,
-                            host: root.draft-host,
-                            port: root.draft-port.to-float(),
-                            user: root.draft-user,
-                            auth: root.draft-auth,
-                            password: root.draft-password,
-                            private-key-path: root.draft-key-path,
-                            private-key-inline: root.draft-key-inline,
-                            private-key-inline-mode: root.draft-key-inline-mode,
-                            proxy: (root.draft-proxy-type == "none" || root.draft-proxy-hostport == "") ? ""
-                                 : root.draft-proxy-type == "http" ? "http://" + root.draft-proxy-hostport
-                                 : "socks5://" + root.draft-proxy-hostport,
-                            group: root.draft-group,
-                            serial-port: root.draft-serial-port,
-                            baud-rate: root.draft-baud.to-float(),
-                            data-bits: root.draft-data-bits.to-float(),
-                            stop-bits: root.draft-stop-bits.to-float(),
-                            parity: root.draft-parity,
-                            flow-control: root.draft-flow,
-                            encoding: root.draft-encoding,
-                            disable-shell-integration: root.draft-disable-shell-integration,
-                            note: root.draft-note,
-                            jump-session-id: (root.draft-jump-index > 0 && root.draft-jump-index < root.jump-ids.length)
-                                ? root.jump-ids[root.draft-jump-index] : "",
-                        });
-                    }
-                }
-                if root.test-status != "" : Text {
-                    text: root.test-status;
-                    color: root.test-status == @tr("Connection OK") ? Theme.success : Theme.text-muted;
-                    font-size: Theme.fs-xs;
-                    vertical-alignment: center;
-                    horizontal-stretch: 1;
-                    overflow: elide;
-                }
-                if root.test-status == "" : Rectangle { horizontal-stretch: 1; }
+                Rectangle { horizontal-stretch: 1; }
                 GhostButton {
                     text: @tr("Cancel");
                     clicked => { root.cancel(); }
@@ -1090,9 +729,6 @@ export component SessionDialog inherits Rectangle {
                             private-key-path: root.draft-key-path,
                             private-key-inline: root.draft-key-inline,
                             private-key-inline-mode: root.draft-key-inline-mode,
-                            proxy: (root.draft-proxy-type == "none" || root.draft-proxy-hostport == "") ? ""
-                                 : root.draft-proxy-type == "http" ? "http://" + root.draft-proxy-hostport
-                                 : "socks5://" + root.draft-proxy-hostport,
                             group: root.draft-group,
                             serial-port: root.draft-serial-port,
                             baud-rate: root.draft-baud.to-float(),
@@ -1103,8 +739,6 @@ export component SessionDialog inherits Rectangle {
                             encoding: root.draft-encoding,
                             disable-shell-integration: root.draft-disable-shell-integration,
                             note: root.draft-note,
-                            jump-session-id: (root.draft-jump-index > 0 && root.draft-jump-index < root.jump-ids.length)
-                                ? root.jump-ids[root.draft-jump-index] : "",
                         });
                     }
                 }

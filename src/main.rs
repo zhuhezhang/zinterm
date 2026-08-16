@@ -13,10 +13,8 @@ mod session;
 mod sftp;
 mod ssh;
 mod terminal;
-mod tunnel;
 mod ui;
 mod wallpaper;
-mod webdav;
 
 fn main() -> anyhow::Result<()> {
     if std::env::args().any(|arg| arg == "--version" || arg == "-V") {

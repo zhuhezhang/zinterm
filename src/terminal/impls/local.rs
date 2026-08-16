@@ -152,9 +152,7 @@ async fn run_local(
                     pixel_height: 0,
                 });
             }
-            SessionCommand::AddTunnel { .. }
-            | SessionCommand::StopTunnel(_)
-            | SessionCommand::SetResourceMonitoring(_) => {}
+            SessionCommand::SetResourceMonitoring(_) => {}
             SessionCommand::KillProcess { reply, .. } => {
                 let _ = reply.send(crate::ssh::ProcessKillResult {
                     success: false,
@@ -220,9 +218,6 @@ fn local_program(session: &Session) -> (String, Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::local_program;
-    use crate::config::Session;
-
     #[cfg(windows)]
     #[test]
     fn windows_shells_start_in_utf8_mode() {

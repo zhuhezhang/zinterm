@@ -1,5 +1,5 @@
 import { Theme } from "theme.slint";
-import { SftpPanel, SftpEntry, SftpTreeNode, TunnelInfo } from "sftp_panel.slint";
+import { SftpPanel, SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { TabInfo } from "tabs.slint";
 import { DockExpandButton, ToolStrip } from "widgets.slint";
 
@@ -267,7 +267,6 @@ export component TerminalView inherits Rectangle {
     in property <string> sftp-sort-key: "";
     in property <int> sftp-sort-dir: 0;
     in property <bool> sftp-available: true;
-    in property <[TunnelInfo]> tunnels: [];
 
     // Per-session now (#v0.5): the AppWindow stores these in each TerminalState
     // and writes back via the set-* callbacks, so each tab/pane keeps its own SFTP
@@ -354,8 +353,6 @@ export component TerminalView inherits Rectangle {
     callback sftp-edit-external(string);
     callback sftp-sort-request(string);
     callback sftp-clear-sort();
-    callback tunnel-add(string, string, string, string, string, string);
-    callback tunnel-stop(string);
     // Context-menu extensions (#69), forwarded up to the app shell.
     callback sftp-rename-request(string, string);
     callback sftp-chmod-request(string, string, int);
@@ -1894,7 +1891,6 @@ export component TerminalView inherits Rectangle {
             selected-count: root.sftp-selected-count;
             sort-key: root.sftp-sort-key;
             sort-dir: root.sftp-sort-dir;
-            tunnels: root.tunnels;
             toggle-collapsed => {
                 if (root.sftp-collapsed) {
                     // Re-expand; the panel height was preserved while collapsed.
@@ -1923,10 +1919,6 @@ export component TerminalView inherits Rectangle {
             edit-external(path) => { root.sftp-edit-external(path); }
             sort-request(key)   => { root.sftp-sort-request(key); }
             clear-sort()        => { root.sftp-clear-sort(); }
-            tunnel-add(name, kind, bind, bind-port, host, host-port) => {
-                root.tunnel-add(name, kind, bind, bind-port, host, host-port);
-            }
-            tunnel-stop(id)     => { root.tunnel-stop(id); }
             rename-request(path, name) => { root.sftp-rename-request(path, name); }
             chmod-request(path, name, mode) => { root.sftp-chmod-request(path, name, mode); }
             copy-path(path)     => { root.sftp-copy-path(path); }

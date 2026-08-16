@@ -88,11 +88,8 @@ open /Applications/meatshell.app
     / `~/Library/Application Support/meatshell/sessions.json`（macOS）
 - [x] SSH（`russh`，纯 Rust）：密码 / 私钥 / 加密私钥（密码短语）
 - [x] SFTP 文件浏览 + 上传 / 下载（拖拽）+ 终端内 ZMODEM（`sz`）接收
-- [x] SSH 端口转发 / 隧道：本地 -L / 远程 -R / 动态 -D（SOCKS5）
 - [x] 快捷命令 + 命令输入框（可群发到所有会话）+ 命令历史
 - [x] 串口 / Telnet 会话
-- [x] 出站代理（SOCKS5 / HTTP）
-- [x] 导入 `~/.ssh/config`
 - [x] 会话密码加密存储（ChaCha20-Poly1305）
 - [x] 已知主机（`known_hosts`）校验 + 首次连接确认
 - [x] 多标签页终端分屏
@@ -166,13 +163,6 @@ meatshell/
 ```
 
 脚本会更新 `Cargo.toml` / `Cargo.lock`，运行 `cargo check --locked`，验证 `meatshell --version`，提交 `Release v0.6.0`，创建 annotated tag，并推送当前分支和 tag。更多细节见 [docs/release.md](docs/release.md)。
-
-## 相关群组
-
-<p align="center">
-  <img src="docs/QR/QQ_Group_QR_Code.jpg" alt="QQ群二维码" width="300"><br>
-  <em>扫描二维码加入 QQ 群，与其他用户交流使用经验、反馈问题或获取最新动态</em>
-</p>
 
 ## License
 

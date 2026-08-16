@@ -102,15 +102,6 @@ pub struct Session {
     pub private_key_path: String,
     #[serde(default)]
     pub private_key_inline: Secret,
-    /// Optional outbound proxy, e.g. "socks5://127.0.0.1:1080" or
-    /// "http://user:pass@host:8080". Empty = use $ALL_PROXY, else direct.
-    #[serde(default)]
-    pub proxy: String,
-    /// Optional SSH jump host (bastion): the id of another saved SSH session to
-    /// tunnel this connection through, like OpenSSH's ProxyJump. Empty = direct.
-    /// Single hop only; the jump session supplies its own host/user/auth (#211).
-    #[serde(default)]
-    pub jump_session_id: String,
     #[serde(default)]
     pub last_used: Option<String>,
     /// Optional folder/group name to organize sessions in the list (#41).
@@ -152,42 +143,17 @@ pub struct Session {
     #[serde(default = "default_encoding")]
     pub encoding: String,
 
-    // --- SSH port forwarding / tunnels (#56) --------------------------------
-    /// Tunnels established automatically when this SSH session connects.
-    #[serde(default)]
-    pub forwards: Vec<PortForward>,
-
     /// Skip the shell-integration setup (the cwd-follow PROMPT_COMMAND hook + the
     /// remote resource monitor). Those assume a POSIX shell; on a Windows server
     /// whose shell is pwsh/cmd the injected hook breaks the shell. Turn this on
     /// for such servers (#140).
     #[serde(default)]
     pub disable_shell_integration: bool,
-    /// Free-form note for this session — somewhere to stash extra info (jump-host
-    /// details, credentials hints, owner, etc.). Shown only in the edit dialog.
+    /// Free-form note for this session — somewhere to stash extra info
+    /// (credentials hints, owner, etc.). Shown only in the edit dialog.
     /// (B站 suggestion)
     #[serde(default)]
     pub note: String,
-}
-
-/// One SSH tunnel (#56). `kind` is "local" (-L), "remote" (-R) or
-/// "dynamic" (-D / SOCKS5). For local/remote, `host:host_port` is the target;
-/// for dynamic it is ignored (the SOCKS client picks the destination).
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct PortForward {
-    pub kind: String,
-    /// Optional label to tell rules apart (#100). Empty = unnamed.
-    #[serde(default)]
-    pub name: String,
-    /// Listener bind address (local side for L/D, remote side for R).
-    /// Empty → 127.0.0.1.
-    #[serde(default)]
-    pub bind_addr: String,
-    pub bind_port: u16,
-    #[serde(default)]
-    pub host: String,
-    #[serde(default)]
-    pub host_port: u16,
 }
 
 impl Session {
@@ -202,8 +168,6 @@ impl Session {
             password: Secret::default(),
             private_key_path: String::new(),
             private_key_inline: Secret::default(),
-            proxy: String::new(),
-            jump_session_id: String::new(),
             last_used: None,
             group: String::new(),
             kind: SessionKind::Ssh,
@@ -216,7 +180,6 @@ impl Session {
             parity: default_parity(),
             flow_control: default_flow(),
             encoding: default_encoding(),
-            forwards: Vec::new(),
             disable_shell_integration: false,
             note: String::new(),
         }

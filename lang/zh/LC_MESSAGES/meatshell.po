@@ -75,9 +75,6 @@ msgstr "新建会话"
 msgid "Name"
 msgstr "名称"
 
-msgid "Name (optional)"
-msgstr "名称（可选）"
-
 msgid "e.g. production web-01"
 msgstr "例如：生产环境 web-01"
 
@@ -150,9 +147,6 @@ msgstr "仅本次会话记住"
 msgid "Please enter a host / IP address."
 msgstr "请输入主机 / IP 地址。"
 
-msgid "Please enter a serial port."
-msgstr "请输入串口。"
-
 msgid "Cancel"
 msgstr "取消"
 
@@ -164,24 +158,6 @@ msgstr "创建"
 
 msgid "Connect"
 msgstr "连接"
-
-msgid "Test connection"
-msgstr "测试连接"
-
-msgid "Testing..."
-msgstr "测试中..."
-
-msgid "Connection OK"
-msgstr "连接正常"
-
-msgid "Connection failed"
-msgstr "连接失败"
-
-msgid "Connection timed out"
-msgstr "连接超时"
-
-msgid "SFTP not connected"
-msgstr "SFTP 未连接"
 
 msgid "Upload"
 msgstr "上传"
@@ -354,11 +330,8 @@ msgstr "例如：查看日志"
 msgid "Search history"
 msgstr "搜索历史"
 
-msgid "Port forwarding"
-msgstr "端口转发"
-
-msgid "Advanced (encoding, proxy, tunnels)"
-msgstr "高级（字符集、代理、隧道）"
+msgid "Advanced (encoding)"
+msgstr "高级（字符集）"
 
 msgid "Terminal character encoding"
 msgstr "终端字符集"
@@ -366,35 +339,8 @@ msgstr "终端字符集"
 msgid "Use GBK for servers configured for GB2312 or GBK output."
 msgstr "远端使用 GB2312 或 GBK 输出时请选择 GBK。"
 
-msgid "Local (-L)"
-msgstr "本地 -L"
-
-msgid "Remote (-R)"
-msgstr "远程 -R"
-
-msgid "Dynamic (-D)"
-msgstr "动态 -D"
-
-msgid "Listen port"
-msgstr "监听端口"
-
-msgid "Target host"
-msgstr "目标主机"
-
-msgid "Target port"
-msgstr "目标端口"
-
 msgid "Add"
 msgstr "添加"
-
-msgid "-L: local port → target reached from the server"
-msgstr "-L：本地端口 → 由服务器侧访问的目标"
-
-msgid "-R: server port → target reached from here"
-msgstr "-R：服务器端口 → 由本机访问的目标"
-
-msgid "-D: local SOCKS5 proxy"
-msgstr "-D：本地 SOCKS5 代理"
 
 msgid "meatshell — a lightweight Rust + Slint SSH client by 'lil meatball'"
 msgstr "meatshell 一个由「一坨肉」开发的轻量 Rust + Slint SSH 客户端"
@@ -410,30 +356,6 @@ msgstr "尚无会话"
 
 msgid "Use 'New session' (top-right) to add your first server"
 msgstr "点击右上角 “新建会话” 添加你的第一台服务器"
-
-msgid "Import ~/.ssh/config"
-msgstr "导入 ~/.ssh/config"
-
-msgid "Proxy (optional)"
-msgstr "代理（可选）"
-
-msgid "No proxy — use $ALL_PROXY or connect directly"
-msgstr "不使用代理 — 使用 $ALL_PROXY 或直接连接"
-
-msgid "Leave blank to use $ALL_PROXY or connect directly"
-msgstr "留空则用 $ALL_PROXY 环境变量，或直接连接"
-
-msgid "Proxy address"
-msgstr "代理地址"
-
-msgid "Format: host:port  (with auth: user:pass@host:port)"
-msgstr "格式：host:port（带认证：user:pass@host:port）"
-
-msgid "Jump host (optional)"
-msgstr "跳板机（可选）"
-
-msgid "Tunnel this connection through another saved SSH session."
-msgstr "通过另一个已保存的 SSH 会话作为跳板来连接。"
 
 msgid "Connection type"
 msgstr "连接类型"

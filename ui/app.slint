@@ -18,11 +18,11 @@ import { Theme } from "theme.slint";
 import { Sidebar, DiskInfo } from "sidebar.slint";
 import { TabBar, TabInfo } from "tabs.slint";
 import { Welcome, SessionInfo } from "welcome.slint";
-import { SessionDialog, SessionDraft, PortFwd } from "session_dialog.slint";
+import { SessionDialog, SessionDraft } from "session_dialog.slint";
 import { ConfirmDialog } from "confirm_dialog.slint";
 import { LabeledInput, PrimaryButton, GhostButton, DockExpandButton, IconButton, ToolStrip } from "widgets.slint";
 import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel } from "terminal_view.slint";
-import { SftpEntry, SftpTreeNode, TunnelInfo } from "sftp_panel.slint";
+import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { ProcWindow, ProcRow } from "proc_window.slint";
 import { SystemInfoWindow, SysInfoRow, SysMetricRow, SysNetRow } from "system_info_window.slint";
 import { InterfacePanel, OutputRuleItem, WslProfileInfo } from "interface_panel.slint";
@@ -30,7 +30,7 @@ import { InterfacePanel, OutputRuleItem, WslProfileInfo } from "interface_panel.
 export { ProcWindow, SystemInfoWindow }
 import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette } from "std-widgets.slint";
 
-export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, TunnelInfo, QuickCmd, PortFwd, WslProfileInfo }
+export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd, WslProfileInfo }
 
 // --- TerminalState ---------------------------------------------------------
 // Per-terminal view-model exposed to Rust. A TabInfo has the metadata; the
@@ -71,7 +71,6 @@ export struct TerminalState {
     sftp-sort-key: string,      // ""|"name"|"size"|"modified" (#248)
     sftp-sort-dir: int,         // 0 default / 1 asc / -1 desc (#248)
     sftp-available: bool,       // false for local/serial/telnet sessions
-    tunnels: [TunnelInfo],      // runtime SSH tunnels (#206)
     sftp-collapsed: bool,       // SFTP panel minimised — per session (#v0.5)
     sftp-panel-height: length,  // SFTP panel extent (bottom dock) — per session
     sftp-panel-width: length,   // SFTP panel extent (side dock) — per session
@@ -609,24 +608,6 @@ export component AppWindow inherits Window {
     callback delete-group(string /* name */);
     callback submit-group(string /* orig */, string /* name */) -> string;
     callback toggle-theme();               // flip dark ↔ light
-    // Session sync / broadcast input (#78 pt.4): mirror keystrokes to every
-    // online session. Default off (it types into ALL sessions at once).
-    in-out property <bool> sync-input: false;
-    callback set-sync-input(bool);
-    // Mirror SFTP uploads to other sessions while sync-input is on (#sync).
-    in-out property <bool> sync-upload-enabled: false;
-    callback set-sync-upload-enabled(bool);
-    // WebDAV config sync (#185): manual upload/download of portable session JSON.
-    in-out property <bool> webdav-enabled: false;
-    in-out property <string> webdav-url;
-    in-out property <string> webdav-username;
-    in-out property <string> webdav-password;
-    in-out property <string> webdav-remote-path;
-    in-out property <bool> webdav-accept-invalid-certs: false;
-    in-out property <string> webdav-status;
-    callback save-webdav-settings(bool, string, string, string, string, bool);
-    callback webdav-upload();
-    callback webdav-download();
     in-out property <length> sftp-panel-height: 220px; // shared; lets Rust locate the drop zone
     in-out property <length> sftp-panel-width: 380px;  // SFTP extent when docked left/right
     in-out property <string> sftp-dock: "bottom";      // SFTP dock edge, shared across tabs
@@ -701,15 +682,9 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-key-path;
     in-out property <string> dialog-key-inline;
     in-out property <bool> dialog-key-inline-mode: false;
-    in-out property <string> dialog-proxy-type: "none";  // "none" | "socks5" | "http"
-    in-out property <string> dialog-proxy-hostport;
     in-out property <string> dialog-group;
     // Existing group names (from Rust) for the dialog's group dropdown (#179).
     in property <[string]> session-groups;
-    // SSH jump host picker (#211): parallel label/id lists + selected index.
-    in property <[string]> jump-choices;
-    in property <[string]> jump-ids;
-    in-out property <int> dialog-jump-index: 0;
     in-out property <string> dialog-kind: "ssh";
     in-out property <string> dialog-serial-port;
     in-out property <string> dialog-baud: "115200";
@@ -720,7 +695,6 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-encoding: "UTF-8";
     in-out property <bool> dialog-disable-shell-integration: false;
     in-out property <string> dialog-note;
-    in-out property <string> dialog-test-status;
 
     // Delete-confirmation modal state (#28).
     in-out property <bool> confirm-delete-open: false;
@@ -730,8 +704,7 @@ export component AppWindow inherits Window {
 
     // --- Callbacks up to Rust ---------------------------------------------
     callback new-session-clicked();
-    callback import-ssh-config();             // import hosts from ~/.ssh/config
-    in-out property <string> ssh-import-hint;  // result text shown after import
+    in-out property <string> ssh-import-hint;  // result text shown after import/export
     callback export-sessions();               // export all sessions to a file (#46)
     callback import-sessions();               // import sessions from a file (#46)
     in-out property <bool> batch-import-open: false;  // text batch-import dialog (#150)
@@ -752,14 +725,8 @@ export component AppWindow inherits Window {
     callback toggle-group(string /* group */);
     callback remove-session(string /* session-id */);
     callback session-dialog-submit(SessionDraft);
-    callback session-dialog-test(SessionDraft);
     callback session-dialog-cancel();
     callback session-dialog-pick-key();
-    // Port forwards for the session being edited (#56).
-    in-out property <[PortFwd]> dialog-forwards;
-    callback add-forward();
-    callback update-forward(int /* index */, PortFwd);
-    callback delete-forward(int /* index */);
 
     callback tab-selected(string);
     callback tab-closed(string);
@@ -828,8 +795,6 @@ export component AppWindow inherits Window {
     callback sftp-edit-external(string /* tab-id */, string /* path */);
     callback sftp-sort-request(string /* tab-id */, string /* key */);
     callback sftp-clear-sort(string /* tab-id */);
-    callback tunnel-add(string /* tab-id */, string /* name */, string /* kind */, string /* bind */, string /* bind-port */, string /* host */, string /* host-port */);
-    callback tunnel-stop(string /* tab-id */, string /* tunnel-id */);
     // SFTP context-menu extensions (#69): rename / chmod / mkdir / touch share
     // one single-input prompt dialog; copy-path goes straight to the clipboard.
     in-out property <bool> sftp-prompt-open: false;
@@ -1133,7 +1098,6 @@ export component AppWindow inherits Window {
                     root.panel-dragging = false;
                 }
                 new-session => { root.new-session-clicked(); }
-                import-ssh-config => { root.import-ssh-config(); }
                 connect-session(id) => { root.connect-session(id); }
                 edit-session(id) => { root.edit-session(id); }
                 duplicate-session(id) => { root.duplicate-session(id); }
@@ -1501,7 +1465,6 @@ export component AppWindow inherits Window {
                     sessions: root.sessions;
                     import-hint: root.ssh-import-hint;
                     new-session => { root.new-session-clicked(); }
-                    import-ssh-config => { root.import-ssh-config(); }
                     connect-session(id) => { root.connect-session(id); }
                     edit-session(id) => { root.edit-session(id); }
                     duplicate-session(id) => { root.duplicate-session(id); }
@@ -1570,7 +1533,6 @@ export component AppWindow inherits Window {
                     sftp-sort-key: term.sftp-sort-key;
                     sftp-sort-dir: term.sftp-sort-dir;
                     sftp-available: term.sftp-available && !root.zen-mode;
-                    tunnels: term.tunnels;
                     quick-commands: root.quick-commands;
                     quick-sidebar-enabled: root.quick-commands-as-sidebar;
                     quick-panel-docked: root.quick-panel-open;
@@ -1657,10 +1619,6 @@ export component AppWindow inherits Window {
                     sftp-edit-external(path) => { root.sftp-edit-external(term.id, path); }
                     sftp-sort-request(key) => { root.sftp-sort-request(term.id, key); }
                     sftp-clear-sort() => { root.sftp-clear-sort(term.id); }
-                    tunnel-add(name, kind, bind, bind-port, host, host-port) => {
-                        root.tunnel-add(term.id, name, kind, bind, bind-port, host, host-port);
-                    }
-                    tunnel-stop(id) => { root.tunnel-stop(term.id, id); }
                     // #69 context-menu extensions → shared prompt dialog.
                     sftp-rename-request(path, name) => {
                         root.sftp-prompt-kind = "rename";
@@ -1907,16 +1865,6 @@ export component AppWindow inherits Window {
         icon-color: Theme.dark ? #f5c542 : #5856d6;
         tooltip: root.lang-en ? "Toggle theme" : "切换主题";
         clicked => { root.toggle-theme(); }
-    }
-    IconBtn {
-        x: root.width - 124px - root.toolbar-x-off; y: root.toolbar-y;
-        icon: "\u{E627}";
-        icon-color: root.sync-input ? Theme.accent : Theme.text-secondary;
-        active: root.sync-input;
-        tooltip: root.lang-en
-            ? (root.sync-input ? "Sync input: ON" : "Sync input")
-            : (root.sync-input ? "会话同步：开" : "会话同步");
-        clicked => { root.sync-input = !root.sync-input; root.set-sync-input(root.sync-input); }
     }
 
     // Frameless resize edges (#119): thin hit-zones that start an OS-level
@@ -2649,36 +2597,6 @@ export component AppWindow inherits Window {
                     Text { text: root.lang-en ? "Batch import (text)" : "批量导入(文本)";
                            color: Theme.text-primary; font-size: Theme.fs-md;
                            vertical-alignment: center; horizontal-stretch: 1; }
-                }
-            }
-            // Import hosts from ~/.ssh/config. Keep the menu open so the result
-            // (e.g. "imported 3" / "no new hosts") is visible right here — it used
-            // to only show on the welcome page, so importing while a session was
-            // open looked like nothing happened (#133).
-            Rectangle {
-                height: root.ssh-import-hint != "" ? 46px : 28px;
-                border-radius: Theme.radius-sm;
-                background: import-ta.has-hover ? Theme.bg-hover : transparent;
-                import-ta := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => { root.import-ssh-config(); }
-                }
-                HorizontalLayout {
-                    padding-left: 8px; padding-right: 8px; spacing: 8px;
-                    Text { text: "\u{E890}"; font-family: "Material Icons"; // input/import
-                           color: Theme.text-secondary; font-size: Theme.fs-sm;
-                           vertical-alignment: center; }
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        alignment: center;
-                        Text { text: @tr("Import ~/.ssh/config"); color: Theme.text-primary; font-size: Theme.fs-md;
-                               vertical-alignment: center; }
-                        if root.ssh-import-hint != "" : Text {
-                            text: root.ssh-import-hint;
-                            color: Theme.text-muted; font-size: Theme.fs-xs;
-                            overflow: elide;
-                        }
-                    }
                 }
             }
             // Language toggle: shows the language you'll switch TO.
@@ -3731,13 +3649,8 @@ export component AppWindow inherits Window {
         draft-key-path <=> root.dialog-key-path;
         draft-key-inline <=> root.dialog-key-inline;
         draft-key-inline-mode <=> root.dialog-key-inline-mode;
-        draft-proxy-type <=> root.dialog-proxy-type;
-        draft-proxy-hostport <=> root.dialog-proxy-hostport;
         draft-group <=> root.dialog-group;
         session-groups: root.session-groups;
-        jump-choices: root.jump-choices;
-        jump-ids: root.jump-ids;
-        draft-jump-index <=> root.dialog-jump-index;
         draft-kind <=> root.dialog-kind;
         draft-serial-port <=> root.dialog-serial-port;
         draft-baud <=> root.dialog-baud;
@@ -3748,15 +3661,9 @@ export component AppWindow inherits Window {
         draft-encoding <=> root.dialog-encoding;
         draft-disable-shell-integration <=> root.dialog-disable-shell-integration;
         draft-note <=> root.dialog-note;
-        test-status <=> root.dialog-test-status;
-        forwards: root.dialog-forwards;
         submit(draft) => { root.session-dialog-submit(draft); }
-        test-connection(draft) => { root.session-dialog-test(draft); }
         cancel => { root.session-dialog-cancel(); }
         pick-key-file => { root.session-dialog-pick-key(); }
-        add-forward => { root.add-forward(); }
-        update-forward(i, f) => { root.update-forward(i, f); }
-        delete-forward(i) => { root.delete-forward(i); }
     }
 
     // --- Delete confirmation (#28) ----------------------------------------
@@ -4172,14 +4079,6 @@ export component AppWindow inherits Window {
                     sftp-follow-cd <=> root.sftp-follow-cd;
                     collapse-sidebar-default <=> root.collapse-sidebar-default;
                     collapse-sftp-default <=> root.collapse-sftp-default;
-                    sync-upload-enabled <=> root.sync-upload-enabled;
-                    webdav-enabled <=> root.webdav-enabled;
-                    webdav-url <=> root.webdav-url;
-                    webdav-username <=> root.webdav-username;
-                    webdav-password <=> root.webdav-password;
-                    webdav-remote-path <=> root.webdav-remote-path;
-                    webdav-accept-invalid-certs <=> root.webdav-accept-invalid-certs;
-                    webdav-status <=> root.webdav-status;
                     download-always-ask <=> root.download-always-ask;
                     paste-confirm-enabled <=> root.paste-confirm-enabled;
                     extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
@@ -4220,12 +4119,6 @@ export component AppWindow inherits Window {
                     set-sftp-follow-cd(v) => { root.set-sftp-follow-cd(v); }
                     set-collapse-sidebar-default(v) => { root.set-collapse-sidebar-default(v); }
                     set-collapse-sftp-default(v) => { root.set-collapse-sftp-default(v); }
-                    set-sync-upload-enabled(v) => { root.set-sync-upload-enabled(v); }
-                    save-webdav-settings(enabled, url, username, password, remote-path, accept-invalid-certs) => {
-                        root.save-webdav-settings(enabled, url, username, password, remote-path, accept-invalid-certs);
-                    }
-                    webdav-upload => { root.webdav-upload(); }
-                    webdav-download => { root.webdav-download(); }
                     set-download-always-ask(v) => { root.set-download-always-ask(v); }
                     set-paste-confirm-enabled(v) => { root.set-paste-confirm-enabled(v); }
                     set-extra-paste-shortcuts-enabled(v) => { root.set-extra-paste-shortcuts-enabled(v); }

@@ -6,7 +6,6 @@
 //!   * Manage the tab list + per-tab `SessionHandle` map.
 //!   * Route Slint callbacks to the right domain module.
 mod auth_dialogs;
-mod port_forward;
 mod quick_commands;
 mod resource_ui;
 mod session_event;
@@ -17,11 +16,9 @@ mod sftp_ui;
 mod sidebar;
 mod tab_callbacks;
 mod terminal_ui;
-mod webdav;
 mod window;
 
 use self::auth_dialogs::*;
-use self::port_forward::*;
 use self::quick_commands::*;
 use self::resource_ui::*;
 use self::session_event::*;
@@ -32,7 +29,6 @@ use self::sftp_ui::*;
 use self::sidebar::*;
 use self::tab_callbacks::*;
 use self::terminal_ui::*;
-use self::webdav::*;
 use self::window::*;
 
 use std::cell::{Cell, RefCell};
@@ -150,16 +146,14 @@ use crate::config::{
 use crate::i18n::t;
 use crate::layout::{LogicalRect, TerminalWheelHit};
 use crate::resource::system::{format_bytes_per_sec, format_mem};
-use crate::resource::{
-    LocalGpuInfo, LocalHardwareInfo, LocalSnap, NetHist, TabStatus, TabStatuses,
-};
+use crate::resource::{LocalSnap, NetHist, TabStatus, TabStatuses};
 use crate::resource::{SystemSampler, SystemSnapshot};
 use crate::session::{ConnectCtx, PendingCred, PendingHostKey, PendingMfa};
 use crate::sftp::{
     download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd,
 };
 use crate::ssh::{
-    format_mtime, format_size, spawn_session, test_session_auth, ProcInfo, SessionCommand,
+    format_mtime, format_size, spawn_session, ProcInfo, SessionCommand,
     SessionEvent, SessionHandle, SystemDetails,
 };
 #[cfg(windows)]
@@ -178,7 +172,6 @@ use crate::terminal::{
 #[cfg(any(target_os = "windows", test))]
 use crate::terminal::{windows_process_ctrl_release, CtrlKeySide};
 use crate::ui::*;
-use crate::webdav::WebDavAcceptAnyCertVerifier;
 
 fn tab_title_len(title: &str) -> i32 {
     title
@@ -485,7 +478,7 @@ pub fn run() -> Result<()> {
         // ✕ hides the window (data keeps flowing into the shared model).
         let weak = proc_win.as_weak();
         let main_weak = window.as_weak();
-        proc_win.on_close(move || {
+        proc_win.on_win_close(move || {
             if let Some(main) = main_weak.upgrade() {
                 main.set_process_window_open(false);
             }
@@ -545,7 +538,7 @@ pub fn run() -> Result<()> {
     {
         let weak = sys_win.as_weak();
         let main_weak = window.as_weak();
-        sys_win.on_close(move || {
+        sys_win.on_win_close(move || {
             if let Some(main) = main_weak.upgrade() {
                 main.set_system_info_window_open(false);
             }
@@ -908,97 +901,6 @@ pub fn run() -> Result<()> {
         });
     }
 
-    // Session-sync upload setting (#sync). Persisted; only has effect while the
-    // session-sync toggle is on. Read live from the window in the upload handler.
-    window.set_sync_upload_enabled(store.borrow().sync_upload());
-    {
-        let store = store.clone();
-        window.on_set_sync_upload_enabled(move |v| {
-            let mut s = store.borrow_mut();
-            s.set_sync_upload(v);
-            let _ = s.save();
-        });
-    }
-
-    // WebDAV config sync (#185): manual upload/download of the portable session
-    // export JSON. It is intentionally not automatic on startup.
-    {
-        let s = store.borrow();
-        window.set_webdav_enabled(s.webdav_enabled());
-        window.set_webdav_url(s.webdav_url().into());
-        window.set_webdav_username(s.webdav_username().into());
-        window.set_webdav_password(s.webdav_password().into());
-        window.set_webdav_remote_path(s.webdav_remote_path().into());
-        window.set_webdav_accept_invalid_certs(s.webdav_accept_invalid_certs());
-        window.set_webdav_status(String::new().into());
-    }
-    {
-        let store = store.clone();
-        window.on_save_webdav_settings(
-            move |enabled: bool,
-                  url: SharedString,
-                  username: SharedString,
-                  password: SharedString,
-                  remote_path: SharedString,
-                  accept_invalid_certs: bool| {
-                let mut s = store.borrow_mut();
-                s.set_webdav_settings(
-                    enabled,
-                    url.to_string(),
-                    username.to_string(),
-                    password.to_string(),
-                    remote_path.to_string(),
-                    accept_invalid_certs,
-                );
-                let _ = s.save();
-            },
-        );
-    }
-    {
-        let weak = window.as_weak();
-        let store = store.clone();
-        window.on_webdav_upload(move || {
-            let Some(w) = weak.upgrade() else { return };
-            let enabled = w.get_webdav_enabled();
-            let url = w.get_webdav_url().to_string();
-            let username = w.get_webdav_username().to_string();
-            let password = w.get_webdav_password().to_string();
-            let remote_path = w.get_webdav_remote_path().to_string();
-            let accept_invalid_certs = w.get_webdav_accept_invalid_certs();
-            {
-                let mut s = store.borrow_mut();
-                s.set_webdav_settings(
-                    enabled,
-                    url.clone(),
-                    username.clone(),
-                    password.clone(),
-                    remote_path.clone(),
-                    accept_invalid_certs,
-                );
-                let _ = s.save();
-            }
-            if !enabled {
-                w.set_webdav_status(t("请先启用 WebDAV 同步", "enable WebDAV sync first").into());
-                return;
-            }
-            let res = store.borrow().export_json().and_then(|(json, count)| {
-                webdav_put_json(
-                    &url,
-                    &remote_path,
-                    &username,
-                    &password,
-                    accept_invalid_certs,
-                    json,
-                )
-                .map(|_| count)
-            });
-            let msg = match res {
-                Ok(n) => format!("{} {}", t("已上传连接", "uploaded connections"), n),
-                Err(e) => format!("{}: {}", t("上传失败", "upload failed"), e),
-            };
-            w.set_webdav_status(msg.into());
-        });
-    }
     {
         let weak = window.as_weak();
         let store = store.clone();
@@ -1337,58 +1239,6 @@ pub fn run() -> Result<()> {
                 w.set_wsl_profiles(wsl_profile_model(&s));
                 sync_sessions_to_model(&s, &sessions_model);
             }
-        });
-    }
-    {
-        let weak = window.as_weak();
-        let store = store.clone();
-        let sessions_model = sessions_model.clone();
-        window.on_webdav_download(move || {
-            let Some(w) = weak.upgrade() else { return };
-            let enabled = w.get_webdav_enabled();
-            let url = w.get_webdav_url().to_string();
-            let username = w.get_webdav_username().to_string();
-            let password = w.get_webdav_password().to_string();
-            let remote_path = w.get_webdav_remote_path().to_string();
-            let accept_invalid_certs = w.get_webdav_accept_invalid_certs();
-            {
-                let mut s = store.borrow_mut();
-                s.set_webdav_settings(
-                    enabled,
-                    url.clone(),
-                    username.clone(),
-                    password.clone(),
-                    remote_path.clone(),
-                    accept_invalid_certs,
-                );
-                let _ = s.save();
-            }
-            if !enabled {
-                w.set_webdav_status(t("请先启用 WebDAV 同步", "enable WebDAV sync first").into());
-                return;
-            }
-            let res = webdav_get_json(
-                &url,
-                &remote_path,
-                &username,
-                &password,
-                accept_invalid_certs,
-            )
-            .and_then(|json| store.borrow_mut().import_json(&json));
-            let msg = match res {
-                Ok((added, skipped)) => {
-                    sync_sessions_to_model(&store.borrow(), &sessions_model);
-                    format!(
-                        "{} {}, {} {}",
-                        t("已导入", "imported"),
-                        added,
-                        t("跳过", "skipped"),
-                        skipped
-                    )
-                }
-                Err(e) => format!("{}: {}", t("下载失败", "download failed"), e),
-            };
-            w.set_webdav_status(msg.into());
         });
     }
 
@@ -2019,7 +1869,6 @@ pub fn run() -> Result<()> {
             local_net_hist: local_net_hist.clone(),
             last_term_size: last_term_size.clone(),
             sftp_follow_cd: sftp_follow_cd.clone(),
-            store: store.clone(),
         },
     );
 
@@ -2120,7 +1969,7 @@ pub fn run() -> Result<()> {
         let mut chrome_done = false;
         window
             .window()
-            .on_winit_window_event(move |slint_window, event| {
+            .on_winit_window_event(move |_slint_window, event| {
                 if !chrome_done {
                     chrome_done = true;
                     if let Some(win) = weak.upgrade() {
@@ -2820,6 +2669,7 @@ fn active_terminal_panel_rects(win: &AppWindow) -> Option<(String, LogicalRect, 
     ))
 }
 
+#[cfg(windows)]
 fn active_sftp_file_list_rect(win: &AppWindow) -> Option<LogicalRect> {
     if win.get_zen_mode() {
         return None;
@@ -2919,29 +2769,10 @@ fn handle_file_drop(win: &AppWindow, sftp_handles: &SftpHandles, path: std::path
     if dir.is_empty() {
         return;
     }
-    // Session-sync (#sync): when both toggles are on, also mirror the drop to
-    // every other online session — each into *its own* current SFTP dir. This
-    // matches the upload button's behaviour (drag-and-drop is a separate path).
-    let sync = win.get_sync_input() && win.get_sync_upload_enabled();
-    let other_dirs = if sync {
-        terminal_sftp_paths(win)
-    } else {
-        HashMap::new()
-    };
     if let Ok(handles) = sftp_handles.lock() {
         if let Some(h) = handles.get(&active) {
             win.set_download_open(true);
-            h.upload(path.clone(), dir);
-        }
-        if sync {
-            for (id, h) in handles.iter() {
-                if id == &active {
-                    continue;
-                }
-                if let Some(d) = other_dirs.get(id).filter(|d| !d.is_empty()) {
-                    h.upload(path.clone(), d.clone());
-                }
-            }
+            h.upload(path, dir);
         }
     }
 }
@@ -2979,27 +2810,13 @@ fn wire_session_callbacks(
     local_net_hist: NetHist,
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
 ) {
-    // Working set of port forwards (#56) for the session being created/edited.
-    // The forward add/delete callbacks mutate it; saving reads it into
-    // Session.forwards; opening the dialog (new/edit) resets it.
-    let edit_forwards: Rc<RefCell<Vec<PortFwd>>> =
-        Rc::new(RefCell::new(vec![blank_forward_draft()]));
-
     // New session -> open dialog with blank draft.
     let weak = window.as_weak();
-    let ef_new = edit_forwards.clone();
     let store_ng = store.clone();
     window.on_new_session_clicked(move || {
         if let Some(w) = weak.upgrade() {
-            *ef_new.borrow_mut() = vec![blank_forward_draft()];
             w.set_session_groups(session_groups_model(&store_ng.borrow()));
-            w.set_dialog_forwards(forward_model(&ef_new.borrow()));
             let empty = Session::new_empty();
-            let (jump_labels, jump_ids, jump_idx) =
-                jump_candidates(&store_ng.borrow(), &empty.id, "");
-            w.set_jump_choices(jump_labels);
-            w.set_jump_ids(jump_ids);
-            w.set_dialog_jump_index(jump_idx);
             w.set_dialog_id(empty.id.into());
             w.set_dialog_name("".into());
             w.set_dialog_host("".into());
@@ -3012,9 +2829,6 @@ fn wire_session_callbacks(
             w.set_dialog_key_path("".into());
             w.set_dialog_key_inline("".into());
             w.set_dialog_key_inline_mode(false);
-            w.set_dialog_test_status("".into());
-            w.set_dialog_proxy_type("none".into());
-            w.set_dialog_proxy_hostport("".into());
             w.set_dialog_group("".into());
             w.set_dialog_kind("ssh".into());
             w.set_dialog_serial_port("".into());
@@ -3030,70 +2844,6 @@ fn wire_session_callbacks(
             w.set_dialog_open(true);
         }
     });
-
-    // Import hosts from ~/.ssh/config -> add them as sessions (skipping dups).
-    {
-        let weak = window.as_weak();
-        let store = store.clone();
-        let sessions_model = sessions_model.clone();
-        window.on_import_ssh_config(move || {
-            let hosts = crate::ssh::ssh_config::parse_default();
-            let mut added = 0usize;
-            if hosts.is_empty() {
-                if let Some(w) = weak.upgrade() {
-                    w.set_ssh_import_hint(
-                        t("未找到 ~/.ssh/config", "no ~/.ssh/config found").into(),
-                    );
-                }
-                return;
-            }
-            {
-                let mut s = store.borrow_mut();
-                for h in hosts {
-                    // Skip if a session already has this alias, or the same
-                    // host + user pair.
-                    let dup = s
-                        .sessions()
-                        .iter()
-                        .any(|x| x.name == h.alias || (x.host == h.hostname && x.user == h.user));
-                    if dup {
-                        continue;
-                    }
-                    let auth = if h.identity_file.is_empty() {
-                        AuthMethod::Password
-                    } else {
-                        AuthMethod::Key
-                    };
-                    s.upsert(Session {
-                        name: h.alias,
-                        host: h.hostname,
-                        port: h.port,
-                        user: if h.user.is_empty() {
-                            "root".into()
-                        } else {
-                            h.user
-                        },
-                        auth,
-                        private_key_path: h.identity_file,
-                        ..Session::new_empty()
-                    });
-                    added += 1;
-                }
-                if added > 0 {
-                    let _ = s.save();
-                }
-            }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
-            if let Some(w) = weak.upgrade() {
-                let hint = if added > 0 {
-                    format!("{} {}", t("已导入", "imported"), added)
-                } else {
-                    t("没有新主机可导入", "no new hosts to import").to_string()
-                };
-                w.set_ssh_import_hint(hint.into());
-            }
-        });
-    }
 
     // Export all sessions to a portable JSON file (issue #46). Passwords are
     // obfuscated with the built-in export key; host/user/port stay plaintext.
@@ -3195,20 +2945,14 @@ fn wire_session_callbacks(
     {
         let weak = window.as_weak();
         let store = store.clone();
-        let ef_edit = edit_forwards.clone();
         window.on_edit_session(move |id: SharedString| {
             let id = id.to_string();
             let store = store.borrow();
             let Some(session) = store.get(&id) else {
                 return;
             };
-            *ef_edit.borrow_mut() = forward_drafts(&session.forwards);
-            if ef_edit.borrow().is_empty() {
-                ef_edit.borrow_mut().push(blank_forward_draft());
-            }
             if let Some(w) = weak.upgrade() {
                 w.set_session_groups(session_groups_model(&store));
-                w.set_dialog_forwards(forward_model(&ef_edit.borrow()));
                 w.set_dialog_id(session.id.clone().into());
                 w.set_dialog_name(session.name.clone().into());
                 w.set_dialog_host(session.host.clone().into());
@@ -3221,15 +2965,6 @@ fn wire_session_callbacks(
                 w.set_dialog_key_path(session.private_key_path.clone().into());
                 w.set_dialog_key_inline("".into());
                 w.set_dialog_key_inline_mode(!session.private_key_inline.is_empty());
-                w.set_dialog_test_status("".into());
-                let (proxy_type, proxy_hostport) = split_proxy(&session.proxy);
-                w.set_dialog_proxy_type(proxy_type.into());
-                w.set_dialog_proxy_hostport(proxy_hostport.into());
-                let (jump_labels, jump_ids, jump_idx) =
-                    jump_candidates(&store, &session.id, &session.jump_session_id);
-                w.set_jump_choices(jump_labels);
-                w.set_jump_ids(jump_ids);
-                w.set_dialog_jump_index(jump_idx);
                 w.set_dialog_group(session.group.clone().into());
                 w.set_dialog_kind(session.kind.as_str().into());
                 w.set_dialog_serial_port(session.serial_port.clone().into());
@@ -3435,18 +3170,8 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
-        let edit_forwards = edit_forwards.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft| {
             let id = draft.id.to_string();
-            let forwards = match validated_port_forwards(&edit_forwards.borrow()) {
-                Ok(forwards) => forwards,
-                Err(message) => {
-                    if let Some(w) = weak.upgrade() {
-                        w.set_dialog_test_status(message.into());
-                    }
-                    return;
-                }
-            };
             // The edit dialog never echoes the real password (issue #10): a blank
             // field while editing means "keep the existing password" rather than
             // "clear it".  Only overwrite when the user actually typed something.
@@ -3512,7 +3237,6 @@ fn wire_session_callbacks(
                 // Store the key path with forward slashes uniformly.
                 private_key_path,
                 private_key_inline,
-                proxy: draft.proxy.to_string(),
                 last_used: None,
                 group: draft.group.to_string(),
                 kind,
@@ -3529,10 +3253,8 @@ fn wire_session_callbacks(
                 parity: draft.parity.to_string(),
                 flow_control: draft.flow_control.to_string(),
                 encoding: draft.encoding.to_string(),
-                forwards,
                 disable_shell_integration: draft.disable_shell_integration,
                 note: draft.note.to_string(),
-                jump_session_id: draft.jump_session_id.to_string(),
             };
             {
                 let mut s = store.borrow_mut();
@@ -3545,167 +3267,6 @@ fn wire_session_callbacks(
             if let Some(w) = weak.upgrade() {
                 w.set_dialog_open(false);
             }
-        });
-    }
-
-    // Test connection from the session dialog. SSH tests use the same handshake,
-    // host-key verification, proxy/jump routing, and authentication as a real
-    // terminal connection (#276). Telnet and serial retain reachability tests.
-    {
-        let weak = window.as_weak();
-        let runtime = runtime.clone();
-        let store = store.clone();
-        let edit_forwards = edit_forwards.clone();
-        window.on_session_dialog_test(move |draft: SessionDraft| {
-            let kind = draft.kind.to_string();
-            if kind == "serial" {
-                let port_name = draft.serial_port.to_string();
-                let baud = if draft.baud_rate <= 0 {
-                    115_200
-                } else {
-                    draft.baud_rate as u32
-                };
-                let weak_done = weak.clone();
-                runtime.spawn(async move {
-                    let message = match tokio::task::spawn_blocking(move || {
-                        serialport::new(&port_name, baud)
-                            .timeout(std::time::Duration::from_millis(800))
-                            .open()
-                    })
-                    .await
-                    {
-                        Ok(Ok(_)) => t("连接正常", "Connection OK").to_string(),
-                        Ok(Err(e)) => format!("{}: {e}", t("连接失败", "Connection failed")),
-                        Err(e) => format!("{}: {e}", t("连接失败", "Connection failed")),
-                    };
-                    let _ = slint::invoke_from_event_loop(move || {
-                        if let Some(w) = weak_done.upgrade() {
-                            w.set_dialog_test_status(message.into());
-                        }
-                    });
-                });
-                return;
-            }
-
-            let existing = store.borrow().get(draft.id.as_str()).cloned();
-            let forwards = match validated_port_forwards(&edit_forwards.borrow()) {
-                Ok(forwards) => forwards,
-                Err(message) => {
-                    if let Some(w) = weak.upgrade() {
-                        w.set_dialog_test_status(message.into());
-                    }
-                    return;
-                }
-            };
-            let session = session_from_draft(&draft, existing.as_ref(), forwards);
-            let weak_done = weak.clone();
-
-            if kind == "ssh" {
-                let jump = resolve_jump(&store, &session);
-                let (events_tx, mut events_rx) = tokio::sync::mpsc::unbounded_channel();
-                runtime.spawn(async move {
-                    let mut test = Box::pin(test_session_auth(session, jump, events_tx));
-                    let result = loop {
-                        tokio::select! {
-                            result = &mut test => break result,
-                            event = events_rx.recv() => {
-                                let Some(event) = event else { continue };
-                                if matches!(
-                                    event,
-                                    SessionEvent::HostKeyPrompt { .. }
-                                        | SessionEvent::CredentialPrompt { .. }
-                                        | SessionEvent::MfaPrompt { .. }
-                                ) {
-                                    let weak_prompt = weak_done.clone();
-                                    let _ = slint::invoke_from_event_loop(move || {
-                                        let Some(w) = weak_prompt.upgrade() else { return };
-                                        match event {
-                                            SessionEvent::HostKeyPrompt {
-                                                host,
-                                                port,
-                                                key_type,
-                                                fingerprint,
-                                                changed,
-                                                responder,
-                                            } => enqueue_hostkey_prompt(
-                                                &w,
-                                                host,
-                                                port,
-                                                key_type,
-                                                fingerprint,
-                                                changed,
-                                                responder,
-                                            ),
-                                            SessionEvent::CredentialPrompt {
-                                                session_id,
-                                                host,
-                                                user,
-                                                need_user,
-                                                need_password,
-                                                responder,
-                                            } => enqueue_cred_prompt(
-                                                &w,
-                                                session_id,
-                                                host,
-                                                user,
-                                                need_user,
-                                                need_password,
-                                                responder,
-                                            ),
-                                            SessionEvent::MfaPrompt {
-                                                session_id,
-                                                host,
-                                                prompt,
-                                                echo,
-                                                responder,
-                                            } => enqueue_mfa_prompt(
-                                                &w,
-                                                session_id,
-                                                host,
-                                                prompt,
-                                                echo,
-                                                responder,
-                                            ),
-                                            _ => {}
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                    };
-                    let message = match result {
-                        Ok(()) => t("连接正常", "Connection OK").to_string(),
-                        Err(e) => format!("{}: {e:#}", t("连接失败", "Connection failed")),
-                    };
-                    let _ = slint::invoke_from_event_loop(move || {
-                        if let Some(w) = weak_done.upgrade() {
-                            w.set_dialog_test_status(message.into());
-                        }
-                    });
-                });
-                return;
-            }
-
-            let host = session.host;
-            let port = session.port;
-            runtime.spawn(async move {
-                let target = format!("{host}:{port}");
-                let result = tokio::time::timeout(
-                    std::time::Duration::from_secs(3),
-                    tokio::net::TcpStream::connect((host.as_str(), port)),
-                )
-                .await;
-                let message = match result {
-                    Ok(Ok(_)) => t("连接正常", "Connection OK").to_string(),
-                    Ok(Err(e)) => format!("{}: {e}", t("连接失败", "Connection failed")),
-                    Err(_) => format!("{}: {target}", t("连接超时", "Connection timed out")),
-                };
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(w) = weak_done.upgrade() {
-                        w.set_dialog_test_status(message.into());
-                    }
-                });
-            });
         });
     }
 
@@ -3748,50 +3309,6 @@ fn wire_session_callbacks(
                 if let Some(w) = weak.upgrade() {
                     w.set_dialog_key_path(path.into());
                 }
-            }
-        });
-    }
-
-    // Add another editable port-forward row (#56, #277).
-    {
-        let weak = window.as_weak();
-        let ef = edit_forwards.clone();
-        window.on_add_forward(move || {
-            ef.borrow_mut().push(blank_forward_draft());
-            if let Some(w) = weak.upgrade() {
-                w.set_dialog_forwards(forward_model(&ef.borrow()));
-            }
-        });
-    }
-    // Keep each editable row in the Rust-side working set. Saving validates and
-    // converts all non-empty rows together, so no separate "added" state exists.
-    {
-        let ef = edit_forwards.clone();
-        window.on_update_forward(move |index: i32, forward: PortFwd| {
-            let i = index as usize;
-            let mut forwards = ef.borrow_mut();
-            if i < forwards.len() {
-                forwards[i] = forward;
-            }
-        });
-    }
-    // Delete a port forward by index (#56).
-    {
-        let weak = window.as_weak();
-        let ef = edit_forwards.clone();
-        window.on_delete_forward(move |index: i32| {
-            let i = index as usize;
-            {
-                let mut v = ef.borrow_mut();
-                if i < v.len() {
-                    v.remove(i);
-                }
-                if v.is_empty() {
-                    v.push(blank_forward_draft());
-                }
-            }
-            if let Some(w) = weak.upgrade() {
-                w.set_dialog_forwards(forward_model(&ef.borrow()));
             }
         });
     }
@@ -3912,7 +3429,6 @@ fn wire_session_callbacks(
                 sftp_sort_key: "".into(),
                 sftp_sort_dir: 0,
                 sftp_available: has_sftp,
-                tunnels: ModelRc::from(std::rc::Rc::new(VecModel::<TunnelInfo>::default())),
                 sftp_collapsed: !has_sftp || sftp_collapsed_default,
                 sftp_panel_height: sftp_h_default,
                 sftp_panel_width: sftp_w_default,
@@ -3989,7 +3505,6 @@ fn wire_session_callbacks(
                 local_net_hist: local_net_hist.clone(),
                 last_term_size: last_term_size.clone(),
                 sftp_follow_cd: sftp_follow_cd.clone(),
-                store: store.clone(),
             };
             start_session_in_tab(&tab_id, session, &ctx);
         });
@@ -4026,8 +3541,6 @@ fn wire_session_callbacks(
     }
 }
 
-/// Resolve a session's configured SSH jump host to the saved session it points
-/// at, ignoring a missing / dangling / self reference (#211).
 fn save_layout(win: &AppWindow, store: &Rc<RefCell<ConfigStore>>) {
     let scale = win.window().scale_factor().max(0.01);
     let size = win.window().size();
@@ -4275,56 +3788,6 @@ fn wire_key_input(
     store: Rc<RefCell<ConfigStore>>,
     ctx: ConnectCtx,
 ) {
-    // Runtime SSH tunnel panel (#206). These tunnels live only for the active
-    // connection; saved session configuration remains unchanged.
-    {
-        let handles_rc = handles.clone();
-        window.on_tunnel_add(
-            move |tab_id: SharedString,
-                  name: SharedString,
-                  kind: SharedString,
-                  bind: SharedString,
-                  bind_port: SharedString,
-                  host: SharedString,
-                  host_port: SharedString| {
-                let kind = kind.to_string();
-                if kind != "local" && kind != "dynamic" {
-                    return;
-                }
-                let Ok(bind_port) = bind_port.trim().parse::<u16>() else {
-                    return;
-                };
-                let host_port = if kind == "dynamic" {
-                    0
-                } else {
-                    match host_port.trim().parse::<u16>() {
-                        Ok(p) => p,
-                        Err(_) => return,
-                    }
-                };
-                let forward = crate::config::PortForward {
-                    kind,
-                    name: name.trim().to_string(),
-                    bind_addr: bind.trim().to_string(),
-                    bind_port,
-                    host: host.trim().to_string(),
-                    host_port,
-                };
-                if let Some(handle) = handles_rc.borrow().get(tab_id.as_str()) {
-                    handle.add_tunnel(format!("runtime-{}", uuid::Uuid::new_v4()), forward);
-                }
-            },
-        );
-    }
-    {
-        let handles_rc = handles.clone();
-        window.on_tunnel_stop(move |tab_id: SharedString, tunnel_id: SharedString| {
-            if let Some(handle) = handles_rc.borrow().get(tab_id.as_str()) {
-                handle.stop_tunnel(tunnel_id.to_string());
-            }
-        });
-    }
-
     // --- Command bar (#55): run command + quick-command management ---------
     {
         let handles_rc = handles.clone();
@@ -4656,17 +4119,6 @@ fn wire_key_input(
         });
     }
 
-    // Session sync / broadcast input: when on, a keystroke in any terminal is
-    // mirrored to every online session (Xshell-style; #78 pt.4). Read on the hot
-    // keystroke path, so use an AtomicBool rather than a window-property lookup.
-    let sync_input = Arc::new(std::sync::atomic::AtomicBool::new(false));
-    {
-        let flag = sync_input.clone();
-        window.on_set_sync_input(move |on| {
-            flag.store(on, std::sync::atomic::Ordering::Relaxed);
-        });
-    }
-
     // Forward each keystroke as raw bytes to the SSH PTY. The server's bash /
     // readline handles echo, history (↑↓), Tab completion, Ctrl+C, etc.
     {
@@ -4699,7 +4151,6 @@ fn wire_key_input(
 
         let handles = handles.clone();
         let bufs = bufs.clone();
-        let sync_input = sync_input.clone();
         // Shared timestamp: the last time the Shift key alone was pressed
         // (key="", shift=true).  Used by the time-based Backspace filter below.
         let last_shift_time: Arc<Mutex<Option<std::time::Instant>>> = Arc::new(Mutex::new(None));
@@ -4997,16 +4448,7 @@ fn wire_key_input(
             );
             if !bytes.is_empty() {
                 let h = handles.borrow();
-                if sync_input.load(std::sync::atomic::Ordering::Relaxed) {
-                    // Broadcast the same bytes to every online session (#78 pt.4).
-                    for (target_id, handle) in h.iter() {
-                        if let Some(buffer) = term_buf(&bufs, target_id) {
-                            buffer.lock().unwrap().interactive_echo_until =
-                                std::time::Instant::now() + INTERACTIVE_ECHO_WINDOW;
-                        }
-                        handle.send_raw(bytes.clone());
-                    }
-                } else if let Some(handle) = h.get(tab_id.as_str()) {
+                if let Some(handle) = h.get(tab_id.as_str()) {
                     if let Some(buffer) = term_buf(&bufs, tab_id.as_str()) {
                         buffer.lock().unwrap().interactive_echo_until =
                             std::time::Instant::now() + INTERACTIVE_ECHO_WINDOW;
@@ -5741,12 +5183,6 @@ fn system_monospace_fonts() -> Vec<slint::SharedString> {
     out
 }
 
-/// Split a stored proxy URL into `(type, host:port)` for the session dialog.
-///
-/// `""` → `("none", "")`. Recognises `socks5`/`socks5h`/`socks` and
-/// `http`/`https` scheme prefixes. A value without a (recognised) scheme is
-/// treated as SOCKS5, matching proxy.rs's parse default, so older configs that
-/// stored a bare `host:port` keep working.
 /// Parse a "vX.Y.Z" / "X.Y.Z" tag into a comparable tuple, or None if it isn't
 /// a three-part numeric version. A pre-release suffix on the patch (e.g.
 /// "3-rc1") is tolerated by taking its leading digits (#48).
@@ -5762,31 +5198,6 @@ fn parse_version(s: &str) -> Option<(u32, u32, u32)> {
         .parse()
         .ok()?;
     Some((major, minor, patch))
-}
-
-fn split_proxy(url: &str) -> (String, String) {
-    let s = url.trim();
-    if s.is_empty() {
-        return ("none".to_string(), String::new());
-    }
-    let lower = s.to_ascii_lowercase();
-    for p in ["http://", "https://"] {
-        if lower.starts_with(p) {
-            return (
-                "http".to_string(),
-                s[p.len()..].trim_end_matches('/').to_string(),
-            );
-        }
-    }
-    for p in ["socks5h://", "socks5://", "socks://"] {
-        if lower.starts_with(p) {
-            return (
-                "socks5".to_string(),
-                s[p.len()..].trim_end_matches('/').to_string(),
-            );
-        }
-    }
-    ("socks5".to_string(), s.trim_end_matches('/').to_string())
 }
 
 fn parent_path(path: &str) -> String {

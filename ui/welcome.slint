@@ -253,7 +253,6 @@ export component Welcome inherits Rectangle {
     in property <[SessionInfo]> sessions;
     in property <string> import-hint;        // result text after an import
     callback new-session();
-    callback import-ssh-config();
     callback connect-session(string);
     callback edit-session(string);
     callback duplicate-session(string);

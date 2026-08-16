@@ -7,13 +7,6 @@ pub enum SessionCommand {
     Resize(u32, u32),
     /// Start or pause periodic local/remote resource monitoring for this session.
     SetResourceMonitoring(bool),
-    /// Start a runtime-only SSH tunnel for this connected session (#206).
-    AddTunnel {
-        id: String,
-        forward: crate::config::PortForward,
-    },
-    /// Stop a runtime tunnel created for this connected session (#206).
-    StopTunnel(String),
     /// Terminate one remote process on a short-lived exec channel. Supplying a
     /// password selects the privileged `sudo -S` path; the secret is never
     /// written to the interactive PTY or shell history.

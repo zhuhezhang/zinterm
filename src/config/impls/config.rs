@@ -460,9 +460,6 @@ impl ConfigStore {
                             session.private_key_inline = Secret::new(plain);
                         }
                     }
-                    if let Some(plain) = Self::try_decrypt(&key, cfg.webdav_password.as_str()) {
-                        cfg.webdav_password = Secret::new(plain);
-                    }
                     // Clean up any duplicate history accumulated before #113,
                     // keeping the last (most recent) occurrence of each command.
                     dedup_keep_last(&mut cfg.command_history);
@@ -1172,65 +1169,6 @@ impl ConfigStore {
         self.cache.collapse_sftp_default = v;
     }
 
-    /// Mirror SFTP uploads to other sessions while session-sync is on (default
-    /// false). Only has effect when the session-sync toggle is on.
-    pub fn sync_upload(&self) -> bool {
-        self.cache.sync_upload
-    }
-
-    pub fn set_sync_upload(&mut self, v: bool) {
-        self.cache.sync_upload = v;
-    }
-
-    pub fn webdav_enabled(&self) -> bool {
-        self.cache.webdav_enabled
-    }
-
-    pub fn webdav_url(&self) -> &str {
-        &self.cache.webdav_url
-    }
-
-    pub fn webdav_username(&self) -> &str {
-        &self.cache.webdav_username
-    }
-
-    pub fn webdav_password(&self) -> &str {
-        self.cache.webdav_password.as_str()
-    }
-
-    pub fn webdav_remote_path(&self) -> &str {
-        if self.cache.webdav_remote_path.trim().is_empty() {
-            "meatshell-connections.json"
-        } else {
-            &self.cache.webdav_remote_path
-        }
-    }
-
-    pub fn webdav_accept_invalid_certs(&self) -> bool {
-        self.cache.webdav_accept_invalid_certs
-    }
-
-    pub fn set_webdav_settings(
-        &mut self,
-        enabled: bool,
-        url: String,
-        username: String,
-        password: String,
-        remote_path: String,
-        accept_invalid_certs: bool,
-    ) {
-        self.cache.webdav_enabled = enabled;
-        self.cache.webdav_url = url.trim().trim_end_matches('/').to_string();
-        self.cache.webdav_username = username.trim().to_string();
-        self.cache.webdav_password = Secret::new(password);
-        self.cache.webdav_remote_path = if remote_path.trim().is_empty() {
-            "meatshell-connections.json".to_string()
-        } else {
-            remote_path.trim().trim_start_matches('/').to_string()
-        };
-        self.cache.webdav_accept_invalid_certs = accept_invalid_certs;
-    }
-
     /// Whether each download prompts for a save location (default false) (#87).
     pub fn download_always_ask(&self) -> bool {
         self.cache.download_always_ask
@@ -1388,12 +1326,6 @@ impl ConfigStore {
                 let enc = Self::encrypt(&self.key, session.private_key_inline.as_str())?;
                 session.private_key_inline = Secret::new(enc);
             }
-        }
-        if !disk.webdav_password.is_empty()
-            && !disk.webdav_password.as_str().starts_with(Self::ENC_PREFIX)
-        {
-            let enc = Self::encrypt(&self.key, disk.webdav_password.as_str())?;
-            disk.webdav_password = Secret::new(enc);
         }
         let raw = serde_json::to_string_pretty(&disk)?;
         // Write to a sibling temp file then rename — cheap atomicity.

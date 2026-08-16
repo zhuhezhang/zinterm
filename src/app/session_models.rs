@@ -89,44 +89,6 @@ pub(super) fn session_groups_model(store: &ConfigStore) -> ModelRc<SharedString>
     )))
 }
 
-/// Build the jump-host picker's parallel label/id lists for the session dialog
-/// (#211). Index 0 is always the "no jump host" entry (empty id); the rest are
-/// the saved SSH sessions except `exclude_id` (a session can't jump through
-/// itself). Returns `(labels, ids, selected_index)` where `selected_index`
-/// points at `current_jump_id` (0 if unset / dangling).
-pub(super) fn jump_candidates(
-    store: &ConfigStore,
-    exclude_id: &str,
-    current_jump_id: &str,
-) -> (ModelRc<SharedString>, ModelRc<SharedString>, i32) {
-    let mut labels: Vec<SharedString> = vec![t("无（直接连接）", "None (direct)").into()];
-    let mut ids: Vec<SharedString> = vec!["".into()];
-    let mut selected: i32 = 0;
-    for s in store.sessions() {
-        if s.kind != SessionKind::Ssh || s.id == exclude_id {
-            continue;
-        }
-        let label = if s.name.trim().is_empty() {
-            if s.user.trim().is_empty() {
-                s.host.clone()
-            } else {
-                format!("{}@{}", s.user, s.host)
-            }
-        } else {
-            format!("{} ({}@{})", s.name, s.user, s.host)
-        };
-        if s.id == current_jump_id {
-            selected = ids.len() as i32;
-        }
-        labels.push(label.into());
-        ids.push(s.id.clone().into());
-    }
-    (
-        ModelRc::from(Rc::new(VecModel::from(labels))),
-        ModelRc::from(Rc::new(VecModel::from(ids))),
-        selected,
-    )
-}
 
 pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<SessionInfo>) {
     // Group sessions by their `group` (named groups alphabetically, ungrouped
@@ -243,6 +205,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
 }
 
 pub(super) fn builtin_local_sessions(
+    #[cfg_attr(not(windows), allow(unused_variables))]
     wsl_profiles: &[crate::config::WslProfile],
 ) -> Vec<Session> {
     let mut out = Vec::new();
@@ -321,82 +284,3 @@ pub(super) fn wsl_available() -> bool {
 // ---------------------------------------------------------------------------
 // Session callbacks (welcome page + dialog)
 // ---------------------------------------------------------------------------
-
-/// Build the effective session represented by the dialog. When editing, blank
-/// secret fields retain their saved values because real passwords and pasted
-/// private keys are deliberately never echoed back into the UI (#10, #276).
-pub(super) fn session_from_draft(
-    draft: &SessionDraft,
-    existing: Option<&Session>,
-    forwards: Vec<crate::config::PortForward>,
-) -> Session {
-    let password = if draft.password.is_empty() {
-        existing.map(|s| s.password.clone()).unwrap_or_default()
-    } else {
-        Secret::new(draft.password.to_string())
-    };
-    let private_key_inline = if draft.private_key_inline_mode {
-        if draft.private_key_inline.is_empty() {
-            existing
-                .map(|s| s.private_key_inline.clone())
-                .unwrap_or_default()
-        } else {
-            Secret::new(draft.private_key_inline.to_string())
-        }
-    } else {
-        Secret::default()
-    };
-    let private_key_path = if draft.private_key_inline_mode {
-        String::new()
-    } else {
-        draft.private_key_path.to_string().replace('\\', "/")
-    };
-    let kind = SessionKind::from_str(&draft.kind.to_string());
-    let auto_name = match kind {
-        SessionKind::Serial => format!("{} @{}", draft.serial_port, draft.baud_rate),
-        _ if draft.user.trim().is_empty() => draft.host.to_string(),
-        _ => format!("{}@{}", draft.user, draft.host),
-    };
-    let default_port = if kind == SessionKind::Telnet { 23 } else { 22 };
-
-    Session {
-        id: draft.id.to_string(),
-        name: if draft.name.is_empty() {
-            auto_name
-        } else {
-            draft.name.to_string()
-        },
-        host: draft.host.to_string(),
-        port: if draft.port <= 0 {
-            default_port
-        } else {
-            draft.port as u16
-        },
-        user: draft.user.to_string(),
-        auth: AuthMethod::from_str(&draft.auth.to_string()),
-        password,
-        private_key_path,
-        private_key_inline,
-        proxy: draft.proxy.to_string(),
-        last_used: None,
-        group: draft.group.to_string(),
-        kind,
-        local_distribution: String::new(),
-        local_working_dir: String::new(),
-        serial_port: draft.serial_port.to_string(),
-        baud_rate: if draft.baud_rate <= 0 {
-            115_200
-        } else {
-            draft.baud_rate as u32
-        },
-        data_bits: draft.data_bits as u8,
-        stop_bits: draft.stop_bits as u8,
-        parity: draft.parity.to_string(),
-        flow_control: draft.flow_control.to_string(),
-        encoding: draft.encoding.to_string(),
-        forwards,
-        disable_shell_integration: draft.disable_shell_integration,
-        note: draft.note.to_string(),
-        jump_session_id: draft.jump_session_id.to_string(),
-    }
-}

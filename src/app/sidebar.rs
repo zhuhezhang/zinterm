@@ -293,6 +293,7 @@ pub(super) fn refresh_sidebar(
             win.set_conn_host("".into());
             show_local_res(win);
             set_top_local(win);
+            win.set_system_info_available(true);
             set_system_models(
                 win,
                 snap.cpu_percent,
@@ -306,7 +307,7 @@ pub(super) fn refresh_sidebar(
                     down: format_bytes_per_sec(snap.net_rx_per_sec).into(),
                 }],
                 Vec::new(),
-                SystemDetails::default(),
+                local_system_details(&snap),
             );
         }
     }

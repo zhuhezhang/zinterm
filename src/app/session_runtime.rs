@@ -1,32 +1,24 @@
 use super::*;
 
-pub(super) fn resolve_jump(store: &Rc<RefCell<ConfigStore>>, session: &Session) -> Option<Session> {
-    if session.kind != SessionKind::Ssh || session.jump_session_id.trim().is_empty() {
-        return None;
-    }
-    if session.jump_session_id == session.id {
-        return None;
-    }
-    store.borrow().get(&session.jump_session_id).cloned()
-}
-
 /// Spawn the shell (+ SFTP) workers and their event-pump threads for an
 /// already-registered tab. Used by the initial connect and by in-place
 /// reconnect (#79); the tab/terminal/parser must already exist.
 pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &ConnectCtx) {
     let has_sftp = session.kind == SessionKind::Ssh;
     let (initial_cols, initial_rows) = *ctx.last_term_size.lock().unwrap();
-    // Resolve the optional SSH jump host now (on the UI thread, where the store
-    // lives) so the owned Session can be handed to the worker threads (#211).
-    let jump = resolve_jump(&ctx.store, &session);
+    let monitoring_enabled = ctx
+        .weak
+        .upgrade()
+        .map(|window| !window.get_sidebar_collapsed() && !window.get_zen_mode())
+        .unwrap_or(true);
     let (handle, rx) = match session.kind {
         SessionKind::Ssh => spawn_session(
             ctx.runtime.handle(),
             tab_id.to_string(),
             session.clone(),
-            jump.clone(),
             initial_cols,
             initial_rows,
+            monitoring_enabled,
         ),
         SessionKind::Serial => crate::terminal::serial::spawn_serial_session(
             ctx.runtime.handle(),
@@ -49,11 +41,6 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         ),
     };
     let terminal_reply_tx = handle.commands.clone();
-    let monitoring_enabled = ctx
-        .weak
-        .upgrade()
-        .map(|window| !window.get_sidebar_collapsed() && !window.get_zen_mode())
-        .unwrap_or(true);
     handle.set_resource_monitoring(monitoring_enabled);
     ctx.handles.borrow_mut().insert(tab_id.to_string(), handle);
 
@@ -72,7 +59,7 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 return;
             }
             tokio::task::yield_now().await;
-            let sftp_handle = spawn_sftp(sftp_task_runtime.handle(), session, jump, sftp_tx);
+            let sftp_handle = spawn_sftp(sftp_task_runtime.handle(), session, sftp_tx);
             if let Ok(mut handles) = sftp_handles.lock() {
                 handles.insert(sftp_tab_id, sftp_handle);
             }

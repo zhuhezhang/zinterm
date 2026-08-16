@@ -93,11 +93,8 @@ open /Applications/meatshell.app
     / `~/Library/Application Support/meatshell/sessions.json` (macOS)
 - [x] SSH (`russh`, pure Rust): password / private key / encrypted key (passphrase)
 - [x] SFTP browser + upload / download (drag-and-drop) + in-terminal ZMODEM (`sz`) receive
-- [x] SSH port forwarding / tunnels: local -L / remote -R / dynamic -D (SOCKS5)
 - [x] Quick commands + command box (broadcast to all sessions) + command history
 - [x] Serial / Telnet sessions
-- [x] Outbound proxy (SOCKS5 / HTTP)
-- [x] Import `~/.ssh/config`
 - [x] Session passwords encrypted at rest (ChaCha20-Poly1305)
 - [x] Known-hosts (`known_hosts`) verification + first-connect confirmation
 - [x] Split panes for tabbed terminals
@@ -176,13 +173,6 @@ The script updates `Cargo.toml` / `Cargo.lock`, runs `cargo check --locked`,
 verifies `meatshell --version`, commits `Release v0.6.0`, creates an annotated
 tag, and pushes the current branch plus the tag. See
 [docs/release.md](docs/release.md) for details.
-
-## Related Groups
-
-<p align="center">
-  <img src="docs/QR/QQ_Group_QR_Code.jpg" alt="QQ group QR code" width="300"><br>
-  <em>Scan the QR code to join QQ groups to exchange user experiences, provide feedback, or get the latest updates</em>
-</p>
 
 ## License
 

@@ -20,17 +20,3 @@ pub struct SystemDetails {
     pub networks: Vec<(String, String, String, String, String)>,
     pub filesystems: Vec<(String, String, String, String, String)>,
 }
-
-/// One SSH tunnel row shown in the runtime tunnel panel (#206).
-#[derive(Debug, Clone)]
-pub struct RuntimeTunnelInfo {
-    pub id: String,
-    pub name: String,
-    pub kind: String,
-    pub bind_addr: String,
-    pub bind_port: u16,
-    pub host: String,
-    pub host_port: u16,
-    pub active: bool,
-    pub status: String,
-}
