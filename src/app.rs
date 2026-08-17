@@ -1926,7 +1926,7 @@ pub fn run() -> Result<()> {
         let mut chrome_done = false;
         window
             .window()
-            .on_winit_window_event(move |slint_window, event| {
+            .on_winit_window_event(move |_slint_window, event| {
                 if !chrome_done {
                     chrome_done = true;
                     if let Some(win) = weak.upgrade() {
@@ -1977,7 +1977,7 @@ pub fn run() -> Result<()> {
                                 CtrlKeySide::Left => slint::platform::Key::Control,
                                 CtrlKeySide::Right => slint::platform::Key::ControlR,
                             };
-                            slint_window.dispatch_event(
+                            _slint_window.dispatch_event(
                                 slint::platform::WindowEvent::KeyReleased { text: key.into() },
                             );
                             tracing::debug!(
@@ -1995,7 +1995,7 @@ pub fn run() -> Result<()> {
                         // detached and every TextInput appears to stop accepting keys
                         // (#236). Re-associate the window with its current default IME;
                         // the focused Slint TextInput keeps owning text input as before.
-                        slint_window.with_winit_window(|window| window.set_ime_allowed(true));
+                        _slint_window.with_winit_window(|window| window.set_ime_allowed(true));
                     }
                     WEvent::DroppedFile(path) => {
                         if let Some(win) = weak.upgrade() {
@@ -2042,7 +2042,7 @@ pub fn run() -> Result<()> {
                         apply_activity(focused, minimized, occluded);
                         if *f {
                             #[cfg(target_os = "windows")]
-                            slint_window.with_winit_window(|window| window.set_ime_allowed(true));
+                            _slint_window.with_winit_window(|window| window.set_ime_allowed(true));
 
                             // Some window managers deliver the first Resized event
                             // before the native window belongs to a monitor. Focus
@@ -2348,45 +2348,6 @@ pub fn run() -> Result<()> {
     window.run().context("event loop exited with error")?;
     Ok(())
 }
-
-/// Center the window on the primary monitor's work area (Windows).
-#[cfg(windows)]
-fn center_window(win: &AppWindow) {
-    #[repr(C)]
-    struct Rect {
-        left: i32,
-        top: i32,
-        right: i32,
-        bottom: i32,
-    }
-    #[link(name = "user32")]
-    extern "system" {
-        fn SystemParametersInfoW(action: u32, uiparam: u32, pvparam: *mut Rect, winini: u32)
-            -> i32;
-    }
-    const SPI_GETWORKAREA: u32 = 0x0030;
-
-    let size = win.window().size(); // physical pixels
-    let mut wa = Rect {
-        left: 0,
-        top: 0,
-        right: 0,
-        bottom: 0,
-    };
-    let ok = unsafe { SystemParametersInfoW(SPI_GETWORKAREA, 0, &mut wa, 0) };
-    if ok == 0 {
-        return;
-    }
-    let area_w = (wa.right - wa.left).max(0) as u32;
-    let area_h = (wa.bottom - wa.top).max(0) as u32;
-    let x = wa.left + ((area_w.saturating_sub(size.width)) / 2) as i32;
-    let y = wa.top + ((area_h.saturating_sub(size.height)) / 2) as i32;
-    win.window()
-        .set_position(slint::PhysicalPosition::new(x, y));
-}
-
-#[cfg(not(windows))]
-fn center_window(_win: &AppWindow) {}
 
 /// The active terminal tab's current SFTP directory ("" if unknown).
 fn active_sftp_path(win: &AppWindow, tab_id: &str) -> String {
