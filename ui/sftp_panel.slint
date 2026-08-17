@@ -67,6 +67,10 @@ export component SftpPanel inherits Rectangle {
     in property <bool> collapsed: false;   // when true only the toolbar shows
     in property <bool> show-tree: true;    // hide the directory tree when narrow (#dock)
     in property <bool> compact: false;     // side-docked + collapsed → render nothing but a clean strip (#dock)
+    // Panel width as set by the parent (sf-w or full dock-region width). Used
+    // instead of root.width for responsive layout so toolbar height can't feed
+    // back into the width that narrow-toolbar reads (binding loop, cf. TabBar).
+    in property <length> dock-width: 480px;
     // Responsive columns: only when docked left/right (narrow, width-adjustable).
     // Docked top/bottom the panel is wide and can only be resized vertically, so
     // always show every column there (show-tree is true exactly in that case).
@@ -76,7 +80,7 @@ export component SftpPanel inherits Rectangle {
     in-out property <length> tree-width: 160px;
     callback persist-tree-width(length);
     property <bool> tree-resizing: false;
-    property <length> list-w: root.show-tree ? root.width - root.tree-width - 5px : root.width;
+    property <length> list-w: root.show-tree ? root.dock-width - root.tree-width - 5px : root.dock-width;
     property <length> name-min: 180px;     // narrower than this → start dropping columns
     property <bool> show-size-col: root.show-tree || (root.list-w - 36px - 76px - 120px > root.name-min);
     property <bool> show-modified-col: root.show-tree || (root.list-w - 36px - 120px > root.name-min);
@@ -94,7 +98,7 @@ export component SftpPanel inherits Rectangle {
     // The full toolbar needs roughly 480px once a useful path field is included.
     // Below that, switch deliberately to a two-row compact layout instead of
     // allowing fixed-size controls to squeeze the path and each other (#285).
-    property <bool> narrow-toolbar: !root.show-tree && root.width < 480px;
+    property <bool> narrow-toolbar: !root.show-tree && root.dock-width < 480px;
 
     // --- Callbacks ---------------------------------------------------------
     callback toggle-collapsed();    // minimise / restore the panel

@@ -1864,6 +1864,7 @@ export component TerminalView inherits Rectangle {
             y: root.sftp-dock == "bottom" ? parent.height - parent.sf-h : 0px;
             width:  root.sftp-horizontal ? parent.sf-w : parent.width;
             height: root.sftp-horizontal ? parent.height : parent.sf-h;
+            dock-width: root.sftp-horizontal ? parent.sf-w : parent.width;
             show-tree: !root.sftp-horizontal;   // hide the tree when narrow (vertical)
             tree-width: root.sftp-tree-width;
             persist-tree-width(width) => { root.persist-sftp-tree-width(width); }
