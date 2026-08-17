@@ -816,30 +816,6 @@ impl ConfigStore {
         self.cache.quick_commands = cmds;
     }
 
-    pub fn wsl_profiles(&self) -> &[WslProfile] {
-        &self.cache.wsl_profiles
-    }
-
-    pub fn add_wsl_profile(&mut self, name: String, distribution: String, directory: String) {
-        let name = name.trim();
-        if name.is_empty() {
-            return;
-        }
-        self.cache.wsl_profiles.push(WslProfile {
-            id: uuid::Uuid::new_v4().to_string(),
-            name: name.to_string(),
-            distribution: distribution.trim().to_string(),
-            directory: match directory.trim() {
-                "" => "~".to_string(),
-                value => value.to_string(),
-            },
-        });
-    }
-
-    pub fn remove_wsl_profile(&mut self, id: &str) {
-        self.cache.wsl_profiles.retain(|profile| profile.id != id);
-    }
-
     pub fn quick_panel_open(&self) -> bool {
         self.cache.quick_panel_open
     }

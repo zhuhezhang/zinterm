@@ -14,7 +14,7 @@ pub enum SessionKind {
     Serial,
     /// Plain Telnet over TCP, for legacy network gear (#17).
     Telnet,
-    /// Local shell process on this machine (PowerShell/CMD/WSL/$SHELL).
+    /// Local shell process on this machine (PowerShell/CMD/$SHELL).
     Local,
 }
 
@@ -114,13 +114,6 @@ pub struct Session {
     #[serde(default)]
     pub kind: SessionKind,
 
-    /// WSL distribution and startup directory for generated local sessions.
-    /// The directory defaults to the selected distribution user's home (`~`).
-    #[serde(default)]
-    pub local_distribution: String,
-    #[serde(default)]
-    pub local_working_dir: String,
-
     // --- Serial-only fields (ignored unless kind == Serial) -----------------
     /// Serial device path, e.g. "COM3" (Windows) or "/dev/ttyUSB0" (Linux).
     #[serde(default)]
@@ -171,8 +164,6 @@ impl Session {
             last_used: None,
             group: String::new(),
             kind: SessionKind::Ssh,
-            local_distribution: String::new(),
-            local_working_dir: String::new(),
             serial_port: String::new(),
             baud_rate: default_baud(),
             data_bits: default_data_bits(),

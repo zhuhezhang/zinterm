@@ -519,7 +519,7 @@ impl TermBuffer {
             }
             // `view_offset` is measured backwards from the live bottom.  If
             // output scrolls while the user is reading history, keeping the
-            // same offset would move their viewport forward by `k` rows. Move
+            // same offset would move their content forward by `k` rows. Move
             // the offset back by the number of newly captured rows instead so
             // the content under the scrollbar stays anchored (#306). At the
             // live bottom (`0`) output-following remains unchanged.

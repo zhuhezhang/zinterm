@@ -43,7 +43,7 @@ component SessionRow inherits Rectangle {
         mouse-cursor: pointer;
         clicked => { root.connect(); }
         pointer-event(e) => {
-            // Built-in PowerShell/CMD/WSL rows have no edit/move/delete actions.
+            // Built-in PowerShell/CMD rows have no edit/move/delete actions.
             // All menu items are conditional on !system-row, so opening the
             // popup for them only produces an empty rectangle (#336).
             if (!root.system-row && e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
@@ -409,8 +409,8 @@ export component Welcome inherits Rectangle {
 
                 if sessions.length > 0 : ScrollView {
                     vertical-stretch: 1;
-                    viewport-width: self.visible-width;
-                    viewport-height: max(self.visible-height, sess-list.preferred-height);
+                    content-width: self.visible-width;
+                    content-height: max(self.visible-height, sess-list.preferred-height);
                     sess-list := VerticalLayout {
                     spacing: 2px;
                     for session[i] in sessions : VerticalLayout {

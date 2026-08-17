@@ -232,8 +232,8 @@ export component ProcWindow inherits Window {
 
             Flickable {
                 vertical-stretch: 1;
-                viewport-width: self.width;
-                viewport-height: max(self.height, proc-col.preferred-height);
+                content-width: self.width;
+                content-height: max(self.height, proc-col.preferred-height);
                 proc-col := VerticalLayout {
                     alignment: start;
                     spacing: 1px;

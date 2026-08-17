@@ -276,8 +276,8 @@ export component SystemInfoWindow inherits Window {
 
         Flickable {
             vertical-stretch: 1;
-            viewport-width: self.width;
-            viewport-height: max(self.height, content.preferred-height);
+            content-width: self.width;
+            content-height: max(self.height, content.preferred-height);
 
             content := VerticalLayout {
                 padding: 14px;

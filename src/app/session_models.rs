@@ -1,19 +1,5 @@
 use super::*;
 
-pub(super) fn wsl_profile_model(store: &ConfigStore) -> ModelRc<WslProfileInfo> {
-    let rows = store
-        .wsl_profiles()
-        .iter()
-        .map(|profile| WslProfileInfo {
-            id: profile.id.clone().into(),
-            name: profile.name.clone().into(),
-            distribution: profile.distribution.clone().into(),
-            directory: profile.directory.clone().into(),
-        })
-        .collect::<Vec<_>>();
-    ModelRc::from(Rc::new(VecModel::from(rows)))
-}
-
 pub(super) fn parse_batch_import(text: &str) -> Vec<Session> {
     let mut out = Vec::new();
     for raw in text.lines() {
@@ -147,7 +133,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
     };
 
     let mut rows: Vec<SessionInfo> = Vec::new();
-    for (i, s) in builtin_local_sessions(store.wsl_profiles()).iter().enumerate() {
+    for (i, s) in builtin_local_sessions().iter().enumerate() {
         rows.push(SessionInfo {
             id: s.id.clone().into(),
             name: s.name.clone().into(),
@@ -204,10 +190,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
     model.set_vec(rows);
 }
 
-pub(super) fn builtin_local_sessions(
-    #[cfg_attr(not(windows), allow(unused_variables))]
-    wsl_profiles: &[crate::config::WslProfile],
-) -> Vec<Session> {
+pub(super) fn builtin_local_sessions() -> Vec<Session> {
     let mut out = Vec::new();
     #[cfg(windows)]
     {
@@ -217,28 +200,6 @@ pub(super) fn builtin_local_sessions(
             "powershell",
         ));
         out.push(builtin_local_session("system:cmd", "CMD", "cmd"));
-        if wsl_available() {
-            if wsl_profiles.is_empty() {
-                let mut session = builtin_local_session("system:wsl", "WSL", "wsl");
-                session.local_working_dir = "~".to_string();
-                out.push(session);
-            } else {
-                for profile in wsl_profiles {
-                    let mut session = builtin_local_session(
-                        &format!("system:wsl:{}", profile.id),
-                        profile.name.clone(),
-                        "wsl",
-                    );
-                    session.local_distribution = profile.distribution.clone();
-                    session.local_working_dir = if profile.directory.trim().is_empty() {
-                        "~".to_string()
-                    } else {
-                        profile.directory.clone()
-                    };
-                    out.push(session);
-                }
-            }
-        }
     }
     #[cfg(not(windows))]
     {
@@ -264,21 +225,6 @@ pub(super) fn builtin_local_session(id: &str, name: impl Into<String>, host: &st
     s.group = "system".to_string();
     s.kind = SessionKind::Local;
     s
-}
-
-#[cfg(windows)]
-pub(super) fn wsl_available() -> bool {
-    use std::os::windows::process::CommandExt;
-
-    static AVAILABLE: OnceLock<bool> = OnceLock::new();
-    *AVAILABLE.get_or_init(|| {
-        std::process::Command::new("wsl.exe")
-            .arg("--status")
-            .creation_flags(0x08000000)
-            .status()
-            .map(|s| s.success())
-            .unwrap_or(false)
-    })
 }
 
 // ---------------------------------------------------------------------------

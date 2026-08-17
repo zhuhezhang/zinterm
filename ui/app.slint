@@ -25,12 +25,12 @@ import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel } from "ter
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { ProcWindow, ProcRow } from "proc_window.slint";
 import { SystemInfoWindow, SysInfoRow, SysMetricRow, SysNetRow } from "system_info_window.slint";
-import { InterfacePanel, OutputRuleItem, WslProfileInfo } from "interface_panel.slint";
+import { InterfacePanel, OutputRuleItem } from "interface_panel.slint";
 // Re-export so `slint::include_modules!` generates the detached Rust window types.
 export { ProcWindow, SystemInfoWindow }
 import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette } from "std-widgets.slint";
 
-export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd, WslProfileInfo }
+export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd }
 
 // --- TerminalState ---------------------------------------------------------
 // Per-terminal view-model exposed to Rust. A TabInfo has the metadata; the
@@ -54,7 +54,7 @@ export struct TerminalState {
     spans: [TermSpan],     // coloured runs of the visible terminal screen
     cursor-row: int,       // cursor cell on the grid
     cursor-col: int,
-    rows-used: int,        // content rows, for viewport sizing
+    rows-used: int,        // content rows, for content sizing
     scroll-max: int,       // scrollback depth (max offset) — terminal scrollbar (#103)
     scroll-offset: int,    // current scrollback offset (0 = live bottom)
     is-alt-screen: bool,
@@ -513,8 +513,6 @@ export component AppWindow inherits Window {
     // feed the Interface → Wallpaper picker.
     in-out property <string> current-wallpaper: "";
     in-out property <string> custom-wallpaper-name: "";
-    in property <[WslProfileInfo]> wsl-profiles;
-    in-out property <string> wsl-new-directory: "~";
     callback set-wallpaper(string);                // apply + persist a wallpaper id
     callback pick-wallpaper-file();                // open the OS file dialog (Rust)
     // SFTP follows the terminal's cd; opt out in Interface settings.
@@ -537,9 +535,6 @@ export component AppWindow inherits Window {
     callback set-welcome-as-sidebar(bool);         // apply + persist
     in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
-    callback add-wsl-profile(string, string, string);
-    callback remove-wsl-profile(string);
-    callback pick-wsl-directory();
     // Drag-resizable width of that welcome sidebar (logical px), persisted.
     in-out property <length> welcome-sidebar-width: 240px;
     callback persist-welcome-sidebar-width(float);
@@ -2175,7 +2170,7 @@ export component AppWindow inherits Window {
                     // word-wrap is OFF so one logical line == one display line and
                     // the numbers line up (long lines scroll horizontally); the
                     // gutter is pinned horizontally but tracks the editor's
-                    // vertical scroll via ed-scroll.viewport-y (#81).
+                    // vertical scroll via ed-scroll.content-y (#81).
                     Rectangle {
                         vertical-stretch: 1;
                         background: Theme.bg-root;
@@ -2187,7 +2182,7 @@ export component AppWindow inherits Window {
                                 clip: true;
                                 Text {
                                     x: 0;
-                                    y: ed-scroll.viewport-y + 8px;
+                                    y: ed-scroll.content-y + 8px;
                                     width: parent.width - 6px;
                                     text: root.editor-line-numbers;
                                     horizontal-alignment: right;
@@ -2198,8 +2193,8 @@ export component AppWindow inherits Window {
                             }
                             Rectangle { width: 1px; background: Theme.border-subtle; }
                             ed-scroll := ScrollView {
-                                viewport-width: max(self.visible-width, edit-input.preferred-width + 16px);
-                                viewport-height: max(self.visible-height, edit-input.preferred-height + 16px);
+                                content-width: max(self.visible-width, edit-input.preferred-width + 16px);
+                                content-height: max(self.visible-height, edit-input.preferred-height + 16px);
                                 edit-input := TextInput {
                                     x: 8px;
                                     y: 8px;
@@ -2398,8 +2393,8 @@ export component AppWindow inherits Window {
 
                 Flickable {
                     vertical-stretch: 1;
-                    viewport-width: self.width;
-                    viewport-height: max(self.height, xfer-col.preferred-height);
+                    content-width: self.width;
+                    content-height: max(self.height, xfer-col.preferred-height);
                     xfer-col := VerticalLayout {
                         alignment: start;
                         spacing: 4px;
@@ -2823,8 +2818,8 @@ export component AppWindow inherits Window {
                         background: Theme.bg-root;
                         clip: true;
                         Flickable {
-                            viewport-width: self.width;
-                            viewport-height: max(self.height, qcm-cmd-in.preferred-height + 12px);
+                            content-width: self.width;
+                            content-height: max(self.height, qcm-cmd-in.preferred-height + 12px);
                             qcm-cmd-in := TextInput {
                                 x: 8px; y: 6px;
                                 width: parent.width - 16px;
@@ -2885,8 +2880,8 @@ export component AppWindow inherits Window {
                 // Existing commands list with delete buttons.
                 Flickable {
                     vertical-stretch: 1;
-                    viewport-width: self.width;
-                    viewport-height: max(self.height, qcm-list.preferred-height);
+                    content-width: self.width;
+                    content-height: max(self.height, qcm-list.preferred-height);
                     qcm-list := VerticalLayout {
                         alignment: start;
                         spacing: 2px;
@@ -3778,7 +3773,7 @@ export component AppWindow inherits Window {
                     background: Theme.bg-root;
                     clip: true;
                     Flickable {
-                        viewport-height: max(self.height, bi-input.preferred-height + 16px);
+                        content-height: max(self.height, bi-input.preferred-height + 16px);
                         bi-input := TextInput {
                             x: 10px;
                             y: 8px;
@@ -4089,8 +4084,6 @@ export component AppWindow inherits Window {
                     wallpaper-overlay <=> root.wallpaper-overlay;
                     current-wallpaper: root.current-wallpaper;
                     custom-wallpaper-name: root.custom-wallpaper-name;
-                    wsl-profiles: root.wsl-profiles;
-                    wsl-new-directory <=> root.wsl-new-directory;
                     set-wallpaper(v) => { root.set-wallpaper(v); }
                     pick-wallpaper-file() => { root.pick-wallpaper-file(); }
                     set-term-font(v) => { root.set-term-font(v); }
@@ -4133,9 +4126,6 @@ export component AppWindow inherits Window {
                         root.set-quick-commands-as-sidebar(v);
                     }
                     set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
-                    add-wsl-profile(name, distribution, directory) => { root.add-wsl-profile(name, distribution, directory); }
-                    remove-wsl-profile(id) => { root.remove-wsl-profile(id); }
-                    pick-wsl-directory => { root.pick-wsl-directory(); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
                 }
             }
