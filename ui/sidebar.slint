@@ -377,7 +377,7 @@ component DiskBlock inherits Rectangle {
     private property <int>    tip-idx: -1;
     private property <string> tip-path: "";
     private property <length> tip-y: tip-idx >= 0
-        ? clamp(flick.y + tip-idx * 21px + flick.content-y + 20px, 2px, root.height - 28px) : 0px;
+        ? clamp(flick.y + tip-idx * 21px + flick.viewport-y + 20px, 2px, root.height - 28px) : 0px;
     VerticalLayout {
         spacing: 3px;
         HorizontalLayout {
@@ -387,8 +387,8 @@ component DiskBlock inherits Rectangle {
         }
         flick := Flickable {
             vertical-stretch: 1;
-            content-width: self.width;
-            content-height: max(self.height, disk-col.preferred-height);
+            viewport-width: self.width;
+            viewport-height: max(self.height, disk-col.preferred-height);
             disk-col := VerticalLayout {
                 alignment: start;
                 spacing: 1px;

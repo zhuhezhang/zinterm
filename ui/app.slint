@@ -2170,7 +2170,7 @@ export component AppWindow inherits Window {
                     // word-wrap is OFF so one logical line == one display line and
                     // the numbers line up (long lines scroll horizontally); the
                     // gutter is pinned horizontally but tracks the editor's
-                    // vertical scroll via ed-scroll.content-y (#81).
+                    // vertical scroll via ed-scroll.viewport-y (#81).
                     Rectangle {
                         vertical-stretch: 1;
                         background: Theme.bg-root;
@@ -2182,7 +2182,7 @@ export component AppWindow inherits Window {
                                 clip: true;
                                 Text {
                                     x: 0;
-                                    y: ed-scroll.content-y + 8px;
+                                    y: ed-scroll.viewport-y + 8px;
                                     width: parent.width - 6px;
                                     text: root.editor-line-numbers;
                                     horizontal-alignment: right;
@@ -2193,8 +2193,8 @@ export component AppWindow inherits Window {
                             }
                             Rectangle { width: 1px; background: Theme.border-subtle; }
                             ed-scroll := ScrollView {
-                                content-width: max(self.visible-width, edit-input.preferred-width + 16px);
-                                content-height: max(self.visible-height, edit-input.preferred-height + 16px);
+                                viewport-width: max(self.visible-width, edit-input.preferred-width + 16px);
+                                viewport-height: max(self.visible-height, edit-input.preferred-height + 16px);
                                 edit-input := TextInput {
                                     x: 8px;
                                     y: 8px;
@@ -2393,8 +2393,8 @@ export component AppWindow inherits Window {
 
                 Flickable {
                     vertical-stretch: 1;
-                    content-width: self.width;
-                    content-height: max(self.height, xfer-col.preferred-height);
+                    viewport-width: self.width;
+                    viewport-height: max(self.height, xfer-col.preferred-height);
                     xfer-col := VerticalLayout {
                         alignment: start;
                         spacing: 4px;
@@ -2818,8 +2818,8 @@ export component AppWindow inherits Window {
                         background: Theme.bg-root;
                         clip: true;
                         Flickable {
-                            content-width: self.width;
-                            content-height: max(self.height, qcm-cmd-in.preferred-height + 12px);
+                            viewport-width: self.width;
+                            viewport-height: max(self.height, qcm-cmd-in.preferred-height + 12px);
                             qcm-cmd-in := TextInput {
                                 x: 8px; y: 6px;
                                 width: parent.width - 16px;
@@ -2880,8 +2880,8 @@ export component AppWindow inherits Window {
                 // Existing commands list with delete buttons.
                 Flickable {
                     vertical-stretch: 1;
-                    content-width: self.width;
-                    content-height: max(self.height, qcm-list.preferred-height);
+                    viewport-width: self.width;
+                    viewport-height: max(self.height, qcm-list.preferred-height);
                     qcm-list := VerticalLayout {
                         alignment: start;
                         spacing: 2px;
@@ -3773,7 +3773,7 @@ export component AppWindow inherits Window {
                     background: Theme.bg-root;
                     clip: true;
                     Flickable {
-                        content-height: max(self.height, bi-input.preferred-height + 16px);
+                        viewport-height: max(self.height, bi-input.preferred-height + 16px);
                         bi-input := TextInput {
                             x: 10px;
                             y: 8px;
