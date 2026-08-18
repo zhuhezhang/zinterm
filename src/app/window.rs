@@ -231,67 +231,146 @@ pub(super) fn is_wayland_window(_window: &slint::Window) -> bool {
     false
 }
 
-/// Center the main window on the primary monitor once at startup.
-pub(super) fn center_window(win: &AppWindow) {
-    #[cfg(windows)]
-    {
-        #[repr(C)]
-        struct Rect {
-            left: i32,
-            top: i32,
-            right: i32,
-            bottom: i32,
-        }
-        #[link(name = "user32")]
-        extern "system" {
-            fn SystemParametersInfoW(
-                action: u32,
-                uiparam: u32,
-                pvparam: *mut Rect,
-                winini: u32,
-            ) -> i32;
-        }
-        const SPI_GETWORKAREA: u32 = 0x0030;
+/// Outer-position that places `window` in the center of `area`.
+///
+/// All values are physical pixels in the virtual-screen coordinate space.
+pub(super) fn centered_outer_position(
+    origin_x: i32,
+    origin_y: i32,
+    area_w: u32,
+    area_h: u32,
+    window_w: u32,
+    window_h: u32,
+) -> (i32, i32) {
+    (
+        origin_x + area_w.saturating_sub(window_w) as i32 / 2,
+        origin_y + area_h.saturating_sub(window_h) as i32 / 2,
+    )
+}
 
-        let size = win.window().size(); // physical pixels
-        let mut wa = Rect {
+/// Work area of the monitor that currently owns `ww` (physical pixels).
+/// Falls back to the full monitor rectangle when the Win32 query fails.
+#[cfg(windows)]
+fn windows_monitor_work_area(
+    ww: &i_slint_backend_winit::winit::window::Window,
+) -> Option<(i32, i32, u32, u32)> {
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+
+    #[repr(C)]
+    struct Rect {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    }
+    #[repr(C)]
+    struct MonitorInfo {
+        cb_size: u32,
+        rc_monitor: Rect,
+        rc_work: Rect,
+        dw_flags: u32,
+    }
+    #[link(name = "user32")]
+    extern "system" {
+        fn MonitorFromWindow(hwnd: isize, flags: u32) -> isize;
+        fn GetMonitorInfoW(hmonitor: isize, info: *mut MonitorInfo) -> i32;
+    }
+    const MONITOR_DEFAULTTONEAREST: u32 = 2;
+
+    let handle = ww.window_handle().ok()?;
+    let RawWindowHandle::Win32(h) = handle.as_raw() else {
+        return None;
+    };
+    let hwnd = h.hwnd.get();
+    let hmonitor = unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) };
+    if hmonitor == 0 {
+        return None;
+    }
+    let mut info = MonitorInfo {
+        cb_size: std::mem::size_of::<MonitorInfo>() as u32,
+        rc_monitor: Rect {
             left: 0,
             top: 0,
             right: 0,
             bottom: 0,
+        },
+        rc_work: Rect {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        },
+        dw_flags: 0,
+    };
+    if unsafe { GetMonitorInfoW(hmonitor, &mut info) } == 0 {
+        return None;
+    }
+    let area = info.rc_work;
+    let w = (area.right - area.left).max(0) as u32;
+    let h = (area.bottom - area.top).max(0) as u32;
+    if w == 0 || h == 0 {
+        return None;
+    }
+    Some((area.left, area.top, w, h))
+}
+
+/// Center the main window on the current (else primary) monitor.
+///
+/// Uses winit outer-position + physical pixels on every platform. The previous
+/// Windows path mixed `SPI_GETWORKAREA` (system-DPI, primary monitor only) with
+/// Slint `set_position`, which leaves the HWND at the default top-left cascade
+/// on mixed-DPI / Win10 machines.
+pub(super) fn center_window(win: &AppWindow) {
+    #[cfg(target_os = "linux")]
+    if is_wayland_window(&win.window()) {
+        return;
+    }
+
+    use i_slint_backend_winit::winit::dpi::PhysicalPosition;
+
+    win.window().with_winit_window(|ww| {
+        let window_size = ww.outer_size();
+        if window_size.width == 0 || window_size.height == 0 {
+            return None;
+        }
+
+        let (origin_x, origin_y, area_w, area_h) = {
+            #[cfg(windows)]
+            {
+                if let Some(area) = windows_monitor_work_area(ww) {
+                    area
+                } else {
+                    let monitor = ww.current_monitor().or_else(|| ww.primary_monitor())?;
+                    let origin = monitor.position();
+                    let size = monitor.size();
+                    (origin.x, origin.y, size.width, size.height)
+                }
+            }
+            #[cfg(not(windows))]
+            {
+                let monitor = ww.current_monitor().or_else(|| ww.primary_monitor())?;
+                let origin = monitor.position();
+                let size = monitor.size();
+                (origin.x, origin.y, size.width, size.height)
+            }
         };
-        let ok = unsafe { SystemParametersInfoW(SPI_GETWORKAREA, 0, &mut wa, 0) };
-        if ok == 0 {
-            return;
-        }
-        let area_w = (wa.right - wa.left).max(0) as u32;
-        let area_h = (wa.bottom - wa.top).max(0) as u32;
-        let x = wa.left + ((area_w.saturating_sub(size.width)) / 2) as i32;
-        let y = wa.top + ((area_h.saturating_sub(size.height)) / 2) as i32;
-        win.window()
-            .set_position(slint::PhysicalPosition::new(x, y));
-    }
 
-    #[cfg(not(windows))]
-    {
-        #[cfg(target_os = "linux")]
-        if is_wayland_window(&win.window()) {
-            return;
-        }
-
-        use i_slint_backend_winit::winit::dpi::PhysicalPosition;
-
-        win.window().with_winit_window(|ww| {
-            let monitor = ww.current_monitor().or_else(|| ww.primary_monitor())?;
-            let origin = monitor.position();
-            let monitor_size = monitor.size();
-            let window_size = ww.outer_size();
-            let x = origin.x + monitor_size.width.saturating_sub(window_size.width) as i32 / 2;
-            let y = origin.y + monitor_size.height.saturating_sub(window_size.height) as i32 / 2;
-            ww.set_outer_position(PhysicalPosition::new(x, y));
-            Some(())
-        });
-    }
+        let (x, y) = centered_outer_position(
+            origin_x,
+            origin_y,
+            area_w,
+            area_h,
+            window_size.width,
+            window_size.height,
+        );
+        ww.set_outer_position(PhysicalPosition::new(x, y));
+        tracing::debug!(
+            "centered window at {x},{y} size={}x{} area={area_w}x{area_h}",
+            window_size.width,
+            window_size.height
+        );
+        Some(())
+    });
 }
 
 /// Detect the Windows mixed-DPI failure where the native maximized flag stays

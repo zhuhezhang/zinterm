@@ -2143,6 +2143,7 @@ pub fn run() -> Result<()> {
                                         {
                                             ev_pending_window_size_restore.set(None);
                                             ev_window_size_tracking_ready.set(true);
+                                            center_window(&win);
                                             tracing::info!(
                                                 "[WINDOW_SIZE] restore settled at {:.0}x{:.0}",
                                                 actual.0,
@@ -2161,6 +2162,7 @@ pub fn run() -> Result<()> {
                                     // First run: accept the initialized size as the
                                     // baseline, but do not persist this startup event.
                                     ev_window_size_tracking_ready.set(true);
+                                    center_window(&win);
                                 }
                                 return EventResult::Propagate;
                             }
@@ -2334,11 +2336,13 @@ pub fn run() -> Result<()> {
         });
     }
 
-    // Center the window on the primary monitor once it's shown (size is only
-    // known after the first frame, so defer via a single-shot timer).
+    // Re-center after the first frame. Size restore may settle in the Resized
+    // handler first; this second pass catches the case where the HWND still
+    // had a zero outer size at that moment (common on Windows before DWM
+    // finishes mapping the frameless window).
     {
         let weak = window.as_weak();
-        slint::Timer::single_shot(std::time::Duration::from_millis(30), move || {
+        slint::Timer::single_shot(std::time::Duration::from_millis(80), move || {
             if let Some(w) = weak.upgrade() {
                 center_window(&w);
             }
