@@ -5,8 +5,8 @@
 //! unchanged: it returns a [`SessionHandle`] plus an
 //! [`UnboundedReceiver<SessionEvent>`].
 //!
-//! Unlike SSH there is no remote PTY, no SFTP and no resource monitor — a
-//! serial line is just a raw byte pipe to a switch / router / MCU console.
+//! Unlike SSH there is no remote PTY and no SFTP — a serial line is just a
+//! raw byte pipe to a switch / router / MCU console.
 //! The `serialport` crate is blocking, so the read side runs on a dedicated OS
 //! thread and writes happen via `spawn_blocking`.
 
@@ -194,17 +194,6 @@ async fn run_serial(
             }
             // A serial line has no window size; nothing to propagate.
             SessionCommand::Resize(_, _) => {}
-            SessionCommand::SetResourceMonitoring(_) => {}
-            SessionCommand::KillProcess { reply, .. } => {
-                let _ = reply.send(crate::ssh::ProcessKillResult {
-                    success: false,
-                    message: t(
-                        "串口不支持远程进程操作",
-                        "Remote process control is unavailable for serial sessions",
-                    )
-                    .into(),
-                });
-            }
             SessionCommand::Close => break,
         }
     }

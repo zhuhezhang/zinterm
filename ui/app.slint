@@ -15,19 +15,14 @@ import "fonts/MeatshellMono-Bold.ttf";
 import "fonts/MaterialIcons-Regular.ttf";
 
 import { Theme } from "theme.slint";
-import { Sidebar, DiskInfo } from "sidebar.slint";
 import { TabBar, TabInfo } from "tabs.slint";
 import { Welcome, SessionInfo } from "welcome.slint";
 import { SessionDialog, SessionDraft } from "session_dialog.slint";
 import { ConfirmDialog } from "confirm_dialog.slint";
-import { LabeledInput, PrimaryButton, GhostButton, DockExpandButton, IconButton, ToolStrip } from "widgets.slint";
+import { LabeledInput, PrimaryButton, GhostButton, IconButton, ToolStrip } from "widgets.slint";
 import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel } from "terminal_view.slint";
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
-import { ProcWindow, ProcRow } from "proc_window.slint";
-import { SystemInfoWindow, SysInfoRow, SysMetricRow, SysNetRow } from "system_info_window.slint";
 import { InterfacePanel, OutputRuleItem } from "interface_panel.slint";
-// Re-export so `slint::include_modules!` generates the detached Rust window types.
-export { ProcWindow, SystemInfoWindow }
 import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette } from "std-widgets.slint";
 
 export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd }
@@ -45,8 +40,6 @@ export struct TransferInfo {
     state: int,       // 0 active / 1 done / 2 error
     is-upload: bool,
 }
-
-// ProcRow now lives in proc_window.slint (the detachable process window).
 
 export struct TerminalState {
     id: string,
@@ -239,32 +232,8 @@ export component AppWindow inherits Window {
     // system CJK font on startup; empty on Linux keeps the Slint default.
     default-font-family: Theme.ui-font-family;
 
-    // --- Sidebar data ------------------------------------------------------
-    in property <string> connection-state: @tr("Not connected");
-    in property <string> conn-host;             // clean IP/host for click-to-copy (#192)
-    in property <int> conn-state;                       // 0 gray / 1 green / 2 yellow
-    in property <string> resource-title: @tr("Local resources");    // @tr("Local resources") | @tr("Server resources")
-    in property <float> cpu-percent;
-    in property <float> mem-percent;
-    in property <float> swap-percent;
-    in property <string> mem-detail;
-    in property <string> swap-detail;
-    // Dual network panel.  "top" follows the active tab (remote NIC on a
-    // session tab, local on the welcome tab); "bot" is always the local machine.
-    in property <string> net-top-up;        // ↑ tx rate text
-    in property <string> net-top-down;      // ↓ rx rate text
-    in property <[float]> net-top-history;
-    in property <string> net-bot-up;
-    in property <string> net-bot-down;
-    in property <[float]> net-bot-history;
-    in property <[string]> net-ifaces;      // remote NIC names for the selector
-    in property <string> net-selected;      // currently selected NIC
-    in property <bool> net-show-selector;   // only on a live session tab
-    in property <[DiskInfo]> disks;         // active tab's filesystem usage
-    in property <string> app-version;       // from Rust: env!("CARGO_PKG_VERSION")
-    callback select-net-iface(string);
-
-    // --- Top-right popups --------------------------------------------------
+    // App version string, injected from Rust (env!("CARGO_PKG_VERSION")).
+    in property <string> app-version;
     in-out property <bool> download-open: false;  // download manager popup
     in-out property <bool> settings-open: false;  // settings menu popup
 
@@ -279,31 +248,11 @@ export component AppWindow inherits Window {
     // traffic-light buttons + a clean drag strip (0 elsewhere). See setup_macos_platform.
     property <length> titlebar-inset: root.is-mac ? 28px : 0px;
     in-out property <bool> window-maximized: false;
-    // Rust disables live model updates while the native window is unfocused,
-    // minimized or occluded. Cached samples are applied when it becomes active.
-    in-out property <bool> dynamic-ui-active: true;
     callback win-minimize();
     callback win-maximize-toggle();
     callback win-close();
     callback win-drag();          // start an OS window-move
     callback win-resize(int);     // start an OS resize; arg = direction code
-    in-out property <bool> sidebar-collapsed: false; // left panel hidden
-    changed sidebar-collapsed => {
-        if (!root.sidebar-collapsed) { root.refresh-sidebar(); }
-    }
-    callback set-sidebar-collapsed(bool);       // apply + persist
-    // User-draggable size of the resource sidebar. width is used when docked
-    // left/right, height when docked top/bottom. Seeded / persisted via the
-    // persist-* callbacks (fired on drag end).
-    in-out property <length> sidebar-width: 220px;
-    in-out property <length> sidebar-height: 240px;
-    property <bool> sidebar-dragging;            // splitter being dragged
-    callback persist-sidebar-width(float /* logical px */);
-
-    // --- Panel docking (resource sidebar; SFTP follows in a later phase) ----
-    // Which window edge the resource panel is docked to: left|right|top|bottom.
-    in-out property <string> sidebar-dock: "left";
-    property <bool> sidebar-horizontal: root.sidebar-dock == "left" || root.sidebar-dock == "right";
     // Drag-to-dock state: while a panel's header is dragged, a 4-edge snap
     // overlay shows and `dock-target` tracks the edge under the cursor.
     property <bool> panel-dragging;
@@ -316,36 +265,27 @@ export component AppWindow inherits Window {
         : root.drag-ny < 0.22 ? "top"
         : root.drag-ny > 0.78 ? "bottom"
         : "";
-    callback persist-sidebar-dock(string);
-    // The top-right toolbar icons float over the tab row; when the sidebar docks
+    // The top-right toolbar icons float over the tab row; when a sidebar docks
     // top/right it covers that corner, so shift the icons to stay over the tabs.
     property <length> toolbar-x-off:
-        (root.sidebar-dock == "right"
-            ? (root.sidebar-collapsed ? 36px : root.sidebar-width + 4px)
-            : 0px)
-        + ((root.welcome-as-sidebar && root.welcome-sidebar-dock == "right")
+        ((root.welcome-as-sidebar && root.welcome-sidebar-dock == "right")
             ? root.welcome-sidebar-taken
             : 0px)
         + ((root.quick-panel-open && root.quick-panel-dock == "right")
             ? (root.quick-panel-collapsed
                 ? ((root.welcome-as-sidebar && root.welcome-collapsed
                         && root.welcome-sidebar-dock == "right")
-                    || (root.sidebar-collapsed && root.sidebar-dock == "right")
                     ? 0px : 36px)
                 : root.quick-panel-width + 4px)
             : 0px);
     property <length> toolbar-y-off:
-        (root.sidebar-dock == "top"
-            ? (root.sidebar-collapsed ? 36px : root.sidebar-height + 4px)
-            : 0px)
-        + ((root.welcome-as-sidebar && root.welcome-sidebar-dock == "top")
+        ((root.welcome-as-sidebar && root.welcome-sidebar-dock == "top")
             ? root.welcome-sidebar-taken
             : 0px)
         + ((root.quick-panel-open && root.quick-panel-dock == "top")
             ? (root.quick-panel-collapsed
                 ? ((root.welcome-as-sidebar && root.welcome-collapsed
                         && root.welcome-sidebar-dock == "top")
-                    || (root.sidebar-collapsed && root.sidebar-dock == "top")
                     ? 0px : 36px)
                 : root.quick-panel-height + 4px)
             : 0px);
@@ -355,27 +295,6 @@ export component AppWindow inherits Window {
     callback open-repo();                          // open the project's GitHub page
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103)
     in property <string> download-dir;      // preset SFTP download folder ("" = ask)
-    // Process monitor is now a detachable top-level window (ProcWindow). Rust
-    // shows/hides it in response to open-processes(); proc-list/proc-available
-    // stay here as the live data source shared with that window (#23).
-    callback open-processes();
-    in-out property <bool> process-window-open: false;
-    in property <bool> proc-available;       // a live remote session is active
-    in property <[ProcRow]> proc-list;       // top remote processes by CPU
-    callback open-system-info();
-    in-out property <bool> system-info-window-open: false;
-    in property <bool> system-info-available; // connected Linux session only (#268)
-    in property <[SysMetricRow]> sys-metrics;
-    in property <[SysNetRow]> sys-net-rows;
-    in property <[DiskInfo]> sys-disks;
-    in property <[SysInfoRow]> sys-overview-rows;
-    in property <[SysInfoRow]> sys-cpu-info-rows;
-    in property <[SysInfoRow]> sys-gpu-info-rows;
-    in property <[SysInfoRow]> sys-cpu-usage-rows;
-    in property <[SysInfoRow]> sys-memory-rows;
-    in property <[SysInfoRow]> sys-swap-rows;
-    in property <[SysInfoRow]> sys-network-rows;
-    in property <[SysInfoRow]> sys-filesystem-rows;
     // Command bar (#55): quick commands + history, fed from Rust.
     in property <[QuickCmd]> quick-commands;
     in-out property <bool> quick-commands-as-sidebar: false;
@@ -527,9 +446,6 @@ export component AppWindow inherits Window {
     callback set-extra-paste-shortcuts-enabled(bool);
     in-out property <bool> zen-mode: false;
     callback set-zen-mode(bool);
-    // Collapse-by-default settings + shared SFTP collapse state (#78).
-    in-out property <bool> collapse-sidebar-default: false;
-    callback set-collapse-sidebar-default(bool);   // apply + persist
     // Render the welcome/session list as a left sidebar instead of a tab (v0.5).
     in-out property <bool> welcome-as-sidebar: false;
     callback set-welcome-as-sidebar(bool);         // apply + persist
@@ -756,10 +672,6 @@ export component AppWindow inherits Window {
     // Reports the pane-area size to Rust so it can flatten the split tree into
     // absolute pane / splitter rects. Fired whenever the content area resizes.
     callback content-resized(length /* w */, length /* h */);
-    // Asks Rust to recompute the sidebar (status + resources) for whatever tab
-    // is now active.  Fired on every active-tab change, UI- or code-driven.
-    callback refresh-sidebar();
-    changed active-tab-id => { root.refresh-sidebar(); }
 
     // Raw keystroke forwarding: Rust converts key+modifiers to PTY bytes.
     callback send-key(string /* tab-id */, string /* key */, bool /* ctrl */, bool /* alt */, bool /* shift */);
@@ -905,29 +817,20 @@ export component AppWindow inherits Window {
             }
         }
 
-        // Dock area — fills below the title bar. The resource sidebar and the
-        // central content are positioned by absolute geometry computed from
-        // `sidebar-dock`, so the sidebar can sit on any window edge (#dock).
+        // Dock area — fills below the title bar. Welcome/session sidebar and
+        // the central content are positioned by absolute geometry.
         dock-area := Rectangle {
         vertical-stretch: 1;
         // Left-edge layout (welcome-as-sidebar mode): a thin always-on icon strip
         // (IDEA-style) + the welcome/session sidebar (0 when collapsed). The rest
-        // (resource panel + central terminal, which never collapses) sits to their
-        // right in `rest`.
+        // (central terminal, which never collapses) sits to their right in `rest`.
         // Collapsed-only (M5): the icon strip shows only while collapsed; the
         // panel itself (welcome-w) only while expanded — one or the other.
-        property <bool> sidebar-strip-outside:
-            !root.zen-mode && root.welcome-as-sidebar && !root.welcome-collapsed
-            && root.sidebar-collapsed && root.sidebar-dock == root.welcome-sidebar-dock;
-        property <length> sidebar-outside-strip: dock-area.sidebar-strip-outside ? 36px : 0px;
         property <length> welcome-strip: (!root.zen-mode && root.welcome-as-sidebar && root.welcome-collapsed) ? 36px : 0px;
         property <length> welcome-size: (!root.zen-mode && root.welcome-as-sidebar && !root.welcome-collapsed) ? root.welcome-sidebar-width : 0px;
-        property <length> welcome-taken: welcome-strip + welcome-size + sidebar-outside-strip;
+        property <length> welcome-taken: welcome-strip + welcome-size;
         property <bool> welcome-horizontal: root.welcome-sidebar-horizontal;
         property <bool> welcome-sidebar-dragging;
-        property <bool> combine-collapsed-tools:
-            root.welcome-as-sidebar && root.welcome-collapsed
-            && root.sidebar-collapsed && root.sidebar-dock == root.welcome-sidebar-dock;
         // A collapsed quick-command sidebar joins an existing collapsed strip
         // on the same edge. Only when no such strip exists does it reserve its
         // own outermost 36px slot (#215).
@@ -935,13 +838,9 @@ export component AppWindow inherits Window {
             root.quick-panel-open && root.quick-panel-collapsed
             && root.welcome-as-sidebar && root.welcome-collapsed
             && root.quick-panel-dock == root.welcome-sidebar-dock;
-        property <bool> quick-merge-sidebar:
-            root.quick-panel-open && root.quick-panel-collapsed
-            && !dock-area.quick-merge-welcome && root.sidebar-collapsed
-            && root.quick-panel-dock == root.sidebar-dock;
         property <length> quick-outer-strip:
             !root.zen-mode && root.quick-panel-open && root.quick-panel-collapsed
-                && !dock-area.quick-merge-welcome && !dock-area.quick-merge-sidebar
+                && !dock-area.quick-merge-welcome
                 ? 36px : 0px;
         property <bool> quick-outer-horizontal:
             root.quick-panel-dock == "left" || root.quick-panel-dock == "right";
@@ -964,10 +863,6 @@ export component AppWindow inherits Window {
             tooltip: @tr("Quick commands");
             expand => {
                 root.quick-panel-collapsed = false;
-                if (root.sidebar-dock == root.quick-panel-dock) {
-                    root.sidebar-collapsed = true;
-                    root.set-sidebar-collapsed(true);
-                }
                 if (root.welcome-as-sidebar
                         && root.welcome-sidebar-dock == root.quick-panel-dock) {
                     root.welcome-collapsed = true;
@@ -990,57 +885,13 @@ export component AppWindow inherits Window {
                 ? parent.height - parent.quick-top - parent.quick-bottom : parent.welcome-strip;
             dock-edge: root.welcome-sidebar-dock;
             glyph: "\u{E88A}";   // session list / welcome
-            show-second: parent.combine-collapsed-tools || parent.quick-merge-welcome;
-            second-glyph: parent.combine-collapsed-tools ? "\u{E871}" : "\u{E3E7}";
-            show-third: parent.combine-collapsed-tools && parent.quick-merge-welcome;
-            third-glyph: "\u{E3E7}";
+            show-second: parent.quick-merge-welcome;
+            second-glyph: "\u{E3E7}";
             expand => {
                 root.welcome-collapsed = false;
                 root.set-welcome-collapsed(false);
-                if (root.sidebar-dock == root.welcome-sidebar-dock) {
-                    root.sidebar-collapsed = true;
-                    root.set-sidebar-collapsed(true);
-                }
                 if (root.quick-panel-open
                         && root.quick-panel-dock == root.welcome-sidebar-dock) {
-                    root.quick-panel-collapsed = true;
-                }
-            }
-            expand-second => {
-                if (parent.combine-collapsed-tools) {
-                    root.sidebar-collapsed = false;
-                    root.set-sidebar-collapsed(false);
-                    if (root.quick-panel-open && root.quick-panel-dock == root.sidebar-dock) {
-                        root.quick-panel-collapsed = true;
-                    }
-                } else {
-                    root.quick-panel-collapsed = false;
-                }
-            }
-            expand-third => { root.quick-panel-collapsed = false; }
-        }
-
-        if dock-area.sidebar-strip-outside : ToolStrip {
-            x: root.welcome-sidebar-dock == "right"
-                ? parent.width - parent.quick-right - parent.sidebar-outside-strip
-                : root.welcome-sidebar-dock == "left" ? parent.quick-left : parent.quick-left;
-            y: root.welcome-sidebar-dock == "bottom"
-                ? parent.height - parent.quick-bottom - parent.sidebar-outside-strip
-                : root.welcome-sidebar-dock == "top" ? parent.quick-top : parent.quick-top;
-            width: parent.welcome-horizontal ? parent.sidebar-outside-strip
-                : parent.width - parent.quick-left - parent.quick-right;
-            height: parent.welcome-horizontal
-                ? parent.height - parent.quick-top - parent.quick-bottom : parent.sidebar-outside-strip;
-            dock-edge: root.welcome-sidebar-dock;
-            glyph: "\u{E871}";
-            show-second: parent.quick-merge-sidebar;
-            second-glyph: "\u{E3E7}";
-            expand => {
-                root.sidebar-collapsed = false;
-                root.set-sidebar-collapsed(false);
-                root.welcome-collapsed = true;
-                root.set-welcome-collapsed(true);
-                if (root.quick-panel-open && root.quick-panel-dock == root.sidebar-dock) {
                     root.quick-panel-collapsed = true;
                 }
             }
@@ -1050,11 +901,11 @@ export component AppWindow inherits Window {
         // Welcome / session list, to the right of the icon strip. Hidden when
         // collapsed — its icon stays in the strip; clicking it re-opens.
         if root.welcome-as-sidebar && !root.welcome-collapsed : Rectangle {
-            x: root.welcome-sidebar-dock == "right" ? parent.width - parent.quick-right - parent.sidebar-outside-strip - parent.welcome-size
-             : root.welcome-sidebar-dock == "left" ? parent.quick-left + parent.sidebar-outside-strip
+            x: root.welcome-sidebar-dock == "right" ? parent.width - parent.quick-right - parent.welcome-size
+             : root.welcome-sidebar-dock == "left" ? parent.quick-left
              : parent.quick-left;
-            y: root.welcome-sidebar-dock == "bottom" ? parent.height - parent.quick-bottom - parent.sidebar-outside-strip - parent.welcome-size
-             : root.welcome-sidebar-dock == "top" ? parent.quick-top + parent.sidebar-outside-strip
+            y: root.welcome-sidebar-dock == "bottom" ? parent.height - parent.quick-bottom - parent.welcome-size
+             : root.welcome-sidebar-dock == "top" ? parent.quick-top
              : parent.quick-top;
             width: parent.welcome-horizontal ? parent.welcome-size
                 : parent.width - parent.quick-left - parent.quick-right;
@@ -1081,10 +932,6 @@ export component AppWindow inherits Window {
                 dock-drag-end() => {
                     if (root.dock-target != "") {
                         root.welcome-sidebar-dock = root.dock-target;
-                        if (root.sidebar-dock == root.dock-target) {
-                            root.sidebar-collapsed = true;
-                            root.set-sidebar-collapsed(true);
-                        }
                         if (root.quick-panel-open && root.quick-panel-dock == root.dock-target) {
                             root.quick-panel-collapsed = true;
                         }
@@ -1124,11 +971,11 @@ export component AppWindow inherits Window {
 
         // Drag the welcome sidebar's right edge to resize it (v0.5 M3b).
         if root.welcome-as-sidebar && !root.welcome-collapsed : Rectangle {
-            x: root.welcome-sidebar-dock == "left" ? parent.quick-left + parent.sidebar-outside-strip + parent.welcome-size - 2px
-             : root.welcome-sidebar-dock == "right" ? parent.width - parent.quick-right - parent.sidebar-outside-strip - parent.welcome-size - 2px
+            x: root.welcome-sidebar-dock == "left" ? parent.quick-left + parent.welcome-size - 2px
+             : root.welcome-sidebar-dock == "right" ? parent.width - parent.quick-right - parent.welcome-size - 2px
              : parent.quick-left;
-            y: root.welcome-sidebar-dock == "top" ? parent.quick-top + parent.sidebar-outside-strip + parent.welcome-size - 2px
-             : root.welcome-sidebar-dock == "bottom" ? parent.height - parent.quick-bottom - parent.sidebar-outside-strip - parent.welcome-size - 2px
+            y: root.welcome-sidebar-dock == "top" ? parent.quick-top + parent.welcome-size - 2px
+             : root.welcome-sidebar-dock == "bottom" ? parent.height - parent.quick-bottom - parent.welcome-size - 2px
              : parent.quick-top;
             width: parent.welcome-horizontal ? 4px
                 : parent.width - parent.quick-left - parent.quick-right;
@@ -1170,8 +1017,8 @@ export component AppWindow inherits Window {
             }
         }
 
-        // Everything except the welcome strip/sidebar — the resource panel,
-        // splitter and the central tab/pane content — sits to the right of them.
+        // Everything except the welcome strip/sidebar — the central tab/pane
+        // content — sits to the right of them.
         rest := Rectangle {
         x: (root.welcome-sidebar-dock == "left" ? parent.welcome-taken : 0px)
             + parent.quick-left;
@@ -1183,184 +1030,14 @@ export component AppWindow inherits Window {
         height: parent.height
             - (!parent.welcome-horizontal ? parent.welcome-taken : 0px)
             - parent.quick-top - parent.quick-bottom;
-        // A shared ToolStrip is already reserved outside `rest` while the
-        // welcome panel is expanded, or by the merged welcome strip while both
-        // panels are collapsed. Do not reserve the same 36px a second time.
-        property <length> sb-w: root.zen-mode ? 0px
-            : dock-area.sidebar-strip-outside
-                || dock-area.combine-collapsed-tools ? 0px
-            : root.sidebar-collapsed ? 36px : root.sidebar-width;
-        property <length> sb-h: root.zen-mode ? 0px
-            : dock-area.sidebar-strip-outside
-                || dock-area.combine-collapsed-tools ? 0px
-            : root.sidebar-collapsed ? 36px : root.sidebar-height;
-        property <length> sp: root.zen-mode || root.sidebar-collapsed ? 0px : 4px;
-        // The collapsed bar (sb-h) already reserves the bottom strip now.
-        property <length> bottom-strip-h: 0px;
 
-        // Left sidebar — collapsible and drag-resizable, dockable to any edge.
-        // Only shown while expanded; collapsing swaps it for the ToolStrip icon
-        // bar below (mirrors the welcome sidebar), so no clipped widgets bleed
-        // through the 36px strip (#resource-collapse).
-        if !root.sidebar-collapsed : Rectangle {
-            x: root.sidebar-dock == "right" ? parent.width - parent.sb-w
-             : 0px;
-            y: root.sidebar-dock == "bottom" ? parent.height - parent.sb-h
-             : 0px;
-            width: root.sidebar-horizontal ? parent.sb-w : parent.width;
-            height: root.sidebar-horizontal ? parent.height : parent.sb-h;
-            clip: true;
-            Sidebar {
+        // Tabs + content fill `rest`. Clipped so the terminal / SFTP panel can
+        // never bleed onto a panel docked on the bottom or right.
+        quick-area := Rectangle {
+            x: 0px;
+            y: 0px;
             width: parent.width;
             height: parent.height;
-            // Docked top/bottom → lay the resource widgets out in a row.
-            lay-horizontal: !root.sidebar-horizontal;
-            dock-edge: root.sidebar-dock;
-            animate width, height { duration: root.sidebar-dragging ? 0ms : 150ms; easing: ease-out; }
-            connection-state: root.connection-state;
-            conn-host: root.conn-host;
-            conn-state: root.conn-state;
-            resource-title: root.resource-title;
-            cpu-percent: root.cpu-percent;
-            mem-percent: root.mem-percent;
-            swap-percent: root.swap-percent;
-            mem-detail: root.mem-detail;
-            swap-detail: root.swap-detail;
-            net-top-up: root.net-top-up;
-            net-top-down: root.net-top-down;
-            net-top-history: root.net-top-history;
-            net-bot-up: root.net-bot-up;
-            net-bot-down: root.net-bot-down;
-            net-bot-history: root.net-bot-history;
-            net-ifaces: root.net-ifaces;
-            net-selected: root.net-selected;
-            net-show-selector: root.net-show-selector;
-            disks: root.disks;
-            system-info-available: root.system-info-available;
-            proc-available: root.proc-available;
-            app-version: root.app-version;
-            select-net-iface(i) => { root.select-net-iface(i); }
-            show-system-info() => { root.open-system-info(); }
-            show-processes() => { root.open-processes(); }
-            copy-host(h) => { root.copy-text(h); }   // reuse the clipboard helper (#192)
-            // Drag the sidebar header to dock it to another edge. Coordinates
-            // arrive in window space; convert to dock-area-relative fractions.
-            dock-drag-move(ax, ay) => {
-                root.panel-dragging = true;
-                root.drag-nx = (ax - dock-area.absolute-position.x) / dock-area.width;
-                root.drag-ny = (ay - dock-area.absolute-position.y) / dock-area.height;
-            }
-            dock-drag-end() => {
-                if (root.dock-target != "") {
-                    root.sidebar-dock = root.dock-target;
-                    if (root.welcome-as-sidebar && root.welcome-sidebar-dock == root.dock-target) {
-                        root.welcome-collapsed = true;
-                        root.set-welcome-collapsed(true);
-                    }
-                    if (root.quick-panel-open && root.quick-panel-dock == root.dock-target) {
-                        root.quick-panel-collapsed = true;
-                    }
-                    root.persist-sidebar-dock(root.sidebar-dock);
-                }
-                root.panel-dragging = false;
-            }
-            toggle-collapse() => {
-                root.sidebar-collapsed = !root.sidebar-collapsed;
-                root.set-sidebar-collapsed(root.sidebar-collapsed);
-            }
-            }
-        }
-
-        // Collapsed resource panel → a ToolStrip icon bar at the same docked edge
-        // (M5), in place of the old floating expand button.
-        if root.sidebar-collapsed && !dock-area.combine-collapsed-tools && !dock-area.sidebar-strip-outside : ToolStrip {
-            x: root.sidebar-dock == "right" ? parent.width - parent.sb-w : 0px;
-            y: root.sidebar-dock == "bottom" ? parent.height - parent.sb-h : 0px;
-            width: root.sidebar-horizontal ? parent.sb-w : parent.width;
-            height: root.sidebar-horizontal ? parent.height : parent.sb-h;
-            dock-edge: root.sidebar-dock;
-            glyph: "\u{E871}";   // dashboard — resource panel
-            show-second: dock-area.quick-merge-sidebar;
-            second-glyph: "\u{E3E7}";
-            expand => {
-                root.sidebar-collapsed = false;
-                root.set-sidebar-collapsed(false);
-                if (root.welcome-as-sidebar && root.welcome-sidebar-dock == root.sidebar-dock) {
-                    root.welcome-collapsed = true;
-                    root.set-welcome-collapsed(true);
-                }
-                if (root.quick-panel-open && root.quick-panel-dock == root.sidebar-dock) {
-                    root.quick-panel-collapsed = true;
-                }
-            }
-            expand-second => { root.quick-panel-collapsed = false; }
-        }
-
-        // Splitter — drag to resize the sidebar. Orientation + which dimension it
-        // adjusts follow the dock edge. Hidden while collapsed.
-        Rectangle {
-            visible: !root.sidebar-collapsed;
-            // Horizontal docks → a vertical 4px bar at the sidebar's inner edge;
-            // vertical docks → a horizontal 4px bar.
-            x: root.sidebar-dock == "left"   ? parent.sb-w
-             : root.sidebar-dock == "right"  ? parent.width - parent.sb-w - 4px
-             : 0px;
-            y: root.sidebar-dock == "top"    ? parent.sb-h
-             : root.sidebar-dock == "bottom" ? parent.height - parent.sb-h - 4px
-             : 0px;
-            width:  root.sidebar-horizontal ? 4px : parent.width;
-            height: root.sidebar-horizontal ? parent.height : 4px;
-            background: sb-split-ta.has-hover || root.sidebar-dragging
-                ? Theme.accent
-                : Theme.border-subtle;
-            sb-split-ta := TouchArea {
-                mouse-cursor: root.sidebar-horizontal ? ew-resize : ns-resize;
-                pointer-event(ev) => {
-                    if (ev.kind == PointerEventKind.down) {
-                        root.sidebar-dragging = true;
-                    } else if (ev.kind == PointerEventKind.up) {
-                        root.sidebar-dragging = false;
-                        root.persist-sidebar-width(root.sidebar-width / 1px);
-                    }
-                }
-                moved => {
-                    if (root.sidebar-dragging) {
-                        if (root.sidebar-horizontal) {
-                            // Track the cursor in stable dock-area coordinates.
-                            // The splitter moves while resizing, so adding local
-                            // mouse deltas to the current width feeds the movement
-                            // back into itself and can suddenly widen the panel
-                            // on Win10 (#244).
-                            root.sidebar-width = clamp(
-                                root.sidebar-dock == "right"
-                                    ? dock-area.absolute-position.x + dock-area.width
-                                        - (self.absolute-position.x + self.mouse-x)
-                                    : (self.absolute-position.x + self.mouse-x)
-                                        - dock-area.absolute-position.x,
-                                160px, 520px);
-                        } else {
-                            root.sidebar-height = clamp(
-                                root.sidebar-dock == "bottom"
-                                    ? dock-area.absolute-position.y + dock-area.height
-                                        - (self.absolute-position.y + self.mouse-y)
-                                    : (self.absolute-position.y + self.mouse-y)
-                                        - dock-area.absolute-position.y,
-                                120px, 480px);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Right side: tabs + content — positioned in the rect left after the
-        // sidebar is carved off its docked edge. Clipped so the terminal / SFTP
-        // panel can never bleed (visually or for clicks) onto a panel docked on
-        // the bottom or right (#dock).
-        quick-area := Rectangle {
-            x: root.sidebar-dock == "left" ? parent.sb-w + parent.sp : 0px;
-            y: root.sidebar-dock == "top"  ? parent.sb-h + parent.sp : 0px;
-            width:  root.sidebar-horizontal ? parent.width - parent.sb-w - parent.sp : parent.width;
-            height: root.sidebar-horizontal ? parent.height : parent.height - parent.sb-h - parent.sp - parent.bottom-strip-h;
             clip: true;
             property <bool> quick-horizontal:
                 root.quick-panel-dock == "left" || root.quick-panel-dock == "right";
@@ -1397,8 +1074,7 @@ export component AppWindow inherits Window {
 
                 HorizontalLayout {
                 spacing: 0;
-                // (Collapsed resource panel now reserves its own ToolStrip slot in
-                // `rest`, so the tab strip no longer needs a spacer for it.)
+                // Tab strip.
                 TabBar {
                     horizontal-stretch: 1;
                     // Reserve room for the top-right toolbar icons that sit over
@@ -1558,10 +1234,6 @@ export component AppWindow inherits Window {
                             root.quick-panel-dock = root.dock-target;
                             root.quick-panel-open = true;
                             root.quick-panel-collapsed = false;
-                            if (root.sidebar-dock == root.dock-target) {
-                                root.sidebar-collapsed = true;
-                                root.set-sidebar-collapsed(true);
-                            }
                             if (root.welcome-as-sidebar
                                     && root.welcome-sidebar-dock == root.dock-target) {
                                 root.welcome-collapsed = true;
@@ -1739,10 +1411,6 @@ export component AppWindow inherits Window {
             dock-drag-end => {
                 if (root.dock-target != "") {
                     root.quick-panel-dock = root.dock-target;
-                    if (root.sidebar-dock == root.dock-target) {
-                        root.sidebar-collapsed = true;
-                        root.set-sidebar-collapsed(true);
-                    }
                     if (root.welcome-as-sidebar
                             && root.welcome-sidebar-dock == root.dock-target) {
                         root.welcome-collapsed = true;
@@ -2271,8 +1939,7 @@ export component AppWindow inherits Window {
     // Always present; toggled via `visible` (avoids destroying interactive
     // elements mid-event, which crashes when created/removed at the Window root).
     Rectangle {
-        // Follow the download button (shifts with the toolbar when the resource
-        // panel docks right/top) (#dock).
+        // Follow the download button (shifts with the toolbar).
         x: parent.width - 364px - root.toolbar-x-off;
         y: (root.custom-titlebar ? 78px : 40px + root.titlebar-inset) + root.toolbar-y-off;
         width: 350px;
@@ -2472,9 +2139,6 @@ export component AppWindow inherits Window {
             }
         }
 
-    // Process monitor is now ProcWindow (a detachable top-level window); the
-    // former in-app overlay was removed in favour of a real OS window (#23).
-
     // --- Settings menu popup (top-right) ----------------------------------
     // Click-outside-to-close backdrop (same pattern as the download popup).
     if root.settings-open : TouchArea {
@@ -2483,9 +2147,8 @@ export component AppWindow inherits Window {
         clicked => { root.settings-open = false; }
     }
     Rectangle {
-        // Follow the gear button: it shifts by toolbar-x/y-off when the resource
-        // panel docks right/top, so the menu must shift the same amount or it ends
-        // up floating over the resource panel (#dock).
+        // Follow the gear button: it shifts by toolbar-x/y-off with docked
+        // sidebars so the menu stays over the tabs.
         x: parent.width - 196px - root.toolbar-x-off;
         y: (root.custom-titlebar ? 78px : 40px + root.titlebar-inset) + root.toolbar-y-off;
         width: 198px;
@@ -3978,7 +3641,7 @@ export component AppWindow inherits Window {
             // Bigger base, and scales with the settings font size (#v0.5).
             width: root.ifd-w;
             height: root.ifd-h;
-            // 20% less transparent than the welcome/resource panels so the dense
+            // 20% less transparent than the welcome panel so the dense
             // grey settings labels stay readable at a low overlay (user request).
             background: Theme.bg-panel-strong;
             border-radius: Theme.radius-md;
@@ -3994,8 +3657,8 @@ export component AppWindow inherits Window {
                 Rectangle {
                     height: 44px;
                     // Transparent so the card's single frosted layer shows through
-                    // — no extra stacked opacity, matching the welcome/resource
-                    // panels and following the wallpaper slider (#new-user-defaults
+                    // — no extra stacked opacity, matching the welcome
+                    // panel and following the wallpaper slider (#new-user-defaults
                     // items 6/7). The 1px divider below still separates it.
                     background: transparent;
                     title-drag := TouchArea {
@@ -4072,7 +3735,6 @@ export component AppWindow inherits Window {
                     output-highlight-rule-status <=> root.output-highlight-rule-status;
                     ui-scale: root.ui-scale;
                     sftp-follow-cd <=> root.sftp-follow-cd;
-                    collapse-sidebar-default <=> root.collapse-sidebar-default;
                     collapse-sftp-default <=> root.collapse-sftp-default;
                     download-always-ask <=> root.download-always-ask;
                     paste-confirm-enabled <=> root.paste-confirm-enabled;
@@ -4110,7 +3772,6 @@ export component AppWindow inherits Window {
                     set-panel-font(v) => { root.set-panel-font(v); }
                     set-renderer-mode(v) => { root.set-renderer-mode(v); }
                     set-sftp-follow-cd(v) => { root.set-sftp-follow-cd(v); }
-                    set-collapse-sidebar-default(v) => { root.set-collapse-sidebar-default(v); }
                     set-collapse-sftp-default(v) => { root.set-collapse-sftp-default(v); }
                     set-download-always-ask(v) => { root.set-download-always-ask(v); }
                     set-paste-confirm-enabled(v) => { root.set-paste-confirm-enabled(v); }

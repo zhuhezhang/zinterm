@@ -43,7 +43,7 @@ pub(super) fn wire_tab_callbacks(
     }
 
     // Select a tab inside a pane: make it that pane's active tab and focus the
-    // pane. refresh_panes propagates active-tab-id (→ sidebar refresh).
+    // pane. refresh_panes propagates active-tab-id.
     {
         let weak = window.as_weak();
         let layout = layout.clone();

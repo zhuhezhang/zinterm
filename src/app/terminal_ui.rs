@@ -240,7 +240,7 @@ pub(super) fn theme_pref_is_dark(store: &ConfigStore) -> bool {
 /// recolours the Slint chrome — each terminal bakes its ANSI/default colours
 /// from a per-buffer `is_dark` flag at render time, so we must also update every
 /// buffer and re-render it. Both the theme toggle and wallpaper switching route
-/// through here (the proc-window mirror stays with the toggle).
+/// through here.
 pub(super) fn apply_dark_mode(window: &AppWindow, bufs: &TermBuffers, dark: bool) {
     window.set_dark_mode(dark);
     {
@@ -337,27 +337,4 @@ pub(super) fn apply_wallpaper(
             apply_dark_mode(window, bufs, theme_pref_is_dark(store));
         }
     }
-}
-
-/// Resolve which interface drives the top sparkline: the user's selection if it
-/// still exists, otherwise the busiest (the list is sorted busiest-first).
-/// Returns (name, rx_bps, tx_bps).
-pub(super) fn selected_iface(st: &TabStatus) -> (String, u64, u64) {
-    if !st.selected_iface.is_empty() {
-        if let Some(e) = st.net.iter().find(|e| e.0 == st.selected_iface) {
-            return e.clone();
-        }
-    }
-    st.net.first().cloned().unwrap_or_default()
-}
-
-/// Recompute the whole sidebar (status dot + CPU/mem/swap + dual network panel)
-/// for whichever tab is active.  Welcome tab → local machine; a session tab →
-/// that server.  The bottom network graph is always the local machine.
-/// Must run on the Slint event loop thread.
-/// The copyable IP/host from a `user@host` connection label (#192): the part
-/// after the last `@`, trimmed. Falls back to the whole string when there's no
-/// `@` (already a bare host/IP).
-pub(super) fn conn_ip(host: &str) -> String {
-    host.rsplit('@').next().unwrap_or(host).trim().to_string()
 }

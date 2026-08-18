@@ -4,20 +4,20 @@
 
 A lightweight, low-memory SSH / terminal client inspired by FinalShell, but
 written entirely in **Rust + [Slint](https://slint.dev)**. The goal is to keep
-FinalShell's core experience (resource-monitor sidebar, session management,
-tabbed terminals) while cutting memory use from the 400 MB+ of a JVM app down to
-the tens-of-MB range of a native binary.
+FinalShell's core experience (session management, tabbed terminals) while
+cutting memory use from the 400 MB+ of a JVM app down to the tens-of-MB range of
+a native binary.
 
 ## Screenshots
 
 <p align="center">
   <img src="docs/screenshots/01-welcome-en.png" alt="Welcome / session management" width="800"><br>
-  <em>Welcome page: session management + local resource monitor sidebar</em>
+  <em>Welcome page: session management</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/02-terminal-htop.png" alt="Terminal + SFTP" width="800"><br>
-  <em>Tabbed terminal (full-screen btop) + SFTP file browser + remote resource monitoring</em>
+  <em>Tabbed terminal (full-screen btop) + SFTP file browser</em>
 </p>
 
 ## Download & install
@@ -82,8 +82,6 @@ open /Applications/meatshell.app
 ### Done
 
 - [x] FinalShell-style UI with dark / light / follow-system themes
-- [x] Local + remote resource monitoring (CPU / memory / swap / network / disk)
-- [x] Remote process monitor (CPU-sorted table with PID copy and permission-aware termination)
 - [x] Full VT/ANSI terminal emulation (btop / htop / vim render correctly)
 - [x] Color emoji, including skin tones, flags, and ZWJ sequences
 - [x] Tabs (welcome page + multiple sessions)
@@ -114,7 +112,6 @@ under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See
 | UI            | [Slint](https://slint.dev) (compiled pure Rust, no GC)            |
 | Async runtime | [`tokio`](https://tokio.rs)                                       |
 | SSH protocol  | [`russh`](https://crates.io/crates/russh) (no libssh dependency)  |
-| System metrics| [`sysinfo`](https://crates.io/crates/sysinfo)                     |
 | Serialization | `serde` + `serde_json`                                            |
 | Logging       | `tracing` + `tracing-subscriber`                                  |
 
@@ -137,8 +134,7 @@ meatshell/
 ├── ui/
 │   ├── app.slint            # top-level window
 │   ├── theme.slint          # design tokens
-│   ├── widgets.slint        # reusable buttons / inputs / sparkline
-│   ├── sidebar.slint        # left-hand system monitor panel
+│   ├── widgets.slint        # reusable buttons / inputs
 │   ├── tabs.slint           # top tab bar
 │   ├── welcome.slint        # welcome page / quick connect
 │   ├── session_dialog.slint # new / edit session dialog
@@ -147,7 +143,6 @@ meatshell/
     ├── main.rs
     ├── app.rs               # UI ↔ backend bridge
     ├── config.rs            # session JSON persistence
-    ├── system.rs            # CPU / memory / network sampling
     └── ssh.rs               # SSH session worker
 ```
 

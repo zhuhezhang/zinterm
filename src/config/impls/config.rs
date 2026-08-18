@@ -224,13 +224,12 @@ fn normalize_hex_color(value: &str) -> Option<String> {
 
 /// A brand-new config (no file yet, or the old one was corrupt). Seeds the
 /// new-user default layout (#new-user-defaults): ms wallpaper, welcome page as
-/// a left sidebar, resource panel docked right, 15% wallpaper transparency, and
-/// marks the migration done so it isn't re-applied.
+/// a left sidebar, 15% wallpaper transparency, and marks the migration done so
+/// it isn't re-applied.
 fn fresh_config() -> ConfigFile {
     ConfigFile {
         wallpaper: "builtin:ms".to_string(),
         welcome_as_sidebar: true,
-        sidebar_dock: "right".to_string(),
         wallpaper_overlay: DEFAULT_WALLPAPER_OVERLAY,
         defaults_rev: DEFAULTS_REV,
         ..ConfigFile::default()
@@ -245,7 +244,7 @@ fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
     if cfg.defaults_rev >= DEFAULTS_REV {
         return false;
     }
-    // rev 1: miku / welcome-as-sidebar / right-docked resources / wallpaper overlay.
+    // rev 1: miku / welcome-as-sidebar / wallpaper overlay.
     if cfg.defaults_rev < 1 {
         // Old default wallpaper → miku. A custom path, "none" (""), or any other
         // built-in means the user chose it, so leave it.
@@ -259,10 +258,6 @@ fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
         // Never enabled the welcome sidebar → enable it.
         if !cfg.welcome_as_sidebar {
             cfg.welcome_as_sidebar = true;
-        }
-        // Never moved the resource panel (empty = the old left default) → right.
-        if cfg.sidebar_dock.trim().is_empty() {
-            cfg.sidebar_dock = "right".to_string();
         }
     }
     // rev 2: settings show wallpaper transparency, while rev 1 accidentally
@@ -965,61 +960,6 @@ impl ConfigStore {
         }
     }
 
-    /// Collapse the resource sidebar on startup (default false) (#78).
-    pub fn collapse_sidebar_default(&self) -> bool {
-        self.cache.collapse_sidebar_default
-    }
-
-    pub fn set_collapse_sidebar_default(&mut self, v: bool) {
-        self.cache.collapse_sidebar_default = v;
-    }
-
-    /// Persisted sidebar width in logical px. Falls back to the default when the
-    /// stored value is unset/zero (e.g. a config created via `Default`).
-    pub fn sidebar_width(&self) -> f32 {
-        let w = self.cache.sidebar_width;
-        if w <= 0.0 {
-            default_sidebar_width()
-        } else {
-            w
-        }
-    }
-
-    pub fn set_sidebar_width(&mut self, v: f32) {
-        self.cache.sidebar_width = v;
-    }
-
-    /// Resource / SFTP panel docking geometry, persisted across restarts (#dock).
-    /// Sizes fall back to their defaults when unset/zero; docks fall back to a
-    /// sensible edge when the stored string is empty.
-    pub fn sidebar_height(&self) -> f32 {
-        let h = self.cache.sidebar_height;
-        if h <= 0.0 {
-            default_sidebar_height()
-        } else {
-            h
-        }
-    }
-    pub fn set_sidebar_height(&mut self, v: f32) {
-        self.cache.sidebar_height = v;
-    }
-    pub fn sidebar_dock(&self) -> String {
-        let d = self.cache.sidebar_dock.trim();
-        if d.is_empty() {
-            "left".into()
-        } else {
-            d.to_string()
-        }
-    }
-    pub fn set_sidebar_dock(&mut self, v: String) {
-        self.cache.sidebar_dock = v;
-    }
-    pub fn sidebar_collapsed(&self) -> Option<bool> {
-        self.cache.sidebar_collapsed
-    }
-    pub fn set_sidebar_collapsed(&mut self, v: bool) {
-        self.cache.sidebar_collapsed = Some(v);
-    }
     pub fn welcome_as_sidebar(&self) -> bool {
         self.cache.welcome_as_sidebar
     }

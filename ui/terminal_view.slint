@@ -286,7 +286,7 @@ export component TerminalView inherits Rectangle {
     // Which edge of the terminal area the SFTP panel sits on: left|right|top|bottom.
     in-out property <string> sftp-dock: "bottom";
     property <bool> sftp-horizontal: root.sftp-dock == "left" || root.sftp-dock == "right";
-    // Drag-to-dock snap state (mirrors the resource-panel docking in app.slint).
+    // Drag-to-dock snap state (mirrors panel docking in app.slint).
     property <bool> sftp-panel-dragging;
     property <float> sftp-drag-nx;
     property <float> sftp-drag-ny;
@@ -551,7 +551,7 @@ export component TerminalView inherits Rectangle {
 
         // SFTP docking region — terminal + command-bar (central) on one side,
         // the SFTP panel docked to the chosen edge. Absolute geometry, mirroring
-        // the resource-panel dock area in app.slint (#dock).
+        // the dock area in app.slint (#dock).
         dock-region := Rectangle {
         vertical-stretch: 1;
         // Collapsed → shrink to the 36px ToolStrip icon bar at the docked edge
@@ -1804,7 +1804,7 @@ export component TerminalView inherits Rectangle {
 
         // --- SFTP resize splitter (orientation follows the dock edge) -------
         Rectangle {
-            visible: root.sftp-available && !root.sftp-collapsed;   // gone when collapsed (like the resource splitter)
+            visible: root.sftp-available && !root.sftp-collapsed;
             x: root.sftp-dock == "left"   ? parent.sf-w
              : root.sftp-dock == "right"  ? parent.width - parent.sf-w - 4px
              : 0px;

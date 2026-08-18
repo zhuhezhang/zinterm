@@ -175,37 +175,17 @@ export component LabeledInput inherits VerticalLayout {
     }
 }
 
-// --- Sparkline -------------------------------------------------------------
-// Compact horizontal bar chart used in the stats sidebar.
-export component Sparkline inherits Rectangle {
-    in property <[float]> values;
-    in property <brush> line-color: Theme.accent;
-
-    background: Theme.bg-root;
-    border-radius: Theme.radius-sm;
-    clip: true;
-
-    for v[i] in values : Rectangle {
-        x: i * (parent.width / max(1, values.length));
-        y: parent.height - (parent.height * clamp(v, 0.0, 1.0));
-        width: (parent.width / max(1, values.length)) - 1px;
-        height: parent.height * clamp(v, 0.0, 1.0);
-        background: line-color.with-alpha(0.85);
-        border-radius: 1px;
-    }
-}
-
 // --- DockExpandButton ------------------------------------------------------
 // The little button shown when a dockable panel is collapsed, anchored to the
 // edge it was docked on (chevron points toward where the panel reopens). Shared
-// by the resource panel and the SFTP panel so they collapse/expand identically.
+// by the SFTP panel so they collapse/expand identically.
 // The host is responsible for any reserved gap (e.g. the bottom edge) so this
 // button never overlaps neighbouring chrome (#dock).
 // IDEA-style collapsed tool strip (#v0.5 M5): when a dockable panel is collapsed
 // the host renders this thin bar along the panel's docked edge instead of the
 // panel. It shows the panel's tool icon; clicking re-expands. The host reserves
-// the slot (≈36px) and fills this in; one reusable strip for welcome / resource /
-// SFTP so they all collapse the same way.
+// the slot (≈36px) and fills this in; one reusable strip for welcome / SFTP
+// so they all collapse the same way.
 export component ToolStrip inherits Rectangle {
     in property <string> dock-edge;   // left | right | top | bottom
     in property <string> glyph;       // the panel's tool icon (Material Icons)

@@ -11,7 +11,7 @@
 //! * doubles `0xFF` bytes in user input as the protocol requires,
 //! * re-sends NAWS (window size) on every terminal resize.
 //!
-//! There is no SFTP and no resource monitor — a Telnet console is a raw pipe.
+//! There is no SFTP — a Telnet console is a raw pipe.
 
 use anyhow::{Context, Result};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -164,13 +164,6 @@ async fn run_telnet(
                     Some(SessionCommand::Resize(cols, rows)) => {
                         let _ = wr.write_all(&naws_subneg(cols, rows)).await;
                         let _ = wr.flush().await;
-                    }
-                    Some(SessionCommand::SetResourceMonitoring(_)) => {}
-                    Some(SessionCommand::KillProcess { reply, .. }) => {
-                        let _ = reply.send(crate::ssh::ProcessKillResult {
-                            success: false,
-                            message: t("Telnet 不支持远程进程操作", "Remote process control is unavailable for Telnet sessions").into(),
-                        });
                     }
                     Some(SessionCommand::Close) | None => break,
                 }

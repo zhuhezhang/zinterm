@@ -4,19 +4,19 @@
 
 一个轻量级、低内存占用的 SSH / 终端客户端，灵感来自 FinalShell，但完全由
 **Rust + [Slint](https://slint.dev)** 实现。目标是保留 FinalShell 的核心体验
-（资源监控侧栏、会话管理、多标签页终端）的同时，把内存占用从 400 MB+ 的
+（会话管理、多标签页终端）的同时，把内存占用从 400 MB+ 的
 JVM 压到几十 MB 原生级别。
 
 ## 截图
 
 <p align="center">
   <img src="docs/screenshots/01-welcome.png" alt="欢迎页 / 会话管理" width="800"><br>
-  <em>欢迎页：会话管理 + 左侧本机资源监控</em>
+  <em>欢迎页：会话管理</em>
 </p>
 
 <p align="center">
   <img src="docs/screenshots/02-terminal-htop.png" alt="终端 + SFTP" width="800"><br>
-  <em>多标签页终端（htop 全屏渲染）+ 底部 SFTP 文件浏览 + 远端资源监控</em>
+  <em>多标签页终端（htop 全屏渲染）+ 底部 SFTP 文件浏览</em>
 </p>
 
 ## 下载与安装
@@ -77,8 +77,6 @@ open /Applications/meatshell.app
 ### 已实现
 
 - [x] FinalShell 风格 UI，深色 / 浅色 / 跟随系统主题
-- [x] 本机 + 远端资源监控（CPU / 内存 / 交换 / 网络 / 磁盘）
-- [x] 远端进程监控（按 CPU 排序、PID 复制与权限确认后结束进程）
 - [x] 完整 VT/ANSI 终端模拟（btop / htop / vim 全屏正常渲染）
 - [x] 彩色 emoji（支持肤色、旗帜及 ZWJ 组合序列）
 - [x] 多标签页（欢迎页 + 多个会话）
@@ -109,7 +107,6 @@ open /Applications/meatshell.app
 | UI            | [Slint](https://slint.dev)（纯 Rust 编译，无 GC）                 |
 | 异步运行时    | [`tokio`](https://tokio.rs)                                       |
 | SSH 协议      | [`russh`](https://crates.io/crates/russh)（无 libssh 依赖）       |
-| 系统指标      | [`sysinfo`](https://crates.io/crates/sysinfo)                     |
 | 序列化        | `serde` + `serde_json`                                            |
 | 日志          | `tracing` + `tracing-subscriber`                                  |
 
@@ -131,8 +128,7 @@ meatshell/
 ├── ui/
 │   ├── app.slint            # 顶层窗口
 │   ├── theme.slint          # 设计 tokens
-│   ├── widgets.slint        # 可复用按钮 / 输入框 / sparkline
-│   ├── sidebar.slint        # 左侧系统监控面板
+│   ├── widgets.slint        # 可复用按钮 / 输入框
 │   ├── tabs.slint           # 顶部标签栏
 │   ├── welcome.slint        # 欢迎页 / 快速连接
 │   ├── session_dialog.slint # 新建 / 编辑会话弹框
@@ -141,7 +137,6 @@ meatshell/
     ├── main.rs
     ├── app.rs               # UI ↔ 后端桥接
     ├── config.rs            # 会话 JSON 持久化
-    ├── system.rs            # CPU / 内存 / 网络采样
     └── ssh.rs               # SSH 会话 worker
 ```
 

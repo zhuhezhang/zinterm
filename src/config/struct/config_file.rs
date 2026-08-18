@@ -23,12 +23,6 @@ pub(crate) const PREVIOUS_DEFAULT_WALLPAPER_OVERLAY: f32 =
 pub(crate) const DEFAULT_WALLPAPER_TRANSPARENCY: f32 = 0.15;
 pub(crate) const DEFAULT_WALLPAPER_OVERLAY: f32 = 1.0 - DEFAULT_WALLPAPER_TRANSPARENCY;
 
-pub(crate) fn default_sidebar_width() -> f32 {
-    220.0
-}
-pub(crate) fn default_sidebar_height() -> f32 {
-    240.0
-}
 pub(crate) fn default_sftp_width() -> f32 {
     380.0
 }
@@ -159,23 +153,6 @@ pub struct ConfigFile {
     /// Recent commands sent from the command box, oldest first, capped (#55).
     #[serde(default)]
     pub command_history: Vec<String>,
-    /// Collapse the left resource sidebar on startup (#78).
-    #[serde(default)]
-    pub collapse_sidebar_default: bool,
-    /// Last resource-sidebar collapsed state. None means fall back to
-    /// `collapse_sidebar_default` for older configs.
-    #[serde(default)]
-    pub sidebar_collapsed: Option<bool>,
-    /// User-adjustable width of the left resource sidebar, in logical pixels.
-    /// Persisted across restarts so the drag-resized width sticks.
-    #[serde(default = "default_sidebar_width")]
-    pub sidebar_width: f32,
-    /// Resource-panel docking: size when docked top/bottom, and which edge it is
-    /// docked to (left|right|top|bottom). Persisted so the layout sticks (#dock).
-    #[serde(default = "default_sidebar_height")]
-    pub sidebar_height: f32,
-    #[serde(default)]
-    pub sidebar_dock: String,
     /// SFTP-panel docking: extents (px) and docked edge, persisted (#dock).
     #[serde(default = "default_sftp_width")]
     pub sftp_panel_width: f32,
@@ -222,8 +199,8 @@ pub struct ConfigFile {
     pub update_check_disabled: bool,
     /// One-time default-layout migration marker (#new-user-defaults). 0 = config
     /// predates the migration. `migrate_defaults` bumps it to `DEFAULTS_REV` after
-    /// pushing the new look (default wallpaper / welcome-as-sidebar / right-docked
-    /// resource panel / wallpaper overlay) to users still sitting on old defaults.
+    /// pushing the new look (default wallpaper / welcome-as-sidebar /
+    /// wallpaper overlay) to users still sitting on old defaults.
     #[serde(default)]
     pub defaults_rev: u32,
 }

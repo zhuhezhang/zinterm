@@ -370,7 +370,6 @@ export component InterfacePanel inherits Rectangle {
     in-out property <string> output-highlight-rule-status;
     in property <float> ui-scale;
     in-out property <bool> sftp-follow-cd;
-    in-out property <bool> collapse-sidebar-default;
     in-out property <bool> collapse-sftp-default;
     in-out property <bool> download-always-ask;
     in-out property <bool> paste-confirm-enabled: true;
@@ -411,7 +410,6 @@ export component InterfacePanel inherits Rectangle {
     callback set-panel-font(int);   // settings-panel font scale, percent
     callback set-renderer-mode(string);
     callback set-sftp-follow-cd(bool);
-    callback set-collapse-sidebar-default(bool);
     callback set-collapse-sftp-default(bool);
     callback set-download-always-ask(bool);
     callback set-paste-confirm-enabled(bool);
@@ -502,7 +500,7 @@ export component InterfacePanel inherits Rectangle {
         Rectangle {
             horizontal-stretch: 1;
             // Transparent: the card's single bg-panel frost shows through, so the
-            // settings panel matches the welcome/resource panels and tracks the
+            // settings panel matches the welcome panel and tracks the
             // wallpaper-opacity slider (items 6/7).
             background: transparent;
 
@@ -1264,13 +1262,6 @@ export component InterfacePanel inherits Rectangle {
                 spacing: 0;
                 alignment: start;
                 SectionHeader { text: root.lang-en ? "SIDEBARS" : "侧栏"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Collapse the resource panel by default" : "默认收起资源视图面板";
-                    Switch {
-                        on: root.collapse-sidebar-default;
-                        toggled(v) => { root.collapse-sidebar-default = v; root.set-collapse-sidebar-default(v); }
-                    }
-                }
                 SettingRow {
                     label: root.lang-en ? "Zen mode" : "专注模式";
                     desc: root.lang-en

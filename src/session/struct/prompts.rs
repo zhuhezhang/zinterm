@@ -6,11 +6,20 @@ use std::sync::{Arc, Mutex};
 
 use tokio::runtime::Runtime;
 
-use crate::resource::{LocalSnap, NetHist, TabStatuses};
 use crate::sftp::{SftpHandles, SftpLastCwd};
 use crate::ssh::{CredentialResponder, HostKeyResponder, MfaResponder, SessionHandle};
 use crate::terminal::{RenderGates, TermBuffers};
 use crate::ui::AppWindow;
+
+/// Per-tab connection state used for reconnect (Enter) and tab duplicate.
+#[derive(Clone, Default)]
+pub(crate) struct TabStatus {
+    pub(crate) session_id: String,
+    /// 0 connecting / 1 connected / 2 disconnected
+    pub(crate) state: u8,
+}
+
+pub(crate) type TabStatuses = Arc<Mutex<HashMap<String, TabStatus>>>;
 
 /// Shared dependencies for starting or reconnecting a session tab.
 pub(crate) struct ConnectCtx {
@@ -22,8 +31,6 @@ pub(crate) struct ConnectCtx {
     pub(crate) bufs: TermBuffers,
     pub(crate) render_gates: RenderGates,
     pub(crate) tab_statuses: TabStatuses,
-    pub(crate) local_snap: LocalSnap,
-    pub(crate) local_net_hist: NetHist,
     pub(crate) last_term_size: Arc<Mutex<(u32, u32)>>,
     pub(crate) sftp_follow_cd: Arc<AtomicBool>,
 }

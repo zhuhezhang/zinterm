@@ -1,32 +1,27 @@
 //! Top-level UI state machine.
 //!
 //! Responsibilities:
-//!   * Load the config store and expose sessions to Slint.
-//!   * Drive the 1-Hz system sampler.
+//!   * Load the config store and expose sessions to the UI.
 //!   * Manage the tab list + per-tab `SessionHandle` map.
 //!   * Route Slint callbacks to the right domain module.
 mod auth_dialogs;
 mod quick_commands;
-mod resource_ui;
 mod session_event;
 mod session_models;
 mod session_runtime;
 mod sftp_callbacks;
 mod sftp_ui;
-mod sidebar;
 mod tab_callbacks;
 mod terminal_ui;
 mod window;
 
 use self::auth_dialogs::*;
 use self::quick_commands::*;
-use self::resource_ui::*;
 use self::session_event::*;
 use self::session_models::*;
 use self::session_runtime::*;
 use self::sftp_callbacks::*;
 use self::sftp_ui::*;
-use self::sidebar::*;
 use self::tab_callbacks::*;
 use self::terminal_ui::*;
 use self::window::*;
@@ -34,7 +29,7 @@ use self::window::*;
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 
 /// Max bytes merged into one Output event before starting a fresh chunk (#209).
 /// Keeps a single UI callback from spending hundreds of ms in vt100 ingest.
@@ -145,16 +140,12 @@ use crate::config::{
 };
 use crate::i18n::t;
 use crate::layout::{LogicalRect, TerminalWheelHit};
-use crate::resource::system::{format_bytes_per_sec, format_mem};
-use crate::resource::{LocalSnap, NetHist, TabStatus, TabStatuses};
-use crate::resource::{SystemSampler, SystemSnapshot};
-use crate::session::{ConnectCtx, PendingCred, PendingHostKey, PendingMfa};
+use crate::session::{ConnectCtx, PendingCred, PendingHostKey, PendingMfa, TabStatus, TabStatuses};
 use crate::sftp::{
     download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd,
 };
 use crate::ssh::{
-    format_mtime, format_size, spawn_session, ProcInfo, SessionCommand,
-    SessionEvent, SessionHandle, SystemDetails,
+    format_mtime, format_size, spawn_session, SessionCommand, SessionEvent, SessionHandle,
 };
 #[cfg(windows)]
 use crate::terminal::c0_letter_key_down;
@@ -335,9 +326,6 @@ fn do_tab_render_flush(
     }
 }
 
-/// Number of samples kept for the sparkline.
-const NET_HISTORY_LEN: usize = 60;
-
 /// Embed the app icon PNG into the binary and set it as the X11 window icon.
 ///
 /// On X11, the taskbar/dock icon for a running window comes from the
@@ -414,8 +402,7 @@ pub fn run() -> Result<()> {
     let window_size_tracking_ready = Rc::new(Cell::new(false));
     let pending_window_size_restore = Rc::new(Cell::new(None::<(f32, f32)>));
 
-    // Show the crate version (from Cargo.toml at compile time) in the sidebar,
-    // so the footer never drifts out of sync with the actual build.
+    // Show the crate version (from Cargo.toml at compile time) in About.
     window.set_app_version(env!("CARGO_PKG_VERSION").into());
 
     // Set the window icon from the PNG embedded in the binary so the dock
@@ -428,171 +415,6 @@ pub fn run() -> Result<()> {
     // its native decorations, so turn the custom bar off there.
     #[cfg(target_os = "macos")]
     window.set_custom_titlebar(false);
-
-    // --- Detachable process monitor window (#23) -----------------------------
-    // The process table is its own top-level OS window so it can be dragged
-    // outside the main window (or onto a second monitor). Both windows render
-    // the *same* VecModel, so the table stays live wherever it's parked; closing
-    // it just hides it, so reopening is instant.
-    let proc_rows_model: Rc<VecModel<ProcRow>> = Rc::new(VecModel::default());
-    window.set_proc_list(ModelRc::from(proc_rows_model.clone()));
-    let sys_metrics_model: Rc<VecModel<SysMetricRow>> = Rc::new(VecModel::default());
-    let sys_net_rows_model: Rc<VecModel<SysNetRow>> = Rc::new(VecModel::default());
-    let sys_disks_model: Rc<VecModel<DiskInfo>> = Rc::new(VecModel::default());
-    let sys_overview_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_cpu_info_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_gpu_info_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_cpu_usage_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_memory_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_swap_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_network_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    let sys_filesystem_model: Rc<VecModel<SysInfoRow>> = Rc::new(VecModel::default());
-    window.set_sys_metrics(ModelRc::from(sys_metrics_model.clone()));
-    window.set_sys_net_rows(ModelRc::from(sys_net_rows_model.clone()));
-    window.set_sys_disks(ModelRc::from(sys_disks_model.clone()));
-    window.set_sys_overview_rows(ModelRc::from(sys_overview_model.clone()));
-    window.set_sys_cpu_info_rows(ModelRc::from(sys_cpu_info_model.clone()));
-    window.set_sys_gpu_info_rows(ModelRc::from(sys_gpu_info_model.clone()));
-    window.set_sys_cpu_usage_rows(ModelRc::from(sys_cpu_usage_model.clone()));
-    window.set_sys_memory_rows(ModelRc::from(sys_memory_model.clone()));
-    window.set_sys_swap_rows(ModelRc::from(sys_swap_model.clone()));
-    window.set_sys_network_rows(ModelRc::from(sys_network_model.clone()));
-    window.set_sys_filesystem_rows(ModelRc::from(sys_filesystem_model.clone()));
-    let proc_win = ProcWindow::new().context("failed to build process window")?;
-    proc_win.set_custom_titlebar(cfg!(not(target_os = "macos")));
-    proc_win.set_proc_list(ModelRc::from(proc_rows_model.clone()));
-    let sys_win = SystemInfoWindow::new().context("failed to build system info window")?;
-    sys_win.set_custom_titlebar(cfg!(not(target_os = "macos")));
-    sys_win.set_metrics(ModelRc::from(sys_metrics_model.clone()));
-    sys_win.set_nets(ModelRc::from(sys_net_rows_model.clone()));
-    sys_win.set_disks(ModelRc::from(sys_disks_model.clone()));
-    sys_win.set_overview_rows(ModelRc::from(sys_overview_model.clone()));
-    sys_win.set_cpu_info_rows(ModelRc::from(sys_cpu_info_model.clone()));
-    sys_win.set_gpu_info_rows(ModelRc::from(sys_gpu_info_model.clone()));
-    sys_win.set_cpu_usage_rows(ModelRc::from(sys_cpu_usage_model.clone()));
-    sys_win.set_memory_rows(ModelRc::from(sys_memory_model.clone()));
-    sys_win.set_swap_rows(ModelRc::from(sys_swap_model.clone()));
-    sys_win.set_network_rows(ModelRc::from(sys_network_model.clone()));
-    sys_win.set_filesystem_rows(ModelRc::from(sys_filesystem_model.clone()));
-    {
-        // ✕ hides the window (data keeps flowing into the shared model).
-        let weak = proc_win.as_weak();
-        let main_weak = window.as_weak();
-        proc_win.on_win_close(move || {
-            if let Some(main) = main_weak.upgrade() {
-                main.set_process_window_open(false);
-            }
-            if let Some(w) = weak.upgrade() {
-                let _ = w.hide();
-            }
-        });
-    }
-    {
-        proc_win.on_copy_pid(move |pid: SharedString| {
-            let text = pid.to_string();
-            std::thread::spawn(move || clipboard_set_text(text));
-        });
-    }
-    {
-        // Frameless titlebar drag, via winit on the process window's own handle.
-        let weak = proc_win.as_weak();
-        proc_win.on_win_drag(move || {
-            if let Some(w) = weak.upgrade() {
-                w.window().with_winit_window(|ww| {
-                    let _ = ww.drag_window();
-                });
-                schedule_slint_pointer_ungrab(weak.clone());
-            }
-        });
-    }
-    {
-        // Bottom-right resize grip.
-        use i_slint_backend_winit::winit::window::ResizeDirection;
-        let weak = proc_win.as_weak();
-        proc_win.on_win_resize_se(move || {
-            if let Some(w) = weak.upgrade() {
-                w.window().with_winit_window(|ww| {
-                    let _ = ww.drag_resize_window(ResizeDirection::SouthEast);
-                });
-                schedule_slint_pointer_ungrab(weak.clone());
-            }
-        });
-    }
-    {
-        // The sidebar "Processes" button shows / focuses the window.
-        let win_weak = window.as_weak();
-        let proc_weak = proc_win.as_weak();
-        window.on_open_processes(move || {
-            let (Some(main), Some(pw)) = (win_weak.upgrade(), proc_weak.upgrade()) else {
-                return;
-            };
-            main.set_process_window_open(true);
-            main.invoke_refresh_sidebar();
-            pw.set_host(main.get_connection_state());
-            sync_proc_theme(&main, &pw);
-            let _ = pw.show();
-            place_process_window(&main, &pw);
-            pw.window().with_winit_window(|ww| ww.focus_window());
-        });
-    }
-    {
-        let weak = sys_win.as_weak();
-        let main_weak = window.as_weak();
-        sys_win.on_win_close(move || {
-            if let Some(main) = main_weak.upgrade() {
-                main.set_system_info_window_open(false);
-            }
-            if let Some(w) = weak.upgrade() {
-                let _ = w.hide();
-            }
-        });
-    }
-    {
-        let weak = sys_win.as_weak();
-        sys_win.on_win_drag(move || {
-            if let Some(w) = weak.upgrade() {
-                w.window().with_winit_window(|ww| {
-                    let _ = ww.drag_window();
-                });
-                schedule_slint_pointer_ungrab(weak.clone());
-            }
-        });
-    }
-    {
-        use i_slint_backend_winit::winit::window::ResizeDirection;
-        let weak = sys_win.as_weak();
-        sys_win.on_win_resize_se(move || {
-            if let Some(w) = weak.upgrade() {
-                w.window().with_winit_window(|ww| {
-                    let _ = ww.drag_resize_window(ResizeDirection::SouthEast);
-                });
-                schedule_slint_pointer_ungrab(weak.clone());
-            }
-        });
-    }
-    {
-        let win_weak = window.as_weak();
-        let sys_weak = sys_win.as_weak();
-        window.on_open_system_info(move || {
-            let (Some(main), Some(sw)) = (win_weak.upgrade(), sys_weak.upgrade()) else {
-                return;
-            };
-            // Detailed system information is remote-only. Keep this guard even
-            // though the sidebar hides/disables its affordance when unavailable.
-            if !main.get_system_info_available() {
-                return;
-            }
-            main.set_system_info_window_open(true);
-            main.invoke_refresh_sidebar();
-            sw.set_host(main.get_conn_host());
-            sw.set_connection_state(main.get_connection_state());
-            sw.set_resource_title(main.get_resource_title());
-            sync_system_info_theme(&main, &sw);
-            let _ = sw.show();
-            place_system_info_window(&main, &sw);
-            sw.window().with_winit_window(|ww| ww.focus_window());
-        });
-    }
 
     // Apply the saved UI language.  The Rust-side flag drives `i18n::t(...)`;
     // `apply_to_slint` selects the bundled `.po` for the static `@tr(...)` text
@@ -722,58 +544,32 @@ pub fn run() -> Result<()> {
     }
     {
         let store = store.clone();
-        let handles = handles.clone();
-        let weak = window.as_weak();
         window.on_set_zen_mode(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_zen_mode(enabled);
             let _ = s.save();
-            let sidebar_visible = weak
-                .upgrade()
-                .map(|window| !window.get_sidebar_collapsed())
-                .unwrap_or(false);
-            for handle in handles.borrow().values() {
-                handle.set_resource_monitoring(!enabled && sidebar_visible);
-            }
         });
     }
 
-    // Interface setting: collapse the sidebars by default (#78). Seed the
+    // Interface setting: collapse panels by default (#78). Seed the
     // checkboxes, apply the collapsed state once at startup, and persist toggles.
     {
         let s = store.borrow();
-        let collapse_sidebar = s.collapse_sidebar_default();
         let collapse_sftp = s.collapse_sftp_default();
-        let sidebar_dock = s.sidebar_dock();
         let welcome_as_sidebar = s.welcome_as_sidebar();
         let quick_commands_as_sidebar = s.quick_commands_as_sidebar();
         let quick_panel_open = quick_commands_as_sidebar && s.quick_panel_open();
         let quick_panel_collapsed = s.quick_panel_collapsed();
         let quick_panel_dock = s.quick_panel_dock();
         let welcome_sidebar_dock = s.welcome_sidebar_dock();
-        let mut sidebar_collapsed = s.sidebar_collapsed().unwrap_or(collapse_sidebar);
         let mut welcome_collapsed = s.welcome_collapsed().unwrap_or(false);
-        if welcome_as_sidebar
-            && sidebar_dock == welcome_sidebar_dock
-            && !sidebar_collapsed
-            && !welcome_collapsed
-        {
-            sidebar_collapsed = true;
-        }
         if quick_panel_open && !quick_panel_collapsed {
-            if sidebar_dock == quick_panel_dock {
-                sidebar_collapsed = true;
-            }
             if welcome_as_sidebar && welcome_sidebar_dock == quick_panel_dock {
                 welcome_collapsed = true;
             }
         }
-        window.set_collapse_sidebar_default(collapse_sidebar);
         window.set_collapse_sftp_default(collapse_sftp);
         // Restore the persisted panel docking layout (#dock).
-        window.set_sidebar_width(s.sidebar_width());
-        window.set_sidebar_height(s.sidebar_height());
-        window.set_sidebar_dock(sidebar_dock.into());
         window.set_sftp_panel_width(s.sftp_panel_width());
         window.set_sftp_panel_height(s.sftp_panel_height());
         window.set_sftp_tree_width(s.sftp_tree_width());
@@ -788,7 +584,6 @@ pub fn run() -> Result<()> {
         window.set_welcome_sidebar_width(s.welcome_sidebar_width());
         window.set_welcome_sidebar_dock(welcome_sidebar_dock.into());
         window.set_welcome_collapsed(welcome_collapsed);
-        window.set_sidebar_collapsed(sidebar_collapsed);
         window.set_wallpaper_overlay(s.wallpaper_overlay());
         window.set_update_check_enabled(s.update_check_enabled()); // #184
         if collapse_sftp {
@@ -801,14 +596,6 @@ pub fn run() -> Result<()> {
         let (ww, wh) = s.window_size();
         let preferred = (ww > 0.0 && wh > 0.0).then_some((ww, wh));
         pending_window_size_restore.set(preferred);
-    }
-    {
-        let store = store.clone();
-        window.on_set_collapse_sidebar_default(move |v| {
-            let mut s = store.borrow_mut();
-            s.set_collapse_sidebar_default(v);
-            let _ = s.save();
-        });
     }
     {
         let store = store.clone();
@@ -836,28 +623,6 @@ pub fn run() -> Result<()> {
             let mut s = store.borrow_mut();
             s.set_renderer_mode(mode.to_string());
             let _ = s.save();
-        });
-    }
-    {
-        let store = store.clone();
-        window.on_persist_sidebar_width(move |w| {
-            let mut s = store.borrow_mut();
-            s.set_sidebar_width(w);
-            let _ = s.save();
-        });
-    }
-    {
-        let store = store.clone();
-        let handles = handles.clone();
-        let weak = window.as_weak();
-        window.on_set_sidebar_collapsed(move |v| {
-            let mut s = store.borrow_mut();
-            s.set_sidebar_collapsed(v);
-            let _ = s.save();
-            let zen = weak.upgrade().map(|window| window.get_zen_mode()).unwrap_or(false);
-            for handle in handles.borrow().values() {
-                handle.set_resource_monitoring(!v && !zen);
-            }
         });
     }
     {
@@ -1145,7 +910,6 @@ pub fn run() -> Result<()> {
         let weak = window.as_weak();
         let store = store.clone();
         let bufs_wp = bufs.clone();
-        let proc_weak = proc_win.as_weak();
         window.on_set_wallpaper(move |id: SharedString| {
             let id = id.to_string();
             let mut selected_builtin_theme = None;
@@ -1153,10 +917,6 @@ pub fn run() -> Result<()> {
                 apply_wallpaper(&w, &store.borrow(), &bufs_wp, &id, true);
                 if crate::wallpaper::is_builtin(&id) {
                     selected_builtin_theme = Some(w.get_dark_mode());
-                }
-                // Keep an already-open process window in sync with the change.
-                if let Some(p) = proc_weak.upgrade() {
-                    sync_proc_theme(&w, &p);
                 }
             }
             let mut s = store.borrow_mut();
@@ -1174,7 +934,6 @@ pub fn run() -> Result<()> {
         let weak = window.as_weak();
         let store = store.clone();
         let bufs_wp = bufs.clone();
-        let proc_weak = proc_win.as_weak();
         window.on_pick_wallpaper_file(move || {
             let picked = rfd::FileDialog::new()
                 .set_title("选择壁纸 / Choose wallpaper")
@@ -1184,9 +943,6 @@ pub fn run() -> Result<()> {
                 let id = path.to_string_lossy().to_string();
                 if let Some(w) = weak.upgrade() {
                     apply_wallpaper(&w, &store.borrow(), &bufs_wp, &id, false);
-                    if let Some(p) = proc_weak.upgrade() {
-                        sync_proc_theme(&w, &p);
-                    }
                 }
                 let mut s = store.borrow_mut();
                 s.set_wallpaper(id);
@@ -1351,92 +1107,8 @@ pub fn run() -> Result<()> {
         });
     }
 
-    // Per-tab connection status + remote resources, the latest local sample,
-    // and the local machine's network history (bottom sparkline).
+    // Per-tab connection state used for reconnect and tab duplicate.
     let tab_statuses: TabStatuses = Arc::new(Mutex::new(HashMap::new()));
-    let local_snap: LocalSnap = Arc::new(Mutex::new(SystemSnapshot::default()));
-    let local_net_hist: NetHist = Arc::new(Mutex::new(vec![0.0; NET_HISTORY_LEN]));
-
-    {
-        let proc_weak = proc_win.as_weak();
-        let handles = handles.clone();
-        let statuses = tab_statuses.clone();
-        let runtime = runtime.clone();
-        proc_win.on_terminate_process(
-            move |tab_id: SharedString, pid: SharedString, password: SharedString| {
-                let tab_id = tab_id.to_string();
-                let Ok(pid) = pid.parse::<u32>() else {
-                    set_process_action_error(&proc_weak, t("无效的 PID", "Invalid PID"));
-                    return;
-                };
-
-                // Re-check the source tab, PID, and owner against the latest sample;
-                // the main window may have switched tabs since the menu was opened.
-                let ownership = {
-                    let states = statuses.lock().unwrap();
-                    states.get(&tab_id).map_or_else(
-                        || Err(t("当前会话不可用", "The current session is unavailable")),
-                        |status| {
-                            status
-                                .procs
-                                .iter()
-                                .find(|p| p.pid == pid)
-                                .map(|process| process_needs_root(&status.user, &process.user))
-                                .ok_or_else(|| t("进程已退出", "The process has already exited"))
-                        },
-                    )
-                };
-                let needs_root = match ownership {
-                    Ok(value) => value,
-                    Err(message) => {
-                        set_process_action_error(&proc_weak, message);
-                        return;
-                    }
-                };
-                if needs_root && password.is_empty() {
-                    set_process_action_error(
-                        &proc_weak,
-                        t(
-                            "请输入管理员（sudo）密码",
-                            "Enter the administrator (sudo) password",
-                        ),
-                    );
-                    return;
-                }
-
-                let root_password =
-                    needs_root.then(|| crate::config::Secret::new(password.to_string()));
-                let response = handles
-                    .borrow()
-                    .get(&tab_id)
-                    .map(|handle| handle.kill_process(pid, root_password));
-                let Some(response) = response else {
-                    set_process_action_error(
-                        &proc_weak,
-                        t("SSH 会话不可用", "The SSH session is unavailable"),
-                    );
-                    return;
-                };
-
-                let done_weak = proc_weak.clone();
-                runtime.spawn(async move {
-                    let result = response
-                        .await
-                        .unwrap_or_else(|_| crate::ssh::ProcessKillResult {
-                            success: false,
-                            message: t("SSH 会话已关闭", "The SSH session has closed").to_string(),
-                        });
-                    let _ = slint::invoke_from_event_loop(move || {
-                        if let Some(pw) = done_weak.upgrade() {
-                            pw.set_action_busy(false);
-                            pw.set_action_error(!result.success);
-                            pw.set_action_status(result.message.into());
-                        }
-                    });
-                });
-            },
-        );
-    }
 
     // --- Wire callbacks --------------------------------------------------
     wire_session_callbacks(
@@ -1457,24 +1129,8 @@ pub fn run() -> Result<()> {
         sftp_handles.clone(),
         sftp_last_cwd.clone(),
         tab_statuses.clone(),
-        local_snap.clone(),
-        local_net_hist.clone(),
         sftp_follow_cd.clone(),
     );
-
-    // Recompute the sidebar whenever the active tab changes (fired from Slint's
-    // `changed active-tab-id`).
-    {
-        let weak = window.as_weak();
-        let statuses = tab_statuses.clone();
-        let local = local_snap.clone();
-        let net = local_net_hist.clone();
-        window.on_refresh_sidebar(move || {
-            if let Some(w) = weak.upgrade() {
-                refresh_sidebar(&w, &statuses, &local, &net);
-            }
-        });
-    }
 
     // Switch UI language at runtime.  Static `@tr(...)` text updates live via
     // select_bundled_translation; we additionally refresh the Rust-driven
@@ -1502,7 +1158,6 @@ pub fn run() -> Result<()> {
             }
             if let Some(w) = weak.upgrade() {
                 w.set_lang_en(crate::i18n::is_en());
-                w.invoke_refresh_sidebar();
             }
         });
     }
@@ -1514,17 +1169,11 @@ pub fn run() -> Result<()> {
         let weak = window.as_weak();
         let store = store.clone();
         let bufs_theme = bufs.clone();
-        let proc_weak = proc_win.as_weak();
         window.on_toggle_theme(move || {
             let Some(w) = weak.upgrade() else { return };
             let next_dark = !w.get_dark_mode();
             // Flip theme + every terminal buffer + re-render (shared with wallpaper).
             apply_dark_mode(&w, &bufs_theme, next_dark);
-            // Mirror the flip onto the detached process window (its Theme global
-            // is a separate instance) so an open process window follows.
-            if let Some(p) = proc_weak.upgrade() {
-                sync_proc_theme(&w, &p);
-            }
             let pref = if next_dark { "dark" } else { "light" };
             let mut s = store.borrow_mut();
             s.set_theme_pref(pref.to_string());
@@ -1587,23 +1236,6 @@ pub fn run() -> Result<()> {
             if let Some(w) = weak.upgrade() {
                 resolve_front_mfa(&w, false);
             }
-        });
-    }
-
-    // NIC selector: remember the user's choice for the active tab and refresh.
-    {
-        let weak = window.as_weak();
-        let statuses = tab_statuses.clone();
-        let local = local_snap.clone();
-        let net = local_net_hist.clone();
-        window.on_select_net_iface(move |iface: SharedString| {
-            let Some(w) = weak.upgrade() else { return };
-            let active = w.get_active_tab_id().to_string();
-            if let Some(st) = statuses.lock().unwrap().get_mut(&active) {
-                st.selected_iface = iface.to_string();
-                st.net_hist = vec![0.0; NET_HISTORY_LEN]; // reset graph for new NIC
-            }
-            refresh_sidebar(&w, &statuses, &local, &net);
         });
     }
 
@@ -1753,10 +1385,6 @@ pub fn run() -> Result<()> {
                 "vt100 — terminal (VT100/xterm) parser",
             ),
             t(
-                "sysinfo — 本机资源采集",
-                "sysinfo — local resource sampling",
-            ),
-            t(
                 "serde / serde_json — 配置序列化",
                 "serde / serde_json — config serialization",
             ),
@@ -1822,19 +1450,15 @@ pub fn run() -> Result<()> {
             bufs: bufs.clone(),
             render_gates: render_gates.clone(),
             tab_statuses: tab_statuses.clone(),
-            local_snap: local_snap.clone(),
-            local_net_hist: local_net_hist.clone(),
             last_term_size: last_term_size.clone(),
             sftp_follow_cd: sftp_follow_cd.clone(),
         },
     );
 
     // --- Window activity, for idle-CPU throttling (#127) ----------------
-    // Idle terminals shouldn't burn CPU: pause the sampler when the window is
-    // minimized / occluded, throttle it when it's merely unfocused, and stop the
-    // cursor blink whenever the window isn't focused (mirrors what Tabby / Windows
-    // Terminal do). The winit event handler below updates this; the blink reads
-    // Theme.window-focused.
+    // Idle terminals shouldn't burn CPU: stop the cursor blink whenever the
+    // window isn't focused (mirrors what Tabby / Windows Terminal do). The
+    // winit event handler below updates this; the blink reads Theme.window-focused.
     #[derive(Clone, Copy, PartialEq, Eq)]
     enum WinActivity {
         Active,     // focused & visible → full rate
@@ -1847,59 +1471,6 @@ pub fn run() -> Result<()> {
     // and Restart Manager may issue more than one close request while replacing
     // the executable (#267).
     let exit_confirmed = Rc::new(Cell::new(false));
-
-    // --- System sampler (1 Hz) ------------------------------------------
-    let sampler = Rc::new(Mutex::new(SystemSampler::new()));
-    let weak = window.as_weak();
-    let tick_sampler = sampler.clone();
-    let tick_statuses = tab_statuses.clone();
-    let tick_local = local_snap.clone();
-    let tick_net = local_net_hist.clone();
-    let tick_activity = activity.clone();
-    let mut bg_tick = 0u32;
-    let timer = slint::Timer::default();
-    timer.start(
-        slint::TimerMode::Repeated,
-        SystemSampler::recommended_interval(),
-        move || {
-            let Some(window) = weak.upgrade() else { return };
-            if window.get_sidebar_collapsed() || window.get_zen_mode() {
-                return;
-            }
-            // Skip the (non-trivial) sysinfo refresh + sidebar repaint when no one
-            // is looking, and back off to ~5 s when the window is in the background.
-            match tick_activity.get() {
-                WinActivity::Hidden => return,
-                WinActivity::Background => {
-                    bg_tick = bg_tick.wrapping_add(1);
-                    if bg_tick % 5 != 0 {
-                        return;
-                    }
-                }
-                WinActivity::Active => {}
-            }
-            let snap = {
-                let mut s = tick_sampler.lock().expect("sampler poisoned");
-                s.sample()
-            };
-            // Append the raw local throughput to the bottom-graph ring buffer
-            // (normalisation happens at display time so the graph auto-scales).
-            push_ring(&mut tick_net.lock().unwrap(), snap.net_bytes_per_sec as f32);
-            // Stash the local sample; the sidebar shows it on the welcome tab
-            // and in the bottom network graph.
-            *tick_local.lock().unwrap() = snap.clone();
-
-            // Everything (status, CPU/mem/swap, both graphs) follows the
-            // active tab; refresh_sidebar reads the stores we just updated.
-            if sidebar_updates_visible(&window) {
-                refresh_sidebar(&window, &tick_statuses, &tick_local, &tick_net);
-            }
-        },
-    );
-    // Keep the timer alive for the entire event loop by parking it on a
-    // leaked Box. Slint timers drop themselves on Drop, and we don't want
-    // that here.
-    Box::leak(Box::new(timer));
 
     // OS file drag-and-drop → upload to the active session's SFTP directory,
     // but only when the file is dropped over the file-list area.
@@ -1947,7 +1518,6 @@ pub fn run() -> Result<()> {
                     ev_activity.set(act);
                     if let Some(win) = weak.upgrade() {
                         win.set_window_focused(act == WinActivity::Active);
-                        win.set_dynamic_ui_active(act == WinActivity::Active);
                         if prev == WinActivity::Hidden && act != WinActivity::Hidden {
                             win.set_terminal_restore_cover(true);
                             let weak2 = weak.clone();
@@ -2094,7 +1664,7 @@ pub fn run() -> Result<()> {
                     }
                     WEvent::Resized(size) => {
                         // A 0-sized resize is how Windows reports a minimize; track it
-                        // so we pause the sampler while minimized (#127).
+                        // so idle-CPU throttling can treat the window as inactive (#127).
                         minimized = size.width == 0 || size.height == 0;
                         apply_activity(focused, minimized, occluded);
                         // Keep the maximize/restore icon (and resize-edge gating) in
@@ -2216,8 +1786,6 @@ pub fn run() -> Result<()> {
     // Confirm-close dialog "Close" → actually quit the event loop (#88).
     {
         let weak = window.as_weak();
-        let proc_weak = proc_win.as_weak();
-        let sys_weak = sys_win.as_weak();
         let cc_store = store.clone();
         let close_handles = handles.clone();
         let close_sftp_handles = sftp_handles.clone();
@@ -2231,12 +1799,6 @@ pub fn run() -> Result<()> {
             if let Some(w) = weak.upgrade() {
                 w.set_confirm_close_open(false);
                 save_layout(&w, &cc_store);
-                let _ = w.hide();
-            }
-            if let Some(w) = proc_weak.upgrade() {
-                let _ = w.hide();
-            }
-            if let Some(w) = sys_weak.upgrade() {
                 let _ = w.hide();
             }
             // Ask every worker to stop before the runtime/event loop is torn
@@ -2499,14 +2061,11 @@ fn app_content_area(win: &AppWindow) -> LogicalRect {
 
     if win.get_welcome_as_sidebar() {
         let dock = win.get_welcome_sidebar_dock().to_string();
-        let sidebar_strip_outside = !win.get_welcome_collapsed()
-            && win.get_sidebar_collapsed()
-            && win.get_sidebar_dock().as_str() == dock.as_str();
-        let welcome_taken = (if win.get_welcome_collapsed() {
+        let welcome_taken = if win.get_welcome_collapsed() {
             36.0
         } else {
             win.get_welcome_sidebar_width()
-        }) + if sidebar_strip_outside { 36.0 } else { 0.0 };
+        };
         shrink_edge(
             &mut area.x,
             &mut area.y,
@@ -2517,29 +2076,12 @@ fn app_content_area(win: &AppWindow) -> LogicalRect {
         );
     }
 
-    let side_dock = win.get_sidebar_dock().to_string();
-    let side_take = if win.get_sidebar_collapsed() {
-        36.0
-    } else if side_dock == "left" || side_dock == "right" {
-        win.get_sidebar_width() + 4.0
-    } else {
-        win.get_sidebar_height() + 4.0
-    };
-    shrink_edge(
-        &mut area.x,
-        &mut area.y,
-        &mut area.w,
-        &mut area.h,
-        &side_dock,
-        side_take,
-    );
     if win.get_quick_panel_open() {
         let quick_dock = win.get_quick_panel_dock().to_string();
         let quick_merged = win.get_quick_panel_collapsed()
-            && ((win.get_welcome_as_sidebar()
-                && win.get_welcome_collapsed()
-                && win.get_welcome_sidebar_dock().as_str() == quick_dock.as_str())
-                || (win.get_sidebar_collapsed() && side_dock.as_str() == quick_dock.as_str()));
+            && win.get_welcome_as_sidebar()
+            && win.get_welcome_collapsed()
+            && win.get_welcome_sidebar_dock().as_str() == quick_dock.as_str();
         if quick_merged {
             return area;
         }
@@ -2728,8 +2270,6 @@ fn wire_session_callbacks(
     sftp_handles: SftpHandles,
     sftp_last_cwd: SftpLastCwd,
     tab_statuses: TabStatuses,
-    local_snap: LocalSnap,
-    local_net_hist: NetHist,
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
 ) {
     // New session -> open dialog with blank draft.
@@ -3249,8 +2789,6 @@ fn wire_session_callbacks(
         let sftp_handles = sftp_handles.clone();
         let sftp_last_cwd = sftp_last_cwd.clone();
         let tab_statuses = tab_statuses.clone();
-        let local_snap = local_snap.clone();
-        let local_net_hist = local_net_hist.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         window.on_connect_session(move |id: SharedString| {
             let id = id.to_string();
@@ -3271,29 +2809,14 @@ fn wire_session_callbacks(
             let tab_id = format!("term-{}", uuid::Uuid::new_v4());
             let tab_title = session.name.clone();
 
-            // Connection label shown in the sidebar / status line, per transport.
-            let conn_label = match session.kind {
-                SessionKind::Ssh => format!("{}@{}", session.user, session.host),
-                SessionKind::Serial => {
-                    format!("{} @{}", session.serial_port, session.baud_rate)
-                }
-                SessionKind::Telnet => format!("telnet {}:{}", session.host, session.port),
-                SessionKind::Local => format!("local {}", session.name),
-            };
             // Serial / Telnet have no SFTP side-channel.
             let has_sftp = session.kind == SessionKind::Ssh;
 
-            // Seed the per-tab status so the sidebar shows "连接中 host" the
-            // moment this tab becomes active (the `changed active-tab-id`
-            // handler fires refresh-sidebar right after set_active_tab_id below).
             tab_statuses.lock().unwrap().insert(
                 tab_id.clone(),
                 TabStatus {
-                    host: conn_label.clone(),
-                    user: session.user.clone(),
                     session_id: id.clone(),
                     state: 0,
-                    ..Default::default()
                 },
             );
 
@@ -3421,8 +2944,6 @@ fn wire_session_callbacks(
                 bufs: bufs.clone(),
                 render_gates: render_gates.clone(),
                 tab_statuses: tab_statuses.clone(),
-                local_snap: local_snap.clone(),
-                local_net_hist: local_net_hist.clone(),
                 last_term_size: last_term_size.clone(),
                 sftp_follow_cd: sftp_follow_cd.clone(),
             };
@@ -3467,10 +2988,6 @@ fn save_layout(win: &AppWindow, store: &Rc<RefCell<ConfigStore>>) {
     let w = size.width as f32 / scale;
     let h = size.height as f32 / scale;
     let mut s = store.borrow_mut();
-    s.set_sidebar_width(win.get_sidebar_width());
-    s.set_sidebar_height(win.get_sidebar_height());
-    s.set_sidebar_dock(win.get_sidebar_dock().to_string());
-    s.set_sidebar_collapsed(win.get_sidebar_collapsed());
     s.set_sftp_panel_width(win.get_sftp_panel_width());
     s.set_sftp_panel_height(win.get_sftp_panel_height());
     s.set_sftp_dock(win.get_sftp_dock().to_string());

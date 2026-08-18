@@ -23,7 +23,7 @@ export struct SessionDraft {
     parity: string,        // "none" | "odd" | "even"
     flow-control: string,  // "none" | "hardware" | "software"
     encoding: string,
-    // Skip the POSIX shell-integration setup (cwd-follow hook + monitor) for
+    // Skip the POSIX shell-integration setup (cwd-follow hook) for
     // Windows / pwsh servers where it breaks the shell (#140).
     disable-shell-integration: bool,
     // Free-form note (B站 suggestion).
@@ -667,9 +667,9 @@ export component SessionDialog inherits Rectangle {
             if root.show-advanced && root.draft-kind == "ssh" : VerticalLayout {
                 spacing: 6px;
 
-                // Shell-integration toggle (#140): the cwd-follow hook + resource
-                // monitor assume a POSIX shell; on a Windows pwsh/cmd server the
-                // injected hook breaks the shell, so let the user turn it off.
+                // Shell-integration toggle (#140): the cwd-follow hook assumes a
+                // POSIX shell; on a Windows pwsh/cmd server the injected hook
+                // breaks the shell, so let the user turn it off.
                 HorizontalLayout {
                     spacing: 8px;
                     Rectangle {

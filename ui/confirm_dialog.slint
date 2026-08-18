@@ -40,7 +40,7 @@ export component ConfirmDialog inherits Rectangle {
     in property <string> detail;                  // optional, e.g. the file path
     in property <string> confirm-label: @tr("Confirm");
     // Long AI prompts and other large multi-line pastes need a review surface
-    // comparable to the system-information window, with fixed footer actions.
+    // with room for the payload and fixed footer actions.
     in property <bool> large-detail: false;
     // Temporarily hide this modal behind a higher-priority prompt without
     // discarding its state (for example, app-exit confirmation).

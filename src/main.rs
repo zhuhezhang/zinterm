@@ -1,5 +1,4 @@
-// Entry point. Wires the Slint UI to the config store, system sampler and
-// SSH session manager.
+// Entry point. Wires the Slint UI to the config store and SSH session manager.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -8,7 +7,6 @@ mod config;
 mod i18n;
 mod layout;
 mod logging;
-mod resource;
 mod session;
 mod sftp;
 mod ssh;

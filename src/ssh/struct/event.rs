@@ -2,8 +2,8 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
 use super::{
-    CredentialResponder, HostKeyResponder, MfaResponder, ProcInfo, ProcessKillResult, RemoteEntry,
-    RemoteTreeNode, SessionCommand, SystemDetails,
+    CredentialResponder, HostKeyResponder, MfaResponder, RemoteEntry, RemoteTreeNode,
+    SessionCommand,
 };
 
 /// Events emitted back to the UI thread.
@@ -51,41 +51,6 @@ pub enum SessionEvent {
         /// Whether typed input should be visible (false = hide, like a password).
         echo: bool,
         responder: MfaResponder,
-    },
-    /// Remote machine resource sample (from the monitor channel).
-    /// Memory/swap are in KiB (as reported by /proc/meminfo).
-    ResourceStats {
-        cpu_percent: f32,
-        mem_used_kib: u64,
-        mem_total_kib: u64,
-        swap_used_kib: u64,
-        swap_total_kib: u64,
-        /// Per-interface (name, rx_bytes_per_sec, tx_bytes_per_sec).
-        net: Vec<(String, u64, u64)>,
-        /// Per-filesystem (mount_point, available_bytes, total_bytes).
-        disks: Vec<(String, u64, u64)>,
-        /// Effective login name reported by the remote host (`id -un`).
-        /// Prefer [`SessionEvent::ProcessStats`] for UI updates; kept for
-        /// monitor-channel compatibility and tests.
-        #[allow(dead_code)]
-        current_user: String,
-        /// Top processes by CPU (#23). Empty if the host's `ps` is unusable.
-        /// Prefer [`SessionEvent::ProcessStats`] for UI updates; kept for
-        /// monitor-channel compatibility and tests.
-        #[allow(dead_code)]
-        procs: Vec<ProcInfo>,
-        /// Detailed system information for the detached system-info window.
-        /// Detailed data is present only for the separately delayed one-shot
-        /// system-information probe; lightweight resource samples leave it None.
-        sys: Option<SystemDetails>,
-    },
-
-    /// Effective user and top-process snapshot from the dedicated lightweight
-    /// process channel. Keeping this separate prevents a slow `df`, `lspci`, or
-    /// other system-information probe from freezing the process window.
-    ProcessStats {
-        current_user: String,
-        procs: Vec<ProcInfo>,
     },
 
     /// A command the user ran in the terminal, captured via the shell hook
@@ -145,26 +110,6 @@ impl SessionHandle {
 
     pub fn resize(&self, cols: u32, rows: u32) {
         let _ = self.commands.send(SessionCommand::Resize(cols, rows));
-    }
-
-    pub fn set_resource_monitoring(&self, enabled: bool) {
-        let _ = self
-            .commands
-            .send(SessionCommand::SetResourceMonitoring(enabled));
-    }
-
-    pub fn kill_process(
-        &self,
-        pid: u32,
-        root_password: Option<crate::config::Secret>,
-    ) -> tokio::sync::oneshot::Receiver<ProcessKillResult> {
-        let (reply, rx) = tokio::sync::oneshot::channel();
-        let _ = self.commands.send(SessionCommand::KillProcess {
-            pid,
-            root_password,
-            reply,
-        });
-        rx
     }
 
     pub fn close(&self) {

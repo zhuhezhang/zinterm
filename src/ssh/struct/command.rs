@@ -5,22 +5,6 @@ pub enum SessionCommand {
     RawInput(Vec<u8>),
     /// Notify the remote PTY of a terminal resize.
     Resize(u32, u32),
-    /// Start or pause periodic local/remote resource monitoring for this session.
-    SetResourceMonitoring(bool),
-    /// Terminate one remote process on a short-lived exec channel. Supplying a
-    /// password selects the privileged `sudo -S` path; the secret is never
-    /// written to the interactive PTY or shell history.
-    KillProcess {
-        pid: u32,
-        root_password: Option<crate::config::Secret>,
-        reply: tokio::sync::oneshot::Sender<ProcessKillResult>,
-    },
     /// Gracefully disconnect and drop the session.
     Close,
-}
-
-#[derive(Debug)]
-pub struct ProcessKillResult {
-    pub success: bool,
-    pub message: String,
 }

@@ -7,8 +7,6 @@ pub(super) fn apply_session_event_to_window(
     bufs: &TermBuffers,
     gates: &RenderGates,
     statuses: &TabStatuses,
-    local: &LocalSnap,
-    local_net_hist: &NetHist,
 ) {
     let tabs_rc = win.get_tabs();
     let terminals_rc = win.get_terminals();
@@ -85,11 +83,6 @@ pub(super) fn apply_session_event_to_window(
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 1;
             }
-            if win.get_active_tab_id().as_str() == tab_id
-                && (sidebar_updates_visible(win) || win.get_system_info_window_open())
-            {
-                refresh_sidebar(win, statuses, local, local_net_hist);
-            }
         }
         SessionEvent::Closed(reason) => {
             // Print the hint into the terminal itself (FinalShell-style), via a
@@ -107,8 +100,6 @@ pub(super) fn apply_session_event_to_window(
                 bufs,
                 gates,
                 statuses,
-                local,
-                local_net_hist,
             );
             update_tab(&|t| t.connected = false);
             update_terminal(&|t| {
@@ -116,62 +107,6 @@ pub(super) fn apply_session_event_to_window(
             });
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 2;
-            }
-            if win.get_active_tab_id().as_str() == tab_id
-                && (sidebar_updates_visible(win) || win.get_system_info_window_open())
-            {
-                refresh_sidebar(win, statuses, local, local_net_hist);
-            }
-        }
-        SessionEvent::ResourceStats {
-            cpu_percent,
-            mem_used_kib,
-            mem_total_kib,
-            swap_used_kib,
-            swap_total_kib,
-            net,
-            disks,
-            current_user: _,
-            procs: _,
-            sys,
-        } => {
-            if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
-                st.cpu = cpu_percent;
-                st.mem_used_kib = mem_used_kib;
-                st.mem_total_kib = mem_total_kib;
-                st.swap_used_kib = swap_used_kib;
-                st.swap_total_kib = swap_total_kib;
-                st.net = net;
-                st.disks = disks;
-                if let Some(sys) = sys {
-                    st.sys = sys;
-                }
-                // A sample means the channel is alive → treat as connected.
-                if st.state != 1 {
-                    st.state = 1;
-                }
-                // Append the selected interface's total rate to its sparkline.
-                let (_, rx, tx) = selected_iface(st);
-                push_ring(&mut st.net_hist, (rx + tx) as f32);
-            }
-            if win.get_active_tab_id().as_str() == tab_id
-                && (sidebar_updates_visible(win) || win.get_system_info_window_open())
-            {
-                refresh_sidebar(win, statuses, local, local_net_hist);
-            }
-        }
-        SessionEvent::ProcessStats {
-            current_user,
-            procs,
-        } => {
-            if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
-                if !current_user.is_empty() {
-                    st.user = current_user;
-                }
-                st.procs = procs;
-            }
-            if win.get_active_tab_id().as_str() == tab_id {
-                refresh_process_model(win, statuses);
             }
         }
 
@@ -261,8 +196,6 @@ pub(super) fn apply_session_event_to_window(
                     bufs,
                     gates,
                     statuses,
-                    local,
-                    local_net_hist,
                 );
                 update_terminal(&|t| t.sftp_status = error.clone().into());
             }

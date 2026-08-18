@@ -6,11 +6,6 @@ use super::*;
 pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &ConnectCtx) {
     let has_sftp = session.kind == SessionKind::Ssh;
     let (initial_cols, initial_rows) = *ctx.last_term_size.lock().unwrap();
-    let monitoring_enabled = ctx
-        .weak
-        .upgrade()
-        .map(|window| !window.get_sidebar_collapsed() && !window.get_zen_mode())
-        .unwrap_or(true);
     let (handle, rx) = match session.kind {
         SessionKind::Ssh => spawn_session(
             ctx.runtime.handle(),
@@ -18,7 +13,6 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
             session.clone(),
             initial_cols,
             initial_rows,
-            monitoring_enabled,
         ),
         SessionKind::Serial => crate::terminal::serial::spawn_serial_session(
             ctx.runtime.handle(),
@@ -41,7 +35,6 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         ),
     };
     let terminal_reply_tx = handle.commands.clone();
-    handle.set_resource_monitoring(monitoring_enabled);
     ctx.handles.borrow_mut().insert(tab_id.to_string(), handle);
 
     // Separate SFTP connection for the same session (SSH only). It waits for
@@ -78,8 +71,6 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         let rt_pump = ctx.runtime.clone();
         let tab_id_pump = tab_id.to_string();
         let statuses_pump = ctx.tab_statuses.clone();
-        let local_pump = ctx.local_snap.clone();
-        let net_pump = ctx.local_net_hist.clone();
         let follow_cd_pump = ctx.sftp_follow_cd.clone();
         let render_gates_pump = ctx.render_gates.clone();
         std::thread::spawn(move || {
@@ -257,14 +248,12 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 let tid = tab_id_pump.clone();
                 let bufs_evt = bufs_thread.clone();
                 let st_evt = statuses_pump.clone();
-                let lc_evt = local_pump.clone();
-                let nh_evt = net_pump.clone();
                 let gates_evt = render_gates_pump.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(win) = weak_evt.upgrade() {
                         for evt in ui_only {
                             apply_session_event_to_window(
-                                &win, &tid, evt, &bufs_evt, &gates_evt, &st_evt, &lc_evt, &nh_evt,
+                                &win, &tid, evt, &bufs_evt, &gates_evt, &st_evt,
                             );
                         }
                     }
@@ -279,8 +268,6 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         let bufs_sftp = ctx.bufs.clone();
         let tab_id_sftp = tab_id.to_string();
         let statuses_sftp = ctx.tab_statuses.clone();
-        let local_sftp = ctx.local_snap.clone();
-        let net_sftp = ctx.local_net_hist.clone();
         let gates_sftp = ctx.render_gates.clone();
         std::thread::spawn(move || {
             let mut sftp_rx = sftp_evt_tx;
@@ -305,14 +292,12 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 let tid = tab_id_sftp.clone();
                 let bufs_s = bufs_sftp.clone();
                 let st_s = statuses_sftp.clone();
-                let lc_s = local_sftp.clone();
-                let nh_s = net_sftp.clone();
                 let gates_s = gates_sftp.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(win) = weak_s.upgrade() {
                         for sftp_evt in ui_batch {
                             apply_session_event_to_window(
-                                &win, &tid, sftp_evt, &bufs_s, &gates_s, &st_s, &lc_s, &nh_s,
+                                &win, &tid, sftp_evt, &bufs_s, &gates_s, &st_s,
                             );
                         }
                     }
