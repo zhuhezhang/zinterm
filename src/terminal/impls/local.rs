@@ -203,6 +203,8 @@ fn local_program(session: &Session) -> (String, Vec<String>) {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[cfg(windows)]
     #[test]
     fn windows_shells_start_in_utf8_mode() {
