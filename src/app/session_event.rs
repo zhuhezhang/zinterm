@@ -151,6 +151,7 @@ pub(super) fn apply_session_event_to_window(
                 t.sftp_path = path.clone().into();
                 t.sftp_entries = model.clone();
                 t.sftp_loading = false;
+                t.sftp_ready = true;
             });
         }
         SessionEvent::SftpStatus(msg) => {
@@ -162,6 +163,15 @@ pub(super) fn apply_session_event_to_window(
             update_terminal(&|t| {
                 t.sftp_status = msg.clone().into();
                 t.sftp_loading = false;
+            });
+        }
+        SessionEvent::SftpFailed(msg) => {
+            // Connection-level failure: keep the bar collapsed / disabled.
+            update_terminal(&|t| {
+                t.sftp_status = msg.clone().into();
+                t.sftp_loading = false;
+                t.sftp_ready = false;
+                t.sftp_collapsed = true;
             });
         }
         SessionEvent::SftpFileText {

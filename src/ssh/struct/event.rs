@@ -70,6 +70,9 @@ pub enum SessionEvent {
     /// A directory listing failed (e.g. permission denied): show the message and
     /// stop the panel's loading spinner without disturbing the current view (#112).
     SftpError(String),
+    /// The SFTP worker itself failed to connect / authenticate / stay up. The
+    /// panel stays collapsed and non-interactive until a later session succeeds.
+    SftpFailed(String),
     /// Directory tree structure changed (full rebuild pushed on every toggle).
     SftpTreeUpdate(Vec<RemoteTreeNode>),
     /// File-transfer progress / completion (download or upload).

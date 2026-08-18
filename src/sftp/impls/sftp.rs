@@ -168,7 +168,7 @@ pub fn spawn_sftp(
     let events_err = events.clone();
     let join = runtime.spawn(async move {
         if let Err(err) = run_sftp(session, cmd_rx, self_tx, events).await {
-            let _ = events_err.send(SessionEvent::SftpStatus(friendly_sftp_error(&err)));
+            let _ = events_err.send(SessionEvent::SftpFailed(friendly_sftp_error(&err)));
         }
     });
     SftpHandle {

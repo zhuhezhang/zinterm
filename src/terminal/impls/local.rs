@@ -190,11 +190,10 @@ fn local_program(session: &Session) -> (String, Vec<String>) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 
-    #[cfg(windows)]
     #[test]
     fn windows_shells_start_in_utf8_mode() {
         let mut session = Session::new_empty();

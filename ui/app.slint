@@ -64,6 +64,7 @@ export struct TerminalState {
     sftp-sort-key: string,      // ""|"name"|"size"|"modified" (#248)
     sftp-sort-dir: int,         // 0 default / 1 asc / -1 desc (#248)
     sftp-available: bool,       // false for local/serial/telnet sessions
+    sftp-ready: bool,           // true after the first successful listing
     sftp-collapsed: bool,       // SFTP panel minimised — per session (#v0.5)
     sftp-panel-height: length,  // SFTP panel extent (bottom dock) — per session
     sftp-panel-width: length,   // SFTP panel extent (side dock) — per session
@@ -1204,6 +1205,7 @@ export component AppWindow inherits Window {
                     sftp-sort-key: term.sftp-sort-key;
                     sftp-sort-dir: term.sftp-sort-dir;
                     sftp-available: term.sftp-available && !root.zen-mode;
+                    sftp-ready: term.sftp-ready;
                     quick-commands: root.quick-commands;
                     quick-sidebar-enabled: root.quick-commands-as-sidebar;
                     quick-panel-docked: root.quick-panel-open;

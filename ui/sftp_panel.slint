@@ -65,6 +65,7 @@ export component SftpPanel inherits Rectangle {
     in property <string> sort-key: "";
     in property <int> sort-dir: 0; // 0 default / 1 asc / -1 desc
     in property <bool> collapsed: false;   // when true only the toolbar shows
+    in property <bool> ready: true;        // false while connecting / after SFTP failure
     in property <bool> show-tree: true;    // hide the directory tree when narrow (#dock)
     in property <bool> compact: false;     // side-docked + collapsed → render nothing but a clean strip (#dock)
     // Panel width as set by the parent (sf-w or full dock-region width). Used
@@ -162,6 +163,7 @@ export component SftpPanel inherits Rectangle {
     // expand button over this (#dock).
     VerticalLayout {
         visible: !root.compact;
+        opacity: root.ready ? 1.0 : 0.45;
         spacing: 0;
 
         // --- Toolbar (full width) ------------------------------------------
@@ -173,285 +175,242 @@ export component SftpPanel inherits Rectangle {
                 spacing: 6px;
 
                 HorizontalLayout {
-                height: 34px;
-                padding-left: 6px;
-                padding-right: 6px;
-                padding-top: 6px;
-                padding-bottom: 6px;
-                spacing: 4px;
+                    height: 34px;
+                    // Collapsed top/bottom: leave 4px after the overlay folder icon
+                    // (ToolStrip glyph at x=4, 30px wide → 38px).
+                    padding-left: root.collapsed ? 38px : 6px;
+                    padding-right: 6px;
+                    padding-top: 6px;
+                    padding-bottom: 6px;
+                    spacing: 4px;
 
-                // Dedicated drag handle to re-dock the panel. The toolbar is full
-                // of controls, so dragging "empty space" is unreliable; this grip
-                // is always grabbable and reports window-space coords (#dock).
-                Rectangle {
-                    width: 16px;
-                    y: (parent.height - self.height) / 2;
-                    height: 22px;
-                    grip-ta := TouchArea {
-                        mouse-cursor: move;
-                        moved => {
-                            root.dock-drag-move(self.absolute-position.x + self.mouse-x,
-                                                self.absolute-position.y + self.mouse-y);
+                    // Dedicated drag handle to re-dock the panel. The toolbar is full
+                    // of controls, so dragging "empty space" is unreliable; this grip
+                    // is always grabbable and reports window-space coords (#dock).
+                    // Hidden while collapsed so it doesn't sit under the folder icon.
+                    if !root.collapsed : Rectangle {
+                        width: 16px;
+                        y: (parent.height - self.height) / 2;
+                        height: 22px;
+                        grip-ta := TouchArea {
+                            mouse-cursor: move;
+                            moved => {
+                                root.dock-drag-move(self.absolute-position.x + self.mouse-x,
+                                                    self.absolute-position.y + self.mouse-y);
+                            }
+                            pointer-event(ev) => {
+                                if (ev.kind == PointerEventKind.up) { root.dock-drag-end(); }
+                            }
                         }
-                        pointer-event(ev) => {
-                            if (ev.kind == PointerEventKind.up) { root.dock-drag-end(); }
+                        Text {
+                            text: "\u{E945}";   // drag_indicator
+                            font-family: "Material Icons";
+                            color: grip-ta.has-hover ? Theme.text-secondary : Theme.text-muted;
+                            font-size: 16px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
                         }
                     }
-                    Text {
-                        text: "\u{E945}";   // drag_indicator
-                        font-family: "Material Icons";
-                        color: grip-ta.has-hover ? Theme.text-secondary : Theme.text-muted;
-                        font-size: 16px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        width: parent.width;
-                        height: parent.height;
-                    }
-                }
 
-                // Keep parent navigation discoverable in the narrow layout
-                // instead of hiding this primary action in the overflow menu
-                // (#322). It stays beside the other compact toolbar actions.
-                if root.narrow-toolbar : Rectangle {
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: compact-up-ta.has-hover ? Theme.bg-hover : transparent;
-                    compact-up-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.navigate(".."); }
+                    // Editable path bar: type or paste a path and press Enter to
+                    // jump there; copy / paste-jump buttons sit right after it (#54).
+                    // Collapsed to zero width in the narrow two-row layout so it
+                    // doesn't leave a hole on this row (`visible` keeps the id).
+                    Rectangle {
+                        visible: !root.narrow-toolbar;
+                        horizontal-stretch: root.narrow-toolbar ? 0 : 1;
+                        min-width: 0px;
+                        max-width: root.narrow-toolbar ? 0px : 100000px;
+                        height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: Theme.bg-root;
+                        border-width: 1px;
+                        border-color: path-input.has-focus ? Theme.accent : Theme.border-subtle;
+                        path-input := TextInput {
+                            x: 6px;
+                            width: parent.width - 12px;
+                            height: parent.height;
+                            text: root.current-path;
+                            color: root.ready ? Theme.text-primary : Theme.text-muted;
+                            // CJK-capable font so typed Chinese isn't tofu (#54).
+                            font-family: Theme.ui-font-family;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                            single-line: true;
+                            read-only: !root.ready;
+                            accepted => { if (root.ready) { root.navigate(self.text); } }
+                        }
                     }
-                    Text { text: "↑"; color: Theme.text-secondary; font-size: Theme.fs-md;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                }
 
-                // Editable path bar: type or paste a path and press Enter to
-                // jump there; copy / paste-jump buttons sit right after it (#54).
-                Rectangle {
-                    visible: !root.narrow-toolbar;
-                    horizontal-stretch: 1;
-                    height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: Theme.bg-root;
-                    border-width: 1px;
-                    border-color: path-input.has-focus ? Theme.accent : Theme.border-subtle;
-                    path-input := TextInput {
-                        x: 6px;
-                        width: parent.width - 12px;
-                        height: parent.height;
-                        text: root.current-path;
-                        color: Theme.text-primary;
-                        // CJK-capable font so typed Chinese isn't tofu (#54).
-                        font-family: Theme.ui-font-family;
+                    // Narrow first row has no path field; stretch this so the
+                    // action buttons stay on the right, away from the drag grip.
+                    if root.narrow-toolbar : Rectangle {
+                        horizontal-stretch: 1;
+                        min-width: 0px;
+                        height: 22px;
+                    }
+
+                    // Copy the current path to the clipboard.
+                    Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: copy-ta.has-hover ? Theme.bg-hover : transparent;
+                        copy-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                if (root.narrow-toolbar) {
+                                    compact-path-input.select-all();
+                                    compact-path-input.copy();
+                                    compact-path-input.clear-selection();
+                                } else {
+                                    path-input.select-all();
+                                    path-input.copy();
+                                    path-input.clear-selection();
+                                }
+                            }
+                        }
+                        Text { text: "\u{E14D}"; font-family: "Material Icons";
+                            color: Theme.text-secondary; font-size: Theme.fs-sm;
+                            horizontal-alignment: center; vertical-alignment: center; }
+                    }
+
+                    // Paste a path from the clipboard and jump straight to it.
+                    Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: pj-ta.has-hover ? Theme.bg-hover : transparent;
+                        pj-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                if (root.narrow-toolbar) {
+                                    compact-path-input.select-all();
+                                    compact-path-input.paste();
+                                    root.navigate(compact-path-input.text);
+                                } else {
+                                    path-input.select-all();
+                                    path-input.paste();
+                                    root.navigate(path-input.text);
+                                }
+                            }
+                        }
+                        Text { text: "\u{E14F}"; font-family: "Material Icons";
+                            color: Theme.text-secondary; font-size: Theme.fs-sm;
+                            horizontal-alignment: center; vertical-alignment: center; }
+                    }
+
+                    up-btn := Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: up-ta.has-hover ? Theme.bg-hover : transparent;
+                        up-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.navigate(".."); }
+                        }
+                        Text { text: "\u{E2EA}"; font-family: "Material Icons";
+                            color: Theme.text-secondary; font-size: Theme.fs-md;
+                            horizontal-alignment: center; vertical-alignment: center; }
+                    }
+
+                    // Upload: a small menu offers file vs folder (#85). The remote
+                    // SFTP upload handles both — only the local picker differs.
+                    ul-btn := Rectangle {
+                        width: 24px;
+                        height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: ul-ta.has-hover ? Theme.bg-hover : transparent;
+                        ul-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { ul-menu.show(); }
+                        }
+                        Text {
+                            text: "\u{E2C6}"; // file upload
+                            font-family: "Material Icons";
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-md;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        ul-menu := PopupWindow {
+                            x: 0; y: parent.height + 2px;
+                            width: 124px;
+                            height: 2 * 27px + 8px;
+                            Rectangle {
+                                background: Theme.popup-bg;
+                                border-radius: Theme.radius-sm;
+                                border-width: 1px;
+                                border-color: Theme.border-strong;
+                                drop-shadow-blur: 12px;
+                                drop-shadow-color: #00000060;
+                                VerticalLayout {
+                                    padding: 4px;
+                                    spacing: 1px;
+                                    SftpMenuItem {
+                                        label: @tr("Upload file");
+                                        clicked => { root.upload-clicked(root.current-path, false); }
+                                    }
+                                    SftpMenuItem {
+                                        label: @tr("Upload folder");
+                                        clicked => { root.upload-clicked(root.current-path, true); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Batch actions on checked entries — only when something's checked (#100).
+                    if root.selected-count > 0 && !root.narrow-toolbar : Text {
+                        text: "✓" + root.selected-count;
+                        color: Theme.accent;
                         font-size: Theme.fs-sm;
                         vertical-alignment: center;
-                        single-line: true;
-                        accepted => { root.navigate(self.text); }
                     }
-                }
+                    if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: dls-ta.has-hover ? Theme.bg-hover : transparent;
+                        dls-ta := TouchArea { mouse-cursor: pointer; clicked => { root.download-selected(); } }
+                        Text { text: "\u{E2C4}"; font-family: "Material Icons"; color: Theme.text-secondary;
+                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
+                    }
+                    if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: dels-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
+                        dels-ta := TouchArea { mouse-cursor: pointer; clicked => { root.delete-selected(); } }
+                        Text { text: "\u{E872}"; font-family: "Material Icons"; color: Theme.danger;
+                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
+                    }
 
-                // Copy the current path to the clipboard.
-                Rectangle {
-                    visible: !root.narrow-toolbar;
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: copy-ta.has-hover ? Theme.bg-hover : transparent;
-                    copy-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            path-input.select-all();
-                            path-input.copy();
-                            path-input.clear-selection();
+                    // Refresh the current directory btn
+                    Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: ref-ta.has-hover ? Theme.bg-hover : transparent;
+                        ref-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.refresh(root.current-path); }
                         }
+                        Text { text: "\u{E5D5}"; font-family: "Material Icons";
+                            color: Theme.text-secondary; font-size: Theme.fs-sm;
+                            horizontal-alignment: center; vertical-alignment: center; }
                     }
-                    Text { text: "\u{E14D}"; font-family: "Material Icons";
-                           color: Theme.text-secondary; font-size: Theme.fs-sm;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                }
 
-                // Paste a path from the clipboard and jump straight to it.
-                Rectangle {
-                    visible: !root.narrow-toolbar;
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: pj-ta.has-hover ? Theme.bg-hover : transparent;
-                    pj-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            path-input.select-all();
-                            path-input.paste();
-                            root.navigate(path-input.text);
+                    // Minimise / restore the SFTP panel (#41).
+                    Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: min-ta.has-hover ? Theme.bg-hover : transparent;
+                        min-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.toggle-collapsed(); }
                         }
+                        // expand_less (▲, restore) when collapsed, expand_more (▼) otherwise.
+                        Text { text: root.collapsed ? "\u{E5CE}" : "\u{E5CF}"; font-family: "Material Icons";
+                            color: Theme.text-secondary; font-size: Theme.fs-md;
+                            horizontal-alignment: center; vertical-alignment: center; }
                     }
-                    Text { text: "\u{E14F}"; font-family: "Material Icons";
-                           color: Theme.text-secondary; font-size: Theme.fs-sm;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                }
-
-                up-btn := Rectangle {
-                    visible: !root.narrow-toolbar;
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: up-ta.has-hover ? Theme.bg-hover : transparent;
-                    up-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.navigate(".."); }
-                    }
-                    Text { text: "↑"; color: Theme.text-secondary; font-size: Theme.fs-md;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                }
-
-                // Upload: a small menu offers file vs folder (#85). The remote
-                // SFTP upload handles both — only the local picker differs.
-                ul-btn := Rectangle {
-                    visible: true;
-                    width: root.narrow-toolbar ? 24px : 52px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: ul-ta.has-hover ? Theme.accent-hover : Theme.accent;
-                    ul-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { ul-menu.show(); }
-                    }
-                    Text { text: root.narrow-toolbar ? "↑" : @tr("Upload"); color: #ffffff; font-size: Theme.fs-sm;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                    ul-menu := PopupWindow {
-                        x: 0; y: parent.height + 2px;
-                        width: 124px;
-                        height: 2 * 27px + 8px;
-                        Rectangle {
-                            background: Theme.popup-bg;
-                            border-radius: Theme.radius-sm;
-                            border-width: 1px;
-                            border-color: Theme.border-strong;
-                            drop-shadow-blur: 12px;
-                            drop-shadow-color: #00000060;
-                            VerticalLayout {
-                                padding: 4px;
-                                spacing: 1px;
-                                SftpMenuItem {
-                                    label: @tr("Upload file");
-                                    clicked => { root.upload-clicked(root.current-path, false); }
-                                }
-                                SftpMenuItem {
-                                    label: @tr("Upload folder");
-                                    clicked => { root.upload-clicked(root.current-path, true); }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Secondary path actions move into an overflow menu in compact
-                // mode so they never compete with the path field for width.
-                compact-more-btn := Rectangle {
-                    visible: root.narrow-toolbar;
-                    width: 24px;
-                    height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: compact-more-ta.has-hover ? Theme.bg-hover : transparent;
-                    compact-more-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { compact-more-menu.show(); }
-                    }
-                    Text {
-                        text: "\u{E5D4}";
-                        font-family: "Material Icons";
-                        color: Theme.text-secondary;
-                        font-size: Theme.fs-md;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                    compact-more-menu := PopupWindow {
-                        x: parent.width - self.width;
-                        y: parent.height + 2px;
-                        width: 142px;
-                        height: 3 * 27px + 8px;
-                        Rectangle {
-                            background: Theme.popup-bg;
-                            border-radius: Theme.radius-sm;
-                            border-width: 1px;
-                            border-color: Theme.border-strong;
-                            drop-shadow-blur: 12px;
-                            drop-shadow-color: #00000060;
-                            VerticalLayout {
-                                padding: 4px;
-                                spacing: 1px;
-                                SftpMenuItem {
-                                    label: @tr("Copy path");
-                                    clicked => {
-                                        compact-path-input.select-all();
-                                        compact-path-input.copy();
-                                        compact-path-input.clear-selection();
-                                    }
-                                }
-                                SftpMenuItem {
-                                    label: @tr("Paste and go");
-                                    clicked => {
-                                        compact-path-input.select-all();
-                                        compact-path-input.paste();
-                                        root.navigate(compact-path-input.text);
-                                    }
-                                }
-                                SftpMenuItem {
-                                    label: @tr("Refresh");
-                                    clicked => { root.refresh(root.current-path); }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Batch actions on checked entries — only when something's checked (#100).
-                if root.selected-count > 0 && !root.narrow-toolbar : Text {
-                    text: "✓" + root.selected-count;
-                    color: Theme.accent;
-                    font-size: Theme.fs-sm;
-                    vertical-alignment: center;
-                }
-                if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: dls-ta.has-hover ? Theme.bg-hover : transparent;
-                    dls-ta := TouchArea { mouse-cursor: pointer; clicked => { root.download-selected(); } }
-                    Text { text: "\u{E2C4}"; font-family: "Material Icons"; color: Theme.text-secondary;
-                           font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
-                }
-                if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: dels-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
-                    dels-ta := TouchArea { mouse-cursor: pointer; clicked => { root.delete-selected(); } }
-                    Text { text: "\u{E872}"; font-family: "Material Icons"; color: Theme.danger;
-                           font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
-                }
-
-                Rectangle {
-                    visible: !root.narrow-toolbar;
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: ref-ta.has-hover ? Theme.bg-hover : transparent;
-                    ref-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.refresh(root.current-path); }
-                    }
-                    Text { text: "\u{E5D5}"; font-family: "Material Icons";
-                           color: Theme.text-secondary; font-size: Theme.fs-sm;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                }
-
-                // Minimise / restore the SFTP panel (#41).
-                Rectangle {
-                    width: 24px; height: 22px;
-                    border-radius: Theme.radius-sm;
-                    background: min-ta.has-hover ? Theme.bg-hover : transparent;
-                    min-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.toggle-collapsed(); }
-                    }
-                    // expand_less (▲, restore) when collapsed, expand_more (▼) otherwise.
-                    Text { text: root.collapsed ? "\u{E5CE}" : "\u{E5CF}"; font-family: "Material Icons";
-                           color: Theme.text-secondary; font-size: Theme.fs-md;
-                           horizontal-alignment: center; vertical-alignment: center; }
-                }
                 }
 
                 // Preserve path navigation in the side-docked compact layout by
@@ -474,12 +433,13 @@ export component SftpPanel inherits Rectangle {
                             width: parent.width - 12px;
                             height: parent.height;
                             text: root.current-path;
-                            color: Theme.text-primary;
+                            color: root.ready ? Theme.text-primary : Theme.text-muted;
                             font-family: Theme.ui-font-family;
                             font-size: Theme.fs-sm;
                             vertical-alignment: center;
                             single-line: true;
-                            accepted => { root.navigate(self.text); }
+                            read-only: !root.ready;
+                            accepted => { if (root.ready) { root.navigate(self.text); } }
                         }
                     }
                 }
@@ -745,13 +705,24 @@ export component SftpPanel inherits Rectangle {
                                             width: parent.width; height: parent.height;
                                         }
                                     }
-                                    Text {
-                                        text: entry.is-dir ? "📁 " + entry.name : "📄 " + entry.name;
-                                        color: entry.is-dir ? Theme.accent : Theme.text-primary;
-                                        font-size: Theme.fs-sm;
+                                    HorizontalLayout {
                                         horizontal-stretch: 1;
-                                        overflow: elide;
-                                        vertical-alignment: center;
+                                        spacing: 4px;
+                                        Text {
+                                            text: entry.is-dir ? "\u{E2C7}" : "\u{E24D}"; // folder / insert_drive_file
+                                            font-family: "Material Icons";
+                                            color: entry.is-dir ? Theme.accent : Theme.text-secondary;
+                                            font-size: Theme.fs-sm;
+                                            vertical-alignment: center;
+                                        }
+                                        Text {
+                                            text: entry.name;
+                                            color: entry.is-dir ? Theme.accent : Theme.text-primary;
+                                            font-size: Theme.fs-sm;
+                                            horizontal-stretch: 1;
+                                            overflow: elide;
+                                            vertical-alignment: center;
+                                        }
                                     }
                                     if root.show-size-col : Text {
                                         text: entry.is-dir ? "" : entry.size;
@@ -928,5 +899,11 @@ export component SftpPanel inherits Rectangle {
                 width: parent.width - 16px;
             }
         }
+    }
+
+    // Block all interaction while connecting / after a connection-level failure.
+    // Visual mute comes from the VerticalLayout opacity above.
+    if !root.ready && !root.compact : TouchArea {
+        mouse-cursor: default;
     }
 }
