@@ -41,6 +41,9 @@ pub(crate) fn default_quick_panel_height() -> f32 {
     220.0
 }
 
+/// Upper bound for the SSH keepalive interval setting (seconds).
+pub(crate) const SSH_KEEPALIVE_SECS_MAX: u32 = 3600;
+
 /// On-disk layout. Keep additive to ease forward-compat.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ConfigFile {
@@ -197,6 +200,11 @@ pub struct ConfigFile {
     /// it on stops the GitHub releases query and the banner.
     #[serde(default)]
     pub update_check_disabled: bool,
+    /// SSH keepalive interval in seconds. 0 = off (default). A positive value
+    /// sends russh's `keepalive@openssh.com` global request at that interval.
+    /// Some older H3C/VRP stacks drop the TCP session when this is enabled.
+    #[serde(default)]
+    pub ssh_keepalive_secs: u32,
     /// One-time default-layout migration marker (#new-user-defaults). 0 = config
     /// predates the migration. `migrate_defaults` bumps it to `DEFAULTS_REV` after
     /// pushing the new look (default wallpaper / welcome-as-sidebar /

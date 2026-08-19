@@ -378,6 +378,7 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> welcome-as-sidebar;
     in-out property <bool> quick-commands-as-sidebar;
     in-out property <bool> update-check-enabled;
+    in-out property <int> ssh-keepalive-secs: 0;
     in-out property <float> wallpaper-overlay;   // frosted-panel opacity 0.30-1.00
     // Active wallpaper id: "" / "builtin:light" / "builtin:dark" / a file path.
     in property <string> current-wallpaper;
@@ -418,6 +419,7 @@ export component InterfacePanel inherits Rectangle {
     callback set-welcome-as-sidebar(bool);
     callback set-quick-commands-as-sidebar(bool);
     callback set-update-check-enabled(bool);   // startup new-version check (#184)
+    callback set-ssh-keepalive-secs(int);
     callback persist-wallpaper-overlay(float);   // save the overlay opacity
     callback set-wallpaper(string);    // none / builtin selection
     callback pick-wallpaper-file();    // open the OS file dialog (Rust)
@@ -472,6 +474,11 @@ export component InterfacePanel inherits Rectangle {
                     icon: "\u{E2C7}"; label: "SFTP";
                     active: root.ifd-page == "sftp";
                     clicked => { root.ifd-page = "sftp"; }
+                }
+                NavItem {
+                    icon: "\u{E0E8}"; label: "SSH";
+                    active: root.ifd-page == "ssh";
+                    clicked => { root.ifd-page = "ssh"; }
                 }
                 NavItem {
                     icon: "\u{E5CB}"; label: root.lang-en ? "Sidebars" : "侧栏";
@@ -1250,6 +1257,34 @@ export component InterfacePanel inherits Rectangle {
                     Switch {
                         on: root.sftp-follow-cd;
                         toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
+                    }
+                }
+            }
+
+            // --- SSH page ----------------------------------------------
+            if root.ifd-page == "ssh" : VerticalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+                padding-top: 14px;
+                spacing: 0;
+                alignment: start;
+                SectionHeader { text: "SSH"; height: 24px; }
+                SettingRow {
+                    label: root.lang-en ? "Keepalive interval" : "保活间隔";
+                    desc: root.lang-en
+                        ? "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
+                        : "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效。";
+                    show-divider: false;
+                    Stepper {
+                        value: root.ssh-keepalive-secs;
+                        minimum: 0;
+                        maximum: 3600;
+                        step: 5;
+                        unit: "s";
+                        changed(v) => {
+                            root.ssh-keepalive-secs = v;
+                            root.set-ssh-keepalive-secs(v);
+                        }
                     }
                 }
             }

@@ -6,6 +6,9 @@ use super::*;
 pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &ConnectCtx) {
     let has_sftp = session.kind == SessionKind::Ssh;
     let (initial_cols, initial_rows) = *ctx.last_term_size.lock().unwrap();
+    let keepalive_secs = ctx
+        .ssh_keepalive_secs
+        .load(std::sync::atomic::Ordering::Relaxed);
     let (handle, rx) = match session.kind {
         SessionKind::Ssh => spawn_session(
             ctx.runtime.handle(),
@@ -13,6 +16,7 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
             session.clone(),
             initial_cols,
             initial_rows,
+            keepalive_secs,
         ),
         SessionKind::Serial => crate::terminal::serial::spawn_serial_session(
             ctx.runtime.handle(),
@@ -52,7 +56,12 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 return;
             }
             tokio::task::yield_now().await;
-            let sftp_handle = spawn_sftp(sftp_task_runtime.handle(), session, sftp_tx);
+            let sftp_handle = spawn_sftp(
+                sftp_task_runtime.handle(),
+                session,
+                sftp_tx,
+                keepalive_secs,
+            );
             if let Ok(mut handles) = sftp_handles.lock() {
                 handles.insert(sftp_tab_id, sftp_handle);
             }

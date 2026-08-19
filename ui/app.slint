@@ -452,6 +452,9 @@ export component AppWindow inherits Window {
     callback set-welcome-as-sidebar(bool);         // apply + persist
     in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
+    // SSH keepalive interval in seconds. 0 = off (default).
+    in-out property <int> ssh-keepalive-secs: 0;
+    callback set-ssh-keepalive-secs(int);
     // Drag-resizable width of that welcome sidebar (logical px), persisted.
     in-out property <length> welcome-sidebar-width: 240px;
     callback persist-welcome-sidebar-width(float);
@@ -3745,6 +3748,7 @@ export component AppWindow inherits Window {
                     welcome-as-sidebar <=> root.welcome-as-sidebar;
                     quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
                     update-check-enabled <=> root.update-check-enabled;
+                    ssh-keepalive-secs <=> root.ssh-keepalive-secs;
                     wallpaper-overlay <=> root.wallpaper-overlay;
                     current-wallpaper: root.current-wallpaper;
                     custom-wallpaper-name: root.custom-wallpaper-name;
@@ -3789,6 +3793,7 @@ export component AppWindow inherits Window {
                         root.set-quick-commands-as-sidebar(v);
                     }
                     set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
+                    set-ssh-keepalive-secs(v) => { root.set-ssh-keepalive-secs(v); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
                 }
             }

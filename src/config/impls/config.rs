@@ -1001,6 +1001,13 @@ impl ConfigStore {
     pub fn set_update_check_enabled(&mut self, enabled: bool) {
         self.cache.update_check_disabled = !enabled;
     }
+    /// SSH keepalive interval in seconds. 0 disables keepalive.
+    pub fn ssh_keepalive_secs(&self) -> u32 {
+        self.cache.ssh_keepalive_secs.min(SSH_KEEPALIVE_SECS_MAX)
+    }
+    pub fn set_ssh_keepalive_secs(&mut self, secs: u32) {
+        self.cache.ssh_keepalive_secs = secs.min(SSH_KEEPALIVE_SECS_MAX);
+    }
     pub fn wallpaper_overlay(&self) -> f32 {
         let a = self.cache.wallpaper_overlay;
         // Floor lowered 0.40 -> 0.30 so more see-through panels are reachable.
@@ -1453,6 +1460,22 @@ mod tests {
 
         store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
         assert_eq!(store.terminal_cursor_style(), "block");
+    }
+
+    #[test]
+    fn ssh_keepalive_secs_defaults_to_off_and_clamps() {
+        let mut store = temp_store();
+        assert_eq!(store.ssh_keepalive_secs(), 0);
+
+        store.set_ssh_keepalive_secs(30);
+        assert_eq!(store.ssh_keepalive_secs(), 30);
+        store.set_ssh_keepalive_secs(0);
+        assert_eq!(store.ssh_keepalive_secs(), 0);
+        store.set_ssh_keepalive_secs(u32::MAX);
+        assert_eq!(store.ssh_keepalive_secs(), SSH_KEEPALIVE_SECS_MAX);
+
+        store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
+        assert_eq!(store.ssh_keepalive_secs(), 0);
     }
 
     #[test]

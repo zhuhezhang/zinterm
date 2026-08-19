@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::{Arc, Mutex};
 
 use tokio::runtime::Runtime;
@@ -33,6 +33,8 @@ pub(crate) struct ConnectCtx {
     pub(crate) tab_statuses: TabStatuses,
     pub(crate) last_term_size: Arc<Mutex<(u32, u32)>>,
     pub(crate) sftp_follow_cd: Arc<AtomicBool>,
+    /// SSH keepalive interval in seconds. 0 = off. Read when a session starts.
+    pub(crate) ssh_keepalive_secs: Arc<AtomicU32>,
 }
 
 pub(crate) struct PendingHostKey {

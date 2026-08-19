@@ -508,6 +508,22 @@ pub fn run() -> Result<()> {
         });
     }
 
+    let ssh_keepalive_secs = Arc::new(std::sync::atomic::AtomicU32::new(
+        store.borrow().ssh_keepalive_secs(),
+    ));
+    window.set_ssh_keepalive_secs(store.borrow().ssh_keepalive_secs() as i32);
+    {
+        let store = store.clone();
+        let flag = ssh_keepalive_secs.clone();
+        window.on_set_ssh_keepalive_secs(move |secs: i32| {
+            let secs = (secs.max(0) as u32).min(crate::config::SSH_KEEPALIVE_SECS_MAX);
+            flag.store(secs, std::sync::atomic::Ordering::Relaxed);
+            let mut s = store.borrow_mut();
+            s.set_ssh_keepalive_secs(secs);
+            let _ = s.save();
+        });
+    }
+
     // Interface setting: always ask where to save on download (#87). Read live
     // by the download handler from the window property, so just set + persist.
     window.set_download_always_ask(store.borrow().download_always_ask());
@@ -582,6 +598,7 @@ pub fn run() -> Result<()> {
         window.set_welcome_collapsed(welcome_collapsed);
         window.set_wallpaper_overlay(s.wallpaper_overlay());
         window.set_update_check_enabled(s.update_check_enabled()); // #184
+        window.set_ssh_keepalive_secs(s.ssh_keepalive_secs() as i32);
         if collapse_sftp {
             window.set_sftp_collapsed(true);
             window.set_sftp_saved_height(s.sftp_panel_height());
@@ -1126,6 +1143,7 @@ pub fn run() -> Result<()> {
         sftp_last_cwd.clone(),
         tab_statuses.clone(),
         sftp_follow_cd.clone(),
+        ssh_keepalive_secs.clone(),
     );
 
     // Switch UI language at runtime.  Static `@tr(...)` text updates live via
@@ -1444,6 +1462,7 @@ pub fn run() -> Result<()> {
             tab_statuses: tab_statuses.clone(),
             last_term_size: last_term_size.clone(),
             sftp_follow_cd: sftp_follow_cd.clone(),
+            ssh_keepalive_secs: ssh_keepalive_secs.clone(),
         },
     );
 
@@ -2263,6 +2282,7 @@ fn wire_session_callbacks(
     sftp_last_cwd: SftpLastCwd,
     tab_statuses: TabStatuses,
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
+    ssh_keepalive_secs: Arc<std::sync::atomic::AtomicU32>,
 ) {
     // New session -> open dialog with blank draft.
     let weak = window.as_weak();
@@ -2780,6 +2800,7 @@ fn wire_session_callbacks(
         let sftp_last_cwd = sftp_last_cwd.clone();
         let tab_statuses = tab_statuses.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
+        let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         window.on_connect_session(move |id: SharedString| {
             let id = id.to_string();
             let session = if id.starts_with("system:") {
@@ -2934,6 +2955,7 @@ fn wire_session_callbacks(
                 tab_statuses: tab_statuses.clone(),
                 last_term_size: last_term_size.clone(),
                 sftp_follow_cd: sftp_follow_cd.clone(),
+                ssh_keepalive_secs: ssh_keepalive_secs.clone(),
             };
             start_session_in_tab(&tab_id, session, &ctx);
         });

@@ -160,12 +160,13 @@ pub fn spawn_sftp(
     runtime: &tokio::runtime::Handle,
     session: Session,
     events: UnboundedSender<SessionEvent>,
+    keepalive_secs: u32,
 ) -> SftpHandle {
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let self_tx = cmd_tx.clone();
     let events_err = events.clone();
     let join = runtime.spawn(async move {
-        if let Err(err) = run_sftp(session, cmd_rx, self_tx, events).await {
+        if let Err(err) = run_sftp(session, cmd_rx, self_tx, events, keepalive_secs).await {
             let _ = events_err.send(SessionEvent::SftpFailed(friendly_sftp_error(&err)));
         }
     });
@@ -251,6 +252,7 @@ async fn run_sftp(
     mut commands: UnboundedReceiver<SftpCommand>,
     self_tx: UnboundedSender<SftpCommand>,
     events: UnboundedSender<SessionEvent>,
+    keepalive_secs: u32,
 ) -> Result<()> {
     let _ = events.send(SessionEvent::SftpStatus(
         t("SFTP 连接中...", "SFTP connecting...").into(),
@@ -270,10 +272,11 @@ async fn run_sftp(
         session.port,
         Uuid::new_v4()
     ));
-    let (mut handle, config) =
-        crate::ssh::connect_transport(&addr, || sftp_handler(&session, &events))
-            .await
-            .with_context(|| format!("sftp connect {} failed", addr))?;
+    let (mut handle, config) = crate::ssh::connect_transport(&addr, keepalive_secs, || {
+        sftp_handler(&session, &events)
+    })
+    .await
+    .with_context(|| format!("sftp connect {} failed", addr))?;
 
     // Resolve missing username/password (shares the shell's prompt; the UI
     // de-dupes by session id so SFTP doesn't prompt a second time) (#110).

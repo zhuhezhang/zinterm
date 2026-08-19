@@ -398,6 +398,7 @@ pub fn spawn_session(
     session: Session,
     initial_cols: u32,
     initial_rows: u32,
+    keepalive_secs: u32,
 ) -> (SessionHandle, UnboundedReceiver<SessionEvent>) {
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<SessionCommand>();
     let (evt_tx, evt_rx) = mpsc::unbounded_channel::<SessionEvent>();
@@ -410,6 +411,7 @@ pub fn spawn_session(
             evt_tx_for_task.clone(),
             initial_cols,
             initial_rows,
+            keepalive_secs,
         )
         .await
         {
@@ -452,9 +454,10 @@ fn client_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> 
 async fn connect_ssh_handshake(
     session: &Session,
     events: &UnboundedSender<SessionEvent>,
+    keepalive_secs: u32,
 ) -> Result<(Handle<ClientHandler>, Arc<client::Config>)> {
     let addr = format!("{}:{}", session.host, session.port);
-    connect_transport(&addr, || client_handler(session, events)).await
+    connect_transport(&addr, keepalive_secs, || client_handler(session, events)).await
 }
 
 /// Connect with the modern algorithm set, then retry once with a compact
@@ -463,20 +466,21 @@ async fn connect_ssh_handshake(
 /// simply too long — russh surfaces that as `Disconnected`.
 pub(crate) async fn connect_transport<H, F>(
     addr: &str,
+    keepalive_secs: u32,
     make_handler: F,
 ) -> Result<(Handle<H>, Arc<client::Config>)>
 where
     H: Handler<Error = russh::Error> + Send + 'static,
     F: Fn() -> H,
 {
-    let modern = ssh_client_config();
+    let modern = ssh_client_config(keepalive_secs);
     match client::connect(modern.clone(), addr, make_handler()).await {
         Ok(handle) => Ok((handle, modern)),
         Err(err) if should_retry_legacy(&err) => {
             tracing::info!(
                 "ssh handshake failed ({err}); retrying {addr} with compact legacy algorithms"
             );
-            let legacy = ssh_legacy_client_config();
+            let legacy = ssh_legacy_client_config(keepalive_secs);
             match client::connect(legacy.clone(), addr, make_handler()).await {
                 Ok(handle) => Ok((handle, legacy)),
                 Err(err2) => Err(anyhow!(err2))
@@ -664,12 +668,23 @@ pub(crate) const LEGACY_KEY: &[Algorithm] = &[
 
 pub(crate) const LEGACY_COMPRESSION: &[russh::compression::Name] = &[russh::compression::NONE];
 
-fn ssh_config_with_preferred(preferred: russh::Preferred, compact: bool) -> Arc<client::Config> {
+fn keepalive_interval(secs: u32) -> Option<std::time::Duration> {
+    match secs.min(crate::config::SSH_KEEPALIVE_SECS_MAX) {
+        0 => None,
+        n => Some(std::time::Duration::from_secs(n as u64)),
+    }
+}
+
+fn ssh_config_with_preferred(
+    preferred: russh::Preferred,
+    compact: bool,
+    keepalive_secs: u32,
+) -> Arc<client::Config> {
     Arc::new(client::Config {
-        // Keep idle connections alive (#160). Interactive shells can sit
-        // idle long enough to be dropped by NAT / firewall / server timeouts,
-        // especially when shell integration is disabled (#140).
-        keepalive_interval: Some(std::time::Duration::from_secs(30)),
+        // 0 disables keepalive. A positive interval sends
+        // `keepalive@openssh.com`; OpenSSH handles it, but some older
+        // H3C/VRP stacks drop the TCP session.
+        keepalive_interval: keepalive_interval(keepalive_secs),
         // Short, RFC-shaped ident. russh's default (`SSH-2.0-russh_<ver>`) is
         // fine on OpenSSH but some VRP parsers are picky about the software tag.
         client_id: russh::SshId::Standard("SSH-2.0-meatshell".into()),
@@ -687,7 +702,7 @@ fn is_compact_legacy_config(config: &client::Config) -> bool {
     std::ptr::eq(config.preferred.kex.as_ref(), LEGACY_KEX)
 }
 
-pub(crate) fn ssh_client_config() -> Arc<client::Config> {
+pub(crate) fn ssh_client_config(keepalive_secs: u32) -> Arc<client::Config> {
     ssh_config_with_preferred(
         russh::Preferred {
             kex: Cow::Borrowed(COMPAT_KEX),
@@ -695,10 +710,11 @@ pub(crate) fn ssh_client_config() -> Arc<client::Config> {
             ..russh::Preferred::DEFAULT
         },
         false,
+        keepalive_secs,
     )
 }
 
-pub(crate) fn ssh_legacy_client_config() -> Arc<client::Config> {
+pub(crate) fn ssh_legacy_client_config(keepalive_secs: u32) -> Arc<client::Config> {
     ssh_config_with_preferred(
         russh::Preferred {
             kex: Cow::Borrowed(LEGACY_KEX),
@@ -708,6 +724,7 @@ pub(crate) fn ssh_legacy_client_config() -> Arc<client::Config> {
             compression: Cow::Borrowed(LEGACY_COMPRESSION),
         },
         true,
+        keepalive_secs,
     )
 }
 
@@ -717,6 +734,7 @@ async fn run_session(
     events: UnboundedSender<SessionEvent>,
     initial_cols: u32,
     initial_rows: u32,
+    keepalive_secs: u32,
 ) -> Result<()> {
     let session_started = std::time::Instant::now();
     let _ = events.send(SessionEvent::Status(format!(
@@ -727,7 +745,8 @@ async fn run_session(
         session.port
     )));
 
-    let (mut handle, mut config) = connect_ssh_handshake(&session, &events).await?;
+    let (mut handle, mut config) =
+        connect_ssh_handshake(&session, &events, keepalive_secs).await?;
     tracing::info!(
         "[SESSION_START] id={} stage=transport-ready elapsed_ms={}",
         session.id,
@@ -789,7 +808,8 @@ async fn run_session(
                 "session channel failed after shell probe ({err}); reconnecting without exec probe"
             );
             let _ = handle.disconnect(Disconnect::ByApplication, "", "").await;
-            let (new_handle, new_config) = connect_ssh_handshake(&session, &events).await?;
+            let (new_handle, new_config) =
+                connect_ssh_handshake(&session, &events, keepalive_secs).await?;
             handle = new_handle;
             config = new_config;
             match authenticate_session(&mut handle, &session, config.clone(), &events).await? {
@@ -1546,7 +1566,7 @@ mod legacy_ssh_compat_tests {
 
     #[test]
     fn client_ident_is_short_rfc_string() {
-        for config in [ssh_client_config(), ssh_legacy_client_config()] {
+        for config in [ssh_client_config(0), ssh_legacy_client_config(0)] {
             match &config.client_id {
                 russh::SshId::Standard(s) => assert_eq!(s, "SSH-2.0-meatshell"),
                 russh::SshId::Raw(s) => panic!("expected Standard ident, got raw {s:?}"),
@@ -1556,13 +1576,31 @@ mod legacy_ssh_compat_tests {
 
     #[test]
     fn compact_legacy_profile_uses_small_windows() {
-        let compact = ssh_legacy_client_config();
+        let compact = ssh_legacy_client_config(0);
         assert!(is_compact_legacy_config(&compact));
         assert_eq!(compact.window_size, 65_536);
         assert_eq!(compact.maximum_packet_size, 16_384);
 
-        let modern = ssh_client_config();
+        let modern = ssh_client_config(0);
         assert!(!is_compact_legacy_config(&modern));
         assert_eq!(modern.window_size, 2 * 1024 * 1024);
+    }
+
+    #[test]
+    fn keepalive_zero_disables_interval() {
+        let off = ssh_client_config(0);
+        assert!(off.keepalive_interval.is_none());
+        let on = ssh_client_config(30);
+        assert_eq!(
+            on.keepalive_interval,
+            Some(std::time::Duration::from_secs(30))
+        );
+        let clamped = ssh_legacy_client_config(u32::MAX);
+        assert_eq!(
+            clamped.keepalive_interval,
+            Some(std::time::Duration::from_secs(
+                crate::config::SSH_KEEPALIVE_SECS_MAX as u64
+            ))
+        );
     }
 }
