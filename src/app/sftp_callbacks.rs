@@ -215,9 +215,18 @@ pub(super) fn wire_sftp_callbacks(
     // Refresh the current directory listing.
     {
         let sftp_handles = sftp_handles.clone();
+        let weak = window.as_weak();
         window.on_sftp_refresh(move |tab_id: SharedString, path: SharedString| {
             let tab_id = tab_id.to_string();
             let path = path.to_string();
+            // Drop the current multi-select immediately so the toolbar count /
+            // download / delete controls hide without waiting for the listing.
+            if let Some(w) = weak.upgrade() {
+                let terminals = w.get_terminals();
+                if let Some(tm) = terminals.as_any().downcast_ref::<VecModel<TerminalState>>() {
+                    clear_sftp_selection(tm, &tab_id);
+                }
+            }
             if let Ok(handles) = sftp_handles.lock() {
                 if let Some(h) = handles.get(&tab_id) {
                     // Refresh re-syncs the left tree too, not just the file list (#189).

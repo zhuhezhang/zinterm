@@ -152,6 +152,10 @@ pub(super) fn apply_session_event_to_window(
                 t.sftp_entries = model.clone();
                 t.sftp_loading = false;
                 t.sftp_ready = true;
+                // Fresh listings always arrive unselected; keep the toolbar
+                // batch-action count in sync so the download/delete/count
+                // controls hide after refresh or directory change (#100).
+                t.sftp_selected_count = 0;
             });
         }
         SessionEvent::SftpStatus(msg) => {
