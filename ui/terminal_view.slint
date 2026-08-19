@@ -1265,7 +1265,7 @@ export component TerminalView inherits Rectangle {
                                     }
 
                                     Text {
-                                        text: "\u{E5CE}";
+                                        text: !root.quick-open ? "\u{E5CE}" : "\u{E5CF}";
                                         font-family: "Material Icons";
                                         color: Theme.text-muted;
                                         font-size: Theme.fs-sm;
@@ -1411,7 +1411,7 @@ export component TerminalView inherits Rectangle {
                             }
 
                             // History toggle.
-                                Rectangle {
+                            Rectangle {
                                 width: 28px;
                                 border-radius: Theme.radius-sm;
                                 background: hist-ta.has-hover || root.history-open ? Theme.bg-hover : Theme.bg-elevated;
@@ -1425,7 +1425,7 @@ export component TerminalView inherits Rectangle {
                                 }
 
                                 Text {
-                                    text: "\u{E5CE}";
+                                    text: !root.history-open ? "\u{E5CE}" : "\u{E5CF}";
                                     font-family: "Material Icons";
                                     color: Theme.text-secondary;
                                     font-size: Theme.fs-md;
@@ -1488,8 +1488,8 @@ export component TerminalView inherits Rectangle {
                         }
 
                         // --- Quick-command popup (opens upward) --------------------------
-                            if root.quick-open: Rectangle {
-                            x: 8px;
+                        if root.quick-open: Rectangle {
+                            x: 6px;
                             width: 420px;
                             height: min(320px, qc-col.preferred-height + 8px);
                             y: -self.height - 2px;
