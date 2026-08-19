@@ -693,6 +693,13 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     NavItem {
+                        icon: "\u{F013}";
+                        label: "SSH";
+                        active: root.ifd-page == "ssh";
+                        clicked => { root.ifd-page = "ssh"; }
+                    }
+
+                    NavItem {
                         icon: "\u{E2C7}";
                         label: "SFTP";
                         active: root.ifd-page == "sftp";
@@ -700,14 +707,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     NavItem {
-                        icon: "\u{E0E8}";
-                        label: "SSH";
-                        active: root.ifd-page == "ssh";
-                        clicked => { root.ifd-page = "ssh"; }
-                    }
-
-                    NavItem {
-                        icon: "\u{E5CB}";
+                        icon: "\u{EAC3}";
                         label: root.lang-en ? "Sidebars" : "侧栏";
                         active: root.ifd-page == "sidebar";
                         clicked => { root.ifd-page = "sidebar"; }
