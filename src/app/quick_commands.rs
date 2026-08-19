@@ -115,8 +115,7 @@ pub(super) fn reorder_quick_command(
             .rev()
             .find(|&candidate| commands[candidate].group.trim() == group)
     } else {
-        (index + 1..commands.len())
-            .find(|&candidate| commands[candidate].group.trim() == group)
+        (index + 1..commands.len()).find(|&candidate| commands[candidate].group.trim() == group)
     };
     if let Some(target) = target {
         commands.swap(index, target);
@@ -149,7 +148,10 @@ mod reorder_tests {
         ];
         assert!(reorder_quick_command(&mut commands, 2, true));
         assert_eq!(
-            commands.iter().map(|item| item.name.as_str()).collect::<Vec<_>>(),
+            commands
+                .iter()
+                .map(|item| item.name.as_str())
+                .collect::<Vec<_>>(),
             vec!["b", "x", "a"]
         );
         assert!(!reorder_quick_command(&mut commands, 0, true));

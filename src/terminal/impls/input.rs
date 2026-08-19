@@ -1,9 +1,9 @@
 #[cfg(target_os = "linux")]
 use std::sync::OnceLock;
 
-use crate::terminal::TermBuffers;
 #[cfg(any(target_os = "windows", test))]
 use super::state::CtrlKeySide;
+use crate::terminal::TermBuffers;
 
 /// Normalize clipboard line endings to the single CR byte expected for Enter
 /// by a terminal, including inside bracketed-paste payloads.
@@ -95,11 +95,7 @@ pub(crate) fn windows_process_ctrl_release(
     }
 }
 
-pub(crate) fn should_drop_bare_ctrl_marker(
-    key: &str,
-    ctrl: bool,
-    workaround: bool,
-) -> bool {
+pub(crate) fn should_drop_bare_ctrl_marker(key: &str, ctrl: bool, workaround: bool) -> bool {
     workaround
         && ctrl
         && matches!(

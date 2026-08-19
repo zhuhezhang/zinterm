@@ -17,10 +17,7 @@ fn command_bar_preserves_multiline_heredoc() {
     let (history, bytes) = encode_command_bar_input(command);
     assert_eq!(history.as_deref(), Some(command.trim_end()));
     assert_eq!(bytes, command.as_bytes());
-    assert!(!history
-        .unwrap()
-        .lines()
-        .any(|line| line.starts_with(' ')));
+    assert!(!history.unwrap().lines().any(|line| line.starts_with(' ')));
 }
 
 #[test]

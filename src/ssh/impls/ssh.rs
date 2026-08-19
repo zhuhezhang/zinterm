@@ -4,16 +4,17 @@
 //! on the shared Tokio runtime; commands come in via an MPSC channel and
 //! output lines are pushed back via an `UnboundedSender<SessionEvent>`.
 
+use std::borrow::Cow;
 use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
 use russh::client::{self, Handle, Handler};
-use russh::keys::key::PrivateKeyWithHashAlg;
-use russh::keys::{decode_secret_key, load_secret_key, PrivateKey};
-use russh::{ChannelId, ChannelMsg, Disconnect};
-use ssh_key::{HashAlg, PublicKey};
+use russh::keys::{
+    decode_secret_key, load_secret_key, Algorithm, HashAlg, PrivateKey, PrivateKeyWithHashAlg,
+    PublicKey,
+};
+use russh::{ChannelMsg, Disconnect};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 use crate::config::{AuthMethod, Session};
@@ -436,16 +437,84 @@ async fn connect_ssh(
     config: Arc<client::Config>,
     events: &UnboundedSender<SessionEvent>,
 ) -> Result<Handle<ClientHandler>> {
-    let handler = ClientHandler {
+    let addr = format!("{}:{}", session.host, session.port);
+    connect_with_config(&addr, config, client_handler(session, events)).await
+}
+
+fn client_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> ClientHandler {
+    ClientHandler {
         host: session.host.clone(),
         port: session.port,
         events: events.clone(),
-    };
-    let addr = format!("{}:{}", session.host, session.port);
+    }
+}
 
-    client::connect(config, addr.as_str(), handler)
+async fn connect_ssh_handshake(
+    session: &Session,
+    events: &UnboundedSender<SessionEvent>,
+) -> Result<(Handle<ClientHandler>, Arc<client::Config>)> {
+    let addr = format!("{}:{}", session.host, session.port);
+    connect_transport(&addr, || client_handler(session, events)).await
+}
+
+/// Connect with the modern algorithm set, then retry once with a compact
+/// RFC-only profile. Old H3C/Huawei VRP SSH stacks (S3100 / VRP-3.3) drop the
+/// TCP session when the client's KEXINIT lists `@openssh.com` names or is
+/// simply too long — russh surfaces that as `Disconnected`.
+pub(crate) async fn connect_transport<H, F>(
+    addr: &str,
+    make_handler: F,
+) -> Result<(Handle<H>, Arc<client::Config>)>
+where
+    H: Handler<Error = russh::Error> + Send + 'static,
+    F: Fn() -> H,
+{
+    let modern = ssh_client_config();
+    match client::connect(modern.clone(), addr, make_handler()).await {
+        Ok(handle) => Ok((handle, modern)),
+        Err(err) if should_retry_legacy(&err) => {
+            tracing::info!(
+                "ssh handshake failed ({err}); retrying {addr} with compact legacy algorithms"
+            );
+            let legacy = ssh_legacy_client_config();
+            match client::connect(legacy.clone(), addr, make_handler()).await {
+                Ok(handle) => Ok((handle, legacy)),
+                Err(err2) => Err(anyhow!(err2))
+                    .with_context(|| format!("connect {addr} failed (legacy retry after: {err})")),
+            }
+        }
+        Err(err) => Err(anyhow!(err)).with_context(|| format!("connect {addr} failed")),
+    }
+}
+
+async fn connect_with_config<H: Handler<Error = russh::Error> + Send + 'static>(
+    addr: &str,
+    config: Arc<client::Config>,
+    handler: H,
+) -> Result<Handle<H>> {
+    client::connect(config, addr, handler)
         .await
-        .with_context(|| format!("connect {} failed", addr))
+        .map_err(anyhow::Error::from)
+        .with_context(|| format!("connect {addr} failed"))
+}
+
+fn should_retry_legacy(err: &russh::Error) -> bool {
+    match err {
+        russh::Error::Disconnect
+        | russh::Error::KexInit
+        | russh::Error::Kex
+        | russh::Error::UnknownAlgo
+        | russh::Error::NoCommonAlgo { .. }
+        | russh::Error::Version
+        | russh::Error::HUP => true,
+        russh::Error::IO(io) => matches!(
+            io.kind(),
+            std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::UnexpectedEof
+        ),
+        _ => false,
+    }
 }
 
 /// Outcome of authenticating an SSH session, so callers can distinguish a user
@@ -477,7 +546,8 @@ pub(crate) async fn authenticate_session(
             let mut ok = handle
                 .authenticate_password(&user, password.as_str())
                 .await
-                .context("password auth failed")?;
+                .context("password auth failed")?
+                .success();
             if !ok {
                 // russh can't switch auth methods on a handle whose first attempt
                 // already failed (it hangs), so reconnect on a fresh handle before
@@ -515,12 +585,12 @@ pub(crate) async fn authenticate_session(
             // RSA keys must be signed with an explicit SHA-2 hash; every other
             // key type carries its own algorithm, so no override is needed.
             let hash = keypair.algorithm().is_rsa().then_some(HashAlg::Sha256);
-            let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash)
-                .context("invalid private key / hash algorithm combination")?;
+            let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash);
             handle
                 .authenticate_publickey(&user, key_with_hash)
                 .await
                 .context("publickey auth failed")?
+                .success()
         }
     };
 
@@ -531,14 +601,16 @@ pub(crate) async fn authenticate_session(
     }
 }
 
-
-
 // Key-exchange algorithms offered to the server, strongest first. This is the
 // russh default set PLUS the ecdh-sha2-nistp* curves and the legacy
 // diffie-hellman-group{14,1}-sha1 exchanges appended as last-resort fallbacks, so
 // we can still reach old servers / network gear that only speak SHA-1 KEX and
 // otherwise fail with "No common algorithm" (#172). Modern servers still pick a
 // strong algorithm because the client's order decides and SHA-1 is last.
+//
+// Only *client* extension markers are advertised. russh's default also lists the
+// server-side `ext-info-s` / `kex-strict-s` names, which a client must not send
+// (https://github.com/Eugeny/russh/issues/611) and which crash some old parsers.
 pub(crate) const COMPAT_KEX: &[russh::kex::Name] = &[
     russh::kex::CURVE25519,
     russh::kex::CURVE25519_PRE_RFC_8731,
@@ -549,12 +621,8 @@ pub(crate) const COMPAT_KEX: &[russh::kex::Name] = &[
     russh::kex::ECDH_SHA2_NISTP521,
     russh::kex::DH_G14_SHA1, // legacy fallback
     russh::kex::DH_G1_SHA1,  // legacy fallback
-    // Keep the OpenSSH ext-info / strict-kex markers so modern servers still
-    // negotiate ext-info and strict kex (mirrors russh's default tail).
     russh::kex::EXTENSION_SUPPORT_AS_CLIENT,
-    russh::kex::EXTENSION_SUPPORT_AS_SERVER,
     russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT,
-    russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_SERVER,
 ];
 
 // Ciphers offered to the server, strongest first: russh's AEAD/CTR defaults plus
@@ -571,21 +639,76 @@ pub(crate) const COMPAT_CIPHER: &[russh::cipher::Name] = &[
     russh::cipher::TRIPLE_DES_CBC, // legacy fallback
 ];
 
-fn ssh_client_config() -> Arc<client::Config> {
+// Compact RFC-only set for ancient SSH2 stacks (H3C S3100 / Huawei VRP-3.3).
+// Those daemons often abort when the KEXINIT lists `@openssh.com` names or is
+// larger than their fixed parse buffer. Used only as a second-attempt fallback.
+pub(crate) const LEGACY_KEX: &[russh::kex::Name] =
+    &[russh::kex::DH_G14_SHA1, russh::kex::DH_G1_SHA1];
+
+pub(crate) const LEGACY_CIPHER: &[russh::cipher::Name] = &[
+    russh::cipher::AES_128_CBC,
+    russh::cipher::AES_256_CBC,
+    russh::cipher::TRIPLE_DES_CBC,
+    russh::cipher::AES_128_CTR,
+];
+
+pub(crate) const LEGACY_MAC: &[russh::mac::Name] =
+    &[russh::mac::HMAC_SHA1, russh::mac::HMAC_SHA256];
+
+pub(crate) const LEGACY_KEY: &[Algorithm] = &[
+    Algorithm::Rsa { hash: None },
+    Algorithm::Rsa {
+        hash: Some(HashAlg::Sha256),
+    },
+];
+
+pub(crate) const LEGACY_COMPRESSION: &[russh::compression::Name] = &[russh::compression::NONE];
+
+fn ssh_config_with_preferred(preferred: russh::Preferred, compact: bool) -> Arc<client::Config> {
     Arc::new(client::Config {
         // Keep idle connections alive (#160). Interactive shells can sit
         // idle long enough to be dropped by NAT / firewall / server timeouts,
         // especially when shell integration is disabled (#140).
         keepalive_interval: Some(std::time::Duration::from_secs(30)),
-        // Match the normal terminal connection exactly, including compatibility
-        // fallbacks for older servers and network equipment (#172).
-        preferred: russh::Preferred {
-            kex: std::borrow::Cow::Borrowed(COMPAT_KEX),
-            cipher: std::borrow::Cow::Borrowed(COMPAT_CIPHER),
-            ..russh::Preferred::DEFAULT
-        },
+        // Short, RFC-shaped ident. russh's default (`SSH-2.0-russh_<ver>`) is
+        // fine on OpenSSH but some VRP parsers are picky about the software tag.
+        client_id: russh::SshId::Standard("SSH-2.0-meatshell".into()),
+        preferred,
+        // russh's 2 MiB initial window / 32 KiB packet is fine on OpenSSH, but
+        // H3C/Huawei VRP 3.x (S3100) drops CHANNEL_OPEN when the advertised
+        // window is that large. Keep the compact profile inside a 64 KiB window.
+        window_size: if compact { 65_536 } else { 2 * 1024 * 1024 },
+        maximum_packet_size: if compact { 16_384 } else { 32_768 },
         ..<_>::default()
     })
+}
+
+fn is_compact_legacy_config(config: &client::Config) -> bool {
+    std::ptr::eq(config.preferred.kex.as_ref(), LEGACY_KEX)
+}
+
+pub(crate) fn ssh_client_config() -> Arc<client::Config> {
+    ssh_config_with_preferred(
+        russh::Preferred {
+            kex: Cow::Borrowed(COMPAT_KEX),
+            cipher: Cow::Borrowed(COMPAT_CIPHER),
+            ..russh::Preferred::DEFAULT
+        },
+        false,
+    )
+}
+
+pub(crate) fn ssh_legacy_client_config() -> Arc<client::Config> {
+    ssh_config_with_preferred(
+        russh::Preferred {
+            kex: Cow::Borrowed(LEGACY_KEX),
+            cipher: Cow::Borrowed(LEGACY_CIPHER),
+            mac: Cow::Borrowed(LEGACY_MAC),
+            key: Cow::Borrowed(LEGACY_KEY),
+            compression: Cow::Borrowed(LEGACY_COMPRESSION),
+        },
+        true,
+    )
 }
 
 async fn run_session(
@@ -604,9 +727,7 @@ async fn run_session(
         session.port
     )));
 
-    let config = ssh_client_config();
-
-    let mut handle = connect_ssh(&session, config.clone(), &events).await?;
+    let (mut handle, mut config) = connect_ssh_handshake(&session, &events).await?;
     tracing::info!(
         "[SESSION_START] id={} stage=transport-ready elapsed_ms={}",
         session.id,
@@ -652,14 +773,50 @@ async fn run_session(
     // The integration body is Bash/Zsh-specific. Probe out-of-band before the
     // interactive channel exists, so ash/dash/fish/unknown shells never receive
     // (and therefore can never display or get stuck parsing) the setup command.
-    let prompt_setup_supported =
-        !session.disable_shell_integration && remote_supports_prompt_setup(&handle).await;
+    // Skip that extra exec channel on compact/legacy transports: H3C/VRP SSH
+    // only speaks a single CLI session and disconnects the whole TCP socket
+    // when it sees CHANNEL_OPEN + exec (then the real shell open fails with
+    // `Disconnected`).
+    let skip_exec_probe = session.disable_shell_integration || is_compact_legacy_config(&config);
+    let mut prompt_setup_supported =
+        !skip_exec_probe && remote_supports_prompt_setup(&handle).await;
 
     // --- Shell channel --------------------------------------------------
-    let mut channel = handle
-        .channel_open_session()
-        .await
-        .context("open session channel")?;
+    let mut channel = match handle.channel_open_session().await {
+        Ok(ch) => ch,
+        Err(err) if !skip_exec_probe && should_retry_legacy(&err) => {
+            tracing::info!(
+                "session channel failed after shell probe ({err}); reconnecting without exec probe"
+            );
+            let _ = handle.disconnect(Disconnect::ByApplication, "", "").await;
+            let (new_handle, new_config) = connect_ssh_handshake(&session, &events).await?;
+            handle = new_handle;
+            config = new_config;
+            match authenticate_session(&mut handle, &session, config.clone(), &events).await? {
+                AuthResult::Success => {}
+                AuthResult::Cancelled => {
+                    let _ = events.send(SessionEvent::Closed(
+                        t("已取消登录", "login cancelled").into(),
+                    ));
+                    return Ok(());
+                }
+                AuthResult::Failed => {
+                    let _ = events.send(SessionEvent::Closed(
+                        t("认证失败", "authentication failed").into(),
+                    ));
+                    return Ok(());
+                }
+            }
+            prompt_setup_supported = false;
+            handle
+                .channel_open_session()
+                .await
+                .context("open session channel")?
+        }
+        Err(err) => {
+            return Err(anyhow!(err)).context("open session channel");
+        }
+    };
 
     channel
         .request_pty(
@@ -975,7 +1132,7 @@ where
     for _ in 0..16 {
         match res {
             Kb::Success => return Ok(true),
-            Kb::Failure => return Ok(false),
+            Kb::Failure { .. } => return Ok(false),
             Kb::InfoRequest { prompts, .. } => {
                 let mut responses = Vec::with_capacity(prompts.len());
                 for p in &prompts {
@@ -1113,7 +1270,6 @@ pub(crate) async fn resolve_credentials(
     }
 }
 
-#[async_trait]
 impl Handler for ClientHandler {
     type Error = russh::Error;
 
@@ -1122,15 +1278,6 @@ impl Handler for ClientHandler {
         server_public_key: &PublicKey,
     ) -> Result<bool, Self::Error> {
         Ok(verify_host_key(&self.host, self.port, server_public_key, &self.events).await)
-    }
-
-    async fn data(
-        &mut self,
-        _channel: ChannelId,
-        _data: &[u8],
-        _session: &mut client::Session,
-    ) -> Result<(), Self::Error> {
-        Ok(())
     }
 }
 
@@ -1350,5 +1497,72 @@ mod mfa_tests {
         ] {
             assert!(looks_like_mfa(p), "missed an MFA prompt: {p:?}");
         }
+    }
+}
+
+#[cfg(test)]
+mod legacy_ssh_compat_tests {
+    use super::{
+        is_compact_legacy_config, should_retry_legacy, ssh_client_config, ssh_legacy_client_config,
+        COMPAT_KEX, LEGACY_CIPHER, LEGACY_KEX, LEGACY_MAC,
+    };
+
+    fn has_at(name: impl AsRef<str>) -> bool {
+        name.as_ref().contains('@')
+    }
+
+    #[test]
+    fn legacy_algorithm_names_are_rfc_only() {
+        assert!(LEGACY_KEX.iter().all(|n| !has_at(n)));
+        assert!(LEGACY_CIPHER.iter().all(|n| !has_at(n)));
+        assert!(LEGACY_MAC.iter().all(|n| !has_at(n)));
+    }
+
+    #[test]
+    fn modern_kex_does_not_advertise_server_extension_markers() {
+        let names: Vec<&str> = COMPAT_KEX.iter().map(|n| n.as_ref()).collect();
+        assert!(!names.iter().any(|n| n.contains("ext-info-s")), "{names:?}");
+        assert!(
+            !names.iter().any(|n| n.contains("kex-strict-s")),
+            "{names:?}"
+        );
+        assert!(names.iter().any(|n| *n == "ext-info-c"));
+    }
+
+    #[test]
+    fn retry_legacy_on_handshake_disconnect() {
+        assert!(should_retry_legacy(&russh::Error::Disconnect));
+        assert!(should_retry_legacy(&russh::Error::NoCommonAlgo {
+            kind: russh::AlgorithmKind::Kex,
+            ours: Vec::new(),
+            theirs: Vec::new(),
+        }));
+        assert!(should_retry_legacy(&russh::Error::IO(
+            std::io::Error::from(std::io::ErrorKind::ConnectionReset)
+        )));
+        assert!(!should_retry_legacy(&russh::Error::NotAuthenticated));
+        assert!(!should_retry_legacy(&russh::Error::ConnectionTimeout));
+    }
+
+    #[test]
+    fn client_ident_is_short_rfc_string() {
+        for config in [ssh_client_config(), ssh_legacy_client_config()] {
+            match &config.client_id {
+                russh::SshId::Standard(s) => assert_eq!(s, "SSH-2.0-meatshell"),
+                russh::SshId::Raw(s) => panic!("expected Standard ident, got raw {s:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn compact_legacy_profile_uses_small_windows() {
+        let compact = ssh_legacy_client_config();
+        assert!(is_compact_legacy_config(&compact));
+        assert_eq!(compact.window_size, 65_536);
+        assert_eq!(compact.maximum_packet_size, 16_384);
+
+        let modern = ssh_client_config();
+        assert!(!is_compact_legacy_config(&modern));
+        assert_eq!(modern.window_size, 2 * 1024 * 1024);
     }
 }

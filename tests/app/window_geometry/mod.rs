@@ -27,8 +27,5 @@ fn centers_window_in_monitor_work_area() {
 
 #[test]
 fn centering_clamps_when_window_is_larger_than_the_area() {
-    assert_eq!(
-        centered_outer_position(0, 0, 1280, 720, 1440, 900),
-        (0, 0)
-    );
+    assert_eq!(centered_outer_position(0, 0, 1280, 720, 1440, 900), (0, 0));
 }

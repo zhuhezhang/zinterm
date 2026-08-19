@@ -32,14 +32,13 @@ directories = "5"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "io-util", "net", "time", "fs"] }
-# Pinned to 0.49: RUSTSEC-2026-0154 (an unbounded-allocation DoS in russh's
-# ssh-AGENT frame parsing) is fixed only in >= 0.60.3, which drags in pre-release
-# crypto crates (ed25519-dalek 3.0.0-pre, aes-gcm 0.11.0-rc, 鈥?. meatshell never
-# uses the ssh-agent, so the advisory is not reachable here 鈥?see audit.toml.
-# Revisit the upgrade once russh's deps leave the -rc channel (cf. PR #151).
-russh = "0.49"
-russh-keys = "0.49"
-ssh-key = "0.6"
+# Pinned below 0.60: RUSTSEC-2026-0154 (ssh-agent frame DoS) is fixed only in
+# >= 0.60.3, which pulls pre-release crypto crates (ed25519-dalek 3.0.0-pre,
+# aes-gcm 0.11.0-rc, …). meatshell never uses the ssh-agent, so the advisory is
+# not reachable — see audit.toml. 0.52 is the first release that accepts RFC 4253
+# SSH-1.99- banners (H3C/Huawei VRP); stay on this line until russh's crypto
+# deps leave the -rc channel (cf. PR #151).
+russh = { version = "0.52", features = ["des"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rand = "0.8"

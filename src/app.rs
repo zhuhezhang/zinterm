@@ -51,13 +51,11 @@ const RENDER_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_milli
 /// Echo produced shortly after a physical keypress should feel immediate. This
 /// temporary 120 Hz ceiling is still coalesced, then falls back to 30 Hz once
 /// the user stops typing so firehose output keeps its existing CPU protection.
-const INTERACTIVE_RENDER_MIN_INTERVAL: std::time::Duration =
-    std::time::Duration::from_millis(8);
+const INTERACTIVE_RENDER_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_millis(8);
 const INTERACTIVE_ECHO_WINDOW: std::time::Duration = std::time::Duration::from_millis(180);
 /// A scrolled-back content is content-anchored, so sustained output only
 /// needs occasional model refreshes for its scrollbar metadata (#306).
-const SCROLLED_RENDER_MIN_INTERVAL: std::time::Duration =
-    std::time::Duration::from_millis(100);
+const SCROLLED_RENDER_MIN_INTERVAL: std::time::Duration = std::time::Duration::from_millis(100);
 
 fn term_buf(bufs: &TermBuffers, tab_id: &str) -> Option<TermBufferHandle> {
     bufs.lock().unwrap().get(tab_id).cloned()
@@ -141,9 +139,7 @@ use crate::config::{
 use crate::i18n::t;
 use crate::layout::{LogicalRect, TerminalWheelHit};
 use crate::session::{ConnectCtx, PendingCred, PendingHostKey, PendingMfa, TabStatus, TabStatuses};
-use crate::sftp::{
-    download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd,
-};
+use crate::sftp::{download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd};
 use crate::ssh::{
     format_mtime, format_size, spawn_session, SessionCommand, SessionEvent, SessionHandle,
 };
@@ -1370,15 +1366,11 @@ pub fn run() -> Result<()> {
     {
         let libs: Vec<SharedString> = [
             t("Slint — 图形界面框架 (GUI)", "Slint — GUI framework"),
-            t(
-                "russh / russh-keys — SSH 协议实现",
-                "russh / russh-keys — SSH protocol",
-            ),
+            t("russh — SSH 协议实现", "russh — SSH protocol"),
             t(
                 "russh-sftp — SFTP 文件传输",
                 "russh-sftp — SFTP file transfer",
             ),
-            t("ssh-key — SSH 密钥解析", "ssh-key — SSH key parsing"),
             t("tokio — 异步运行时", "tokio — async runtime"),
             t(
                 "vt100 — 终端 (VT100/xterm) 解析",
@@ -2745,18 +2737,16 @@ fn wire_session_callbacks(
     {
         let weak = window.as_weak();
         window.on_session_dialog_pick_key(move || {
-            let mut dialog = rfd::FileDialog::new()
-                .set_title(t("选择私钥文件", "Choose private key file"));
+            let mut dialog =
+                rfd::FileDialog::new().set_title(t("选择私钥文件", "Choose private key file"));
             // OpenSSH's standard macOS key names (id_ed25519, id_rsa, …) have
             // no extension. A native macOS extension filter makes those files
             // visible but disabled, so leave the picker unfiltered there (#325).
             // Other platforms retain the narrower existing filter.
             #[cfg(not(target_os = "macos"))]
             {
-                dialog = dialog.add_filter(
-                    t("SSH 私钥", "SSH private keys"),
-                    &["ppk", "pem", "key"],
-                );
+                dialog =
+                    dialog.add_filter(t("SSH 私钥", "SSH private keys"), &["ppk", "pem", "key"]);
             }
             // Start in ~/.ssh if it exists.
             if let Some(home) = directories::UserDirs::new().map(|u| u.home_dir().join(".ssh")) {
@@ -2793,10 +2783,7 @@ fn wire_session_callbacks(
         window.on_connect_session(move |id: SharedString| {
             let id = id.to_string();
             let session = if id.starts_with("system:") {
-                match builtin_local_sessions()
-                    .into_iter()
-                    .find(|s| s.id == id)
-                {
+                match builtin_local_sessions().into_iter().find(|s| s.id == id) {
                     Some(s) => s,
                     None => return,
                 }

@@ -18,15 +18,13 @@ use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use anyhow::{anyhow, Context, Result};
-use async_trait::async_trait;
 use futures::stream::{FuturesUnordered, StreamExt};
 use russh::client::{self, Handler};
-use russh::keys::key::PrivateKeyWithHashAlg;
+use russh::keys::{HashAlg, PrivateKeyWithHashAlg, PublicKey};
 use russh::Disconnect;
 use russh_sftp::client::error::Error as SftpError;
 use russh_sftp::client::{RawSftpSession, SftpSession};
 use russh_sftp::protocol::{FileAttributes, OpenFlags, StatusCode};
-use ssh_key::{HashAlg, PublicKey};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 use crate::config::{AuthMethod, Session};
@@ -258,25 +256,8 @@ async fn run_sftp(
         t("SFTP 连接中...", "SFTP connecting...").into(),
     ));
 
-    // Open a dedicated SSH connection for SFTP.
-    let config = Arc::new(client::Config {
-        // Keep the idle SFTP connection alive (#160). Without a keepalive, an idle
-        // SFTP connection (no file ops for a while) gets silently dropped by
-        // NAT / firewall / server idle timeouts; afterwards every operation fails
-        // ("folder read failed"). Send a keepalive every 30 s so traffic never
-        // goes quiet; keepalive_max (default 3) still closes a genuinely dead
-        // connection after ~90 s of unanswered keepalives.
-        keepalive_interval: Some(std::time::Duration::from_secs(30)),
-        // Match the shell connection's algorithm set so SFTP reaches the same
-        // legacy servers (#172) instead of failing with "No common algorithm".
-        preferred: russh::Preferred {
-            kex: std::borrow::Cow::Borrowed(crate::ssh::COMPAT_KEX),
-            cipher: std::borrow::Cow::Borrowed(crate::ssh::COMPAT_CIPHER),
-            ..russh::Preferred::DEFAULT
-        },
-        ..<_>::default()
-    });
-
+    // Open a dedicated SSH connection for SFTP. Shares the shell path so H3C/VRP
+    // gear that needs SSH-1.99- and a compact algorithm retry still works.
     let addr = format!("{}:{}", session.host, session.port);
     // Isolate external-editor files by connection and keep the server in the
     // visible local filename. Different hosts (or concurrent edit sessions)
@@ -289,13 +270,10 @@ async fn run_sftp(
         session.port,
         Uuid::new_v4()
     ));
-    let mut handle = client::connect(
-        config.clone(),
-        addr.as_str(),
-        sftp_handler(&session, &events),
-    )
-    .await
-    .with_context(|| format!("sftp connect {} failed", addr))?;
+    let (mut handle, config) =
+        crate::ssh::connect_transport(&addr, || sftp_handler(&session, &events))
+            .await
+            .with_context(|| format!("sftp connect {} failed", addr))?;
 
     // Resolve missing username/password (shares the shell's prompt; the UI
     // de-dupes by session id so SFTP doesn't prompt a second time) (#110).
@@ -310,7 +288,8 @@ async fn run_sftp(
             let mut ok = handle
                 .authenticate_password(&user, password.as_str())
                 .await
-                .context("sftp password auth failed")?;
+                .context("sftp password auth failed")?
+                .success();
             if !ok {
                 // Match the shell session's fallback: russh can hang if a second
                 // auth method is attempted on the same failed handle, so reconnect
@@ -355,12 +334,12 @@ async fn run_sftp(
             let keypair = crate::ssh::load_session_private_key(&session, pass)?;
             // RSA keys need an explicit SHA-2 hash; other key types don't.
             let hash = keypair.algorithm().is_rsa().then_some(HashAlg::Sha256);
-            let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash)
-                .context("invalid private key")?;
+            let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash);
             handle
                 .authenticate_publickey(&user, key_with_hash)
                 .await
                 .context("sftp publickey auth failed")?
+                .success()
         }
     };
 
@@ -1274,12 +1253,9 @@ fn validate_editor_text(bytes: Vec<u8>) -> std::result::Result<String, EditorTex
     if bytes.len() > MAX_BUILTIN_EDITOR_BYTES {
         return Err(EditorTextRejection::TooLarge);
     }
-    if bytes
-        .iter()
-        .any(|&byte| {
-            (byte < 0x20 && byte != b'\t' && byte != b'\n' && byte != b'\r') || byte == 0x7f
-        })
-    {
+    if bytes.iter().any(|&byte| {
+        (byte < 0x20 && byte != b'\t' && byte != b'\n' && byte != b'\r') || byte == 0x7f
+    }) {
         return Err(EditorTextRejection::Binary);
     }
 
@@ -2193,7 +2169,6 @@ fn sftp_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> Sf
     }
 }
 
-#[async_trait]
 impl Handler for SftpClientHandler {
     type Error = russh::Error;
 
@@ -2205,15 +2180,6 @@ impl Handler for SftpClientHandler {
             crate::ssh::verify_host_key(&self.host, self.port, server_public_key, &self.events)
                 .await,
         )
-    }
-
-    async fn data(
-        &mut self,
-        _channel: russh::ChannelId,
-        _data: &[u8],
-        _session: &mut client::Session,
-    ) -> Result<(), Self::Error> {
-        Ok(())
     }
 }
 
@@ -2227,9 +2193,9 @@ const _: fn() = || {
 #[cfg(test)]
 mod sanitize_tests {
     use super::{
-        available_download_path, download_target_path, external_edit_local_name,
-        sanitize_filename, validate_editor_text, EditorTextRejection,
-        MAX_BUILTIN_EDITOR_BYTES, MAX_BUILTIN_EDITOR_LINES, MAX_BUILTIN_EDITOR_LINE_BYTES,
+        available_download_path, download_target_path, external_edit_local_name, sanitize_filename,
+        validate_editor_text, EditorTextRejection, MAX_BUILTIN_EDITOR_BYTES,
+        MAX_BUILTIN_EDITOR_LINES, MAX_BUILTIN_EDITOR_LINE_BYTES,
     };
 
     #[test]
@@ -2305,13 +2271,17 @@ mod sanitize_tests {
 
     #[test]
     fn keep_both_uses_the_first_available_numbered_name() {
-        let dir = std::env::temp_dir().join(format!("meatshell-download-test-{}", uuid::Uuid::new_v4()));
+        let dir =
+            std::env::temp_dir().join(format!("meatshell-download-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let requested = download_target_path("/remote/report.txt", dir.to_str().unwrap());
         std::fs::write(&requested, b"old").unwrap();
         std::fs::write(dir.join("report (1).txt"), b"older").unwrap();
 
-        assert_eq!(available_download_path(&requested), dir.join("report (2).txt"));
+        assert_eq!(
+            available_download_path(&requested),
+            dir.join("report (2).txt")
+        );
 
         std::fs::remove_dir_all(&dir).unwrap();
     }

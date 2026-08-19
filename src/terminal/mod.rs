@@ -1,12 +1,12 @@
 #[path = "struct/state.rs"]
 mod state;
 
+#[path = "impls/encoding.rs"]
+mod encoding;
 #[path = "impls/input.rs"]
 mod input;
 #[path = "impls/json_output.rs"]
 mod json_output;
-#[path = "impls/encoding.rs"]
-mod encoding;
 #[path = "impls/local.rs"]
 pub(crate) mod local;
 #[path = "impls/output_highlight.rs"]
@@ -26,21 +26,19 @@ mod term_buffer;
 #[path = "impls/zmodem.rs"]
 pub(crate) mod zmodem;
 
+pub(crate) use encoding::TerminalEncoding;
 #[cfg(windows)]
 pub(crate) use input::c0_letter_key_down;
 #[cfg(test)]
 pub(crate) use input::normalize_pasted_newlines;
+#[cfg(any(target_os = "windows", test))]
+pub(crate) use input::windows_process_ctrl_release;
 pub(crate) use input::{
     bare_ctrl_marker_workaround_enabled, encode_command_bar_input, encode_pasted_text,
     key_to_pty_bytes, paste_requires_large_review, should_drop_bare_ctrl_marker,
     terminal_uses_bracketed_paste,
 };
-pub(crate) use encoding::TerminalEncoding;
 pub(crate) use json_output::format_json_output;
-#[cfg(any(target_os = "windows", test))]
-pub(crate) use input::windows_process_ctrl_release;
-#[cfg(any(target_os = "windows", test))]
-pub(crate) use state::CtrlKeySide;
 pub(crate) use output_highlight::compile_output_rules;
 pub(crate) use presentation::{highlight_plain_output, render_term_span};
 #[cfg(test)]
@@ -49,6 +47,8 @@ pub(crate) use render::{
     build_row, cell_prefix, char_after_cell_end, char_at_cell_start, detect_scroll, MAX_HISTORY,
     RAW_CAP,
 };
+#[cfg(any(target_os = "windows", test))]
+pub(crate) use state::CtrlKeySide;
 pub(crate) use state::{
     BuiltScreen, CompiledOutputRule, CsiState, HistSpan, Line, OutputHighlightPreset, RenderGates,
     TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,

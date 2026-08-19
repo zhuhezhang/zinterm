@@ -375,9 +375,7 @@ pub(super) fn wire_sftp_callbacks(
                 if let Ok(handles) = sftp_handles.lock() {
                     if let Some(h) = handles.get(tab_id.as_str()) {
                         if single {
-                            if let Some(conflict) =
-                                choose_download_conflict(&paths[0], &preset)
-                            {
+                            if let Some(conflict) = choose_download_conflict(&paths[0], &preset) {
                                 h.download(paths[0].clone(), preset.clone(), conflict);
                             }
                         } else {
