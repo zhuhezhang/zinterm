@@ -357,8 +357,8 @@ export component TerminalView inherits Rectangle {
     property <bool> history-autocomplete: false; // live suggestions from command input (#349)
     property <int> history-cursor: -1;         // ↑/↓ recall index (-1 = live input)
     // Keyboard-driven selection in the open history dropdown (#140): ↑/↓ move it,
-    // Enter runs history-view[history-selected].
-    property <int> history-selected: 0;
+    // Enter runs history-view[history-selected]. -1 = nothing selected yet.
+    property <int> history-selected: -1;
     callback run-command(string /* cmd */, bool /* to-all */);
     callback manage-quick-commands();          // open the add/edit/delete dialog
     callback quick-dock-drag-move(length, length);
@@ -539,7 +539,7 @@ export component TerminalView inherits Rectangle {
     changed history-open => {
         if (root.history-open) {
             if (!root.history-autocomplete) { root.search-history(""); }
-            root.history-selected = 0;
+            root.history-selected = -1;
         } else {
             root.history-autocomplete = false;
         }
@@ -1369,6 +1369,7 @@ export component TerminalView inherits Rectangle {
                                             accept
                                         } else if (e.text == Key.Tab && root.history-autocomplete) {
                                             if (root.history-view.length > 0
+                                                && root.history-selected >= 0
                                                 && root.history-selected < root.history-view.length) {
                                                 self.text = root.history-view[root.history-selected];
                                                 self.set-selection-offsets(1000000, 1000000);
@@ -2151,7 +2152,7 @@ export component TerminalView inherits Rectangle {
                                                 single-line: true;
                                                     // Auto-focus so Ctrl+R lands you typing (#140).
                                                     init => { self.focus(); }
-                                                edited => { root.search-history(self.text); root.history-selected = 0; }
+                                                edited => { root.search-history(self.text); root.history-selected = -1; }
                                                     // ↑/↓ move the selection, Enter runs it, Esc
                                                     // closes and returns focus to the terminal (#140).
                                                     key-pressed(e) => {
@@ -2175,6 +2176,7 @@ export component TerminalView inherits Rectangle {
                                                         accept
                                                     } else if (e.text == Key.Return) {
                                                         if (root.history-view.length > 0
+                                                            && root.history-selected >= 0
                                                             && root.history-selected < root.history-view.length) {
                                                             root.run-command(root.history-view[root.history-selected], root.send-to-all);
                                                             root.history-open = false;
