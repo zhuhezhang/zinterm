@@ -19,7 +19,7 @@ export global Theme {
     // (see app.slint), panels/terminal frost over it, accent + surfaces shift
     // toward the image's colours, and Rust sets `dark` from the image luminance.
     in-out property <image> wallpaper;
-    in-out property <bool>  wallpaper-active: false;
+    in-out property <bool> wallpaper-active: false;
     in-out property <color> wp-accent: #4a90e2;   // vivid accent from the image
     in-out property <color> wp-tint:   #808080;   // average colour, tints surfaces
     // Frosted-panel opacity over a wallpaper (0.30–1.00). User-adjustable via the
@@ -84,9 +84,9 @@ export global Theme {
     out property <brush> text-secondary: dark ? #b4b9c4 : #45454a;
     out property <brush> text-muted:     dark ? #9196a3 : #606066;
 
-    out property <brush> accent:         root.wallpaper-active ? root.wp-accent          : (dark ? #4a90e2 : #0071e3);
+    out property <brush> accent:         root.wallpaper-active ? root.wp-accent : (dark ? #4a90e2 : #0071e3);
     out property <brush> accent-hover:   root.wallpaper-active ? root.wp-accent.brighter(0.12) : (dark ? #5aa0f2 : #0077ed);
-    out property <brush> accent-pressed: root.wallpaper-active ? root.wp-accent.darker(0.12)   : (dark ? #3a80d2 : #006adb);
+    out property <brush> accent-pressed: root.wallpaper-active ? root.wp-accent.darker(0.12) : (dark ? #3a80d2 : #006adb);
 
     out property <brush> success: dark ? #4ec9b0 : #34c759;
     out property <brush> warning: dark ? #e2a84a : #ff9f0a;

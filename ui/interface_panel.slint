@@ -32,15 +32,25 @@ component NavItem inherits Rectangle {
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
     }
+
     HorizontalLayout {
         padding-left: 10px;
         spacing: 9px;
-        Text { text: root.icon; font-family: "Material Icons";
-               color: root.active ? Theme.text-primary : Theme.text-secondary;
-               font-size: 15px * Theme.panel-font; vertical-alignment: center; }
-        Text { text: root.label;
-               color: root.active ? Theme.text-primary : Theme.text-secondary;
-               font-size: 13px * Theme.panel-font; vertical-alignment: center; horizontal-stretch: 1; }
+        Text {
+            text: root.icon;
+            font-family: "Material Icons";
+            color: root.active ? Theme.text-primary : Theme.text-secondary;
+            font-size: 15px * Theme.panel-font;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px * Theme.panel-font;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
     }
 }
 
@@ -67,16 +77,30 @@ component SettingRow inherits Rectangle {
                 horizontal-stretch: 1;
                 alignment: center;
                 spacing: 3px;
-                Text { text: root.label; font-size: 13px * Theme.panel-font; color: Theme.text-primary; }
-                if root.desc != "" : Text { text: root.desc; font-size: 11px * Theme.panel-font;
-                       color: Theme.text-muted; wrap: word-wrap; }
+                Text {
+                    text: root.label;
+                    font-size: 13px * Theme.panel-font;
+                    color: Theme.text-primary;
+                }
+
+                if root.desc != "": Text {
+                    text: root.desc;
+                    font-size: 11px * Theme.panel-font;
+                    color: Theme.text-muted;
+                    wrap: word-wrap;
+                }
             }
+
             VerticalLayout {
                 alignment: center;
                 @children
             }
         }
-        if root.show-divider : Rectangle { height: 1px; background: Theme.border-subtle; }
+
+        if root.show-divider: Rectangle {
+            height: 1px;
+            background: Theme.border-subtle;
+        }
     }
 }
 
@@ -98,8 +122,12 @@ component Switch inherits Rectangle {
         y: 3px;
         x: root.on ? parent.width - self.width - 3px : 3px;
         background: white;
-        animate x { duration: 120ms; easing: ease-out; }
+        animate x {
+            duration: 120ms;
+            easing: ease-out;
+        }
     }
+
     TouchArea {
         mouse-cursor: pointer;
         clicked => { root.toggled(!root.on); }
@@ -129,14 +157,36 @@ component Stepper inherits Rectangle {
                 mouse-cursor: pointer;
                 clicked => { root.changed(max(root.minimum, root.value - root.step)); }
             }
-            Text { text: "\u{E15B}"; font-family: "Material Icons"; font-size: 14px * Theme.panel-font;
-                   color: Theme.text-secondary; horizontal-alignment: center; vertical-alignment: center; }
+
+            Text {
+                text: "\u{E15B}";
+                font-family: "Material Icons";
+                font-size: 14px * Theme.panel-font;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
         }
-        Rectangle { width: 1px; background: Theme.border-subtle; }
-        Text { text: root.value + root.unit; horizontal-stretch: 1;
-               font-size: 12px * Theme.panel-font; color: Theme.text-primary;
-               horizontal-alignment: center; vertical-alignment: center; }
-        Rectangle { width: 1px; background: Theme.border-subtle; }
+
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+
+        Text {
+            text: root.value + root.unit;
+            horizontal-stretch: 1;
+            font-size: 12px * Theme.panel-font;
+            color: Theme.text-primary;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+
         Rectangle {
             width: 30px;
             background: plus-ta.has-hover ? Theme.bg-hover : transparent;
@@ -144,8 +194,15 @@ component Stepper inherits Rectangle {
                 mouse-cursor: pointer;
                 clicked => { root.changed(min(root.maximum, root.value + root.step)); }
             }
-            Text { text: "\u{E145}"; font-family: "Material Icons"; font-size: 14px * Theme.panel-font;
-                   color: Theme.text-secondary; horizontal-alignment: center; vertical-alignment: center; }
+
+            Text {
+                text: "\u{E145}";
+                font-family: "Material Icons";
+                font-size: 14px * Theme.panel-font;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
         }
     }
 }
@@ -166,6 +223,7 @@ component CursorStyleButton inherits Rectangle {
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
     }
+
     HorizontalLayout {
         padding-left: 7px;
         padding-right: 7px;
@@ -189,6 +247,7 @@ component CursorStyleButton inherits Rectangle {
                 }
             }
         }
+
         Text {
             text: root.label;
             color: root.selected ? Theme.text-primary : Theme.text-secondary;
@@ -242,6 +301,7 @@ component CursorColorInput inherits Rectangle {
             clicked => { color-picker.show(); }
         }
     }
+
     color-input := TextInput {
         x: 34px;
         width: parent.width - 41px;
@@ -254,6 +314,7 @@ component CursorColorInput inherits Rectangle {
         single-line: true;
         changed text => { root.valid = root.apply-color(self.text); }
     }
+
     color-picker := PopupWindow {
         x: parent.width - self.width;
         y: parent.height + 4px;
@@ -276,41 +337,185 @@ component CursorColorInput inherits Rectangle {
                     font-size: 11px * Theme.panel-font;
                     vertical-alignment: center;
                 }
+
                 HorizontalLayout {
                     spacing: 6px;
-                    CursorPaletteSwatch { hex: "#D4D4D4"; swatch-color: #D4D4D4; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#FFFFFF"; swatch-color: #FFFFFF; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#FF5252"; swatch-color: #FF5252; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#FF9800"; swatch-color: #FF9800; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#FFD740"; swatch-color: #FFD740; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#69F0AE"; swatch-color: #69F0AE; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
+                    CursorPaletteSwatch {
+                        hex: "#D4D4D4";
+                        swatch-color: #D4D4D4;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#FFFFFF";
+                        swatch-color: #FFFFFF;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#FF5252";
+                        swatch-color: #FF5252;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#FF9800";
+                        swatch-color: #FF9800;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#FFD740";
+                        swatch-color: #FFD740;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#69F0AE";
+                        swatch-color: #69F0AE;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
                 }
+
                 HorizontalLayout {
                     spacing: 6px;
-                    CursorPaletteSwatch { hex: "#00E676"; swatch-color: #00E676; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#00E5FF"; swatch-color: #00E5FF; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#40C4FF"; swatch-color: #40C4FF; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#448AFF"; swatch-color: #448AFF; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#7C4DFF"; swatch-color: #7C4DFF; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#E040FB"; swatch-color: #E040FB; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
+                    CursorPaletteSwatch {
+                        hex: "#00E676";
+                        swatch-color: #00E676;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#00E5FF";
+                        swatch-color: #00E5FF;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#40C4FF";
+                        swatch-color: #40C4FF;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#448AFF";
+                        swatch-color: #448AFF;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#7C4DFF";
+                        swatch-color: #7C4DFF;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#E040FB";
+                        swatch-color: #E040FB;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
                 }
+
                 HorizontalLayout {
                     spacing: 6px;
-                    CursorPaletteSwatch { hex: "#F48FB1"; swatch-color: #F48FB1; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#FF8A65"; swatch-color: #FF8A65; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#FFF176"; swatch-color: #FFF176; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#A5D6A7"; swatch-color: #A5D6A7; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#80CBC4"; swatch-color: #80CBC4; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#90CAF9"; swatch-color: #90CAF9; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
+                    CursorPaletteSwatch {
+                        hex: "#F48FB1";
+                        swatch-color: #F48FB1;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#FF8A65";
+                        swatch-color: #FF8A65;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#FFF176";
+                        swatch-color: #FFF176;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#A5D6A7";
+                        swatch-color: #A5D6A7;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#80CBC4";
+                        swatch-color: #80CBC4;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#90CAF9";
+                        swatch-color: #90CAF9;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
                 }
+
                 HorizontalLayout {
                     spacing: 6px;
-                    CursorPaletteSwatch { hex: "#B39DDB"; swatch-color: #B39DDB; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#CE93D8"; swatch-color: #CE93D8; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#BCAAA4"; swatch-color: #BCAAA4; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#9E9E9E"; swatch-color: #9E9E9E; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#607D8B"; swatch-color: #607D8B; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
-                    CursorPaletteSwatch { hex: "#2D2D2F"; swatch-color: #2D2D2F; selected: root.value == self.hex; chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } } }
+                    CursorPaletteSwatch {
+                        hex: "#B39DDB";
+                        swatch-color: #B39DDB;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#CE93D8";
+                        swatch-color: #CE93D8;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#BCAAA4";
+                        swatch-color: #BCAAA4;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#9E9E9E";
+                        swatch-color: #9E9E9E;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#607D8B";
+                        swatch-color: #607D8B;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
+
+                    CursorPaletteSwatch {
+                        hex: "#2D2D2F";
+                        swatch-color: #2D2D2F;
+                        selected: root.value == self.hex;
+                        chosen(v) => { if root.apply-color(v) { root.value = v; root.valid = true; color-picker.close(); } }
+                    }
                 }
             }
         }
@@ -330,7 +535,7 @@ component WallpaperSwatch inherits Rectangle {
     border-color: root.selected ? Theme.accent : Theme.border-strong;
     clip: true;
     @children
-    if root.selected : Rectangle {
+    if root.selected: Rectangle {
         x: parent.width - self.width - 5px;
         y: 5px;
         width: 18px;
@@ -339,9 +544,13 @@ component WallpaperSwatch inherits Rectangle {
         background: Theme.accent;
         Text {
             text: "\u{E5CA}"; // check
-            font-family: "Material Icons"; color: white; font-size: 13px * Theme.panel-font;
-            width: 100%; height: 100%;
-            horizontal-alignment: center; vertical-alignment: center;
+            font-family: "Material Icons";
+            color: white;
+            font-size: 13px * Theme.panel-font;
+            width: 100%;
+            height: 100%;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
     ta := TouchArea {
@@ -432,9 +641,12 @@ export component InterfacePanel inherits Rectangle {
             // bg-panel); a 1px divider keeps the nav/content separation (items 6/7).
             background: transparent;
             Rectangle {
-                x: parent.width - 1px; width: 1px; height: parent.height;
+                x: parent.width - 1px;
+                width: 1px;
+                height: parent.height;
                 background: Theme.border-subtle;
             }
+
             nav-scroll := ScrollView {
                 width: 100%;
                 height: 100%;
@@ -445,61 +657,82 @@ export component InterfacePanel inherits Rectangle {
                     padding: 10px;
                     spacing: 2px;
                     alignment: start;
-                NavItem {
-                    icon: "\u{E167}"; label: root.lang-en ? "Font" : "字体";
-                    active: root.ifd-page == "font";
-                    clicked => { root.ifd-page = "font"; }
-                }
-                NavItem {
-                    icon: "\u{E312}"; label: root.lang-en ? "Input" : "输入";
-                    active: root.ifd-page == "input";
-                    clicked => { root.ifd-page = "input"; }
-                }
-                NavItem {
-                    icon: "\u{E1B1}"; label: root.lang-en ? "Rendering" : "渲染";
-                    active: root.ifd-page == "renderer";
-                    clicked => { root.ifd-page = "renderer"; }
-                }
-                NavItem {
-                    icon: "\u{E8D4}"; label: root.lang-en ? "Output" : "输出高亮";
-                    active: root.ifd-page == "output";
-                    clicked => { root.ifd-page = "output"; }
-                }
-                NavItem {
-                    icon: "\u{E1BC}"; label: root.lang-en ? "Wallpaper" : "壁纸";
-                    active: root.ifd-page == "wallpaper";
-                    clicked => { root.ifd-page = "wallpaper"; }
-                }
-                NavItem {
-                    icon: "\u{E2C7}"; label: "SFTP";
-                    active: root.ifd-page == "sftp";
-                    clicked => { root.ifd-page = "sftp"; }
-                }
-                NavItem {
-                    icon: "\u{E0E8}"; label: "SSH";
-                    active: root.ifd-page == "ssh";
-                    clicked => { root.ifd-page = "ssh"; }
-                }
-                NavItem {
-                    icon: "\u{E5CB}"; label: root.lang-en ? "Sidebars" : "侧栏";
-                    active: root.ifd-page == "sidebar";
-                    clicked => { root.ifd-page = "sidebar"; }
-                }
-                NavItem {
-                    icon: "\u{E88A}"; label: root.lang-en ? "Welcome page" : "欢迎页";
-                    active: root.ifd-page == "welcome";
-                    clicked => { root.ifd-page = "welcome"; }
-                }
-                NavItem {
-                    icon: "\u{E2C4}"; label: root.lang-en ? "Download" : "下载";
-                    active: root.ifd-page == "download";
-                    clicked => { root.ifd-page = "download"; }
-                }
-                NavItem {
-                    icon: "\u{E923}"; label: root.lang-en ? "Update check" : "新版本提示";
-                    active: root.ifd-page == "update";
-                    clicked => { root.ifd-page = "update"; }
-                }
+                    NavItem {
+                        icon: "\u{E167}";
+                        label: root.lang-en ? "Font" : "字体";
+                        active: root.ifd-page == "font";
+                        clicked => { root.ifd-page = "font"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E312}";
+                        label: root.lang-en ? "Input" : "输入";
+                        active: root.ifd-page == "input";
+                        clicked => { root.ifd-page = "input"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E1B1}";
+                        label: root.lang-en ? "Rendering" : "渲染";
+                        active: root.ifd-page == "renderer";
+                        clicked => { root.ifd-page = "renderer"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E8D4}";
+                        label: root.lang-en ? "Output" : "输出高亮";
+                        active: root.ifd-page == "output";
+                        clicked => { root.ifd-page = "output"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E1BC}";
+                        label: root.lang-en ? "Wallpaper" : "壁纸";
+                        active: root.ifd-page == "wallpaper";
+                        clicked => { root.ifd-page = "wallpaper"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E2C7}";
+                        label: "SFTP";
+                        active: root.ifd-page == "sftp";
+                        clicked => { root.ifd-page = "sftp"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E0E8}";
+                        label: "SSH";
+                        active: root.ifd-page == "ssh";
+                        clicked => { root.ifd-page = "ssh"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E5CB}";
+                        label: root.lang-en ? "Sidebars" : "侧栏";
+                        active: root.ifd-page == "sidebar";
+                        clicked => { root.ifd-page = "sidebar"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E88A}";
+                        label: root.lang-en ? "Welcome page" : "欢迎页";
+                        active: root.ifd-page == "welcome";
+                        clicked => { root.ifd-page = "welcome"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E2C4}";
+                        label: root.lang-en ? "Download" : "下载";
+                        active: root.ifd-page == "download";
+                        clicked => { root.ifd-page = "download"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E923}";
+                        label: root.lang-en ? "Update check" : "新版本提示";
+                        active: root.ifd-page == "update";
+                        clicked => { root.ifd-page = "update"; }
+                    }
                 }
             }
         }
@@ -520,885 +753,1135 @@ export component InterfacePanel inherits Rectangle {
                 settings-pages := VerticalLayout {
                     width: settings-scroll.visible-width;
 
-            // --- Font page ---------------------------------------------
-            if root.ifd-page == "font" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
+                    // --- Font page ---------------------------------------------
+            if root.ifd-page == "font": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
 
-                SectionHeader { text: root.lang-en ? "FONT" : "字体"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Terminal font" : "终端字体";
-                    ComboBox {
-                        width: 220px;
-                        model: root.term-fonts;
-                        current-value: root.term-font-family;
-                        selected(v) => { root.set-term-font(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Terminal font size" : "终端字体大小";
-                    Stepper {
-                        value: root.term-font-size / 1px; minimum: 8; maximum: 32; step: 1; unit: "px";
-                        changed(v) => { root.set-term-font-size(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Terminal line spacing" : "终端行距";
-                    desc: root.lang-en ? "Adjust terminal row height from compact to loose."
-                                       : "调整终端行高，可设置得更紧凑或更宽松。";
-                    Stepper {
-                        value: round(root.terminal-line-spacing * 100);
-                        minimum: 80; maximum: 150; step: 5; unit: "%";
-                        changed(v) => { root.terminal-line-spacing = v / 100; root.set-terminal-line-spacing(root.terminal-line-spacing); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Installed fonts" : "已安装字体";
-                    desc: root.lang-en
-                        ? "Install a TTF/OTF font in Windows, then restart meatshell to refresh this list."
-                        : "在 Windows 中安装 TTF/OTF 字体后，重启 meatshell 即可刷新字体列表。";
-                    show-divider: false;
-                    Rectangle { width: 1px; height: 1px; background: transparent; }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Bold terminal text" : "终端字体加粗";
-                    desc: root.lang-en ? "Makes regular terminal output use a bold face."
-                                       : "让普通终端输出使用加粗字重。";
-                    Switch {
-                        on: root.term-font-bold;
-                        toggled(v) => { root.term-font-bold = v; root.set-term-font-bold(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Cursor shape" : "光标类型";
-                    desc: root.lang-en ? "Choose the terminal insertion cursor shape."
-                                       : "选择终端输入光标的形状。";
-                    HorizontalLayout {
-                        spacing: 5px;
-                        CursorStyleButton {
-                            label: root.lang-en ? "Block" : "块状";
-                            cursor-kind: "block";
-                            selected: root.term-cursor-style == "block";
-                            clicked => { root.term-cursor-style = "block"; root.set-term-cursor-style("block"); }
+                        SectionHeader {
+                            text: root.lang-en ? "FONT" : "字体";
+                            height: 24px;
                         }
-                        CursorStyleButton {
-                            label: root.lang-en ? "Bar" : "竖线";
-                            cursor-kind: "bar";
-                            selected: root.term-cursor-style == "bar";
-                            clicked => { root.term-cursor-style = "bar"; root.set-term-cursor-style("bar"); }
+
+                        SettingRow {
+                            label: root.lang-en ? "Terminal font" : "终端字体";
+                            ComboBox {
+                                width: 220px;
+                                model: root.term-fonts;
+                                current-value: root.term-font-family;
+                                selected(v) => { root.set-term-font(v); }
+                            }
                         }
-                        CursorStyleButton {
-                            label: root.lang-en ? "Line" : "下划线";
-                            cursor-kind: "underline";
-                            selected: root.term-cursor-style == "underline";
-                            clicked => { root.term-cursor-style = "underline"; root.set-term-cursor-style("underline"); }
+
+                        SettingRow {
+                            label: root.lang-en ? "Terminal font size" : "终端字体大小";
+                            Stepper {
+                                value: root.term-font-size / 1px;
+                                minimum: 8;
+                                maximum: 32;
+                                step: 1;
+                                unit: "px";
+                                changed(v) => { root.set-term-font-size(v); }
+                            }
                         }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Cursor color" : "光标颜色";
-                    desc: root.lang-en ? "Enter a hexadecimal RGB color."
-                                       : "输入十六进制 RGB 颜色。";
-                    CursorColorInput {
-                        value <=> root.term-cursor-color-hex;
-                        preview-color: root.term-cursor-color;
-                        apply-color(v) => { root.set-term-cursor-color(v) }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "UI scale" : "界面缩放";
-                    desc: root.lang-en ? "Zooms the whole interface (not this panel)."
-                                       : "缩放整个界面(不影响本面板)。";
-                    Stepper {
-                        value: round(root.ui-scale * 100); minimum: 80; maximum: 200; step: 10; unit: "%";
-                        changed(v) => { root.set-ui-scale(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Settings font size" : "界面字体大小";
-                    desc: root.lang-en ? "Enlarges this settings panel (font + window)."
-                                       : "放大本设置面板的字体和窗口。";
-                    show-divider: false;
-                    Stepper {
-                        value: round(Theme.panel-font * 100); minimum: 80; maximum: 160; step: 10; unit: "%";
-                        changed(v) => { root.set-panel-font(v); }
-                    }
-                }
 
-                Rectangle { height: 14px; }
-                SectionHeader { text: root.lang-en ? "PREVIEW" : "预览"; height: 22px; }
-                Rectangle {
-                    height: 52px;
-                    background: Theme.term-bg;
-                    border-radius: 6px;
-                    border-width: 1px;
-                    border-color: Theme.border-subtle;
-                    Text {
-                        x: 12px;
-                        text: "meatshell ~$ echo preview 0123";
-                        font-family: Theme.term-font-family;
-                        font-size: Theme.term-font-size;
-                        font-weight: Theme.term-font-bold ? 700 : 400;
-                        color: Theme.term-fg;
-                        vertical-alignment: center;
-                        height: parent.height;
-                    }
-                }
-            }
+                        SettingRow {
+                            label: root.lang-en ? "Terminal line spacing" : "终端行距";
+                            desc: root.lang-en ? "Adjust terminal row height from compact to loose."
+                                : "调整终端行高，可设置得更紧凑或更宽松。";
+                            Stepper {
+                                value: round(root.terminal-line-spacing * 100);
+                                minimum: 80;
+                                maximum: 150;
+                                step: 5;
+                                unit: "%";
+                                changed(v) => { root.terminal-line-spacing = v / 100; root.set-terminal-line-spacing(root.terminal-line-spacing); }
+                            }
+                        }
 
-            // --- Input page -------------------------------------------
-            if root.ifd-page == "input" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
+                        SettingRow {
+                            label: root.lang-en ? "Installed fonts" : "已安装字体";
+                            desc: root.lang-en
+                                ? "Install a TTF/OTF font in Windows, then restart meatshell to refresh this list."
+                                : "在 Windows 中安装 TTF/OTF 字体后，重启 meatshell 即可刷新字体列表。";
+                            show-divider: false;
+                            Rectangle {
+                                width: 1px;
+                                height: 1px;
+                                background: transparent;
+                            }
+                        }
 
-                SectionHeader { text: root.lang-en ? "INPUT" : "输入"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Confirm multiline paste" : "确认多行粘贴";
-                    desc: root.lang-en ? "Show a review dialog before sending multiline content."
-                                       : "发送多行内容前显示预览确认窗口。";
-                    Switch {
-                        on: root.paste-confirm-enabled;
-                        toggled(v) => { root.paste-confirm-enabled = v; root.set-paste-confirm-enabled(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Additional paste shortcuts" : "额外粘贴快捷键";
-                    desc: root.lang-en ? "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste."
-                                       : "启用 Ctrl+Alt+V、Shift+Insert 和鼠标中键粘贴。";
-                    show-divider: false;
-                    Switch {
-                        on: root.extra-paste-shortcuts-enabled;
-                        toggled(v) => { root.extra-paste-shortcuts-enabled = v; root.set-extra-paste-shortcuts-enabled(v); }
-                    }
-                }
-            }
+                        SettingRow {
+                            label: root.lang-en ? "Bold terminal text" : "终端字体加粗";
+                            desc: root.lang-en ? "Makes regular terminal output use a bold face."
+                                : "让普通终端输出使用加粗字重。";
+                            Switch {
+                                on: root.term-font-bold;
+                                toggled(v) => { root.term-font-bold = v; root.set-term-font-bold(v); }
+                            }
+                        }
 
-            // --- Output highlighting page -----------------------------
-            if root.ifd-page == "output" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
+                        SettingRow {
+                            label: root.lang-en ? "Cursor shape" : "光标类型";
+                            desc: root.lang-en ? "Choose the terminal insertion cursor shape."
+                                : "选择终端输入光标的形状。";
+                            HorizontalLayout {
+                                spacing: 5px;
+                                CursorStyleButton {
+                                    label: root.lang-en ? "Block" : "块状";
+                                    cursor-kind: "block";
+                                    selected: root.term-cursor-style == "block";
+                                    clicked => { root.term-cursor-style = "block"; root.set-term-cursor-style("block"); }
+                                }
 
-                SectionHeader { text: root.lang-en ? "OUTPUT HIGHLIGHTING" : "输出高亮"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Highlight plain terminal output" : "高亮纯文本终端输出";
-                    desc: root.lang-en
-                        ? "Adds client-side colours only when the program did not provide ANSI styling."
-                        : "仅在程序未提供 ANSI 样式时由客户端补充颜色。";
-                    Switch {
-                        on: root.output-highlight-enabled;
-                        toggled(v) => {
-                            root.output-highlight-enabled = v;
-                            root.set-output-highlight(v, root.output-highlight-preset);
+                                CursorStyleButton {
+                                    label: root.lang-en ? "Bar" : "竖线";
+                                    cursor-kind: "bar";
+                                    selected: root.term-cursor-style == "bar";
+                                    clicked => { root.term-cursor-style = "bar"; root.set-term-cursor-style("bar"); }
+                                }
+
+                                CursorStyleButton {
+                                    label: root.lang-en ? "Line" : "下划线";
+                                    cursor-kind: "underline";
+                                    selected: root.term-cursor-style == "underline";
+                                    clicked => { root.term-cursor-style = "underline"; root.set-term-cursor-style("underline"); }
+                                }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Cursor color" : "光标颜色";
+                            desc: root.lang-en ? "Enter a hexadecimal RGB color."
+                                : "输入十六进制 RGB 颜色。";
+                            CursorColorInput {
+                                value <=> root.term-cursor-color-hex;
+                                preview-color: root.term-cursor-color;
+                                apply-color(v) => { root.set-term-cursor-color(v) }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "UI scale" : "界面缩放";
+                            desc: root.lang-en ? "Zooms the whole interface (not this panel)."
+                                : "缩放整个界面(不影响本面板)。";
+                            Stepper {
+                                value: round(root.ui-scale * 100);
+                                minimum: 80;
+                                maximum: 200;
+                                step: 10;
+                                unit: "%";
+                                changed(v) => { root.set-ui-scale(v); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Settings font size" : "界面字体大小";
+                            desc: root.lang-en ? "Enlarges this settings panel (font + window)."
+                                : "放大本设置面板的字体和窗口。";
+                            show-divider: false;
+                            Stepper {
+                                value: round(Theme.panel-font * 100);
+                                minimum: 80;
+                                maximum: 160;
+                                step: 10;
+                                unit: "%";
+                                changed(v) => { root.set-panel-font(v); }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 14px;
+                        }
+
+                        SectionHeader {
+                            text: root.lang-en ? "PREVIEW" : "预览";
+                            height: 22px;
+                        }
+
+                        Rectangle {
+                            height: 52px;
+                            background: Theme.term-bg;
+                            border-radius: 6px;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+                            Text {
+                                x: 12px;
+                                text: "meatshell ~$ echo preview 0123";
+                                font-family: Theme.term-font-family;
+                                font-size: Theme.term-font-size;
+                                font-weight: Theme.term-font-bold ? 700 : 400;
+                                color: Theme.term-fg;
+                                vertical-alignment: center;
+                                height: parent.height;
+                            }
                         }
                     }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Built-in rule set" : "内置规则集";
-                    desc: root.lang-en
-                        ? "Log levels is conservative; DevOps also recognises deployment and health states."
-                        : "日志级别更保守；DevOps 还识别部署与健康状态。";
-                    show-divider: false;
-                    ComboBox {
-                        width: 190px;
-                        enabled: root.output-highlight-enabled;
-                        model: [root.lang-en ? "Log levels" : "日志级别", "DevOps"];
-                        current-value: root.output-highlight-preset == "devops"
-                            ? "DevOps"
-                            : (root.lang-en ? "Log levels" : "日志级别");
-                        selected(v) => {
-                            root.output-highlight-preset = v == "DevOps" ? "devops" : "log";
-                            root.set-output-highlight(
+
+                    // --- Input page -------------------------------------------
+            if root.ifd-page == "input": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+
+                        SectionHeader {
+                            text: root.lang-en ? "INPUT" : "输入";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Confirm multiline paste" : "确认多行粘贴";
+                            desc: root.lang-en ? "Show a review dialog before sending multiline content."
+                                : "发送多行内容前显示预览确认窗口。";
+                            Switch {
+                                on: root.paste-confirm-enabled;
+                                toggled(v) => { root.paste-confirm-enabled = v; root.set-paste-confirm-enabled(v); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Additional paste shortcuts" : "额外粘贴快捷键";
+                            desc: root.lang-en ? "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste."
+                                : "启用 Ctrl+Alt+V、Shift+Insert 和鼠标中键粘贴。";
+                            show-divider: false;
+                            Switch {
+                                on: root.extra-paste-shortcuts-enabled;
+                                toggled(v) => { root.extra-paste-shortcuts-enabled = v; root.set-extra-paste-shortcuts-enabled(v); }
+                            }
+                        }
+                    }
+
+                    // --- Output highlighting page -----------------------------
+            if root.ifd-page == "output": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+
+                        SectionHeader {
+                            text: root.lang-en ? "OUTPUT HIGHLIGHTING" : "输出高亮";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Highlight plain terminal output" : "高亮纯文本终端输出";
+                            desc: root.lang-en
+                                ? "Adds client-side colours only when the program did not provide ANSI styling."
+                                : "仅在程序未提供 ANSI 样式时由客户端补充颜色。";
+                            Switch {
+                                on: root.output-highlight-enabled;
+                                toggled(v) => {
+                                    root.output-highlight-enabled = v;
+                                    root.set-output-highlight(v, root.output-highlight-preset);
+                                }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Built-in rule set" : "内置规则集";
+                            desc: root.lang-en
+                                ? "Log levels is conservative; DevOps also recognises deployment and health states."
+                                : "日志级别更保守；DevOps 还识别部署与健康状态。";
+                            show-divider: false;
+                            ComboBox {
+                                width: 190px;
+                                enabled: root.output-highlight-enabled;
+                                model: [root.lang-en ? "Log levels" : "日志级别", "DevOps"];
+                                current-value: root.output-highlight-preset == "devops"
+                                    ? "DevOps"
+                                    : (root.lang-en ? "Log levels" : "日志级别");
+                                selected(v) => {
+                                    root.output-highlight-preset = v == "DevOps" ? "devops" : "log";
+                                    root.set-output-highlight(
                                 root.output-highlight-enabled,
                                 root.output-highlight-preset);
+                                }
+                            }
                         }
-                    }
-                }
 
-                SettingRow {
-                    label: root.lang-en ? "Format and colour JSON lines" : "格式化并着色 JSON 行";
-                    desc: root.lang-en
-                        ? "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged."
-                        : "仅美化占据完整一行且可正确解析的 JSON 对象或数组，其他终端输出保持原样。";
-                    show-divider: false;
-                    Switch {
-                        on: root.json-format-output;
-                        toggled(v) => {
-                            root.json-format-output = v;
-                            root.set-json-format-output(v);
+                        SettingRow {
+                            label: root.lang-en ? "Format and colour JSON lines" : "格式化并着色 JSON 行";
+                            desc: root.lang-en
+                                ? "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged."
+                                : "仅美化占据完整一行且可正确解析的 JSON 对象或数组，其他终端输出保持原样。";
+                            show-divider: false;
+                            Switch {
+                                on: root.json-format-output;
+                                toggled(v) => {
+                                    root.json-format-output = v;
+                                    root.set-json-format-output(v);
+                                }
+                            }
                         }
-                    }
-                }
 
-                Rectangle { height: 18px; }
-                SectionHeader { text: root.lang-en ? "PREVIEW" : "预览"; height: 22px; }
-                Rectangle {
-                    height: root.output-highlight-preset == "devops" ? 116px : 92px;
-                    background: Theme.term-bg;
-                    border-radius: 6px;
-                    border-width: 1px;
-                    border-color: Theme.border-subtle;
-                    VerticalLayout {
-                        padding: 12px;
-                        spacing: 5px;
-                        Text { text: "DEBUG cache lookup"; color: root.output-highlight-enabled ? Theme.text-muted : Theme.term-fg; font-family: Theme.term-font-family; font-size: 12px; }
-                        Text { text: "INFO server ready"; color: root.output-highlight-enabled ? Theme.accent : Theme.term-fg; font-family: Theme.term-font-family; font-size: 12px; }
-                        Text { text: "WARN disk nearly full"; color: root.output-highlight-enabled ? Theme.warning : Theme.term-fg; font-family: Theme.term-font-family; font-size: 12px; }
-                        Text { text: "ERROR connection failed"; color: root.output-highlight-enabled ? Theme.danger : Theme.term-fg; font-family: Theme.term-font-family; font-size: 12px; }
-                        if root.output-highlight-preset == "devops" : Text { text: "SUCCESS deployment completed"; color: root.output-highlight-enabled ? Theme.success : Theme.term-fg; font-family: Theme.term-font-family; font-size: 12px; }
-                    }
-                }
+                        Rectangle {
+                            height: 18px;
+                        }
 
-                Rectangle { height: 18px; }
-                SectionHeader { text: root.lang-en ? "CUSTOM RULES" : "自定义规则"; height: 22px; }
-                Text {
-                    text: root.lang-en
-                        ? "Custom rules run before the built-in preset and never overwrite ANSI colours."
-                        : "自定义规则优先于内置规则，且不会覆盖程序输出的 ANSI 颜色。";
-                    color: Theme.text-muted;
-                    font-size: 11px * Theme.panel-font;
-                    wrap: word-wrap;
-                }
-                Rectangle { height: 10px; }
-                LabeledInput {
-                    label: root.lang-en ? "Keyword or regular expression" : "关键词或正则表达式";
-                    placeholder: root.new-rule-regex ? "timeout|connection refused" : "connection refused";
-                    value <=> root.new-rule-pattern;
-                    accepted => {
-                        if root.add-output-highlight-rule(
+                        SectionHeader {
+                            text: root.lang-en ? "PREVIEW" : "预览";
+                            height: 22px;
+                        }
+
+                        Rectangle {
+                            height: root.output-highlight-preset == "devops" ? 116px : 92px;
+                            background: Theme.term-bg;
+                            border-radius: 6px;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+                            VerticalLayout {
+                                padding: 12px;
+                                spacing: 5px;
+                                Text {
+                                    text: "DEBUG cache lookup";
+                                    color: root.output-highlight-enabled ? Theme.text-muted : Theme.term-fg;
+                                    font-family: Theme.term-font-family;
+                                    font-size: 12px;
+                                }
+
+                                Text {
+                                    text: "INFO server ready";
+                                    color: root.output-highlight-enabled ? Theme.accent : Theme.term-fg;
+                                    font-family: Theme.term-font-family;
+                                    font-size: 12px;
+                                }
+
+                                Text {
+                                    text: "WARN disk nearly full";
+                                    color: root.output-highlight-enabled ? Theme.warning : Theme.term-fg;
+                                    font-family: Theme.term-font-family;
+                                    font-size: 12px;
+                                }
+
+                                Text {
+                                    text: "ERROR connection failed";
+                                    color: root.output-highlight-enabled ? Theme.danger : Theme.term-fg;
+                                    font-family: Theme.term-font-family;
+                                    font-size: 12px;
+                                }
+
+                                if root.output-highlight-preset == "devops": Text {
+                                    text: "SUCCESS deployment completed";
+                                    color: root.output-highlight-enabled ? Theme.success : Theme.term-fg;
+                                    font-family: Theme.term-font-family;
+                                    font-size: 12px;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 18px;
+                        }
+
+                        SectionHeader {
+                            text: root.lang-en ? "CUSTOM RULES" : "自定义规则";
+                            height: 22px;
+                        }
+
+                        Text {
+                            text: root.lang-en
+                                ? "Custom rules run before the built-in preset and never overwrite ANSI colours."
+                                : "自定义规则优先于内置规则，且不会覆盖程序输出的 ANSI 颜色。";
+                            color: Theme.text-muted;
+                            font-size: 11px * Theme.panel-font;
+                            wrap: word-wrap;
+                        }
+
+                        Rectangle {
+                            height: 10px;
+                        }
+
+                        LabeledInput {
+                            label: root.lang-en ? "Keyword or regular expression" : "关键词或正则表达式";
+                            placeholder: root.new-rule-regex ? "timeout|connection refused" : "connection refused";
+                            value <=> root.new-rule-pattern;
+                            accepted => {
+                                if root.add-output-highlight-rule(
                             root.new-rule-pattern, root.new-rule-regex,
                             root.new-rule-case-sensitive, root.new-rule-whole-line,
                             root.new-rule-color) {
-                            root.new-rule-pattern = "";
+                                    root.new-rule-pattern = "";
+                                }
+                            }
                         }
-                    }
-                }
-                Rectangle { height: 8px; }
-                HorizontalLayout {
-                    spacing: 8px;
-                    ComboBox {
-                        width: 130px;
-                        model: [root.lang-en ? "Keyword" : "关键词", root.lang-en ? "Regex" : "正则"];
-                        current-value: root.new-rule-regex
-                            ? (root.lang-en ? "Regex" : "正则")
-                            : (root.lang-en ? "Keyword" : "关键词");
-                        selected(v) => {
-                            root.new-rule-regex = v == "Regex" || v == "正则";
+
+                        Rectangle {
+                            height: 8px;
                         }
-                    }
-                    ComboBox {
-                        width: 120px;
-                        model: ["Red", "Yellow", "Green", "Cyan", "Magenta", "Gray"];
-                        current-value: root.new-rule-color == "yellow" ? "Yellow"
-                            : root.new-rule-color == "green" ? "Green"
-                            : root.new-rule-color == "cyan" ? "Cyan"
-                            : root.new-rule-color == "magenta" ? "Magenta"
-                            : root.new-rule-color == "gray" ? "Gray" : "Red";
-                        selected(v) => {
-                            root.new-rule-color = v == "Yellow" ? "yellow"
-                                : v == "Green" ? "green"
-                                : v == "Cyan" ? "cyan"
-                                : v == "Magenta" ? "magenta"
-                                : v == "Gray" ? "gray" : "red";
-                        }
-                    }
-                    Rectangle { horizontal-stretch: 1; }
-                    PrimaryButton {
-                        text: root.lang-en ? "Add rule" : "添加规则";
-                        disabled: root.new-rule-pattern == "";
-                        clicked => {
-                            if root.add-output-highlight-rule(
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            ComboBox {
+                                width: 130px;
+                                model: [root.lang-en ? "Keyword" : "关键词", root.lang-en ? "Regex" : "正则"];
+                                current-value: root.new-rule-regex
+                                    ? (root.lang-en ? "Regex" : "正则")
+                                    : (root.lang-en ? "Keyword" : "关键词");
+                                selected(v) => {
+                                    root.new-rule-regex = v == "Regex" || v == "正则";
+                                }
+                            }
+
+                            ComboBox {
+                                width: 120px;
+                                model: ["Red", "Yellow", "Green", "Cyan", "Magenta", "Gray"];
+                                current-value: root.new-rule-color == "yellow" ? "Yellow"
+                                    : root.new-rule-color == "green" ? "Green"
+                                    : root.new-rule-color == "cyan" ? "Cyan"
+                                    : root.new-rule-color == "magenta" ? "Magenta"
+                                    : root.new-rule-color == "gray" ? "Gray" : "Red";
+                                selected(v) => {
+                                    root.new-rule-color = v == "Yellow" ? "yellow"
+                                        : v == "Green" ? "green"
+                                        : v == "Cyan" ? "cyan"
+                                        : v == "Magenta" ? "magenta"
+                                        : v == "Gray" ? "gray" : "red";
+                                }
+                            }
+
+                            Rectangle {
+                                horizontal-stretch: 1;
+                            }
+
+                            PrimaryButton {
+                                text: root.lang-en ? "Add rule" : "添加规则";
+                                disabled: root.new-rule-pattern == "";
+                                clicked => {
+                                    if root.add-output-highlight-rule(
                                 root.new-rule-pattern, root.new-rule-regex,
                                 root.new-rule-case-sensitive, root.new-rule-whole-line,
                                 root.new-rule-color) {
-                                root.new-rule-pattern = "";
+                                        root.new-rule-pattern = "";
+                                    }
+                                }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Case sensitive" : "区分大小写";
+                            Switch {
+                                on: root.new-rule-case-sensitive;
+                                toggled(v) => { root.new-rule-case-sensitive = v; }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Highlight whole line" : "高亮整行";
+                            desc: root.lang-en
+                                ? "Otherwise only matching text is coloured."
+                                : "关闭时仅高亮匹配到的文字。";
+                            show-divider: false;
+                            Switch {
+                                on: root.new-rule-whole-line;
+                                toggled(v) => { root.new-rule-whole-line = v; }
+                            }
+                        }
+
+                        if root.output-highlight-rule-status != "": Text {
+                            text: root.output-highlight-rule-status;
+                            color: Theme.danger;
+                            font-size: 11px * Theme.panel-font;
+                            wrap: word-wrap;
+                        }
+
+                        if root.output-highlight-rules.length == 0: Text {
+                            text: root.lang-en ? "No custom rules yet." : "暂无自定义规则。";
+                            color: Theme.text-muted;
+                            font-size: 11px * Theme.panel-font;
+                            height: 34px;
+                            vertical-alignment: center;
+                        }
+                        for rule[index] in root.output-highlight-rules: Rectangle {
+                            height: 44px;
+                            Rectangle {
+                                y: 0px;
+                                width: 100%;
+                                height: 1px;
+                                background: Theme.border-subtle;
+                            }
+
+                            HorizontalLayout {
+                                spacing: 9px;
+                                Rectangle {
+                                    width: 8px;
+                                    height: 8px;
+                                    border-radius: 4px;
+                                    background: rule.color == "yellow" ? Theme.warning
+                                        : rule.color == "green" ? Theme.success
+                                        : rule.color == "cyan" ? Theme.accent
+                                        : rule.color == "magenta" ? #d670d6
+                                        : rule.color == "gray" ? Theme.text-muted
+                                        : Theme.danger;
+                                    vertical-stretch: 0;
+                                }
+
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    alignment: center;
+                                    spacing: 2px;
+                                    Text {
+                                        text: rule.pattern;
+                                        color: rule.enabled ? Theme.text-primary : Theme.text-muted;
+                                        font-family: Theme.term-font-family;
+                                        font-size: 12px * Theme.panel-font;
+                                        overflow: elide;
+                                    }
+
+                                    Text {
+                                        text: (rule.regex ? "Regex" : (root.lang-en ? "Keyword" : "关键词"))
+                                            + (rule.case-sensitive ? " · Aa" : "")
+                                            + (rule.whole-line ? (root.lang-en ? " · whole line" : " · 整行") : "");
+                                        color: Theme.text-muted;
+                                        font-size: 10px * Theme.panel-font;
+                                    }
+                                }
+
+                                Switch {
+                                    on: rule.enabled;
+                                    toggled(v) => { root.set-output-highlight-rule-enabled(index, v); }
+                                }
+
+                                Rectangle {
+                                    width: 28px;
+                                    height: 28px;
+                                    border-radius: 5px;
+                                    background: delete-ta.has-hover ? Theme.bg-hover : transparent;
+                                    delete-ta := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { root.remove-output-highlight-rule(index); }
+                                    }
+
+                                    Text {
+                                        text: "\u{E872}";
+                                        font-family: "Material Icons";
+                                        color: Theme.text-muted;
+                                        font-size: 15px * Theme.panel-font;
+                                        width: 100%;
+                                        height: 100%;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
                             }
                         }
                     }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Case sensitive" : "区分大小写";
-                    Switch {
-                        on: root.new-rule-case-sensitive;
-                        toggled(v) => { root.new-rule-case-sensitive = v; }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Highlight whole line" : "高亮整行";
-                    desc: root.lang-en
-                        ? "Otherwise only matching text is coloured."
-                        : "关闭时仅高亮匹配到的文字。";
-                    show-divider: false;
-                    Switch {
-                        on: root.new-rule-whole-line;
-                        toggled(v) => { root.new-rule-whole-line = v; }
-                    }
-                }
-                if root.output-highlight-rule-status != "" : Text {
-                    text: root.output-highlight-rule-status;
-                    color: Theme.danger;
-                    font-size: 11px * Theme.panel-font;
-                    wrap: word-wrap;
-                }
 
-                if root.output-highlight-rules.length == 0 : Text {
-                    text: root.lang-en ? "No custom rules yet." : "暂无自定义规则。";
-                    color: Theme.text-muted;
-                    font-size: 11px * Theme.panel-font;
-                    height: 34px;
-                    vertical-alignment: center;
-                }
-                for rule[index] in root.output-highlight-rules : Rectangle {
-                    height: 44px;
-                    Rectangle { y: 0px; width: 100%; height: 1px; background: Theme.border-subtle; }
-                    HorizontalLayout {
-                        spacing: 9px;
+                    // --- Wallpaper page ----------------------------------------
+            if root.ifd-page == "wallpaper": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+
+                        SectionHeader {
+                            text: root.lang-en ? "WALLPAPER" : "壁纸";
+                            height: 24px;
+                        }
+
+                        Text {
+                            text: root.lang-en
+                                ? "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
+                                : "选一张壁纸,界面会沉浸式地适配它的颜色(强调色、面板、深浅)。";
+                            color: Theme.text-muted;
+                            font-size: 11px * Theme.panel-font;
+                            wrap: word-wrap;
+                        }
+
                         Rectangle {
-                            width: 8px;
-                            height: 8px;
-                            border-radius: 4px;
-                            background: rule.color == "yellow" ? Theme.warning
-                                : rule.color == "green" ? Theme.success
-                                : rule.color == "cyan" ? Theme.accent
-                                : rule.color == "magenta" ? #d670d6
-                                : rule.color == "gray" ? Theme.text-muted
-                                : Theme.danger;
-                            vertical-stretch: 0;
+                            height: 12px;
                         }
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            alignment: center;
-                            spacing: 2px;
-                            Text {
-                                text: rule.pattern;
-                                color: rule.enabled ? Theme.text-primary : Theme.text-muted;
-                                font-family: Theme.term-font-family;
-                                font-size: 12px * Theme.panel-font;
-                                overflow: elide;
-                            }
-                            Text {
-                                text: (rule.regex ? "Regex" : (root.lang-en ? "Keyword" : "关键词"))
-                                    + (rule.case-sensitive ? " · Aa" : "")
-                                    + (rule.whole-line ? (root.lang-en ? " · whole line" : " · 整行") : "");
-                                color: Theme.text-muted;
-                                font-size: 10px * Theme.panel-font;
-                            }
-                        }
-                        Switch {
-                            on: rule.enabled;
-                            toggled(v) => { root.set-output-highlight-rule-enabled(index, v); }
-                        }
-                        Rectangle {
-                            width: 28px;
-                            height: 28px;
-                            border-radius: 5px;
-                            background: delete-ta.has-hover ? Theme.bg-hover : transparent;
-                            delete-ta := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { root.remove-output-highlight-rule(index); }
-                            }
-                            Text {
-                                text: "\u{E872}";
-                                font-family: "Material Icons";
-                                color: Theme.text-muted;
-                                font-size: 15px * Theme.panel-font;
-                                width: 100%; height: 100%;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                        }
-                    }
-                }
-            }
 
-            // --- Wallpaper page ----------------------------------------
-            if root.ifd-page == "wallpaper" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-
-                SectionHeader { text: root.lang-en ? "WALLPAPER" : "壁纸"; height: 24px; }
-                Text {
-                    text: root.lang-en
-                        ? "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
-                        : "选一张壁纸,界面会沉浸式地适配它的颜色(强调色、面板、深浅)。";
-                    color: Theme.text-muted; font-size: 11px * Theme.panel-font; wrap: word-wrap;
-                }
-                Rectangle { height: 12px; }
-
-                // Built-in choices: keep this row horizontally scrollable as
+                        // Built-in choices: keep this row horizontally scrollable as
                 // bundled wallpapers grow.
                 builtin-wallpapers-scroll := ScrollView {
-                    height: 106px;
-                    width: 100%;
-                    viewport-width: max(self.visible-width, builtin-wallpapers-row.preferred-width);
-                    viewport-height: self.visible-height;
+                            height: 106px;
+                            width: 100%;
+                            viewport-width: max(self.visible-width, builtin-wallpapers-row.preferred-width);
+                            viewport-height: self.visible-height;
 
-                    builtin-wallpapers-row := HorizontalLayout {
-                        spacing: 11px;
-                        alignment: start;
-                    VerticalLayout {
-                        spacing: 5px;
-                        WallpaperSwatch {
-                            width: 100px;
-                            selected: root.current-wallpaper == "";
-                            clicked => { root.set-wallpaper(""); }
-                            Rectangle {
-                                width: 100%; height: 100%;
-                                background: Theme.window-base;
-                                Text {
-                                    text: "\u{E14C}"; // clear / none
-                                    font-family: "Material Icons"; color: Theme.text-muted;
-                                    font-size: 22px * Theme.panel-font;
-                                    width: 100%; height: 100%;
-                                    horizontal-alignment: center; vertical-alignment: center;
+                            builtin-wallpapers-row := HorizontalLayout {
+                                spacing: 11px;
+                                alignment: start;
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    WallpaperSwatch {
+                                        width: 100px;
+                                        selected: root.current-wallpaper == "";
+                                        clicked => { root.set-wallpaper(""); }
+                                        Rectangle {
+                                            width: 100%;
+                                            height: 100%;
+                                            background: Theme.window-base;
+                                            Text {
+                                                text: "\u{E14C}"; // clear / none
+                                    font-family: "Material Icons";
+                                                color: Theme.text-muted;
+                                                font-size: 22px * Theme.panel-font;
+                                                width: 100%;
+                                                height: 100%;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: root.lang-en ? "None" : "无";
+                                        font-size: 11px * Theme.panel-font;
+                                        color: Theme.text-secondary;
+                                        horizontal-alignment: center;
+                                    }
                                 }
-                            }
-                        }
-                        Text { text: root.lang-en ? "None" : "无"; font-size: 11px * Theme.panel-font;
-                               color: Theme.text-secondary; horizontal-alignment: center; }
-                    }
-                    VerticalLayout {
-                        spacing: 5px;
-                        WallpaperSwatch {
-                            width: 100px;
-                            selected: root.current-wallpaper == "builtin:light";
-                            clicked => { root.set-wallpaper("builtin:light"); }
-                            Rectangle {
-                                width: 100%; height: 100%;
-                                background: @linear-gradient(135deg, #eff3fb 0%, #d5e1f2 100%);
-                                Rectangle {
-                                    x: parent.width * 0.66; y: -parent.height * 0.2;
-                                    width: 56px; height: 56px; border-radius: 28px;
-                                    background: #4a90e2; opacity: 0.30;
+
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    WallpaperSwatch {
+                                        width: 100px;
+                                        selected: root.current-wallpaper == "builtin:light";
+                                        clicked => { root.set-wallpaper("builtin:light"); }
+                                        Rectangle {
+                                            width: 100%;
+                                            height: 100%;
+                                            background: @linear-gradient(135deg, #eff3fb 0%, #d5e1f2 100%);
+                                            Rectangle {
+                                                x: parent.width * 0.66;
+                                                y: -parent.height * 0.2;
+                                                width: 56px;
+                                                height: 56px;
+                                                border-radius: 28px;
+                                                background: #4a90e2;
+                                                opacity: 0.30;
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: root.lang-en ? "Meat Light" : "简约·浅";
+                                        font-size: 11px * Theme.panel-font;
+                                        color: Theme.text-secondary;
+                                        horizontal-alignment: center;
+                                    }
                                 }
-                            }
-                        }
-                        Text { text: root.lang-en ? "Meat Light" : "简约·浅"; font-size: 11px * Theme.panel-font;
-                               color: Theme.text-secondary; horizontal-alignment: center; }
-                    }
-                    VerticalLayout {
-                        spacing: 5px;
-                        WallpaperSwatch {
-                            width: 100px;
-                            selected: root.current-wallpaper == "builtin:dark";
-                            clicked => { root.set-wallpaper("builtin:dark"); }
-                            Rectangle {
-                                width: 100%; height: 100%;
-                                background: @linear-gradient(135deg, #10131a 0%, #1b2233 100%);
-                                Rectangle {
-                                    x: parent.width * 0.66; y: -parent.height * 0.2;
-                                    width: 56px; height: 56px; border-radius: 28px;
-                                    background: #4a6ce0; opacity: 0.40;
+
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    WallpaperSwatch {
+                                        width: 100px;
+                                        selected: root.current-wallpaper == "builtin:dark";
+                                        clicked => { root.set-wallpaper("builtin:dark"); }
+                                        Rectangle {
+                                            width: 100%;
+                                            height: 100%;
+                                            background: @linear-gradient(135deg, #10131a 0%, #1b2233 100%);
+                                            Rectangle {
+                                                x: parent.width * 0.66;
+                                                y: -parent.height * 0.2;
+                                                width: 56px;
+                                                height: 56px;
+                                                border-radius: 28px;
+                                                background: #4a6ce0;
+                                                opacity: 0.40;
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: root.lang-en ? "Meat Dark" : "简约·暗";
+                                        font-size: 11px * Theme.panel-font;
+                                        color: Theme.text-secondary;
+                                        horizontal-alignment: center;
+                                    }
                                 }
-                            }
-                        }
-                        Text { text: root.lang-en ? "Meat Dark" : "简约·暗"; font-size: 11px * Theme.panel-font;
-                               color: Theme.text-secondary; horizontal-alignment: center; }
-                    }
-                    VerticalLayout {
-                        spacing: 5px;
-                        WallpaperSwatch {
-                            width: 100px;
-                            selected: root.current-wallpaper == "builtin:tech";
-                            clicked => { root.set-wallpaper("builtin:tech"); }
-                            Rectangle {
-                                width: 100%; height: 100%;
-                                background: @linear-gradient(180deg, #05060f 0%, #0b1430 55%, #1a0a2e 100%);
-                                clip: true;
+
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    WallpaperSwatch {
+                                        width: 100px;
+                                        selected: root.current-wallpaper == "builtin:tech";
+                                        clicked => { root.set-wallpaper("builtin:tech"); }
+                                        Rectangle {
+                                            width: 100%;
+                                            height: 100%;
+                                            background: @linear-gradient(180deg, #05060f 0%, #0b1430 55%, #1a0a2e 100%);
+                                            clip: true;
                                 // glowing planet
                                 Rectangle {
-                                    x: parent.width * 0.5 - 16px; y: parent.height * 0.22;
-                                    width: 32px; height: 32px; border-radius: 16px;
-                                    background: @radial-gradient(circle, #ff5ea8 0%, #ff5ea800 70%);
-                                }
+                                                x: parent.width * 0.5 - 16px;
+                                                y: parent.height * 0.22;
+                                                width: 32px;
+                                                height: 32px;
+                                                border-radius: 16px;
+                                                background: @radial-gradient(circle, #ff5ea8 0%, #ff5ea800 70%);
+                                            }
                                 // neon horizon line
                                 Rectangle {
-                                    y: parent.height * 0.58; width: parent.width; height: 2px;
-                                    background: #19e6ff; opacity: 0.85;
+                                                y: parent.height * 0.58;
+                                                width: parent.width;
+                                                height: 2px;
+                                                background: #19e6ff;
+                                                opacity: 0.85;
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: root.lang-en ? "Fantasy 3048" : "幻想3048";
+                                        font-size: 11px * Theme.panel-font;
+                                        color: Theme.text-secondary;
+                                        horizontal-alignment: center;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    WallpaperSwatch {
+                                        width: 100px;
+                                        selected: root.current-wallpaper == "builtin:ms";
+                                        clicked => { root.set-wallpaper("builtin:ms"); }
+                                        Image {
+                                            width: 100%;
+                                            height: 100%;
+                                            source: @image-url("../assets/ms.jpg");
+                                            image-fit: cover;
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "MS";
+                                        font-size: 11px * Theme.panel-font;
+                                        color: Theme.text-secondary;
+                                        horizontal-alignment: center;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    WallpaperSwatch {
+                                        width: 100px;
+                                        selected: root.current-wallpaper == "builtin:miku";
+                                        clicked => { root.set-wallpaper("builtin:miku"); }
+                                        Image {
+                                            width: 100%;
+                                            height: 100%;
+                                            source: @image-url("../assets/miku.jpg");
+                                            image-fit: cover;
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "Miku";
+                                        font-size: 11px * Theme.panel-font;
+                                        color: Theme.text-secondary;
+                                        horizontal-alignment: center;
+                                    }
                                 }
                             }
                         }
-                        Text { text: root.lang-en ? "Fantasy 3048" : "幻想3048"; font-size: 11px * Theme.panel-font;
-                               color: Theme.text-secondary; horizontal-alignment: center; }
-                    }
-                    VerticalLayout {
-                        spacing: 5px;
-                        WallpaperSwatch {
-                            width: 100px;
-                            selected: root.current-wallpaper == "builtin:ms";
-                            clicked => { root.set-wallpaper("builtin:ms"); }
-                            Image {
-                                width: 100%; height: 100%;
-                                source: @image-url("../assets/ms.jpg");
-                                image-fit: cover;
-                            }
-                        }
-                        Text { text: "MS"; font-size: 11px * Theme.panel-font;
-                               color: Theme.text-secondary; horizontal-alignment: center; }
-                    }
-                    VerticalLayout {
-                        spacing: 5px;
-                        WallpaperSwatch {
-                            width: 100px;
-                            selected: root.current-wallpaper == "builtin:miku";
-                            clicked => { root.set-wallpaper("builtin:miku"); }
-                            Image {
-                                width: 100%; height: 100%;
-                                source: @image-url("../assets/miku.jpg");
-                                image-fit: cover;
-                            }
-                        }
-                        Text { text: "Miku"; font-size: 11px * Theme.panel-font;
-                               color: Theme.text-secondary; horizontal-alignment: center; }
-                    }
-                    }
-                }
 
-                Rectangle { height: 16px; }
-                SectionHeader { text: root.lang-en ? "CUSTOM" : "自定义"; height: 22px; }
-                HorizontalLayout {
-                    spacing: 14px;
-                    alignment: start;
-                    WallpaperSwatch {
-                        selected: root.wp-is-custom;
-                        clicked => { root.pick-wallpaper-file(); }
+                        Rectangle {
+                            height: 16px;
+                        }
+
+                        SectionHeader {
+                            text: root.lang-en ? "CUSTOM" : "自定义";
+                            height: 22px;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 14px;
+                            alignment: start;
+                            WallpaperSwatch {
+                                selected: root.wp-is-custom;
+                                clicked => { root.pick-wallpaper-file(); }
                         // Show the real image when a custom one is active, else a
                         // "choose a file" placeholder.
-                        if root.wp-is-custom : Image {
-                            width: 100%; height: 100%;
-                            source: Theme.wallpaper;
-                            image-fit: cover;
-                        }
-                        if !root.wp-is-custom : Rectangle {
-                            width: 100%; height: 100%;
-                            background: Theme.bg-elevated;
-                            Text {
-                                text: "\u{E2C6}"; // folder-open
-                                font-family: "Material Icons"; color: Theme.text-secondary;
-                                font-size: 22px * Theme.panel-font;
-                                width: 100%; height: 100%;
-                                horizontal-alignment: center; vertical-alignment: center;
+                        if root.wp-is-custom: Image {
+                                    width: 100%;
+                                    height: 100%;
+                                    source: Theme.wallpaper;
+                                    image-fit: cover;
+                                }
+                                if !root.wp-is-custom: Rectangle {
+                                    width: 100%;
+                                    height: 100%;
+                                    background: Theme.bg-elevated;
+                                    Text {
+                                        text: "\u{E2C6}"; // folder-open
+                                font-family: "Material Icons";
+                                        color: Theme.text-secondary;
+                                        font-size: 22px * Theme.panel-font;
+                                        width: 100%;
+                                        height: 100%;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
                             }
-                        }
-                    }
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 6px;
-                        Rectangle {
-                            width: 130px; height: 30px;
-                            border-radius: 6px;
-                            background: pick-ta.has-hover ? Theme.accent-hover : Theme.accent;
-                            pick-ta := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { root.pick-wallpaper-file(); }
-                            }
-                            Text {
-                                text: root.lang-en ? "Choose file…" : "选择文件…";
-                                color: white; font-size: 12px * Theme.panel-font;
-                                width: 100%; height: 100%;
-                                horizontal-alignment: center; vertical-alignment: center;
-                            }
-                        }
-                        if root.wp-is-custom : Text {
-                            text: root.custom-wallpaper-name;
-                            color: Theme.text-muted; font-size: 11px * Theme.panel-font;
-                            width: 150px; overflow: elide;
-                        }
-                    }
-                }
 
-                Rectangle { height: 16px; }
-                SectionHeader { text: root.lang-en ? "OVERLAY" : "遮罩"; height: 22px; }
-                SettingRow {
-                    label: root.lang-en ? "Wallpaper transparency" : "壁纸遮罩透明度";
-                    desc: root.lang-en
-                        ? "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)."
-                        : "壁纸透过面板 / 终端背景的程度,越往右越透;没设壁纸时不生效。";
-                    show-divider: false;
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Slider {
-                            width: 150px;
-                            minimum: 0;
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 6px;
+                                Rectangle {
+                                    width: 130px;
+                                    height: 30px;
+                                    border-radius: 6px;
+                                    background: pick-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                                    pick-ta := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { root.pick-wallpaper-file(); }
+                                    }
+
+                                    Text {
+                                        text: root.lang-en ? "Choose file…" : "选择文件…";
+                                        color: white;
+                                        font-size: 12px * Theme.panel-font;
+                                        width: 100%;
+                                        height: 100%;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                if root.wp-is-custom: Text {
+                                    text: root.custom-wallpaper-name;
+                                    color: Theme.text-muted;
+                                    font-size: 11px * Theme.panel-font;
+                                    width: 150px;
+                                    overflow: elide;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 16px;
+                        }
+
+                        SectionHeader {
+                            text: root.lang-en ? "OVERLAY" : "遮罩";
+                            height: 22px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Wallpaper transparency" : "壁纸遮罩透明度";
+                            desc: root.lang-en
+                                ? "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)."
+                                : "壁纸透过面板 / 终端背景的程度,越往右越透;没设壁纸时不生效。";
+                            show-divider: false;
+                            HorizontalLayout {
+                                spacing: 8px;
+                                Slider {
+                                    width: 150px;
+                                    minimum: 0;
                             // Up to 70% transparency (overlay floor 0.30).
                             maximum: 70;
-                            value: (1.0 - root.wallpaper-overlay) * 100;
-                            changed(v) => { root.wallpaper-overlay = 1.0 - v / 100; }
-                            released(v) => { root.persist-wallpaper-overlay(1.0 - v / 100); }
-                        }
-                        Text {
-                            text: "\{round((1.0 - root.wallpaper-overlay) * 100)}%";
-                            color: Theme.text-secondary;
-                            font-size: 12px * Theme.panel-font;
-                            vertical-alignment: center;
-                            width: 34px;
-                        }
-                    }
-                }
-            }
+                                    value: (1.0 - root.wallpaper-overlay) * 100;
+                                    changed(v) => { root.wallpaper-overlay = 1.0 - v / 100; }
+                                    released(v) => { root.persist-wallpaper-overlay(1.0 - v / 100); }
+                                }
 
-            // --- Renderer page (#280) ---------------------------------
-            if root.ifd-page == "renderer" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-
-                SectionHeader { text: root.lang-en ? "RENDERING" : "渲染"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Renderer" : "渲染器";
-                    desc: Theme.is-mac
-                        ? (root.lang-en
-                            ? "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
-                            : "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。")
-                        : (root.lang-en
-                            ? "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
-                            : "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。");
-                    show-divider: false;
-                    ComboBox {
-                        width: 150px;
-                        model: Theme.is-mac
-                            ? ["CPU", "FemtoVG", "Skia"]
-                            : (root.lang-en
-                                ? ["Automatic", "GPU", "Software"]
-                                : ["自动", "GPU", "软件"]);
-                        current-value: Theme.is-mac
-                            ? (root.renderer-mode == "skia"
-                                ? "Skia"
-                                : root.renderer-mode == "femtovg" ? "FemtoVG" : "CPU")
-                            : (root.renderer-mode == "auto"
-                                ? (root.lang-en ? "Automatic" : "自动")
-                                : root.renderer-mode == "gpu"
-                                    ? "GPU"
-                                    : (root.lang-en ? "Software" : "软件"));
-                        selected(v) => {
-                            if (Theme.is-mac && v == "CPU"
-                                    && root.renderer-mode != "software") {
-                                root.renderer-mode = "software";
-                                root.set-renderer-mode("software");
-                                root.renderer-restart-required = true;
-                            } else if (Theme.is-mac && v == "FemtoVG"
-                                    && root.renderer-mode != "femtovg") {
-                                root.renderer-mode = "femtovg";
-                                root.set-renderer-mode("femtovg");
-                                root.renderer-restart-required = true;
-                            } else if (Theme.is-mac && v == "Skia"
-                                    && root.renderer-mode != "skia") {
-                                root.renderer-mode = "skia";
-                                root.set-renderer-mode("skia");
-                                root.renderer-restart-required = true;
-                            } else if (!Theme.is-mac && (v == "Automatic" || v == "自动")
-                                    && root.renderer-mode != "auto") {
-                                root.renderer-mode = "auto";
-                                root.set-renderer-mode("auto");
-                                root.renderer-restart-required = true;
-                            } else if (!Theme.is-mac && v == "GPU" && root.renderer-mode != "gpu") {
-                                root.renderer-mode = "gpu";
-                                root.set-renderer-mode("gpu");
-                                root.renderer-restart-required = true;
-                            } else if (!Theme.is-mac && (v == "Software" || v == "软件")
-                                    && root.renderer-mode != "software") {
-                                root.renderer-mode = "software";
-                                root.set-renderer-mode("software");
-                                root.renderer-restart-required = true;
+                                Text {
+                                    text: "\{round((1.0 - root.wallpaper-overlay) * 100)}%";
+                                    color: Theme.text-secondary;
+                                    font-size: 12px * Theme.panel-font;
+                                    vertical-alignment: center;
+                                    width: 34px;
+                                }
                             }
                         }
                     }
-                }
-                Rectangle { height: 10px; }
-                Text {
-                    text: root.renderer-restart-required
-                        ? (root.lang-en
-                            ? "Restart MeatShell to apply the renderer change."
-                            : "重启 MeatShell 后渲染器设置才会生效。")
-                        : (root.lang-en
-                            ? (Theme.is-mac
+
+                    // --- Renderer page (#280) ---------------------------------
+            if root.ifd-page == "renderer": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+
+                        SectionHeader {
+                            text: root.lang-en ? "RENDERING" : "渲染";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Renderer" : "渲染器";
+                            desc: Theme.is-mac
+                                ? (root.lang-en
+                                ? "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
+                                : "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。")
+                                : (root.lang-en
+                                ? "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
+                                : "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。");
+                            show-divider: false;
+                            ComboBox {
+                                width: 150px;
+                                model: Theme.is-mac
+                                    ? ["CPU", "FemtoVG", "Skia"]
+                                    : (root.lang-en
+                                    ? ["Automatic", "GPU", "Software"]
+                                    : ["自动", "GPU", "软件"]);
+                                current-value: Theme.is-mac
+                                    ? (root.renderer-mode == "skia"
+                                    ? "Skia"
+                                    : root.renderer-mode == "femtovg" ? "FemtoVG" : "CPU")
+                                    : (root.renderer-mode == "auto"
+                                    ? (root.lang-en ? "Automatic" : "自动")
+                                    : root.renderer-mode == "gpu"
+                                    ? "GPU"
+                                    : (root.lang-en ? "Software" : "软件"));
+                                selected(v) => {
+                                    if (Theme.is-mac && v == "CPU"
+                                        && root.renderer-mode != "software") {
+                                        root.renderer-mode = "software";
+                                        root.set-renderer-mode("software");
+                                        root.renderer-restart-required = true;
+                                    } else if (Theme.is-mac && v == "FemtoVG"
+                                        && root.renderer-mode != "femtovg") {
+                                        root.renderer-mode = "femtovg";
+                                        root.set-renderer-mode("femtovg");
+                                        root.renderer-restart-required = true;
+                                    } else if (Theme.is-mac && v == "Skia"
+                                        && root.renderer-mode != "skia") {
+                                        root.renderer-mode = "skia";
+                                        root.set-renderer-mode("skia");
+                                        root.renderer-restart-required = true;
+                                    } else if (!Theme.is-mac && (v == "Automatic" || v == "自动")
+                                        && root.renderer-mode != "auto") {
+                                        root.renderer-mode = "auto";
+                                        root.set-renderer-mode("auto");
+                                        root.renderer-restart-required = true;
+                                    } else if (!Theme.is-mac && v == "GPU" && root.renderer-mode != "gpu") {
+                                        root.renderer-mode = "gpu";
+                                        root.set-renderer-mode("gpu");
+                                        root.renderer-restart-required = true;
+                                    } else if (!Theme.is-mac && (v == "Software" || v == "软件")
+                                        && root.renderer-mode != "software") {
+                                        root.renderer-mode = "software";
+                                        root.set-renderer-mode("software");
+                                        root.renderer-restart-required = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 10px;
+                        }
+
+                        Text {
+                            text: root.renderer-restart-required
+                                ? (root.lang-en
+                                ? "Restart MeatShell to apply the renderer change."
+                                : "重启 MeatShell 后渲染器设置才会生效。")
+                                : (root.lang-en
+                                ? (Theme.is-mac
                                 ? "CPU is the default renderer on macOS."
                                 : (root.is-windows
-                                    ? "Software remains the compatibility default for existing installations."
-                                    : "Automatic remains the default renderer on Linux."))
-                            : (Theme.is-mac
+                                ? "Software remains the compatibility default for existing installations."
+                                : "Automatic remains the default renderer on Linux."))
+                                : (Theme.is-mac
                                 ? "macOS 默认使用 CPU 渲染器。"
                                 : (root.is-windows
-                                    ? "现有安装继续默认使用兼容性更好的软件渲染。"
-                                    : "Linux 默认继续使用自动渲染器。")));
-                    color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
-                    font-size: 11px * Theme.panel-font;
-                    wrap: word-wrap;
-                }
-            }
-
-            // --- SFTP page ---------------------------------------------
-            if root.ifd-page == "sftp" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-                SectionHeader { text: "SFTP"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "SFTP follows terminal cd" : "SFTP 跟随 cd 更新";
-                    desc: root.lang-en
-                        ? "A cd in the terminal switches the SFTP panel to the same directory."
-                        : "终端里执行 cd 时,SFTP 面板自动切到相同目录。";
-                    show-divider: false;
-                    Switch {
-                        on: root.sftp-follow-cd;
-                        toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
-                    }
-                }
-            }
-
-            // --- SSH page ----------------------------------------------
-            if root.ifd-page == "ssh" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-                SectionHeader { text: "SSH"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Keepalive interval" : "保活间隔";
-                    desc: root.lang-en
-                        ? "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
-                        : "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效。";
-                    show-divider: false;
-                    Stepper {
-                        value: root.ssh-keepalive-secs;
-                        minimum: 0;
-                        maximum: 3600;
-                        step: 5;
-                        unit: "s";
-                        changed(v) => {
-                            root.ssh-keepalive-secs = v;
-                            root.set-ssh-keepalive-secs(v);
+                                ? "现有安装继续默认使用兼容性更好的软件渲染。"
+                                : "Linux 默认继续使用自动渲染器。")));
+                            color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
+                            font-size: 11px * Theme.panel-font;
+                            wrap: word-wrap;
                         }
                     }
-                }
-            }
 
-            // --- Sidebars page -----------------------------------------
-            if root.ifd-page == "sidebar" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-                SectionHeader { text: root.lang-en ? "SIDEBARS" : "侧栏"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Zen mode" : "专注模式";
-                    desc: root.lang-en
-                        ? "Hide side panels and collapsed edge strips so the terminal fills the window."
-                        : "隐藏侧栏、底栏和收起图标，让终端填满窗口内容区。";
-                    Switch {
-                        on: root.zen-mode;
-                        toggled(v) => { root.zen-mode = v; root.set-zen-mode(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Collapse the SFTP panel by default" : "默认收起 SFTP 侧栏";
-                    desc: root.lang-en
-                        ? "Takes effect on next launch; handy on low-spec jump hosts."
-                        : "下次启动生效;低配跳板机上可减少常驻面板开销。";
-                    Switch {
-                        on: root.collapse-sftp-default;
-                        toggled(v) => { root.collapse-sftp-default = v; root.set-collapse-sftp-default(v); }
-                    }
-                }
-                SettingRow {
-                    label: root.lang-en ? "Quick commands as a sidebar" : "快捷命令作为侧栏";
-                    desc: root.lang-en
-                        ? "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
-                        : "允许把快捷命令弹窗拖到窗口边缘；停靠后通过侧栏或收起图标使用。";
-                    show-divider: false;
-                    Switch {
-                        on: root.quick-commands-as-sidebar;
-                        toggled(v) => {
-                            root.quick-commands-as-sidebar = v;
-                            root.set-quick-commands-as-sidebar(v);
+                    // --- SFTP page ---------------------------------------------
+            if root.ifd-page == "sftp": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: "SFTP";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "SFTP follows terminal cd" : "SFTP 跟随 cd 更新";
+                            desc: root.lang-en
+                                ? "A cd in the terminal switches the SFTP panel to the same directory."
+                                : "终端里执行 cd 时,SFTP 面板自动切到相同目录。";
+                            show-divider: false;
+                            Switch {
+                                on: root.sftp-follow-cd;
+                                toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
+                            }
                         }
                     }
-                }
-            }
 
-            // --- Welcome page ------------------------------------------
-            if root.ifd-page == "welcome" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-                SectionHeader { text: root.lang-en ? "WELCOME PAGE" : "欢迎页"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Show the welcome page as a sidebar" : "欢迎页设为侧栏";
-                    desc: root.lang-en
-                        ? "Dock the session list on the left instead of a \"New tab\" tab; opened sessions fill the center."
-                        : "把会话列表停靠在左侧,不再用「新标签页」标签;打开的会话占据中央区域。";
-                    show-divider: false;
-                    Switch {
-                        on: root.welcome-as-sidebar;
+                    // --- SSH page ----------------------------------------------
+            if root.ifd-page == "ssh": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: "SSH";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Keepalive interval" : "保活间隔";
+                            desc: root.lang-en
+                                ? "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
+                                : "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效。";
+                            show-divider: false;
+                            Stepper {
+                                value: root.ssh-keepalive-secs;
+                                minimum: 0;
+                                maximum: 3600;
+                                step: 5;
+                                unit: "s";
+                                changed(v) => {
+                                    root.ssh-keepalive-secs = v;
+                                    root.set-ssh-keepalive-secs(v);
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Sidebars page -----------------------------------------
+            if root.ifd-page == "sidebar": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: root.lang-en ? "SIDEBARS" : "侧栏";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Zen mode" : "专注模式";
+                            desc: root.lang-en
+                                ? "Hide side panels and collapsed edge strips so the terminal fills the window."
+                                : "隐藏侧栏、底栏和收起图标，让终端填满窗口内容区。";
+                            Switch {
+                                on: root.zen-mode;
+                                toggled(v) => { root.zen-mode = v; root.set-zen-mode(v); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Collapse the SFTP panel by default" : "默认收起 SFTP 侧栏";
+                            desc: root.lang-en
+                                ? "Takes effect on next launch; handy on low-spec jump hosts."
+                                : "下次启动生效;低配跳板机上可减少常驻面板开销。";
+                            Switch {
+                                on: root.collapse-sftp-default;
+                                toggled(v) => { root.collapse-sftp-default = v; root.set-collapse-sftp-default(v); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Quick commands as a sidebar" : "快捷命令作为侧栏";
+                            desc: root.lang-en
+                                ? "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
+                                : "允许把快捷命令弹窗拖到窗口边缘；停靠后通过侧栏或收起图标使用。";
+                            show-divider: false;
+                            Switch {
+                                on: root.quick-commands-as-sidebar;
+                                toggled(v) => {
+                                    root.quick-commands-as-sidebar = v;
+                                    root.set-quick-commands-as-sidebar(v);
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Welcome page ------------------------------------------
+            if root.ifd-page == "welcome": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: root.lang-en ? "WELCOME PAGE" : "欢迎页";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Show the welcome page as a sidebar" : "欢迎页设为侧栏";
+                            desc: root.lang-en
+                                ? "Dock the session list on the left instead of a \"New tab\" tab; opened sessions fill the center."
+                                : "把会话列表停靠在左侧,不再用「新标签页」标签;打开的会话占据中央区域。";
+                            show-divider: false;
+                            Switch {
+                                on: root.welcome-as-sidebar;
                         // Applying this binding destroys/recreates the Welcome
                         // subtree. Rust defers that work until this Switch
                         // callback has returned, so do not mutate it here (#323).
                         toggled(v) => { root.set-welcome-as-sidebar(v); }
+                            }
+                        }
                     }
-                }
-            }
 
-            // --- Download page -----------------------------------------
-            if root.ifd-page == "download" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-                SectionHeader { text: root.lang-en ? "DOWNLOAD" : "下载"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Always ask where to save" : "总是询问保存去何处";
-                    desc: root.lang-en
-                        ? "Every download prompts for a location instead of using the preset folder."
-                        : "每次下载都询问保存位置,而不是直接存到预设下载目录。";
-                    show-divider: false;
-                    Switch {
-                        on: root.download-always-ask;
-                        toggled(v) => { root.download-always-ask = v; root.set-download-always-ask(v); }
+                    // --- Download page -----------------------------------------
+            if root.ifd-page == "download": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: root.lang-en ? "DOWNLOAD" : "下载";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Always ask where to save" : "总是询问保存去何处";
+                            desc: root.lang-en
+                                ? "Every download prompts for a location instead of using the preset folder."
+                                : "每次下载都询问保存位置,而不是直接存到预设下载目录。";
+                            show-divider: false;
+                            Switch {
+                                on: root.download-always-ask;
+                                toggled(v) => { root.download-always-ask = v; root.set-download-always-ask(v); }
+                            }
+                        }
                     }
-                }
-            }
 
-            // --- Update check page (#184) ------------------------------
-            if root.ifd-page == "update" : VerticalLayout {
-                padding-left: 20px;
-                padding-right: 20px;
-                padding-top: 14px;
-                spacing: 0;
-                alignment: start;
-                SectionHeader { text: root.lang-en ? "UPDATE CHECK" : "新版本提示"; height: 24px; }
-                SettingRow {
-                    label: root.lang-en ? "Check for new versions on startup" : "启动时检查新版本";
-                    desc: root.lang-en
-                        ? "Off: meatshell no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
-                        : "关闭后:不再向 GitHub 查询新版本,也不会弹出更新提示(下次启动生效)。";
-                    show-divider: false;
-                    Switch {
-                        on: root.update-check-enabled;
-                        toggled(v) => { root.update-check-enabled = v; root.set-update-check-enabled(v); }
+                    // --- Update check page (#184) ------------------------------
+            if root.ifd-page == "update": VerticalLayout {
+                        padding-left: 20px;
+                        padding-right: 20px;
+                        padding-top: 14px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: root.lang-en ? "UPDATE CHECK" : "新版本提示";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Check for new versions on startup" : "启动时检查新版本";
+                            desc: root.lang-en
+                                ? "Off: meatshell no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
+                                : "关闭后:不再向 GitHub 查询新版本,也不会弹出更新提示(下次启动生效)。";
+                            show-divider: false;
+                            Switch {
+                                on: root.update-check-enabled;
+                                toggled(v) => { root.update-check-enabled = v; root.set-update-check-enabled(v); }
+                            }
+                        }
                     }
-                }
-            }
-
                 }
             }
         }

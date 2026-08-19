@@ -1219,20 +1219,20 @@ export component TerminalView inherits Rectangle {
 
                     // --- Command bar (#55): quick commands + input box + history ---------
                         cmd-bar := Rectangle {
-                            visible: !root.zen-mode;
-                            height: root.zen-mode ? 0px : 34px;
-                            background: Theme.bg-panel-alt;
-                            border-width: 0;
+                        visible: !root.zen-mode;
+                        height: root.zen-mode ? 0px : 34px;
+                        background: Theme.bg-panel-alt;
+                        border-width: 0;
 
-                            // Outside-click backdrop: covers the terminal above so clicking
+                        // Outside-click backdrop: covers the terminal above so clicking
                             // anywhere out of an open popup dismisses it.
                             if root.quick-open || root.history-open: TouchArea {
-                                x: 0;
-                                y: -2000px;
-                                width: parent.width;
-                                height: 2000px;
-                                clicked => { root.quick-open = false; root.history-open = false; }
-                            }
+                            x: 0;
+                            y: -2000px;
+                            width: parent.width;
+                            height: 2000px;
+                            clicked => { root.quick-open = false; root.history-open = false; }
+                        }
 
                         HorizontalLayout {
                             padding-left: 6px;

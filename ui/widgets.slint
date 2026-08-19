@@ -43,7 +43,7 @@ export component PrimaryButton inherits Rectangle {
     background: disabled
         ? Theme.bg-elevated
         : (touch.pressed ? Theme.accent-pressed
-           : (touch.has-hover ? Theme.accent-hover : Theme.accent));
+        : (touch.has-hover ? Theme.accent-hover : Theme.accent));
     animate background { duration: 120ms; }
 
     HorizontalLayout {
@@ -163,7 +163,7 @@ export component LabeledInput inherits VerticalLayout {
         }
 
         // Lightweight placeholder — shown when value is empty.
-        if value == "" : Text {
+        if value == "": Text {
             x: 10px;
             y: 0px;
             height: parent.height;
@@ -205,7 +205,7 @@ export component ToolStrip inherits Rectangle {
 
     background: root.icon-only ? transparent : Theme.bg-panel-alt;
     // Hairline on the inner edge (facing the central content).
-    if !root.icon-only : Rectangle {
+    if !root.icon-only: Rectangle {
         x: root.dock-edge == "left" ? parent.width - self.width : 0px;
         y: root.dock-edge == "top" ? parent.height - self.height : 0px;
         width: root.horizontal ? parent.width : 1px;
@@ -219,28 +219,30 @@ export component ToolStrip inherits Rectangle {
         x: root.horizontal ? 4px : (parent.width - self.width) / 2;
         y: root.horizontal ? (parent.height - self.height) / 2 : 4px;
         border-radius: Theme.radius-sm;
-          background: root.enabled && ta.has-hover ? Theme.bg-hover : transparent;
-          Text {
-              text: root.glyph;
-              font-family: "Material Icons";
-              font-size: 18px;
-              color: !root.enabled ? Theme.text-muted.with-alpha(0.45)
-                  : ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+        background: root.enabled && ta.has-hover ? Theme.bg-hover : transparent;
+        Text {
+            text: root.glyph;
+            font-family: "Material Icons";
+            font-size: 18px;
+            color: !root.enabled ? Theme.text-muted.with-alpha(0.45)
+                : ta.has-hover ? Theme.text-primary : Theme.text-secondary;
             horizontal-alignment: center;
             vertical-alignment: center;
             width: parent.width;
             height: parent.height;
         }
-          ta := TouchArea {
-              mouse-cursor: root.enabled ? pointer : default;
-              clicked => {
-                  if (root.enabled) {
-                      root.expand();
-                  }
-              }
-          }
-      }
-    if root.show-second : Rectangle {
+
+        ta := TouchArea {
+            mouse-cursor: root.enabled ? pointer : default;
+            clicked => {
+                if (root.enabled) {
+                    root.expand();
+                }
+            }
+        }
+    }
+
+    if root.show-second: Rectangle {
         width: 30px;
         height: 30px;
         x: root.horizontal ? 38px : (parent.width - self.width) / 2;
@@ -257,12 +259,13 @@ export component ToolStrip inherits Rectangle {
             width: parent.width;
             height: parent.height;
         }
+
         ta2 := TouchArea {
             mouse-cursor: pointer;
             clicked => { root.expand-second(); }
         }
     }
-    if root.show-third : Rectangle {
+    if root.show-third: Rectangle {
         width: 30px;
         height: 30px;
         x: root.horizontal ? 72px : (parent.width - self.width) / 2;
@@ -279,6 +282,7 @@ export component ToolStrip inherits Rectangle {
             width: parent.width;
             height: parent.height;
         }
+
         ta3 := TouchArea {
             mouse-cursor: pointer;
             clicked => { root.expand-third(); }
@@ -300,9 +304,9 @@ export component DockExpandButton inherits Rectangle {
         width: 24px;
         height: 22px;
         x: root.dock-edge == "right" ? parent.width - self.width - 2px
-         : (root.dock-edge == "top" || root.dock-edge == "bottom")
-           ? (root.hug-right ? parent.width - self.width - 6px : 6px)
-         : 2px;
+            : (root.dock-edge == "top" || root.dock-edge == "bottom")
+            ? (root.hug-right ? parent.width - self.width - 6px : 6px)
+            : 2px;
         y: root.dock-edge == "bottom" ? parent.height - self.height - 1px : 8px;
         border-radius: Theme.radius-sm;
         background: ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
@@ -312,9 +316,10 @@ export component DockExpandButton inherits Rectangle {
             mouse-cursor: pointer;
             clicked => { root.expand(); }
         }
+
         Text {
-            text: root.dock-edge == "right"  ? "\u{E5CB}"   // chevron_left
-                : root.dock-edge == "top"    ? "\u{E5CF}"   // expand_more
+            text: root.dock-edge == "right" ? "\u{E5CB}"   // chevron_left
+                : root.dock-edge == "top" ? "\u{E5CF}"   // expand_more
                 : root.dock-edge == "bottom" ? "\u{E5CE}"   // expand_less
                 : "\u{E5CC}";                                // chevron_right (left dock)
             font-family: "Material Icons";

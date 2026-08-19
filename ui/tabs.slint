@@ -72,7 +72,7 @@ component SingleTab inherits Rectangle {
                 // A drag begins once the cursor drifts horizontally OR leaves the
                 // tab vertically (so a straight-down drag to split also counts).
                 if (abs(self.mouse-x - root.grab-offset) > 5px
-                        || self.mouse-y < -6px || self.mouse-y > root.height + 6px) {
+                    || self.mouse-y < -6px || self.mouse-y > root.height + 6px) {
                     root.dragging = true;
                 }
                 // Tell the parent where the cursor is, for drop-to-split zones.
@@ -107,7 +107,8 @@ component SingleTab inherits Rectangle {
 
         // Status indicator
         Rectangle {
-            width: 8px; height: 8px;
+            width: 8px;
+            height: 8px;
             y: (parent.height - self.height) / 2;
             border-radius: 4px;
             background: info.kind == "welcome" ? Theme.text-muted
@@ -123,18 +124,16 @@ component SingleTab inherits Rectangle {
             overflow: elide;
             horizontal-stretch: 1;
         }
-
     }
 
     // Keep close pinned to the far right even when the title is very short.
-    if info.kind != "welcome" : IconButton {
+    if info.kind != "welcome": IconButton {
         glyph: "×";
         size: 20px;
         x: parent.width - self.width - 6px;
         y: (parent.height - self.height) / 2;
         clicked => { root.closed(); }
     }
-
 }
 
 // --- Tab context-menu item -------------------------------------------------
@@ -156,6 +155,7 @@ component TabMenuItem inherits Rectangle {
             horizontal-stretch: 1;
         }
     }
+
     ta := TouchArea {
         enabled: root.enabled;
         mouse-cursor: pointer;
@@ -215,7 +215,7 @@ export component TabBar inherits Rectangle {
             strip := HorizontalLayout {
                 spacing: 2px;
                 alignment: start;
-                for tab[i] in tabs : SingleTab {
+                for tab[i] in tabs: SingleTab {
                     info: tab;
                     active: tab.id == root.active-id;
                     selected => { root.tab-selected(tab.id); }
@@ -231,7 +231,7 @@ export component TabBar inherits Rectangle {
                     drag-moved(ax, ay) => { root.tab-drag-move(tab.id, ax, ay); }
                     drag-dropped(ax, ay) => { root.tab-drag-drop(tab.id, ax, ay); }
                 }
-                if root.show-new-tab : IconButton {
+                if root.show-new-tab: IconButton {
                     glyph: "+";
                     size: 28px;
                     y: (parent.height - self.height) / 2;
@@ -250,35 +250,40 @@ export component TabBar inherits Rectangle {
         }
 
         // Reserved gap for the external top-right toolbar icons (#122).
-        Rectangle { width: root.reserve-right; }
+        Rectangle {
+            width: root.reserve-right;
+        }
     }
 
     // Scroll arrows are absolute overlays so toggling them can't
     // change the layout that `tab-overflow` reads (avoids a binding loop). Shown
     // only on overflow, masking the edge tab beneath them (#122).
-    if root.tab-overflow : Rectangle {
+    if root.tab-overflow: Rectangle {
         x: 3px;
         y: (parent.height - self.height) / 2;
-        width: 26px; height: 26px;
+        width: 26px;
+        height: 26px;
         background: Theme.bg-panel-alt;
         IconButton {
-            glyph: "<"; size: 24px;
+            glyph: "<";
+            size: 24px;
             clicked => { flick.viewport-x = min(0px, flick.viewport-x + 120px); }
         }
     }
-    if root.tab-overflow : Rectangle {
+    if root.tab-overflow: Rectangle {
         x: root.width - root.reserve-right - 59px;
         y: (parent.height - self.height) / 2;
-        width: 26px; height: 26px;
+        width: 26px;
+        height: 26px;
         background: Theme.bg-panel-alt;
         IconButton {
-            glyph: ">"; size: 24px;
+            glyph: ">";
+            size: 24px;
             clicked => {
                 flick.viewport-x = max(flick.width - flick.viewport-width, flick.viewport-x - 120px);
             }
         }
     }
-
 
     all-tabs-menu := PopupWindow {
         x: max(4px, root.width - root.reserve-right - self.width - 4px);
@@ -294,14 +299,15 @@ export component TabBar inherits Rectangle {
             drop-shadow-color: #00000060;
             clip: true;
             Flickable {
-                x: 4px; y: 4px;
+                x: 4px;
+                y: 4px;
                 width: parent.width - 8px;
                 height: parent.height - 8px;
                 viewport-width: self.width;
                 viewport-height: max(self.height, all-tabs-list.preferred-height);
                 all-tabs-list := VerticalLayout {
                     spacing: 1px;
-                    for tab in root.tabs : TabMenuItem {
+                    for tab in root.tabs: TabMenuItem {
                         label: (tab.id == root.active-id ? "●  " : "    ") + tab.title;
                         clicked => {
                             root.tab-selected(tab.id);
@@ -335,23 +341,35 @@ export component TabBar inherits Rectangle {
                     enabled: root.menu-target != "welcome";
                     clicked => { root.tab-duplicate(root.menu-target); }
                 }
-                Rectangle { height: 1px; background: Theme.border-subtle; }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
                 TabMenuItem {
                     label: @tr("Split right");
                     enabled: root.tabs.length > 1;
                     clicked => { root.tab-split(root.menu-target, "right"); }
                 }
+
                 TabMenuItem {
                     label: @tr("Split down");
                     enabled: root.tabs.length > 1;
                     clicked => { root.tab-split(root.menu-target, "down"); }
                 }
+
                 TabMenuItem {
                     label: @tr("Merge panes");
                     enabled: root.can-merge-pane;
                     clicked => { root.merge-pane(); }
                 }
-                Rectangle { height: 1px; background: Theme.border-subtle; }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
                 TabMenuItem {
                     label: @tr("Close tab");
                     enabled: root.menu-target != "welcome";

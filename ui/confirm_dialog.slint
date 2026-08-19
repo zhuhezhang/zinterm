@@ -23,6 +23,7 @@ component DangerButton inherits Rectangle {
             vertical-alignment: center;
         }
     }
+
     touch := TouchArea {
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
@@ -75,7 +76,10 @@ export component ConfirmDialog inherits Rectangle {
         drop-shadow-color: #00000080;
 
         // Swallow clicks inside the card so they don't hit the backdrop.
-        TouchArea { width: 100%; height: 100%; }
+        TouchArea {
+            width: 100%;
+            height: 100%;
+        }
 
         card := VerticalLayout {
             padding: 20px;
@@ -89,6 +93,7 @@ export component ConfirmDialog inherits Rectangle {
                     font-size: Theme.fs-xl;
                     vertical-alignment: center;
                 }
+
                 Text {
                     text: root.title;
                     color: Theme.text-primary;
@@ -105,7 +110,7 @@ export component ConfirmDialog inherits Rectangle {
                 wrap: word-wrap;
             }
 
-            if root.detail != "" && !root.large-detail : Text {
+            if root.detail != "" && !root.large-detail: Text {
                 text: root.detail;
                 color: Theme.text-primary;
                 font-family: Theme.font-mono;
@@ -113,7 +118,7 @@ export component ConfirmDialog inherits Rectangle {
                 wrap: word-wrap;
             }
 
-            if root.detail != "" && root.large-detail : Rectangle {
+            if root.detail != "" && root.large-detail: Rectangle {
                 vertical-stretch: 1;
                 min-height: 220px;
                 background: Theme.bg-root;
@@ -150,6 +155,7 @@ export component ConfirmDialog inherits Rectangle {
                     text: @tr("Cancel");
                     clicked => { root.cancel(); }
                 }
+
                 DangerButton {
                     text: root.confirm-label;
                     clicked => { root.confirm(); }
