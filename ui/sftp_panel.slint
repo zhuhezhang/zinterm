@@ -178,7 +178,7 @@ export component SftpPanel inherits Rectangle {
                     height: 34px;
                     // Collapsed top/bottom: leave 4px after the overlay folder icon
                     // (ToolStrip glyph at x=4, 30px wide → 38px).
-                    padding-left: root.collapsed ? 38px : 6px;
+                    padding-left: root.collapsed ? 38px : 4px;
                     padding-right: 6px;
                     padding-top: 6px;
                     padding-bottom: 6px;
@@ -250,6 +250,43 @@ export component SftpPanel inherits Rectangle {
                         horizontal-stretch: 1;
                         min-width: 0px;
                         height: 22px;
+                    }
+
+                    // Batch actions on checked entries — only when something's checked (#100).
+                    if root.selected-count > 0 && !root.narrow-toolbar : HorizontalLayout {
+                        height: 22px; padding-left: 10px; padding-right: 4px;
+                        // Use Material Icons for the check glyph (✓ may render as tofu
+                        // depending on the default font; glyph fallback is disabled #54).
+                        Text {
+                            text: "\u{E5CA}"; // check
+                            font-family: "Material Icons";
+                            color: Theme.accent;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+                        Text {
+                            text: "" + root.selected-count;
+                            font-family: Theme.ui-font-family;
+                            color: Theme.accent;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+                    }
+                    if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: dls-ta.has-hover ? Theme.bg-hover : transparent;
+                        dls-ta := TouchArea { mouse-cursor: pointer; clicked => { root.download-selected(); } }
+                        Text { text: "\u{E2C4}"; font-family: "Material Icons"; color: Theme.text-secondary;
+                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
+                    }
+                    if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
+                        width: 24px; height: 22px;
+                        border-radius: Theme.radius-sm;
+                        background: dels-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
+                        dels-ta := TouchArea { mouse-cursor: pointer; clicked => { root.delete-selected(); } }
+                        Text { text: "\u{E872}"; font-family: "Material Icons"; color: Theme.danger;
+                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
                     }
 
                     // Copy the current path to the clipboard.
@@ -357,30 +394,6 @@ export component SftpPanel inherits Rectangle {
                                 }
                             }
                         }
-                    }
-
-                    // Batch actions on checked entries — only when something's checked (#100).
-                    if root.selected-count > 0 && !root.narrow-toolbar : Text {
-                        text: "✓" + root.selected-count;
-                        color: Theme.accent;
-                        font-size: Theme.fs-sm;
-                        vertical-alignment: center;
-                    }
-                    if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
-                        width: 24px; height: 22px;
-                        border-radius: Theme.radius-sm;
-                        background: dls-ta.has-hover ? Theme.bg-hover : transparent;
-                        dls-ta := TouchArea { mouse-cursor: pointer; clicked => { root.download-selected(); } }
-                        Text { text: "\u{E2C4}"; font-family: "Material Icons"; color: Theme.text-secondary;
-                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
-                    }
-                    if root.selected-count > 0 && !root.narrow-toolbar : Rectangle {
-                        width: 24px; height: 22px;
-                        border-radius: Theme.radius-sm;
-                        background: dels-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
-                        dels-ta := TouchArea { mouse-cursor: pointer; clicked => { root.delete-selected(); } }
-                        Text { text: "\u{E872}"; font-family: "Material Icons"; color: Theme.danger;
-                            font-size: Theme.fs-md; horizontal-alignment: center; vertical-alignment: center; }
                     }
 
                     // Refresh the current directory btn

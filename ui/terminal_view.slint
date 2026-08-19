@@ -1219,31 +1219,31 @@ export component TerminalView inherits Rectangle {
 
                     // --- Command bar (#55): quick commands + input box + history ---------
                         cmd-bar := Rectangle {
-                        visible: !root.zen-mode;
-                        height: root.zen-mode ? 0px : 34px;
-                        background: Theme.bg-panel-alt;
-                        border-width: 0;
+                            visible: !root.zen-mode;
+                            height: root.zen-mode ? 0px : 34px;
+                            background: Theme.bg-panel-alt;
+                            border-width: 0;
 
-                        // Outside-click backdrop: covers the terminal above so clicking
+                            // Outside-click backdrop: covers the terminal above so clicking
                             // anywhere out of an open popup dismisses it.
                             if root.quick-open || root.history-open: TouchArea {
-                            x: 0;
-                            y: -2000px;
-                            width: parent.width;
-                            height: 2000px;
-                            clicked => { root.quick-open = false; root.history-open = false; }
-                        }
+                                x: 0;
+                                y: -2000px;
+                                width: parent.width;
+                                height: 2000px;
+                                clicked => { root.quick-open = false; root.history-open = false; }
+                            }
 
                         HorizontalLayout {
-                            padding-left: 8px;
+                            padding-left: 6px;
                             padding-right: 8px;
                             padding-top: 4px;
                             padding-bottom: 4px;
                             spacing: 6px;
 
                             // Quick-command toggle. Once the sidebar has been docked, the
-                                // sidebar/icon strip becomes its only entry point (#215).
-                                if !root.quick-panel-docked: Rectangle {
+                            // sidebar/icon strip becomes its only entry point (#215).
+                            if !root.quick-panel-docked: Rectangle {
                                 width: qc-row.preferred-width + 16px;
                                 border-radius: Theme.radius-sm;
                                 background: qc-ta.has-hover || root.quick-open ? Theme.bg-hover : Theme.bg-elevated;

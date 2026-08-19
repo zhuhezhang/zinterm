@@ -812,6 +812,8 @@ export component AppWindow inherits Window {
                 Rectangle { horizontal-stretch: 1; }
                 // Window controls only — the app toolbar icons live in the tab
                 // row below, not here (#119).
+                // the code point of icons come from https://fonts.google.com/icons?icon.set=Material+Icons, 
+                // local file is fonts/MaterialIcons-Regular.ttf
                 WinBtn { icon: "\u{E15B}"; clicked => { root.win-minimize(); } }
                 WinBtn {
                     icon: root.window-maximized ? "\u{E3E0}" : "\u{E835}";
