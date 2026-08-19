@@ -159,6 +159,9 @@ msgstr "Create"
 msgid "Connect"
 msgstr "Connect"
 
+msgid "Collapse SFTP panel"
+msgstr "Collapse SFTP panel"
+
 msgid "Upload"
 msgstr "Upload"
 
@@ -176,6 +179,12 @@ msgstr "Loading..."
 
 msgid "Empty directory"
 msgstr "Empty directory"
+
+msgid "Expand SFTP panel"
+msgstr "Expand SFTP panel"
+
+msgid "SFTP not available"
+msgstr "SFTP not available"
 
 msgid "Download"
 msgstr "Download"
@@ -195,8 +204,14 @@ msgstr "Rename"
 msgid "Permissions"
 msgstr "Permissions"
 
+msgid "Parent directory"
+msgstr "Parent directory"
+
 msgid "Copy path"
 msgstr "Copy path"
+
+msgid "Paste path and go"
+msgstr "Paste path and go"
 
 msgid "Copy to session..."
 msgstr "Copy to session..."

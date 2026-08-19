@@ -2266,6 +2266,7 @@ export component TerminalView inherits Rectangle {
                 width: root.sftp-horizontal ? parent.sf-w : parent.width;
                 height: root.sftp-horizontal ? parent.height : parent.sf-h;
                 dock-width: root.sftp-horizontal ? parent.sf-w : parent.width;
+                dock-edge: root.sftp-dock;
                 show-tree: !root.sftp-horizontal;   // hide the tree when narrow (vertical)
                 tree-width: root.sftp-tree-width;
                 persist-tree-width(width) => { root.persist-sftp-tree-width(width); }
@@ -2393,7 +2394,7 @@ export component TerminalView inherits Rectangle {
                 icon-only: !root.sftp-horizontal;
                 glyph: "\u{E2C7}";   // folder — SFTP
                 tooltip: !root.sftp-available ? @tr("SFTP not available")
-                    : root.sftp-ready ? "SFTP" : root.sftp-status;
+                    : root.sftp-ready ? @tr("Expand SFTP panel") : root.sftp-status;
                 enabled: root.sftp-available && root.sftp-ready;
                 expand => {
                     if (root.sftp-available && root.sftp-ready) {

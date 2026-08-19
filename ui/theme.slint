@@ -64,6 +64,12 @@ export global Theme {
     // wallpaper transparency selected for ordinary application panels (#287).
     out property <brush> popup-bg: base-bg-panel;
     out property <brush> popup-bg-alt: base-bg-panel-alt;
+    // Hover tooltips likewise stay fully opaque so labels stay legible over
+    // path fields, icons, and wallpaper-washed panels underneath.
+    out property <brush> tooltip-bg: base-bg-panel;
+    // Window size — synced from AppWindow for tooltip edge flip (#tooltip).
+    in-out property <length> window-width: 1440px;
+    in-out property <length> window-height: 900px;
 
     // Active terminal tab: with wallpaper, pull from the image's average colour
     // so the strip feels immersed; without wallpaper, make the active tab one

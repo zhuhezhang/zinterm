@@ -1,5 +1,102 @@
 import { Theme } from "theme.slint";
 
+// --- TooltipSurface --------------------------------------------------------
+// Opaque tooltip chrome (PopupWindow content). Uses `tooltip-bg`, not frosted
+// `bg-elevated`, so text stays readable over busy UI underneath.
+export component TooltipSurface inherits Rectangle {
+    in property <string> text;
+    in property <length> pad-x: 8px;
+
+    width: tip-txt.preferred-width + root.pad-x * 2;
+    height: 22px;
+    background: Theme.tooltip-bg;
+    border-radius: Theme.radius-sm;
+    border-width: 1px;
+    border-color: Theme.border-strong;
+    drop-shadow-blur: 10px;
+    drop-shadow-color: #00000088;
+
+    tip-txt := Text {
+        text: root.text;
+        color: Theme.text-primary;
+        font-family: Theme.ui-font-family;
+        font-size: Theme.fs-xs;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+}
+
+// --- TooltipPopup ----------------------------------------------------------
+// PopupWindow tooltip — renders above all in-window layers. Prefers below the
+// anchor; flips above only when the tooltip would extend past the window bottom.
+export component TooltipPopup inherits PopupWindow {
+    in property <string> text;
+    in property <length> anchor-width;
+    in property <length> anchor-height;
+    in property <length> anchor-x;
+    in property <length> anchor-y;
+    in property <bool> align-right: true;
+    in property <length> gap: 4px;
+
+    close-policy: no-auto-close;
+
+    property <length> tip-h: 22px;
+    property <bool> flip-above:
+        root.anchor-y + root.anchor-height + root.gap + root.tip-h > Theme.window-height;
+
+    width: surface.width;
+    height: surface.height;
+    property <length> x-below: root.align-right ? (root.anchor-width - self.width) : 0px;
+    x: max(-root.anchor-x, min(root.x-below, Theme.window-width - self.width - root.anchor-x));
+    y: root.flip-above ? (-self.height - root.gap) : (root.anchor-height + root.gap);
+
+    surface := TooltipSurface {
+        text: root.text;
+        height: root.tip-h;
+    }
+}
+
+// --- TooltipArea -----------------------------------------------------------
+// Full-size TouchArea that owns a TooltipPopup. Opens after a short hover delay;
+// closes immediately when the pointer leaves the anchor.
+export component TooltipArea inherits TouchArea {
+    in property <string> tooltip-text;
+    in property <length> anchor-width;
+    in property <length> anchor-height;
+    in property <duration> show-delay: 400ms;
+    callback activate();
+
+    tip-popup := TooltipPopup {
+        text: root.tooltip-text;
+        anchor-width: root.anchor-width;
+        anchor-height: root.anchor-height;
+        anchor-x: parent.absolute-position.x;
+        anchor-y: parent.absolute-position.y;
+    }
+
+    show-timer := Timer {
+        interval: root.show-delay;
+        running: false;
+        triggered => {
+            if (root.has-hover && root.tooltip-text != "") {
+                tip-popup.show();
+            }
+        }
+    }
+
+    changed has-hover => {
+        if (self.has-hover && root.tooltip-text != "") {
+            show-timer.start();
+        } else {
+            show-timer.stop();
+            tip-popup.close();
+        }
+    }
+    clicked => { root.activate(); }
+}
+
 // --- IconButton ------------------------------------------------------------
 // A small square action button that accepts a single-character glyph (or short text).
 // Keeps visual language consistent across the app.
@@ -25,9 +122,13 @@ export component IconButton inherits Rectangle {
         vertical-alignment: center;
     }
 
-    touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+    touch := TooltipArea {
+        width: parent.width;
+        height: parent.height;
+        tooltip-text: root.tooltip;
+        anchor-width: root.width;
+        anchor-height: root.height;
+        activate => { root.clicked(); }
     }
 }
 
@@ -232,9 +333,14 @@ export component ToolStrip inherits Rectangle {
             height: parent.height;
         }
 
-        ta := TouchArea {
+        ta := TooltipArea {
+            width: parent.width;
+            height: parent.height;
+            tooltip-text: root.tooltip;
+            anchor-width: parent.width;
+            anchor-height: parent.height;
             mouse-cursor: root.enabled ? pointer : default;
-            clicked => {
+            activate => {
                 if (root.enabled) {
                     root.expand();
                 }

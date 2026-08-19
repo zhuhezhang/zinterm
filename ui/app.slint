@@ -19,7 +19,7 @@ import { TabBar, TabInfo } from "tabs.slint";
 import { Welcome, SessionInfo } from "welcome.slint";
 import { SessionDialog, SessionDraft } from "session_dialog.slint";
 import { ConfirmDialog } from "confirm_dialog.slint";
-import { LabeledInput, PrimaryButton, GhostButton, IconButton, ToolStrip
+import { LabeledInput, PrimaryButton, GhostButton, IconButton, TooltipArea, ToolStrip
 } from "widgets.slint";
 import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel
 } from "terminal_view.slint";
@@ -142,11 +142,7 @@ component IconBtn inherits Rectangle {
     width: 26px;
     height: 26px;
     border-radius: Theme.radius-sm;
-    background: ta.has-hover || root.active ? Theme.bg-hover : transparent;
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
+    background: touch.has-hover || root.active ? Theme.bg-hover : transparent;
 
     Text {
         text: root.icon;
@@ -157,26 +153,14 @@ component IconBtn inherits Rectangle {
         vertical-alignment: center;
     }
 
-    if ta.has-hover && root.tooltip != "": Rectangle {
-        y: parent.height + 5px;
-        x: parent.width - self.width;   // align right edge with the icon
-        width: tip-txt.preferred-width + 16px;
-        height: 22px;
-        background: Theme.bg-elevated;
-        border-radius: Theme.radius-sm;
-        border-width: 1px;
-        border-color: Theme.border-strong;
-        drop-shadow-blur: 8px;
-        drop-shadow-color: #00000070;
-        tip-txt := Text {
-            text: root.tooltip;
-            color: Theme.text-primary;
-            font-size: Theme.fs-xs;
-            horizontal-alignment: center;
-            vertical-alignment: center;
-            width: parent.width;
-            height: parent.height;
-        }
+    touch := TooltipArea {
+        width: parent.width;
+        height: parent.height;
+        mouse-cursor: pointer;
+        tooltip-text: root.tooltip;
+        anchor-width: root.width;
+        anchor-height: root.height;
+        activate => { root.clicked(); }
     }
 }
 
@@ -239,6 +223,20 @@ export component AppWindow inherits Window {
     // never tofus on glyph fallback (#54). Rust sets Theme.ui-font-family to a
     // system CJK font on startup; empty on Linux keeps the Slint default.
     default-font-family: Theme.ui-font-family;
+
+    init => {
+        Theme.window-width = root.width;
+        Theme.window-height = root.height;
+        Palette.color-scheme = root.dark-mode ? ColorScheme.dark : ColorScheme.light;
+    }
+    changed width => {
+        Theme.window-width = self.width;
+        Theme.window-height = self.height;
+    }
+    changed height => {
+        Theme.window-width = self.width;
+        Theme.window-height = self.height;
+    }
 
     // App version string, injected from Rust (env!("CARGO_PKG_VERSION")).
     in property <string> app-version;
@@ -358,7 +356,6 @@ export component AppWindow inherits Window {
     // Keep Slint's std-widgets (LineEdit / Button / ComboBox in the dialogs) in
     // step with our theme — otherwise in light mode they keep the platform/dark
     // palette and their text/borders blend into the light dialog background.
-    init => { Palette.color-scheme = root.dark-mode ? ColorScheme.dark : ColorScheme.light; }
     changed dark-mode => { Palette.color-scheme = root.dark-mode ? ColorScheme.dark : ColorScheme.light; }
     in-out property <string> term-font-family <=> Theme.term-font-family;
     in-out property <length> term-font-size <=> Theme.term-font-size;
