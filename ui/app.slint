@@ -1685,15 +1685,26 @@ export component AppWindow inherits Window {
         HorizontalLayout {
             padding-left: 12px;
             padding-right: 6px;
-            spacing: 8px;
-            Text {
-                text: "🎉 " + @tr("Update available:") + " " + root.update-version;
-                color: #ffffff;
-                font-size: Theme.fs-sm;
-                font-family: Theme.ui-font-family;
-                vertical-alignment: center;
-                horizontal-stretch: 1;
-                overflow: elide;
+            spacing: 5px;
+            HorizontalLayout {
+                spacing: 2px;
+                Text {
+                    text: "\u{E004}";
+                    font-family: "Material Icons";
+                    color: #ffffff;
+                    font-size: Theme.fs-lg;
+                    vertical-alignment: center;
+                }
+                
+                Text {
+                    text: @tr("Update available:") + " " + root.update-version;
+                    color: #ffffff;
+                    font-size: Theme.fs-sm;
+                    font-family: Theme.ui-font-family;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
             }
 
             Rectangle {
@@ -1716,6 +1727,7 @@ export component AppWindow inherits Window {
                 }
             }
 
+            // close update panel button
             Rectangle {
                 width: 26px;
                 height: 26px;
