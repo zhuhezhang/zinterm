@@ -318,6 +318,9 @@ msgstr "输入命令，回车发送"
 msgid "All sessions"
 msgstr "所有会话"
 
+msgid "When selected, commands are sent to all sessions"
+msgstr "选中时命令发送至所有会话"
+
 msgid "Send"
 msgstr "发送"
 

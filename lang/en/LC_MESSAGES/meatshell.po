@@ -318,6 +318,9 @@ msgstr "Type a command, Enter to send"
 msgid "All sessions"
 msgstr "All sessions"
 
+msgid "When selected, commands are sent to all sessions"
+msgstr "When selected, commands are sent to all sessions"
+
 msgid "Send"
 msgstr "Send"
 

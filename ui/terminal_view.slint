@@ -1,7 +1,7 @@
 import { Theme } from "theme.slint";
 import { SftpPanel, SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { TabInfo } from "tabs.slint";
-import { DockExpandButton, ToolStrip } from "widgets.slint";
+import { DockExpandButton, ToolStrip, TooltipArea } from "widgets.slint";
 
 // Embed the terminal fonts here too so the cell-probe Text below measures
 // with the CORRECT font (the built-in Meatshell Mono), not a system fallback.
@@ -1436,14 +1436,19 @@ export component TerminalView inherits Rectangle {
                             }
 
                             // Send-to-all toggle.
-                                Rectangle {
+                            Rectangle {
                                 width: all-row.preferred-width + 14px;
                                 border-radius: Theme.radius-sm;
                                 background: root.send-to-all ? Theme.accent
                                     : all-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
-                                all-ta := TouchArea {
+                                all-ta := TooltipArea {
+                                    width: parent.width;
+                                    height: parent.height;
                                     mouse-cursor: pointer;
-                                    clicked => { root.send-to-all = !root.send-to-all; }
+                                    tooltip-text: @tr("When selected, commands are sent to all sessions");
+                                    anchor-width: parent.width;
+                                    anchor-height: parent.height;
+                                    activate => { root.send-to-all = !root.send-to-all; }
                                 }
 
                                 all-row := HorizontalLayout {
