@@ -754,7 +754,7 @@ export component InterfacePanel inherits Rectangle {
                     width: settings-scroll.visible-width;
 
                     // --- Font page ---------------------------------------------
-            if root.ifd-page == "font": VerticalLayout {
+                    if root.ifd-page == "font": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -923,7 +923,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Input page -------------------------------------------
-            if root.ifd-page == "input": VerticalLayout {
+                    if root.ifd-page == "input": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -958,7 +958,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Output highlighting page -----------------------------
-            if root.ifd-page == "output": VerticalLayout {
+                    if root.ifd-page == "output": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1274,7 +1274,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Wallpaper page ----------------------------------------
-            if root.ifd-page == "wallpaper": VerticalLayout {
+                    if root.ifd-page == "wallpaper": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1300,8 +1300,8 @@ export component InterfacePanel inherits Rectangle {
                         }
 
                         // Built-in choices: keep this row horizontally scrollable as
-                // bundled wallpapers grow.
-                builtin-wallpapers-scroll := ScrollView {
+                        // bundled wallpapers grow.
+                        builtin-wallpapers-scroll := ScrollView {
                             height: 106px;
                             width: 100%;
                             viewport-width: max(self.visible-width, builtin-wallpapers-row.preferred-width);
@@ -1412,8 +1412,8 @@ export component InterfacePanel inherits Rectangle {
                                             height: 100%;
                                             background: @linear-gradient(180deg, #05060f 0%, #0b1430 55%, #1a0a2e 100%);
                                             clip: true;
-                                // glowing planet
-                                Rectangle {
+                                            // glowing planet
+                                            Rectangle {
                                                 x: parent.width * 0.5 - 16px;
                                                 y: parent.height * 0.22;
                                                 width: 32px;
@@ -1421,8 +1421,8 @@ export component InterfacePanel inherits Rectangle {
                                                 border-radius: 16px;
                                                 background: @radial-gradient(circle, #ff5ea8 0%, #ff5ea800 70%);
                                             }
-                                // neon horizon line
-                                Rectangle {
+                                            // neon horizon line
+                                            Rectangle {
                                                 y: parent.height * 0.58;
                                                 width: parent.width;
                                                 height: 2px;
@@ -1501,9 +1501,9 @@ export component InterfacePanel inherits Rectangle {
                             WallpaperSwatch {
                                 selected: root.wp-is-custom;
                                 clicked => { root.pick-wallpaper-file(); }
-                        // Show the real image when a custom one is active, else a
-                        // "choose a file" placeholder.
-                        if root.wp-is-custom: Image {
+                                // Show the real image when a custom one is active, else a
+                                // "choose a file" placeholder.
+                                if root.wp-is-custom: Image {
                                     width: 100%;
                                     height: 100%;
                                     source: Theme.wallpaper;
@@ -1580,8 +1580,8 @@ export component InterfacePanel inherits Rectangle {
                                 Slider {
                                     width: 150px;
                                     minimum: 0;
-                            // Up to 70% transparency (overlay floor 0.30).
-                            maximum: 70;
+                                    // Up to 70% transparency (overlay floor 0.30).
+                                    maximum: 70;
                                     value: (1.0 - root.wallpaper-overlay) * 100;
                                     changed(v) => { root.wallpaper-overlay = 1.0 - v / 100; }
                                     released(v) => { root.persist-wallpaper-overlay(1.0 - v / 100); }
@@ -1599,7 +1599,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Renderer page (#280) ---------------------------------
-            if root.ifd-page == "renderer": VerticalLayout {
+                    if root.ifd-page == "renderer": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1699,7 +1699,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- SFTP page ---------------------------------------------
-            if root.ifd-page == "sftp": VerticalLayout {
+                    if root.ifd-page == "sftp": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1724,7 +1724,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- SSH page ----------------------------------------------
-            if root.ifd-page == "ssh": VerticalLayout {
+                    if root.ifd-page == "ssh": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1756,7 +1756,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Sidebars page -----------------------------------------
-            if root.ifd-page == "sidebar": VerticalLayout {
+                    if root.ifd-page == "sidebar": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1806,7 +1806,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Welcome page ------------------------------------------
-            if root.ifd-page == "welcome": VerticalLayout {
+                if (root.ifd-page == "welcome"): VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1834,7 +1834,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Download page -----------------------------------------
-            if root.ifd-page == "download": VerticalLayout {
+                    if root.ifd-page == "download": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;
@@ -1859,7 +1859,7 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Update check page (#184) ------------------------------
-            if root.ifd-page == "update": VerticalLayout {
+                    if root.ifd-page == "update": VerticalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
                         padding-top: 14px;

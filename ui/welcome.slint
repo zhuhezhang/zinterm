@@ -540,9 +540,9 @@ export component Welcome inherits Rectangle {
 
                                 TouchArea {
                                     mouse-cursor: pointer;
-                                // Left-click toggles collapse (any group, incl.
-                                // empty); right-click opens the group menu.
-                                clicked => { root.toggle-group(session.group); }
+                                    // Left-click toggles collapse (any group, incl.
+                                    // empty); right-click opens the group menu.
+                                    clicked => { root.toggle-group(session.group); }
                                     pointer-event(e) => {
                                         if (!session.builtin && e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
                                             gmx = self.mouse-x;
@@ -556,8 +556,8 @@ export component Welcome inherits Rectangle {
                                     x: gmx;
                                     y: gmy;
                                     width: 140px;
-                                // edit + new always; delete only for an empty group.
-                                height: (session.id == "" ? 3 : 2) * 28px + 9px;
+                                    // edit + new always; delete only for an empty group.
+                                    height: (session.id == "" ? 3 : 2) * 28px + 9px;
                                     Rectangle {
                                         background: Theme.popup-bg;
                                         border-radius: Theme.radius-sm;
@@ -568,8 +568,8 @@ export component Welcome inherits Rectangle {
                                         VerticalLayout {
                                             padding: 4px;
                                             spacing: 1px;
-                                        // Edit (rename) group
-                                        Rectangle {
+                                            // Edit (rename) group
+                                            Rectangle {
                                                 height: 28px;
                                                 border-radius: Theme.radius-sm;
                                                 background: eg-ta.has-hover ? Theme.bg-hover : transparent;
@@ -598,8 +598,8 @@ export component Welcome inherits Rectangle {
                                                     }
                                                 }
                                             }
-                                        // Delete group — only when it has no sessions (id == "")
-                                        if session.id == "": Rectangle {
+                                            // Delete group — only when it has no sessions (id == "")
+                                            if session.id == "": Rectangle {
                                                 height: 28px;
                                                 border-radius: Theme.radius-sm;
                                                 background: dg-ta.has-hover ? #cc333320 : transparent;
@@ -628,8 +628,8 @@ export component Welcome inherits Rectangle {
                                                     }
                                                 }
                                             }
-                                        // New group
-                                        Rectangle {
+                                            // New group
+                                            Rectangle {
                                                 height: 28px;
                                                 border-radius: Theme.radius-sm;
                                                 background: ng-ta.has-hover ? Theme.bg-hover : transparent;

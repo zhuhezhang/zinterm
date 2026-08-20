@@ -1064,8 +1064,8 @@ export component AppWindow inherits Window {
                     - parent.quick-top - parent.quick-bottom;
 
                 // Tabs + content fill `rest`. Clipped so the terminal / SFTP panel can
-            // never bleed onto a panel docked on the bottom or right.
-            quick-area := Rectangle {
+                // never bleed onto a panel docked on the bottom or right.
+                quick-area := Rectangle {
                     x: 0px;
                     y: 0px;
                     width: parent.width;
@@ -1090,10 +1090,10 @@ export component AppWindow inherits Window {
                         height: root.quick-panel-open && !root.quick-panel-collapsed && !parent.quick-horizontal
                             ? parent.height - parent.quick-h - parent.quick-sp : parent.height;
                         clip: true;
-                // Split-pane area (v0.5): panes tile this rect; each pane has its own
-                // tab strip + active terminal / welcome. Rust flattens the split tree
-                // into `panes` for the size we report here.
-                pane-area := Rectangle {
+                        // Split-pane area (v0.5): panes tile this rect; each pane has its own
+                        // tab strip + active terminal / welcome. Rust flattens the split tree
+                        // into `panes` for the size we report here.
+                        pane-area := Rectangle {
                             width: parent.width;
                             height: parent.height;
                             changed width => { root.content-resized(self.width, self.height); }
@@ -1109,12 +1109,12 @@ export component AppWindow inherits Window {
 
                                     HorizontalLayout {
                                         spacing: 0;
-                            // Tab strip.
-                            TabBar {
+                                        // Tab strip.
+                                        TabBar {
                                             horizontal-stretch: 1;
-                                // Reserve room for the top-right toolbar icons that sit over
-                                // this row so tabs don't slide underneath them (#122).
-                                reserve-right: pane.reserve-right;
+                                            // Reserve room for the top-right toolbar icons that sit over
+                                            // this row so tabs don't slide underneath them (#122).
+                                            reserve-right: pane.reserve-right;
                                             show-new-tab: !root.welcome-as-sidebar;
                                             can-merge-pane: root.panes.length > 1;
                                             tabs: pane.tabs;
@@ -1130,26 +1130,26 @@ export component AppWindow inherits Window {
                                             tab-duplicate(id) => { root.tab-duplicate(id); }
                                             tab-drag-move(id, ax, ay) => {
                                                 root.tab-drag-move(id,
-                                        ax - pane-area.absolute-position.x,
-                                        ay - pane-area.absolute-position.y);
+                                                ax - pane-area.absolute-position.x,
+                                                ay - pane-area.absolute-position.y);
                                             }
                                             tab-drag-drop(id, ax, ay) => {
                                                 root.tab-drag-drop(id,
-                                        ax - pane-area.absolute-position.x,
-                                        ay - pane-area.absolute-position.y);
+                                                ax - pane-area.absolute-position.x,
+                                                ay - pane-area.absolute-position.y);
                                             }
                                         }
                                     }
 
                                     // Content area swaps based on active tab kind.
-                        Rectangle {
+                                    Rectangle {
                                         vertical-stretch: 1;
                                         background: Theme.bg-root;
 
                                         // Empty pane outside welcome-sidebar mode: keep a small hint for
-                            // rare empty panes, but do not cover the wallpaper when the
-                            // session list is already visible as a sidebar.
-                            if pane.tabs.length == 0 && !root.welcome-as-sidebar: Rectangle {
+                                        // rare empty panes, but do not cover the wallpaper when the
+                                        // session list is already visible as a sidebar.
+                                        if pane.tabs.length == 0 && !root.welcome-as-sidebar: Rectangle {
                                             width: parent.width;
                                             height: parent.height;
                                             Text {
@@ -1164,8 +1164,8 @@ export component AppWindow inherits Window {
                                         }
 
                                         // Welcome tab — fill the content area explicitly (some renderers
-                            // don't auto-fill, which spread the header/card apart) (#dock).
-                            if pane.active-id == "welcome": Welcome {
+                                        // don't auto-fill, which spread the header/card apart) (#dock).
+                                        if pane.active-id == "welcome": Welcome {
                                             width: parent.width;
                                             height: parent.height;
                                             sessions: root.sessions;
@@ -1194,10 +1194,10 @@ export component AppWindow inherits Window {
                                         }
 
                                         // Terminal tabs — one TerminalView per terminal state. Only
-                            // the one matching `active-tab-id` is visible. Slint doesn't
-                            // allow nesting `if` directly inside a `for`, so we toggle
-                            // visibility instead and rely on the layout to overlap them.
-                            for term[i] in root.terminals: TerminalView {
+                                        // the one matching `active-tab-id` is visible. Slint doesn't
+                                        // allow nesting `if` directly inside a `for`, so we toggle
+                                        // visibility instead and rely on the layout to overlap them.
+                                        for term[i] in root.terminals: TerminalView {
                                             visible: term.id == pane.active-id;
                                             active: term.id == root.active-tab-id;
                                             zen-mode: root.zen-mode;
@@ -1301,17 +1301,17 @@ export component AppWindow inherits Window {
                                             sftp-download-selected() => { root.sftp-download-selected(term.id); }
                                             sftp-copy-to-target(path, target) => { root.sftp-copy-to-target(term.id, path, target); }
                                             sftp-copy-selected-to-target(target) => { root.sftp-copy-selected-to-target(term.id, target); }
-                                // Confirm before deleting the checked entries (#100), reusing
-                                // the delete-confirm dialog in batch mode.
-                                sftp-delete-selected() => {
+                                            // Confirm before deleting the checked entries (#100), reusing
+                                            // the delete-confirm dialog in batch mode.
+                                            sftp-delete-selected() => {
                                                 root.confirm-delete-tab = term.id;
                                                 root.confirm-delete-batch = true;
                                                 root.confirm-delete-path = root.lang-en ? "the selected items" : "选中的项目";
                                                 root.confirm-delete-open = true;
                                             }
-                                // Gate delete behind an in-app confirmation (#28): stash the
-                                // target and open the modal; the real delete fires on confirm.
-                                sftp-delete(path) => {
+                                            // Gate delete behind an in-app confirmation (#28): stash the
+                                            // target and open the modal; the real delete fires on confirm.
+                                            sftp-delete(path) => {
                                                 root.confirm-delete-tab = term.id;
                                                 root.confirm-delete-path = path;
                                                 root.confirm-delete-open = true;
@@ -1322,8 +1322,8 @@ export component AppWindow inherits Window {
                                             sftp-edit-external(path) => { root.sftp-edit-external(term.id, path); }
                                             sftp-sort-request(key) => { root.sftp-sort-request(term.id, key); }
                                             sftp-clear-sort() => { root.sftp-clear-sort(term.id); }
-                                // #69 context-menu extensions → shared prompt dialog.
-                                sftp-rename-request(path, name) => {
+                                            // #69 context-menu extensions → shared prompt dialog.
+                                            sftp-rename-request(path, name) => {
                                                 root.sftp-prompt-kind = "rename";
                                                 root.sftp-prompt-tab = term.id;
                                                 root.sftp-prompt-target = path;
@@ -1363,10 +1363,10 @@ export component AppWindow inherits Window {
                                         }
 
                                         // Windows may show the terminal model being reconstructed when
-                            // restoring from minimize (#183). Briefly cover the terminal area
-                            // until the restore repaint settles; the underlying PTY/buffer is
-                            // untouched.
-                            if root.terminal-restore-cover && pane.active-id != "welcome" && pane.tabs.length > 0: Rectangle {
+                                        // restoring from minimize (#183). Briefly cover the terminal area
+                                        // until the restore repaint settles; the underlying PTY/buffer is
+                                        // untouched.
+                                        if root.terminal-restore-cover && pane.active-id != "welcome" && pane.tabs.length > 0: Rectangle {
                                             width: parent.width;
                                             height: parent.height;
                                             background: Theme.term-bg;
@@ -1376,18 +1376,18 @@ export component AppWindow inherits Window {
                             }
 
                             // Draggable splitters between panes. Single pane => the model is
-                // empty, so this renders nothing. The handle is a thin 6px bar but its
-                // TouchArea reaches ±5px beyond so it's easy to grab.
-                for sp[si] in root.splitters: Rectangle {
+                            // empty, so this renders nothing. The handle is a thin 6px bar but its
+                            // TouchArea reaches ±5px beyond so it's easy to grab.
+                            for sp[si] in root.splitters: Rectangle {
                                 x: sp.x;
                                 y: sp.y;
                                 width: sp.w;
                                 height: sp.h;
-                    // A tab dropped on a pane boundary leaves the pointer hovering
-                    // over this splitter. Highlight only while the splitter itself
-                    // is being dragged, otherwise that hover looks like a stuck
-                    // full-height tab insertion caret.
-                    background: sp-ta.pressed ? Theme.accent : Theme.border-strong;
+                                // A tab dropped on a pane boundary leaves the pointer hovering
+                                // over this splitter. Highlight only while the splitter itself
+                                // is being dragged, otherwise that hover looks like a stuck
+                                // full-height tab insertion caret.
+                                background: sp-ta.pressed ? Theme.accent : Theme.border-strong;
                                 animate background { duration: 100ms; }
                                 sp-ta := TouchArea {
                                     x: sp.vertical ? -5px : 0px;
@@ -1407,8 +1407,8 @@ export component AppWindow inherits Window {
                             }
 
                             // Drag-to-split drop-zone highlight (v0.5). Purely visual (no
-                // TouchArea) so it never eats the drag; Rust sets the rect.
-                if root.drag-active: Rectangle {
+                            // TouchArea) so it never eats the drag; Rust sets the rect.
+                            if root.drag-active: Rectangle {
                                 x: root.drag-hl-x;
                                 y: root.drag-hl-y;
                                 width: root.drag-hl-w;

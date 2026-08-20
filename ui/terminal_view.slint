@@ -1275,7 +1275,7 @@ export component TerminalView inherits Rectangle {
                             }
 
                             // Command input.
-                                Rectangle {
+                            Rectangle {
                                 horizontal-stretch: 1;
                                 border-radius: Theme.radius-sm;
                                 border-width: 1px;
@@ -1465,7 +1465,7 @@ export component TerminalView inherits Rectangle {
                             }
 
                             // Send button.
-                                Rectangle {
+                            Rectangle {
                                 width: send-row.preferred-width + 18px;
                                 border-radius: Theme.radius-sm;
                                 background: send-ta.has-hover ? Theme.accent-hover : Theme.accent;
@@ -1521,9 +1521,9 @@ export component TerminalView inherits Rectangle {
                                         vertical-alignment: center;
                                     }
                                     for q in root.quick-commands: VerticalLayout {
-                                            // Group header on the first row of each group (#55) —
-                                            // click to collapse/expand the whole group.
-                                            if q.group-header != "": Rectangle {
+                                        // Group header on the first row of each group (#55) —
+                                        // click to collapse/expand the whole group.
+                                        if q.group-header != "": Rectangle {
                                             height: 24px;
                                             property <length> gmx;
                                             property <length> gmy;
@@ -1929,8 +1929,8 @@ export component TerminalView inherits Rectangle {
                                             }
                                         }
                                     }
-                                        // Manage entry.
-                                        Rectangle {
+                                    // Manage entry.
+                                    Rectangle {
                                         height: 30px;
                                         HorizontalLayout {
                                             spacing: 2px;
@@ -1989,7 +1989,7 @@ export component TerminalView inherits Rectangle {
                         }
 
                         // --- History popup (opens upward) -------------------------------
-                            if root.history-open: Rectangle {
+                        if root.history-open: Rectangle {
                             x: parent.width - 308px;
                             width: 300px;
                             height: root.history-autocomplete
@@ -2124,10 +2124,10 @@ export component TerminalView inherits Rectangle {
                                         }
                                     }
                                 }
-                                    // Search box (#101) pinned at the bottom, right above the
-                                    // command input, so it stays in a fixed, easy-to-find spot no
-                                    // matter how tall the list is — like FinalShell (#131).
-                                    if !root.history-autocomplete: Rectangle {
+                                // Search box (#101) pinned at the bottom, right above the
+                                // command input, so it stays in a fixed, easy-to-find spot no
+                                // matter how tall the list is — like FinalShell (#131).
+                                if !root.history-autocomplete: Rectangle {
                                     height: 30px;
                                     border-radius: Theme.radius-sm;
                                     background: Theme.bg-root;
@@ -2210,7 +2210,7 @@ export component TerminalView inherits Rectangle {
             }
 
             // --- SFTP resize splitter (orientation follows the dock edge) -------
-                Rectangle {
+            Rectangle {
                 visible: root.sftp-available && !root.sftp-shut;
                 x: root.sftp-dock == "left" ? parent.sf-w
                     : root.sftp-dock == "right" ? parent.width - parent.sf-w - 4px
@@ -2239,12 +2239,12 @@ export component TerminalView inherits Rectangle {
                             root.sftp-dragging = false;
                         }
                     }
-                        // Direct tracking: the panel's docked edge follows the cursor's
-                        // position within the (stable) dock-region — no deltas, so no
-                        // moving-frame / accumulation issues. NOTE: `parent` here is the
-                        // thin splitter Rectangle, so refer to `dock-region` explicitly
-                        // for the region's size/origin (#dock).
-                        moved => {
+                    // Direct tracking: the panel's docked edge follows the cursor's
+                    // position within the (stable) dock-region — no deltas, so no
+                    // moving-frame / accumulation issues. NOTE: `parent` here is the
+                    // thin splitter Rectangle, so refer to `dock-region` explicitly
+                    // for the region's size/origin (#dock).
+                    moved => {
                         if (root.sftp-dragging) {
                             if (root.sftp-horizontal) {
                                     // Floor matches SftpPanel's compact two-row toolbar;
