@@ -2725,6 +2725,7 @@ export component AppWindow inherits Window {
 
     // --- Quick-command manage dialog (#55) --------------------------------
     if root.quick-cmd-manage-open: Rectangle {
+        property <length> label-width: 95px;
         width: parent.width;
         height: parent.height;
         background: #00000080;
@@ -2780,38 +2781,45 @@ export component AppWindow inherits Window {
                 }
 
                 // Add / edit form: name + group (optional) + command.
-                Text {
-                    text: @tr("Name");
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                }
-
-                qcm-name-in := LineEdit {
-                    text <=> root.qcm-name;
-                    font-family: Theme.ui-font-family;
-                    placeholder-text: @tr("e.g. tail log");
-                }
-
-                Text {
-                    text: @tr("Group (optional)");
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                }
-
-                qcm-group-in := LineEdit {
-                    text <=> root.qcm-group;
-                    font-family: Theme.ui-font-family;
-                    placeholder-text: @tr("leave empty → default");
-                }
-
-                Text {
-                    text: @tr("Command");
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                }
-
                 HorizontalLayout {
-                    spacing: 8px;
+                    Text {
+                        width: label-width;
+                        text: @tr("Name");
+                        color: Theme.text-secondary;
+                        font-size: Theme.fs-sm;
+                        vertical-alignment: center;
+                    }
+    
+                    qcm-name-in := LineEdit {
+                        text <=> root.qcm-name;
+                        font-family: Theme.ui-font-family;
+                        placeholder-text: @tr("e.g. tail log");
+                    }
+                }
+                HorizontalLayout {
+                    Text {
+                        width: label-width;
+                        text: @tr("Group (optional)");
+                        color: Theme.text-secondary;
+                        font-size: Theme.fs-sm;
+                        vertical-alignment: center;
+                    }
+
+                    qcm-group-in := LineEdit {
+                        text <=> root.qcm-group;
+                        font-family: Theme.ui-font-family;
+                        placeholder-text: @tr("leave empty → default");
+                    }
+                }
+                HorizontalLayout {
+                    Text {
+                        width: label-width;
+                        text: @tr("Command");
+                        color: Theme.text-secondary;
+                        font-size: Theme.fs-sm;
+                        vertical-alignment: center;
+                    }
+
                     Rectangle {
                         horizontal-stretch: 1;
                         height: 72px;
@@ -2847,7 +2855,33 @@ export component AppWindow inherits Window {
                             root.qcm-send-enter = true;
                         }
                     }
+                }
+
+                // Whether a click sends+executes or just fills the input box to
+                // tweak first (B站 suggestion).
+                HorizontalLayout {
+                    Text { width: label-width; }
+                    CheckBox {
+                        text: root.lang-en
+                            ? "Send + run on click (off: fill input box only)"
+                            : "点击即发送执行(关闭则只填入输入框,可修改后再发)";
+                        checked <=> root.qcm-send-enter;
+                    }
+                }
+
+                // New (empty) group.
+                HorizontalLayout {
+                    spacing: 4px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
                     Button {
+                        height: 25px;
+                        text: root.lang-en ? "+ New group" : "+ 新建分组";
+                        clicked => { root.qcg-orig = ""; root.qcg-name = ""; root.qcg-open = true; }
+                    }
+                    Button {
+                        height: 25px;
                         text: root.qcm-edit-index >= 0 ? (root.lang-en ? "Save" : "保存")
                             : (root.lang-en ? "Add" : "添加");
                         primary: true;
@@ -2864,27 +2898,6 @@ export component AppWindow inherits Window {
                             root.qcm-group = "";
                             root.qcm-send-enter = true;
                         }
-                    }
-                }
-
-                // Whether a click sends+executes or just fills the input box to
-                // tweak first (B站 suggestion).
-                CheckBox {
-                    text: root.lang-en
-                        ? "Send + run on click (off: fill input box only)"
-                        : "点击即发送执行(关闭则只填入输入框,可修改后再发)";
-                    checked <=> root.qcm-send-enter;
-                }
-
-                // New (empty) group.
-                HorizontalLayout {
-                    Rectangle {
-                        horizontal-stretch: 1;
-                    }
-
-                    Button {
-                        text: root.lang-en ? "+ New group" : "+ 新建分组";
-                        clicked => { root.qcg-orig = ""; root.qcg-name = ""; root.qcg-open = true; }
                     }
                 }
 
@@ -3377,7 +3390,9 @@ export component AppWindow inherits Window {
                 }
 
                 qcm-resize-ta := TouchArea {
+                    height: 23px;
                     mouse-cursor: nwse-resize;
+                    width: 26px;
                     pointer-event(e) => {
                         if (e.kind == PointerEventKind.down) {
                             root.qcm-dialog-resizing = true;
