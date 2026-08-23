@@ -334,7 +334,11 @@ pub(super) fn apply_session_event_to_window(
         SessionEvent::CommandRan(cmd) => {
             // A command typed directly in the terminal, captured via the shell
             // hook (#113). Record it in the same command-box history, reusing the
-            // de-dup/move-to-end logic, and refresh the model.
+            // de-dup/move-to-end logic, and refresh the model. Skip captures that
+            // mirror a command-box / quick-command submission already stored above.
+            if should_suppress_terminal_command_capture(tab_id, &cmd) {
+                return;
+            }
             HISTORY_STORE.with(|s| {
                 if let Some(store) = s.borrow().as_ref() {
                     {

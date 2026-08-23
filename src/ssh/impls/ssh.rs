@@ -101,6 +101,9 @@ const PROMPT_SETUP_SUFFIX: &str = "__ms7'";
 #[cfg(test)]
 const PROMPT_SETUP_HISTORY_MARKER: &str = "__MEATSHELL_INTERNAL_SETUP_1";
 const PROMPT_SETUP_DONE: &str = "\u{1b}]699;ready\u{07}";
+// Multiline history: zsh's `fc -ln` prints real newlines as the two-char
+// sequence `\n`. We keep this hook short (long lines leak under zsh/ZLE
+// redraw) and expand those escapes in `repair_fc_newlines` on receive.
 const PROMPT_BODY: &str = "test -z \"$FISH_VERSION\" && eval '__msc(){ __c=\"$(fc -ln -1 2>/dev/null)\"; [ -n \"$__c\" ] && [ \"$__c\" != \"$__cl\" ] && { __cl=\"$__c\"; printf \"\\033]697;%s\\007\" \"$__c\"; }; }; __ms7(){ printf \"\\033]7;file://%s%s\\007\" \"$HOSTNAME\" \"$PWD\"; __msc; }; if [ -n \"$ZSH_VERSION\" ]; then autoload -Uz add-zsh-hook 2>/dev/null; add-zsh-hook precmd __ms7; else PROMPT_COMMAND=\"__ms7${PROMPT_COMMAND:+;$PROMPT_COMMAND}\"; fi; : __MEATSHELL_INTERNAL_SETUP_1; if [ -n \"$BASH_VERSION\" ]; then __md=\"$(history 2>/dev/null | { __md=\"\"; while read -r __mn __mr; do case \"$__mr\" in *\"__ms7()\"*\"PROMPT_COMMAND=\"*) __mn=\"${__mn%\\*}\"; __md=\"$__mn $__md\";; esac; done; printf \"%s\" \"$__md\"; })\"; for __mn in $__md; do history -d \"$__mn\" 2>/dev/null; done; unset __md __mn __mr; fi; __cl=\"$(fc -ln -1 2>/dev/null)\"; printf \"\\033]699;ready\\007\"; __ms7'";
 const PROMPT_SHELL_PROBE: &[u8] = b"if [ -n \"$BASH_VERSION\" ]; then printf '__MEATSHELL_SHELL__:bash\\n'; elif [ -n \"$ZSH_VERSION\" ]; then printf '__MEATSHELL_SHELL__:zsh\\n'; else printf '__MEATSHELL_SHELL__:other\\n'; fi";
 
@@ -209,16 +212,32 @@ fn strip_prompt_setup_echo(text: &mut String, prefix_pos: usize, end_pos: usize)
 /// Remove a late-echoed prompt setup command when it arrives after the initial
 /// suppression window. Some shells echo a long injected command only after the
 /// first prompt has already been delivered, so the normal buffered path cannot
-/// catch it (#266).
+/// catch it (#266). Also catches mid-line fragments when zsh/ZLE redraws omit
+/// the leading `test -z …` prefix.
 fn strip_late_prompt_setup_echo(text: &mut String) -> bool {
-    let Some(prefix_pos) = text.find(PROMPT_SETUP_PREFIX) else {
+    if let Some(prefix_pos) = text.find(PROMPT_SETUP_PREFIX) {
+        if let Some(rel_end) = text[prefix_pos..].find(PROMPT_SETUP_SUFFIX) {
+            let end = prefix_pos + rel_end + PROMPT_SETUP_SUFFIX.len();
+            strip_prompt_setup_echo(text, prefix_pos, end);
+            return true;
+        }
+    }
+    // Partial redraw: no prefix, but the unique setup marker / tail is present.
+    const MARKER: &str = "__MEATSHELL_INTERNAL_SETUP";
+    let Some(marker_pos) = text.find(MARKER) else {
         return false;
     };
-    let Some(rel_end) = text[prefix_pos..].find(PROMPT_SETUP_SUFFIX) else {
-        return false;
-    };
-    let end = prefix_pos + rel_end + PROMPT_SETUP_SUFFIX.len();
-    strip_prompt_setup_echo(text, prefix_pos, end);
+    let start = line_start_before(text, marker_pos);
+    let end = text[marker_pos..]
+        .find(PROMPT_SETUP_SUFFIX)
+        .map(|rel| marker_pos + rel + PROMPT_SETUP_SUFFIX.len())
+        .or_else(|| {
+            text[marker_pos..]
+                .find(['\r', '\n'])
+                .map(|i| marker_pos + i)
+        })
+        .unwrap_or(text.len());
+    strip_prompt_setup_echo(text, start, end);
     true
 }
 
@@ -307,6 +326,61 @@ fn extract_osc7_end(text: &str) -> Option<(String, usize)> {
         i = end + term_len.max(1);
     }
     None
+}
+
+/// Expand zsh `fc -ln` newline escapes (`\n` / `\r` / `\\`) into real controls.
+///
+/// Bash already emits real LFs, so strings that contain them are left alone.
+/// A lone trailing `\n` (e.g. `echo \n`) is preserved — only escapes with
+/// non-whitespace on both sides, or heredoc markers, are expanded so we don't
+/// corrupt intentional backslash-n.
+pub fn repair_fc_newlines(cmd: &str) -> String {
+    if cmd.contains('\n') || cmd.contains('\r') || !cmd.contains('\\') {
+        return cmd.to_string();
+    }
+    let needs = cmd.contains("<<") || {
+        let b = cmd.as_bytes();
+        let mut i = 0;
+        let mut found = false;
+        while i + 1 < b.len() {
+            if b[i] == b'\\' && (b[i + 1] == b'n' || b[i + 1] == b'r') {
+                // Skip a doubled backslash (`\\n` → intentional `\n` after %b).
+                let doubled = i > 0 && b[i - 1] == b'\\';
+                if !doubled {
+                    let left = cmd[..i].chars().any(|c| !c.is_whitespace());
+                    let right = cmd[i + 2..].chars().any(|c| !c.is_whitespace());
+                    if left && right {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            i += 1;
+        }
+        found
+    };
+    if !needs {
+        return cmd.to_string();
+    }
+    let mut out = String::with_capacity(cmd.len());
+    let mut chars = cmd.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('r') => out.push('\r'),
+                Some('\\') => out.push('\\'),
+                Some(other) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// Find a meatshell command-capture sequence (`ESC ] 697 ; <command> BEL|ST`)
@@ -1032,7 +1106,10 @@ async fn run_session(
                             echo_buf.push_str(&chunk);
                             if let Some(tail) = take_after_prompt_setup_done(&mut echo_buf) {
                                 suppress_echo = false;
-                                late_prompt_echo_pending = false;
+                                // zsh/ZLE may still redraw the long setup line
+                                // after the completion marker; keep stripping
+                                // identifiable leftovers for a short window.
+                                late_prompt_echo_pending = true;
                                 if let Some(cwd) = extract_osc7_path(&tail) {
                                     tracing::debug!("OSC7 cwd={:?}", cwd);
                                     let _ = events.send(SessionEvent::CwdChanged(cwd));
@@ -1062,9 +1139,9 @@ async fn run_session(
                         // rare case HISTCONTROL=ignorespace isn't in effect.
                         while let Some((cmd, range)) = extract_osc_command(&text) {
                             text.replace_range(range, "");
-                            let cmd = cmd.trim();
+                            let cmd = repair_fc_newlines(cmd.trim());
                             if !cmd.is_empty() && !cmd.contains("__ms7") {
-                                let _ = events.send(SessionEvent::CommandRan(cmd.to_string()));
+                                let _ = events.send(SessionEvent::CommandRan(cmd));
                             }
                         }
 
@@ -1340,6 +1417,9 @@ mod prompt_setup_echo_tests {
         assert!(PROMPT_BODY.contains("history 2>/dev/null"));
         assert!(PROMPT_BODY.contains("__ms7()"));
         assert!(PROMPT_BODY.contains("history -d \"$__mn\""));
+        // Multiline escapes are expanded in repair_fc_newlines on receive —
+        // keep this hook short so zsh/ZLE redraws don't leak it to the screen.
+        assert!(!PROMPT_BODY.contains("printf \"%b\""));
         // Re-prime command capture only after deleting the setup entry, so the
         // previous real user command does not get reported as newly executed.
         assert!(PROMPT_BODY.find("history -d").unwrap() < PROMPT_BODY.rfind("__cl=").unwrap());
@@ -1452,7 +1532,7 @@ mod prompt_setup_echo_tests {
 
 #[cfg(test)]
 mod osc_command_tests {
-    use super::extract_osc_command;
+    use super::{extract_osc_command, repair_fc_newlines};
 
     #[test]
     fn extracts_and_locates_bel_terminated() {
@@ -1479,6 +1559,33 @@ mod osc_command_tests {
         // No terminator yet → wait for more.
         assert!(extract_osc_command("\u{1b}]697;ls").is_none());
         assert!(extract_osc_command("plain text").is_none());
+    }
+
+    #[test]
+    fn repairs_zsh_fc_heredoc_escapes() {
+        let raw = "cat <<EOF\\nline1\\nEOF";
+        let fixed = repair_fc_newlines(raw);
+        assert_eq!(fixed, "cat <<EOF\nline1\nEOF");
+        assert!(fixed.contains('\n'));
+    }
+
+    #[test]
+    fn repairs_two_line_command_without_heredoc() {
+        assert_eq!(
+            repair_fc_newlines("echo a\\necho b"),
+            "echo a\necho b"
+        );
+    }
+
+    #[test]
+    fn leaves_intentional_echo_backslash_n_alone() {
+        assert_eq!(repair_fc_newlines("echo \\n"), "echo \\n");
+    }
+
+    #[test]
+    fn leaves_real_newlines_alone() {
+        let cmd = "cat <<EOF\nline1\nEOF";
+        assert_eq!(repair_fc_newlines(cmd), cmd);
     }
 }
 

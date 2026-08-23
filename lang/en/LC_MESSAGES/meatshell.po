@@ -312,8 +312,8 @@ msgstr "Quick"
 msgid "Quick commands"
 msgstr "Quick commands"
 
-msgid "Type a command, Enter to send"
-msgstr "Type a command, Enter to send"
+msgid "Type a command, click Send"
+msgstr "Type a command, click Send"
 
 msgid "All sessions"
 msgstr "All sessions"
@@ -327,8 +327,8 @@ msgstr "Send"
 msgid "No quick commands yet"
 msgstr "No quick commands yet"
 
-msgid "Group (optional)"
-msgstr "Group (optional)"
+msgid "Group"
+msgstr "Group"
 
 msgid "Rename group"
 msgstr "Rename group"
@@ -347,6 +347,27 @@ msgstr "e.g. tail log"
 
 msgid "Search history"
 msgstr "Search history"
+
+msgid "Search commands"
+msgstr "Search commands"
+
+msgid "History command"
+msgstr "History command"
+
+msgid "Execute"
+msgstr "Execute"
+
+msgid "Save and execute"
+msgstr "Save and execute"
+
+msgid "Add and execute"
+msgstr "Add and execute"
+
+msgid "Run"
+msgstr "Run"
+
+msgid "View and edit"
+msgstr "View and edit"
 
 msgid "Advanced (encoding)"
 msgstr "Advanced (encoding)"

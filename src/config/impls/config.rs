@@ -303,6 +303,57 @@ fn dedup_keep_last(items: &mut Vec<String>) {
     }
 }
 
+/// Expand zsh `fc -ln` newline escapes stored as the two-character sequence
+/// `\n` (common before the shell hook ran `printf %b`). Leave real newlines
+/// and intentional lone `echo \n` alone.
+fn repair_history_newlines(cmd: String) -> String {
+    if cmd.contains('\n') || cmd.contains('\r') || !cmd.contains('\\') {
+        return cmd;
+    }
+    let needs = cmd.contains("<<") || {
+        let b = cmd.as_bytes();
+        let mut i = 0;
+        let mut found = false;
+        while i + 1 < b.len() {
+            if b[i] == b'\\' && (b[i + 1] == b'n' || b[i + 1] == b'r') {
+                let doubled = i > 0 && b[i - 1] == b'\\';
+                if !doubled {
+                    let left = cmd[..i].chars().any(|c| !c.is_whitespace());
+                    let right = cmd[i + 2..].chars().any(|c| !c.is_whitespace());
+                    if left && right {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            i += 1;
+        }
+        found
+    };
+    if !needs {
+        return cmd;
+    }
+    let mut out = String::with_capacity(cmd.len());
+    let mut chars = cmd.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => out.push('\n'),
+                Some('r') => out.push('\r'),
+                Some('\\') => out.push('\\'),
+                Some(other) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
 /// Display-only session groups that must never be persisted as user folders.
 /// `default` maps to an empty group; `system` is owned by built-in local shells.
 pub(crate) fn is_reserved_session_group(name: &str) -> bool {
@@ -457,6 +508,10 @@ impl ConfigStore {
                     }
                     // Clean up any duplicate history accumulated before #113,
                     // keeping the last (most recent) occurrence of each command.
+                    // Also expand zsh `fc -ln` `\n` escapes left in older entries.
+                    for cmd in &mut cfg.command_history {
+                        *cmd = repair_history_newlines(std::mem::take(cmd));
+                    }
                     dedup_keep_last(&mut cfg.command_history);
                     // `system` and `default` are display-only group names. Older
                     // builds allowed moving saved servers into `system`, creating
@@ -919,8 +974,51 @@ impl ConfigStore {
                 c.group = n.clone();
             }
         }
-        self.cache.quick_groups.sort();
         self.cache.quick_groups.dedup();
+    }
+
+    /// Ordered named quick-command groups: explicit `quick_groups` first, then
+    /// any group referenced by a command that is not yet listed (first-seen order).
+    pub fn materialized_quick_groups(&self) -> Vec<String> {
+        let mut ordered: Vec<String> = self.cache.quick_groups.clone();
+        for c in &self.cache.quick_commands {
+            let g = c.group.trim();
+            if !g.is_empty() && !ordered.iter().any(|x| x == g) {
+                ordered.push(g.to_string());
+            }
+        }
+        ordered
+    }
+
+    /// Move a named quick-command group to sit immediately before `before` in the
+    /// display order. `before` empty appends to the end. "default" cannot move.
+    pub fn reorder_quick_group(&mut self, from: &str, before: &str) -> bool {
+        if from.trim().is_empty() || from.eq_ignore_ascii_case("default") {
+            return false;
+        }
+        let mut groups = self.materialized_quick_groups();
+        let Some(from_idx) = groups.iter().position(|g| g == from) else {
+            return false;
+        };
+        if before.is_empty() {
+            let item = groups.remove(from_idx);
+            groups.push(item);
+        } else if before.eq_ignore_ascii_case("default") {
+            return false;
+        } else if from == before {
+            return false;
+        } else {
+            let Some(mut to_idx) = groups.iter().position(|g| g == before) else {
+                return false;
+            };
+            let item = groups.remove(from_idx);
+            if to_idx > from_idx {
+                to_idx -= 1;
+            }
+            groups.insert(to_idx, item);
+        }
+        self.cache.quick_groups = groups;
+        true
     }
 
     /// Update one quick command in place by index (#55).
@@ -939,6 +1037,7 @@ impl ConfigStore {
     /// each command appears once, and re-appends at the end so the most-recently
     /// used command is always last. Capped so it can't grow without bound (#113).
     pub fn push_command_history(&mut self, cmd: String) {
+        let cmd = repair_history_newlines(cmd);
         if cmd.trim().is_empty() {
             return;
         }
@@ -1878,5 +1977,32 @@ mod tests {
         assert!(!store.paste_confirm_enabled());
         assert!(!store.extra_paste_shortcuts_enabled());
         assert!(store.zen_mode());
+    }
+
+    #[test]
+    fn quick_groups_keep_user_order_and_reorder() {
+        let mut store = temp_store();
+        store.add_quick_group("beta".into());
+        store.add_quick_group("alpha".into());
+        store.set_quick_commands(vec![crate::config::QuickCommand {
+            name: "x".into(),
+            command: "x".into(),
+            group: "gamma".into(),
+            send_enter: true,
+        }]);
+        assert_eq!(
+            store.materialized_quick_groups(),
+            vec!["beta", "alpha", "gamma"]
+        );
+        assert!(store.reorder_quick_group("gamma", "beta"));
+        assert_eq!(
+            store.materialized_quick_groups(),
+            vec!["gamma", "beta", "alpha"]
+        );
+        assert!(store.reorder_quick_group("beta", ""));
+        assert_eq!(
+            store.materialized_quick_groups(),
+            vec!["gamma", "alpha", "beta"]
+        );
     }
 }

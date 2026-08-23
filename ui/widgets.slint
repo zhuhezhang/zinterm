@@ -1,4 +1,5 @@
 import { Theme } from "theme.slint";
+import { ScrollView } from "std-widgets.slint";
 
 // --- TooltipSurface --------------------------------------------------------
 // Opaque tooltip chrome (PopupWindow content). Uses `tooltip-bg`, not frosted
@@ -273,6 +274,165 @@ export component LabeledInput inherits VerticalLayout {
             font-size: Theme.fs-md;
             vertical-alignment: center;
         }
+    }
+}
+
+// --- BorderedLineInput -----------------------------------------------------
+// Single-line input with themed border focus and horizontal scroll for long text.
+export component BorderedLineInput inherits Rectangle {
+    in property <string> placeholder;
+    in-out property <string> text;
+    in property <length> pad-x: 10px;
+    in property <length> font-size: Theme.fs-md;
+    in property <string> font-family: Theme.ui-font-family;
+    in property <brush> idle-border: Theme.border-subtle;
+    in property <string> leading-icon: "";   // Material Icons glyph shown inside the field
+    in property <bool> auto-focus: false;
+    callback edited(string);
+
+    property <length> icon-gap: 4px;
+    property <length> leading-inset: root.leading-icon != ""
+        ? leading-icon.x + leading-icon.preferred-width + root.icon-gap
+        : root.pad-x;
+    property <bool> focus-pending: false;
+
+    horizontal-stretch: 1;
+    height: 32px;
+    border-radius: Theme.radius-sm;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : root.idle-border;
+    background: Theme.bg-root;
+    clip: true;
+
+    init => { root.focus-pending = root.auto-focus; }
+    focus-timer := Timer {
+        interval: 0ms;
+        running: root.focus-pending;
+        triggered => {
+            root.focus-pending = false;
+            if (root.auto-focus) { input.focus(); }
+        }
+    }
+
+    leading-icon := Text {
+        x: root.pad-x;
+        height: parent.height;
+        text: root.leading-icon;
+        font-family: "Material Icons";
+        color: Theme.text-muted;
+        font-size: root.font-size;
+        vertical-alignment: center;
+        visible: root.leading-icon != "";
+    }
+
+    Rectangle {
+        x: root.leading-inset;
+        width: parent.width - root.leading-inset - root.pad-x;
+        height: parent.height;
+        clip: true;
+
+        input := TextInput {
+            property <length> computed-x;
+
+            x: min(0px, max(parent.width - self.width - self.text-cursor-width, self.computed-x));
+            width: max(parent.width - self.text-cursor-width, self.preferred-width);
+            height: parent.height;
+            text <=> root.text;
+            color: Theme.text-primary;
+            font-family: root.font-family;
+            font-size: root.font-size;
+            vertical-alignment: center;
+            single-line: true;
+            edited => { root.edited(self.text); }
+
+            cursor-position-changed(cursor-position) => {
+                if (cursor-position.x + self.computed_x < 0px) {
+                    self.computed_x = -cursor-position.x;
+                } else if (cursor-position.x + self.computed_x > parent.width - self.text-cursor-width) {
+                    self.computed_x = parent.width - cursor-position.x - self.text-cursor-width;
+                }
+            }
+        }
+    }
+
+    if input.text == "": Text {
+        x: root.leading-inset;
+        width: parent.width - root.leading-inset - root.pad-x;
+        height: parent.height;
+        text: root.placeholder;
+        color: Theme.text-muted;
+        font-size: root.font-size;
+        vertical-alignment: center;
+    }
+}
+
+// --- BorderedTextArea ------------------------------------------------------
+// Multiline input with themed border focus and scroll for overflowing content.
+export component BorderedTextArea inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <length> area-height: 100px;
+    in property <length> font-size: Theme.fs-sm;
+    in property <string> font-family: Theme.font-mono;
+    callback edited(string);
+    callback key-pressed(KeyEvent) -> EventResult;
+
+    public function focus-input() { input.focus(); }
+    public function set-selection-offsets(start: int, end: int) { input.set-selection-offsets(start, end); }
+    public function cut() { input.cut(); }
+    public function cursor-position-byte-offset() -> int { return input.cursor-position-byte-offset; }
+
+    horizontal-stretch: 1;
+    height: root.area-height;
+    border-radius: Theme.radius-sm;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.border-subtle;
+    background: Theme.bg-root;
+    clip: true;
+
+    scroll := ScrollView {
+        x: 10px;
+        y: 8px;
+        width: parent.width - 20px;
+        height: parent.height - 16px;
+        viewport-width: max(self.visible-width, input.preferred-width);
+        viewport-height: max(self.visible-height, input.preferred-height);
+
+        input := TextInput {
+            text <=> root.text;
+            color: Theme.text-primary;
+            font-family: root.font-family;
+            font-size: root.font-size;
+            single-line: false;
+            wrap: no-wrap;
+            page-height: scroll.visible-height;
+            edited => { root.edited(self.text); }
+            key-pressed(e) => { root.key-pressed(e) }
+
+            cursor-position-changed(cpos) => {
+                if (cpos.x + scroll.viewport-x < 12px) {
+                    scroll.viewport-x = min(0px, max(parent.visible-width - self.width, -cpos.x + 12px));
+                } else if (cpos.x + scroll.viewport-x > parent.visible-width - 12px) {
+                    scroll.viewport-x = min(0px, max(parent.visible-width - self.width, parent.visible-width - cpos.x - 12px));
+                }
+                if (cpos.y + scroll.viewport-y < 12px) {
+                    scroll.viewport-y = min(0px, max(parent.visible-height - self.height, -cpos.y + 12px));
+                } else if (cpos.y + scroll.viewport-y > parent.visible-height - 12px - 20px) {
+                    scroll.viewport-y = min(0px, max(parent.visible-height - self.height, parent.visible-height - cpos.y - 12px - 20px));
+                }
+            }
+        }
+    }
+
+    if input.text == "": Text {
+        x: 10px;
+        y: 8px;
+        width: parent.width - 20px;
+        height: parent.height - 16px;
+        text: root.placeholder;
+        color: Theme.text-muted;
+        font-size: root.font-size;
+        vertical-alignment: top;
     }
 }
 

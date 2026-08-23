@@ -312,8 +312,8 @@ msgstr "快捷"
 msgid "Quick commands"
 msgstr "快捷命令"
 
-msgid "Type a command, Enter to send"
-msgstr "输入命令，回车发送"
+msgid "Type a command, click Send"
+msgstr "输入命令，点击发送"
 
 msgid "All sessions"
 msgstr "所有会话"
@@ -327,8 +327,8 @@ msgstr "发送"
 msgid "No quick commands yet"
 msgstr "暂无快捷命令"
 
-msgid "Group (optional)"
-msgstr "分组（可选）"
+msgid "Group"
+msgstr "分组"
 
 msgid "Rename group"
 msgstr "重命名分组"
@@ -347,6 +347,27 @@ msgstr "例如：查看日志"
 
 msgid "Search history"
 msgstr "搜索历史"
+
+msgid "Search commands"
+msgstr "搜索命令"
+
+msgid "History command"
+msgstr "历史命令"
+
+msgid "Execute"
+msgstr "执行"
+
+msgid "Save and execute"
+msgstr "保存并执行"
+
+msgid "Add and execute"
+msgstr "添加并执行"
+
+msgid "Run"
+msgstr "运行"
+
+msgid "View and edit"
+msgstr "查看编辑"
 
 msgid "Advanced (encoding)"
 msgstr "高级（字符集）"

@@ -19,13 +19,13 @@ import { TabBar, TabInfo } from "tabs.slint";
 import { Welcome, SessionInfo } from "welcome.slint";
 import { SessionDialog, SessionDraft } from "session_dialog.slint";
 import { ConfirmDialog } from "confirm_dialog.slint";
-import { LabeledInput, PrimaryButton, GhostButton, IconButton, TooltipArea, ToolStrip
+import { LabeledInput, PrimaryButton, GhostButton, IconButton, TooltipArea, ToolStrip, BorderedLineInput, BorderedTextArea
 } from "widgets.slint";
-import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel
+import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel, HistoryViewItem
 } from "terminal_view.slint";
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { InterfacePanel, OutputRuleItem } from "interface_panel.slint";
-import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette
+import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette, TextEdit
 } from "std-widgets.slint";
 
 export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd }
@@ -303,6 +303,7 @@ export component AppWindow inherits Window {
     in property <string> download-dir;      // preset SFTP download folder ("" = ask)
     // Command bar (#55): quick commands + history, fed from Rust.
     in property <[QuickCmd]> quick-commands;
+    in property <[QuickCmd]> quick-view;           // filtered popup list
     in-out property <bool> quick-commands-as-sidebar: false;
     callback set-quick-commands-as-sidebar(bool);
     in-out property <bool> quick-panel-open: false;
@@ -311,16 +312,106 @@ export component AppWindow inherits Window {
     in-out property <length> quick-panel-height: 220px;
     in-out property <string> quick-panel-dock: "right";
     property <string> quick-external-command;
-    property <bool> quick-external-send-enter;
     property <int> quick-external-sequence;
     in property <[string]> command-history;          // oldest first (newest last, #113)
-    in property <[string]> history-view;             // filtered dropdown, newest first (#101, #331)
+    in property <[HistoryViewItem]> history-view;    // filtered dropdown, newest first (#101, #331)
+    in-out property <bool> send-to-all: false;       // shared across all terminal tabs (#55)
     callback run-command(string /* tab-id */, string /* cmd */, bool /* to-all */);
     callback copy-text(string);                 // copy a history command (#96)
     callback delete-history(int /* index */);   // remove a history entry (#96)
     callback delete-history-cmd(string /* cmd */);   // remove a history entry by command (#101)
     callback search-history(string /* query */);     // filter the history dropdown (#101)
-    in-out property <bool> quick-cmd-manage-open: false;  // manage dialog
+    callback search-quick-commands(string /* query */); // filter the quick-command popup
+    callback search-qcm-commands(string /* query */);   // filter the manage-dialog list
+    in-out property <string> qcm-search: "";
+    // TODO(styling): temporary mock data for the manage-dialog list — set qcm-use-mock false or remove when done
+    property <bool> qcm-use-mock: false;
+    property <[QuickCmd]> qcm-mock-commands: [
+        {
+            name: "查看磁盘",
+            command: "df -h",
+            summary: "df -h",
+            group: "default",
+            group-header: "default",
+            collapsed: false,
+            orig-index: 0,
+        },
+        {
+            name: "重启 Nginx",
+            command: "sudo systemctl restart nginx && sudo systemctl status nginx --no-pager",
+            summary: "sudo systemctl restart nginx && sudo systemctl status nginx --no-pager",
+            group: "default",
+            group-header: "",
+            collapsed: false,
+            orig-index: 1,
+        },
+        {
+            name: "打包发布",
+            command: "cargo build --release && tar czf dist/meatshell-$(date +%Y%m%d).tar.gz target/release/meatshell",
+            summary: "cargo build --release && tar czf dist/meatshell-$(date +%Y%m%d).tar.gz …",
+            group: "default",
+            group-header: "",
+            collapsed: false,
+            orig-index: 2,
+        },
+        {
+            name: "",
+            command: "",
+            summary: "",
+            group: "staging",
+            group-header: "staging",
+            collapsed: false,
+            orig-index: -1,
+        },
+        {
+            name: "SSH 跳板",
+            command: "ssh -J bastion@10.0.0.1 deploy@prod-web-01",
+            summary: "ssh -J bastion@10.0.0.1 deploy@prod-web-01",
+            group: "运维",
+            group-header: "运维",
+            collapsed: false,
+            orig-index: 3,
+        },
+        {
+            name: "滚动日志",
+            command: "journalctl -u meatshell -f --since \"1 hour ago\"",
+            summary: "journalctl -u meatshell -f --since \"1 hour ago\"",
+            group: "运维",
+            group-header: "",
+            collapsed: false,
+            orig-index: 4,
+        },
+        {
+            name: "Very Long Command Name For Layout Testing",
+            command: "echo \"line1\" && echo \"line2\" && echo \"line3\" && echo \"done\"",
+            summary: "echo \"line1\" && echo \"line2\" && echo \"line3\" …",
+            group: "运维",
+            group-header: "",
+            collapsed: false,
+            orig-index: 5,
+        },
+        {
+            name: "Git 状态",
+            command: "git status -sb && git log --oneline -5",
+            summary: "git status -sb && git log --oneline -5",
+            group: "开发",
+            group-header: "开发",
+            collapsed: false,
+            orig-index: 6,
+        },
+        {
+            name: "运行测试",
+            command: "cargo test --workspace -- --nocapture",
+            summary: "cargo test --workspace -- --nocapture",
+            group: "开发",
+            group-header: "",
+            collapsed: false,
+            orig-index: 7,
+        },
+    ];
+    in property <[QuickCmd]> qcm-manage-commands;
+    property <[QuickCmd]> qcm-display-commands: root.qcm-use-mock ? root.qcm-mock-commands : root.qcm-manage-commands;
+    in-out property <bool> quick-cmd-manage-open: root.qcm-use-mock;  // manage dialog
     in-out property <length> qcm-dialog-width: 560px;
     in-out property <length> qcm-dialog-height: 560px;
     property <bool> qcm-dialog-resizing;
@@ -331,16 +422,25 @@ export component AppWindow inherits Window {
     in-out property <string> qcm-name;                // manage form: name field
     in-out property <string> qcm-command;             // manage form: command field
     in-out property <string> qcm-group;               // manage form: group field (#55)
-    in-out property <bool> qcm-send-enter: true;      // click sends+executes (B站)
     in-out property <int> qcm-edit-index: -1;         // -1 = add, >=0 = edit that entry (#55)
-    callback add-quick-command(string /* name */, string /* command */, string /* group */, bool /* send-enter */);
-    callback save-quick-command(int /* index */, string /* name */, string /* command */, string /* group */, bool /* send-enter */);
+    callback add-quick-command(string /* name */, string /* command */, string /* group */);
+    callback save-quick-command(int /* index */, string /* name */, string /* command */, string /* group */);
     callback delete-quick-command(int /* index */);
     callback edit-quick-command(int /* index */);
     callback duplicate-quick-command(int /* index */);
     callback move-quick-command(int /* index */, string /* group */);
-    callback reorder-quick-command(int /* index */, bool /* move up */);
+    callback drop-quick-command(int /* from */, string /* target-group */, int /* before-orig */);
+    callback drop-quick-group(string /* from */, string /* before-group */);
+    callback qcm-drag-at(length /* list-top-y */, length /* pointer-y */, int /* drag-from */, string /* drag-group-from */);
     callback toggle-quick-group(string /* group */);  // collapse/expand a group (#55)
+    // Drag-to-reorder / cross-group move in the manage-dialog list.
+    property <int> qcm-drag-from: -1;
+    in-out property <string> qcm-drop-group;
+    in-out property <int> qcm-drop-before: -1;
+    property <string> qcm-drag-group-from;
+    in-out property <string> qcm-drop-before-group;
+    property <bool> qcm-cmd-dragging;
+    property <bool> qcm-grp-dragging;
     // Quick-command group management (mirror session groups) (#55).
     in-out property <bool> qcg-open: false;           // group name dialog open
     property <string> qcg-name;                       // group dialog: name field
@@ -1241,23 +1341,27 @@ export component AppWindow inherits Window {
                                             sftp-available: term.sftp-available && !root.zen-mode;
                                             sftp-ready: term.sftp-ready;
                                             quick-commands: root.quick-commands;
+                                            quick-view: root.quick-view;
                                             quick-sidebar-enabled: root.quick-commands-as-sidebar;
                                             quick-panel-docked: root.quick-panel-open;
                                             quick-external-command: root.quick-external-command;
-                                            quick-external-send-enter: root.quick-external-send-enter;
                                             quick-external-sequence: root.quick-external-sequence;
                                             command-history: root.command-history;
                                             history-view: root.history-view;
+                                            send-to-all <=> root.send-to-all;
                                             run-command(cmd, all) => { root.run-command(term.id, cmd, all); }
                                             copy-text(t) => { root.copy-text(t); }
                                             delete-history(i) => { root.delete-history(i); }
                                             delete-history-cmd(c) => { root.delete-history-cmd(c); }
                                             search-history(q) => { root.search-history(q); }
+                                            search-quick-commands(q) => { root.search-quick-commands(q); }
                                             manage-quick-commands() => {
                                                 root.qcm-name = "";
                                                 root.qcm-command = "";
                                                 root.qcm-group = "";
                                                 root.qcm-edit-index = -1;
+                                                root.qcm-search = "";
+                                                root.search-qcm-commands("");
                                                 root.quick-cmd-manage-open = true;
                                             }
                                             quick-dock-drag-move(ax, ay) => {
@@ -1428,11 +1532,11 @@ export component AppWindow inherits Window {
                         height: parent.quick-horizontal ? parent.height : parent.quick-h;
                         commands: root.quick-commands;
                         dock-edge: root.quick-panel-dock;
-                        activate(command, send-enter) => {
+                        run(command) => {
                             root.quick-external-command = command;
-                            root.quick-external-send-enter = send-enter;
                             root.quick-external-sequence += 1;
                         }
+                        edit(orig-index) => { root.edit-quick-command(orig-index); }
                         toggle-group(group) => { root.toggle-quick-group(group); }
                         manage => {
                             root.qcm-name = "";
@@ -2743,11 +2847,11 @@ export component AppWindow inherits Window {
             border-color: Theme.border-strong;
             drop-shadow-blur: 24px;
             drop-shadow-color: #000000a0;
-            TouchArea { }   // swallow inside clicks
+            TouchArea { }   // swallow backdrop clicks on the card body
 
             VerticalLayout {
-                padding: 18px;
-                spacing: 10px;
+                padding: 8px;
+                spacing: 8px;
                 HorizontalLayout {
                     Text {
                         text: @tr("Quick commands");
@@ -2780,110 +2884,106 @@ export component AppWindow inherits Window {
                 }
 
                 // Add / edit form: name + group (optional) + command.
-                HorizontalLayout {
-                    spacing: 5px;
-                    VerticalLayout {
-                        width: grp-label.preferred-width + 10px;
+                VerticalLayout {
+                    spacing: 8px;
+                    HorizontalLayout {
+                        spacing: 8px;
                         Text {
+                            width: cmd-label.width;
                             text: @tr("Name");
                             color: Theme.text-secondary;
                             font-size: Theme.fs-sm;
+                            horizontal-alignment: right;
                             vertical-alignment: center;
                         }
 
-                        grp-label := Text {
-                            text: @tr("Group (optional)");
+                        qcm-name-in := BorderedLineInput {
+                            text <=> root.qcm-name;
+                            placeholder: @tr("e.g. tail log");
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text {
+                            text: @tr("Group");
+                            width: cmd-label.width;
                             color: Theme.text-secondary;
                             font-size: Theme.fs-sm;
+                            horizontal-alignment: right;
                             vertical-alignment: center;
                         }
 
-                        Text {
+                        BorderedLineInput {
+                            text <=> root.qcm-group;
+                            placeholder: @tr("leave empty → default");
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        cmd-label := Text {
                             text: @tr("Command");
                             color: Theme.text-secondary;
                             font-size: Theme.fs-sm;
+                            horizontal-alignment: right;
                             vertical-alignment: center;
                         }
 
-                        Text { }
-                    }
-
-                    VerticalLayout {
-                        spacing: 10px;
-                        qcm-name-in := LineEdit {
-                            text <=> root.qcm-name;
-                            font-family: Theme.ui-font-family;
-                            placeholder-text: @tr("e.g. tail log");
-                        }
-
-                        qcm-group-in := LineEdit {
-                            text <=> root.qcm-group;
-                            font-family: Theme.ui-font-family;
-                            placeholder-text: @tr("leave empty → default");
-                        }
-
-                        HorizontalLayout {
-                            Rectangle {
-                                horizontal-stretch: 1;
-                                height: 72px;
-                                border-radius: Theme.radius-sm;
-                                border-width: 1px;
-                                border-color: qcm-cmd-in.has-focus ? Theme.accent : Theme.border-subtle;
-                                background: Theme.bg-root;
-                                clip: true;
-                                Flickable {
-                                    viewport-width: self.width;
-                                    viewport-height: max(self.height, qcm-cmd-in.preferred-height + 12px);
-                                    qcm-cmd-in := TextInput {
-                                        x: 8px;
-                                        y: 6px;
-                                        width: parent.width - 16px;
-                                        text <=> root.qcm-command;
-                                        color: Theme.text-primary;
-                                        font-family: Theme.font-mono;
-                                        font-size: Theme.fs-sm;
-                                        single-line: false;
-                                        wrap: no-wrap;
-                                    }
-                                }
-                            }
-                            
-                            // Cancel only while editing an existing entry.
-                            if root.qcm-edit-index >= 0: Button {
-                                text: root.lang-en ? "Cancel" : "取消";
-                                clicked => {
-                                    root.qcm-edit-index = -1;
-                                    root.qcm-name = "";
-                                    root.qcm-command = "";
-                                    root.qcm-group = "";
-                                    root.qcm-send-enter = true;
-                                }
-                            }
-                        }
-
-                        // Whether a click sends+executes or just fills the input box to
-                        // tweak first (B站 suggestion).
-                        CheckBox {
-                            text: root.lang-en
-                                ? "Send + run on click (off: fill input box only)"
-                                : "点击即发送执行(关闭则只填入输入框,可修改后再发)";
-                            checked <=> root.qcm-send-enter;
+                        qcm-cmd-in := BorderedTextArea {
+                            text <=> root.qcm-command;
                         }
                     }
                 }
 
-                // New (empty) group, save/edit command button.
+                // New (empty) group, cancel、save、edit command button.
                 HorizontalLayout {
-                    padding-top: 5px;
-                    padding-bottom: 10px;
-                    spacing: 5px;
+                    spacing: 7px;
                     Rectangle {
                         horizontal-stretch: 1;
                     }
+
                     Button {
                         text: root.lang-en ? "+ New group" : "+ 新建分组";
                         clicked => { root.qcg-orig = ""; root.qcg-name = ""; root.qcg-open = true; }
                     }
+
+                    // Cancel only while editing an existing entry.
+                    if root.qcm-edit-index >= 0: Button {
+                        text: root.lang-en ? "Cancel" : "取消";
+                        clicked => {
+                            root.qcm-edit-index = -1;
+                            root.qcm-name = "";
+                            root.qcm-command = "";
+                            root.qcm-group = "";
+                        }
+                    }
+
+                    Button {
+                        text: @tr("Execute");
+                        enabled: root.qcm-command != "";
+                        clicked => {
+                            root.run-command(root.active-tab-id, root.qcm-command, false);
+                        }
+                    }
+
+                    Button {
+                        text: root.qcm-edit-index >= 0 ? @tr("Save and execute") : @tr("Add and execute");
+                        enabled: root.qcm-name != "" && root.qcm-command != "";
+                        clicked => {
+                            if (root.qcm-edit-index >= 0) {
+                                root.save-quick-command(root.qcm-edit-index, root.qcm-name, root.qcm-command, root.qcm-group);
+                            } else {
+                                root.add-quick-command(root.qcm-name, root.qcm-command, root.qcm-group);
+                            }
+                            root.run-command(root.active-tab-id, root.qcm-command, false);
+                            root.qcm-edit-index = -1;
+                            root.qcm-name = "";
+                            root.qcm-command = "";
+                            root.qcm-group = "";
+                        }
+                    }
+
                     Button {
                         text: root.qcm-edit-index >= 0 ? (root.lang-en ? "Save" : "保存")
                             : (root.lang-en ? "Add" : "添加");
@@ -2891,15 +2991,14 @@ export component AppWindow inherits Window {
                         enabled: root.qcm-name != "" && root.qcm-command != "";
                         clicked => {
                             if (root.qcm-edit-index >= 0) {
-                                root.save-quick-command(root.qcm-edit-index, root.qcm-name, root.qcm-command, root.qcm-group, root.qcm-send-enter);
+                                root.save-quick-command(root.qcm-edit-index, root.qcm-name, root.qcm-command, root.qcm-group);
                             } else {
-                                root.add-quick-command(root.qcm-name, root.qcm-command, root.qcm-group, root.qcm-send-enter);
+                                root.add-quick-command(root.qcm-name, root.qcm-command, root.qcm-group);
                             }
                             root.qcm-edit-index = -1;
                             root.qcm-name = "";
                             root.qcm-command = "";
                             root.qcm-group = "";
-                            root.qcm-send-enter = true;
                         }
                     }
                 }
@@ -2909,56 +3008,158 @@ export component AppWindow inherits Window {
                     background: Theme.border-subtle;
                 }
 
-                // Existing commands list with delete buttons.
-                Flickable {
+                // Search + list — tighter gap than the dialog's 8px section spacing.
+                VerticalLayout {
                     vertical-stretch: 1;
-                    viewport-width: self.width;
-                    viewport-height: max(self.height, qcm-list.preferred-height);
+                    spacing: 2px;
+
+                    Rectangle {
+                        height: 30px;
+
+                        qcm-search-in := BorderedLineInput {
+                            height: parent.height;
+                            pad-x: 8px;
+                            font-size: Theme.fs-sm;
+                            leading-icon: "\u{E8B6}";
+                            text <=> root.qcm-search;
+                            placeholder: @tr("Search commands");
+                            edited => { root.search-qcm-commands(self.text); }
+                        }
+                    }
+
+                    // Existing commands list with delete buttons.
+                    // ScrollView (not bare Flickable) so a scrollbar appears when the list overflows.
+                    ScrollView {
+                        vertical-stretch: 1;
+                        viewport-width: self.visible-width;
+                        viewport-height: max(self.visible-height, qcm-list.preferred-height);
                     qcm-list := VerticalLayout {
                         alignment: start;
-                        spacing: 2px;
-                        if root.quick-commands.length == 0: Text {
-                            text: @tr("No quick commands yet");
+                        spacing: 0px;
+                        if root.qcm-display-commands.length == 0: Text {
+                            text: root.qcm-search != "" ? @tr("No match") : @tr("No quick commands yet");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                         }
-                        for q in root.quick-commands: VerticalLayout {
+                        for q in root.qcm-display-commands: VerticalLayout {
+                            property <length> row-h: (q.group-header != "" ? 26px : 0px)
+                                + (!q.collapsed && q.orig-index >= 0 ? 38px : 0px);
+                            height: row-h > 0px ? row-h + 2px : 0px;
                             // Group header on the first row of each group (#55).
-                            // Right-click to rename / delete (empty) / new group.
                             if q.group-header != "": Rectangle {
                                 height: 26px;
                                 property <length> gmx;
                                 property <length> gmy;
+                                property <bool> grp-moved: false;
+                                property <bool> grp-pressing: false;
+                                property <length> grp-grab-x: 0px;
+                                border-radius: Theme.radius-sm;
+                                background: root.qcm-drag-group-from == q.group ? Theme.bg-active
+                                    : ((root.qcm-drag-from >= 0
+                                            && root.qcm-drop-group == q.group
+                                            && root.qcm-drop-before < 0)
+                                        || (root.qcm-drag-group-from != ""
+                                            && root.qcm-drop-before-group == q.group
+                                            && root.qcm-drag-group-from != q.group)
+                                        ? Theme.accent.with-alpha(0.12) : transparent);
+
                                 HorizontalLayout {
                                     padding-left: 4px;
-                                    padding-top: 6px;
-                                    spacing: 4px;
-                                    Text {
-                                        text: "\u{E2C7}";
-                                        font-family: "Material Icons";
-                                        color: Theme.text-muted;
-                                        font-size: Theme.fs-sm;
-                                        vertical-alignment: center;
+                                    padding-top: 3px;
+                                    Rectangle {
+                                        width: 20px;
+                                        height: 20px;
+                                        border-radius: Theme.radius-sm;
+
+                                        Text {
+                                            text: q.collapsed ? "\u{E5CC}" : "\u{E5CF}";
+                                            font-family: "Material Icons";
+                                            color: Theme.text-muted;
+                                            font-size: Theme.fs-sm;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
                                     }
 
-                                    Text {
-                                        text: q.group;
-                                        color: Theme.text-muted;
-                                        font-size: Theme.fs-xs;
-                                        font-weight: 700;
-                                        vertical-alignment: center;
+                                    HorizontalLayout {
                                         horizontal-stretch: 1;
-                                        horizontal-alignment: left;
+                                        height: 20px;
+                                        spacing: 4px;
+                                        Text {
+                                            text: "\u{E2C7}";
+                                            font-family: "Material Icons";
+                                            color: Theme.text-muted;
+                                            font-size: Theme.fs-sm;
+                                            vertical-alignment: center;
+                                        }
+
+                                        Text {
+                                            text: q.group;
+                                            color: Theme.text-muted;
+                                            font-size: Theme.fs-xs;
+                                            font-weight: 700;
+                                            vertical-alignment: center;
+                                            horizontal-stretch: 1;
+                                            horizontal-alignment: left;
+                                        }
                                     }
                                 }
 
-                                TouchArea {
-                                    clicked => {}  // grab so right-click pointer-events register inside the Flickable
+                                grp-header-ta := TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    mouse-cursor: q.group != "default"
+                                        ? (root.qcm-grp-dragging && root.qcm-drag-group-from == q.group
+                                            ? grabbing : grab)
+                                        : pointer;
                                     pointer-event(e) => {
-                                        if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                                        if (e.kind == PointerEventKind.down
+                                            && e.button == PointerEventButton.left) {
+                                            grp-pressing = true;
+                                            grp-moved = false;
+                                            grp-grab-x = self.mouse-x;
+                                            root.qcm-drag-from = -1;
+                                            root.qcm-cmd-dragging = false;
+                                        } else if (e.kind == PointerEventKind.down
+                                            && e.button == PointerEventButton.right) {
                                             gmx = self.mouse-x;
                                             gmy = self.mouse-y;
                                             qgrp-menu.show();
+                                        } else if (e.kind == PointerEventKind.up) {
+                                            if (grp-pressing
+                                                && q.group != "default"
+                                                && root.qcm-grp-dragging
+                                                && grp-moved) {
+                                                root.drop-quick-group(
+                                                    root.qcm-drag-group-from,
+                                                    root.qcm-drop-before-group,
+                                                );
+                                                root.qcm-drag-group-from = "";
+                                                root.qcm-drop-before-group = "";
+                                            } else if (grp-pressing && !grp-moved) {
+                                                root.toggle-quick-group(q.group);
+                                            }
+                                            grp-pressing = false;
+                                            root.qcm-grp-dragging = false;
+                                        }
+                                    }
+                                    moved => {
+                                        if (grp-pressing && q.group != "default") {
+                                            if (!grp-moved
+                                                && abs(self.mouse-x - grp-grab-x) > 5px) {
+                                                grp-moved = true;
+                                                root.qcm-drag-group-from = q.group;
+                                                root.qcm-drop-before-group = q.group;
+                                                root.qcm-grp-dragging = true;
+                                            }
+                                            if (root.qcm-grp-dragging) {
+                                                root.qcm-drag-at(
+                                                    qcm-list.absolute-position.y,
+                                                    self.absolute-position.y + self.mouse-y,
+                                                    root.qcm-drag-from,
+                                                    root.qcm-drag-group-from,
+                                                );
+                                            }
                                         }
                                     }
                                 }
@@ -2984,7 +3185,11 @@ export component AppWindow inherits Window {
                                                 background: qeg-ta.has-hover ? Theme.bg-hover : transparent;
                                                 qeg-ta := TouchArea {
                                                     mouse-cursor: pointer;
-                                                    clicked => { root.qcg-orig = q.group; root.qcg-name = q.group; root.qcg-open = true; }
+                                                    clicked => {
+                                                        root.qcg-orig = q.group;
+                                                        root.qcg-name = q.group;
+                                                        root.qcg-open = true;
+                                                    }
                                                 }
 
                                                 HorizontalLayout {
@@ -3043,7 +3248,11 @@ export component AppWindow inherits Window {
                                                 background: qng-ta.has-hover ? Theme.bg-hover : transparent;
                                                 qng-ta := TouchArea {
                                                     mouse-cursor: pointer;
-                                                    clicked => { root.qcg-orig = ""; root.qcg-name = ""; root.qcg-open = true; }
+                                                    clicked => {
+                                                        root.qcg-orig = "";
+                                                        root.qcg-name = "";
+                                                        root.qcg-open = true;
+                                                    }
                                                 }
 
                                                 HorizontalLayout {
@@ -3071,62 +3280,119 @@ export component AppWindow inherits Window {
                                 }
                             }
 
-                            // Command row (skip the empty-group placeholder).
-                            if q.orig-index >= 0: Rectangle {
+                            // Command row (skip the empty-group placeholder; hidden when collapsed).
+                            if !q.collapsed && q.orig-index >= 0: Rectangle {
                                 height: 38px;
+                                property <bool> cmd-moved: false;
+                                property <bool> cmd-pressing: false;
+                                property <length> cmd-grab-x: 0px;
                                 border-radius: Theme.radius-sm;
-                                background: Theme.bg-root;
-                                property <length> ctx-x;
-                                property <length> ctx-y;
-                                item-ta := TouchArea {
-                                    clicked => {}  // grab so right-click pointer-events register inside the Flickable
-                                    pointer-event(e) => {
-                                        if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
-                                            ctx-x = self.mouse-x;
-                                            ctx-y = self.mouse-y;
-                                            qctx-menu.show();
-                                        }
-                                    }
-                                }
+                                background: root.qcm-drag-from == q.orig-index ? Theme.bg-active
+                                    : (root.qcm-drag-from >= 0
+                                        && root.qcm-drop-before == q.orig-index
+                                        && root.qcm-drag-from != q.orig-index
+                                        ? Theme.accent.with-alpha(0.12) : Theme.bg-root);
 
                                 HorizontalLayout {
-                                    padding-left: 8px;
+                                    padding-left: 4px;
                                     padding-right: 6px;
-                                    spacing: 6px;
-                                    VerticalLayout {
+                                    spacing: 4px;
+                                    Rectangle {
                                         horizontal-stretch: 1;
-                                        alignment: center;
-                                        Text {
-                                            text: q.name;
-                                            color: Theme.text-primary;
-                                            font-size: Theme.fs-sm;
-                                            overflow: elide;
+                                        body-ta := TouchArea {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            mouse-cursor: root.qcm-drag-from == q.orig-index ? grabbing : grab;
+                                            double-clicked => {
+                                                cmd-pressing = false;
+                                                cmd-moved = false;
+                                                root.qcm-cmd-dragging = false;
+                                                root.qcm-drag-from = -1;
+                                                root.edit-quick-command(q.orig-index);
+                                            }
+                                            pointer-event(e) => {
+                                                if (e.kind == PointerEventKind.down
+                                                    && e.button == PointerEventButton.left) {
+                                                    cmd-pressing = true;
+                                                    cmd-moved = false;
+                                                    cmd-grab-x = self.mouse-x;
+                                                    root.qcm-drop-group = q.group;
+                                                    root.qcm-drop-before = q.orig-index;
+                                                    root.qcm-drag-group-from = "";
+                                                } else if (e.kind == PointerEventKind.up) {
+                                                    if (cmd-pressing
+                                                        && root.qcm-cmd-dragging
+                                                        && cmd-moved) {
+                                                        root.drop-quick-command(
+                                                            root.qcm-drag-from,
+                                                            root.qcm-drop-group,
+                                                            root.qcm-drop-before,
+                                                        );
+                                                    }
+                                                    cmd-pressing = false;
+                                                    root.qcm-cmd-dragging = false;
+                                                    root.qcm-drag-from = -1;
+                                                    root.qcm-drop-before = -1;
+                                                    root.qcm-drop-group = "";
+                                                }
+                                            }
+                                            moved => {
+                                                if (cmd-pressing) {
+                                                    if (!cmd-moved
+                                                        && abs(self.mouse-x - cmd-grab-x) > 5px) {
+                                                        cmd-moved = true;
+                                                        root.qcm-drag-from = q.orig-index;
+                                                        root.qcm-cmd-dragging = true;
+                                                        root.qcm-grp-dragging = false;
+                                                    }
+                                                    if (root.qcm-cmd-dragging) {
+                                                        root.qcm-drag-at(
+                                                            qcm-list.absolute-position.y,
+                                                            self.absolute-position.y + self.mouse-y,
+                                                            root.qcm-drag-from,
+                                                            root.qcm-drag-group-from,
+                                                        );
+                                                    }
+                                                }
+                                            }
                                         }
 
-                                        Text {
-                                            text: q.command;
-                                            color: Theme.text-muted;
-                                            font-size: Theme.fs-xs;
-                                            overflow: elide;
-                                            font-family: Theme.ui-font-family;
+                                        VerticalLayout {
+                                            alignment: center;
+                                            padding-left: 2px;
+                                            Text {
+                                                text: q.name;
+                                                color: Theme.text-primary;
+                                                font-size: Theme.fs-sm;
+                                                overflow: elide;
+                                            }
+
+                                            Text {
+                                                text: q.summary;
+                                                color: Theme.text-muted;
+                                                font-size: Theme.fs-xs;
+                                                overflow: elide;
+                                                font-family: Theme.ui-font-family;
+                                            }
                                         }
                                     }
 
                                     Rectangle {
                                         width: 24px;
                                         height: 28px;
+                                        y: (parent.height - self.height) / 2;
                                         border-radius: Theme.radius-sm;
-                                        background: up-ta.has-hover ? Theme.bg-hover : transparent;
-                                        up-ta := TouchArea {
+                                        background: run-ta.has-hover ? Theme.accent.with-alpha(0.25) : transparent;
+                                        run-ta := TouchArea {
                                             mouse-cursor: pointer;
-                                            clicked => { root.reorder-quick-command(q.orig-index, true); }
+                                            clicked => { root.run-command(root.active-tab-id, q.command, false); }
                                         }
 
                                         Text {
-                                            text: "\u{E5D8}";
+                                            text: "\u{E037}";
                                             font-family: "Material Icons";
-                                            color: Theme.text-secondary;
-                                            font-size: Theme.fs-sm;
+                                            color: Theme.accent;
+                                            font-size: Theme.fs-md;
                                             horizontal-alignment: center;
                                             vertical-alignment: center;
                                         }
@@ -3135,15 +3401,16 @@ export component AppWindow inherits Window {
                                     Rectangle {
                                         width: 24px;
                                         height: 28px;
+                                        y: (parent.height - self.height) / 2;
                                         border-radius: Theme.radius-sm;
-                                        background: down-ta.has-hover ? Theme.bg-hover : transparent;
-                                        down-ta := TouchArea {
+                                        background: dup-ta.has-hover ? Theme.bg-hover : transparent;
+                                        dup-ta := TouchArea {
                                             mouse-cursor: pointer;
-                                            clicked => { root.reorder-quick-command(q.orig-index, false); }
+                                            clicked => { root.duplicate-quick-command(q.orig-index); }
                                         }
 
                                         Text {
-                                            text: "\u{E5DB}";
+                                            text: "\u{E14D}";
                                             font-family: "Material Icons";
                                             color: Theme.text-secondary;
                                             font-size: Theme.fs-sm;
@@ -3154,8 +3421,8 @@ export component AppWindow inherits Window {
 
                                     Rectangle {
                                         width: 28px;
-                                        y: (parent.height - self.height) / 2;
                                         height: 28px;
+                                        y: (parent.height - self.height) / 2;
                                         border-radius: Theme.radius-sm;
                                         background: del-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
                                         del-ta := TouchArea {
@@ -3173,205 +3440,18 @@ export component AppWindow inherits Window {
                                         }
                                     }
                                 }
-
-                                qctx-menu := PopupWindow {
-                                    x: ctx-x;
-                                    y: ctx-y;
-                                    width: 160px;
-                                    height: qctx-vl.preferred-height;
-                                    Rectangle {
-                                        background: Theme.popup-bg;
-                                        border-radius: Theme.radius-sm;
-                                        border-width: 1px;
-                                        border-color: Theme.border-strong;
-                                        drop-shadow-blur: 10px;
-                                        drop-shadow-color: #00000050;
-                                        qctx-vl := VerticalLayout {
-                                            padding: 4px;
-                                            spacing: 1px;
-                                            Rectangle {
-                                                height: 28px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qe-ta.has-hover ? Theme.bg-hover : transparent;
-                                                qe-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => { root.edit-quick-command(q.orig-index); }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E3C9}";
-                                                        font-family: "Material Icons";
-                                                        color: Theme.text-secondary;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: @tr("Edit");
-                                                        color: Theme.text-primary;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-
-                                            Rectangle {
-                                                height: 28px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qd-ta.has-hover ? Theme.bg-hover : transparent;
-                                                qd-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => { root.duplicate-quick-command(q.orig-index); }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E14D}";
-                                                        font-family: "Material Icons";
-                                                        color: Theme.text-secondary;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: @tr("Duplicate");
-                                                        color: Theme.text-primary;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-
-                                            Rectangle {
-                                                height: 28px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qx-ta.has-hover ? #cc333320 : transparent;
-                                                qx-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => { root.delete-quick-command(q.orig-index); }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E872}";
-                                                        font-family: "Material Icons";
-                                                        color: #cc3333;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: @tr("Delete");
-                                                        color: #cc3333;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-
-                                            Rectangle {
-                                                height: 1px;
-                                                background: Theme.border-subtle;
-                                            }
-
-                                            HorizontalLayout {
-                                                padding-left: 10px;
-                                                padding-top: 2px;
-                                                spacing: 6px;
-                                                Text {
-                                                    text: "\u{E2C7}";
-                                                    font-family: "Material Icons";
-                                                    color: Theme.text-muted;
-                                                    font-size: Theme.fs-xs;
-                                                    vertical-alignment: center;
-                                                }
-
-                                                Text {
-                                                    text: @tr("Move to");
-                                                    color: Theme.text-muted;
-                                                    font-size: Theme.fs-xs;
-                                                    vertical-alignment: center;
-                                                    horizontal-stretch: 1;
-                                                }
-                                            }
-
-                                            if q.group != "default": Rectangle {
-                                                height: 28px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qmd-ta.has-hover ? Theme.bg-hover : transparent;
-                                                qmd-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => { root.move-quick-command(q.orig-index, "default"); }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E2C7}";
-                                                        font-family: "Material Icons";
-                                                        color: Theme.text-secondary;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: "default";
-                                                        color: Theme.text-primary;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-                                            for s in root.quick-commands: Rectangle {
-                                                visible: s.group-header != "" && s.group != "default" && s.group != q.group;
-                                                height: self.visible ? 28px : 0px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qm-ta.has-hover ? Theme.bg-hover : transparent;
-                                                qm-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => { root.move-quick-command(q.orig-index, s.group); }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E2C7}";
-                                                        font-family: "Material Icons";
-                                                        color: Theme.text-secondary;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: s.group;
-                                                        color: Theme.text-primary;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                        overflow: elide;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
                             }
+                        }
+                        // Drop at end of the list (append group to the end).
+                        Rectangle {
+                            height: 10px;
+                            background: root.qcm-drag-group-from != "" && root.qcm-drop-before-group == ""
+                                ? Theme.accent.with-alpha(0.12) : transparent;
+                            qcm-append-ta := TouchArea { }
                         }
                     }
                 }
+            }
             }
 
             // Bottom-right resize grip. The chosen size is retained while the
@@ -3437,7 +3517,7 @@ export component AppWindow inherits Window {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             width: 340px;
-            height: 178px;
+            height: 140px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -3447,8 +3527,8 @@ export component AppWindow inherits Window {
             TouchArea { }   // swallow inside clicks
 
             VerticalLayout {
-                padding: 18px;
-                spacing: 12px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: root.qcg-orig == ""
                         ? (root.lang-en ? "New group" : "新建分组")
@@ -3467,17 +3547,12 @@ export component AppWindow inherits Window {
                 qcg-input := LineEdit {
                     text <=> root.qcg-name;
                     font-family: Theme.ui-font-family;
-                    placeholder-text: @tr("Group name");
                     accepted => {
                         if (root.qcg-name != "") {
                             root.submit-quick-group(root.qcg-orig, root.qcg-name);
                             root.qcg-open = false;
                         }
                     }
-                }
-
-                Rectangle {
-                    vertical-stretch: 1;
                 }
 
                 HorizontalLayout {

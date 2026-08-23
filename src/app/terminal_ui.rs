@@ -1,4 +1,139 @@
 use super::*;
+use std::time::{Duration, Instant};
+
+const APP_COMMAND_CAPTURE_TTL: Duration = Duration::from_secs(30);
+
+struct AppCommandCapture {
+    command: String,
+    pending_lines: Vec<String>,
+    sent_at: Instant,
+}
+
+thread_local! {
+    static APP_COMMAND_CAPTURE: RefCell<HashMap<String, AppCommandCapture>> =
+        RefCell::new(HashMap::new());
+}
+
+/// Remember a command-box / quick-command submission so matching shell-hook
+/// captures (OSC 697, one per executed line) are not duplicated in history.
+pub(super) fn register_app_command_capture(tab_id: &str, command: &str) {
+    let command = command.trim_end();
+    if command.is_empty() {
+        return;
+    }
+    let pending_lines: Vec<String> = command
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect();
+    APP_COMMAND_CAPTURE.with(|map| {
+        map.borrow_mut().insert(
+            tab_id.to_string(),
+            AppCommandCapture {
+                command: command.to_string(),
+                pending_lines,
+                sent_at: Instant::now(),
+            },
+        );
+    });
+}
+
+fn capture_disposition(state: &mut AppCommandCapture, captured: &str) -> bool {
+    let captured = captured.trim();
+    if captured.is_empty() {
+        return false;
+    }
+    if state.sent_at.elapsed() > APP_COMMAND_CAPTURE_TTL {
+        return false;
+    }
+    if captured == state.command.trim() {
+        state.pending_lines.clear();
+        return true;
+    }
+    if let Some(pos) = state
+        .pending_lines
+        .iter()
+        .position(|line| line == captured)
+    {
+        state.pending_lines.remove(pos);
+        return true;
+    }
+    false
+}
+
+/// Returns true when a terminal-captured command should be skipped because it
+/// was already recorded via the command bar / quick commands / history rerun.
+pub(super) fn should_suppress_terminal_command_capture(tab_id: &str, captured: &str) -> bool {
+    APP_COMMAND_CAPTURE.with(|map| {
+        let mut map = map.borrow_mut();
+        let Some(state) = map.get_mut(tab_id) else {
+            return false;
+        };
+        if state.sent_at.elapsed() > APP_COMMAND_CAPTURE_TTL {
+            map.remove(tab_id);
+            return false;
+        }
+        let suppress = capture_disposition(state, captured);
+        if suppress && state.pending_lines.is_empty() {
+            map.remove(tab_id);
+        }
+        suppress
+    })
+}
+
+#[cfg(test)]
+pub(super) struct TestAppCommandCapture {
+    inner: AppCommandCapture,
+}
+
+#[cfg(test)]
+pub(super) fn test_app_command_capture(command: &str) -> TestAppCommandCapture {
+    let command = command.trim_end();
+    let pending_lines: Vec<String> = command
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect();
+    TestAppCommandCapture {
+        inner: AppCommandCapture {
+            command: command.to_string(),
+            pending_lines,
+            sent_at: Instant::now(),
+        },
+    }
+}
+
+#[cfg(test)]
+pub(super) fn test_capture_should_suppress(
+    state: &mut TestAppCommandCapture,
+    captured: &str,
+) -> bool {
+    capture_disposition(&mut state.inner, captured)
+}
+
+#[cfg(test)]
+pub(super) fn test_capture_should_suppress_at(
+    command: &str,
+    sent_at: Instant,
+    captured: &str,
+) -> bool {
+    let mut state = TestAppCommandCapture {
+        inner: AppCommandCapture {
+            command: command.trim_end().to_string(),
+            pending_lines: command
+                .trim_end()
+                .lines()
+                .map(str::trim)
+                .filter(|line| !line.is_empty())
+                .map(str::to_string)
+                .collect(),
+            sent_at,
+        },
+    };
+    capture_disposition(&mut state.inner, captured)
+}
 
 pub(super) fn history_model(store: &ConfigStore) -> ModelRc<SharedString> {
     let rows: Vec<SharedString> = store
@@ -73,22 +208,43 @@ pub(super) fn validate_output_highlight_rule(
     Ok(())
 }
 
+/// Single-line label for a history row: first line, plus " …" when the stored
+/// command spans multiple lines.
+pub(super) fn history_summary(command: &str) -> String {
+    let has_more = command.contains('\n') || command.contains('\r');
+    if !has_more {
+        return command.to_string();
+    }
+    let first = command
+        .split(['\n', '\r'])
+        .find(|line| !line.is_empty())
+        .unwrap_or("");
+    if first.is_empty() {
+        "…".to_string()
+    } else {
+        format!("{first}…")
+    }
+}
+
 /// Build the filtered history-view rows for the dropdown, newest first. The
 /// command-history model itself remains oldest first so ↑/↓ recall keeps its
 /// existing shell-like navigation semantics (#55, #101, #331).
-pub(super) fn history_view_rows(history: &[String], query: &str) -> Vec<SharedString> {
+pub(super) fn history_view_rows(history: &[String], query: &str) -> Vec<HistoryViewItem> {
     let q = query.trim().to_lowercase();
     history
         .iter()
         .rev()
         .filter(|command| q.is_empty() || command.to_lowercase().contains(&q))
-        .map(|command| command.clone().into())
+        .map(|command| HistoryViewItem {
+            command: command.clone().into(),
+            summary: history_summary(command).into(),
+        })
         .collect()
 }
 
 /// Build the filtered history-view model for the dropdown: case-insensitive
 /// substring matches of `query`, ordered from newest to oldest (#101, #331).
-pub(super) fn history_view_model(store: &ConfigStore, query: &str) -> ModelRc<SharedString> {
+pub(super) fn history_view_model(store: &ConfigStore, query: &str) -> ModelRc<HistoryViewItem> {
     let rows = history_view_rows(store.command_history(), query);
     ModelRc::from(Rc::new(VecModel::from(rows)))
 }

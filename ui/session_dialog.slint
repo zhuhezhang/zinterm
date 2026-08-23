@@ -347,7 +347,7 @@ export component SessionDialog inherits Rectangle {
                     // Optional group/folder to organize sessions by business (#41).
                     // Editable + dropdown of existing groups (#179).
                     GroupCombo {
-                        label: @tr("Group (optional)");
+                        label: @tr("Group");
                         placeholder: @tr("e.g. Production / Database");
                         value <=> root.draft-group;
                         groups: root.session-groups;

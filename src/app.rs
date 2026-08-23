@@ -187,6 +187,18 @@ fn visible_tab_ids(win: &AppWindow) -> HashSet<String> {
     out
 }
 
+fn sync_quick_command_models(
+    win: &AppWindow,
+    store: &crate::config::ConfigStore,
+    collapsed: &HashSet<String>,
+    popup_query: &str,
+    manage_query: &str,
+) {
+    win.set_quick_commands(quick_cmd_model(store, collapsed));
+    win.set_quick_view(quick_cmd_view_model(store, collapsed, popup_query));
+    win.set_qcm_manage_commands(quick_cmd_view_model(store, collapsed, manage_query));
+}
+
 struct TabRenderTicket {
     gate: Arc<TabRenderGate>,
     generation: u64,
@@ -483,10 +495,14 @@ pub fn run() -> Result<()> {
 
     // Command bar (#55): seed quick commands + history from the config. Groups
     // start collapsed by default (#55).
-    window.set_quick_commands(quick_cmd_model(
+    let initial_collapsed = all_quick_group_names(&store.borrow());
+    sync_quick_command_models(
+        &window,
         &store.borrow(),
-        &all_quick_group_names(&store.borrow()),
-    ));
+        &initial_collapsed,
+        "",
+        "",
+    );
     window.set_command_history(history_model(&store.borrow()));
     window.set_history_view(history_view_model(&store.borrow(), "")); // #101
 
@@ -3246,10 +3262,12 @@ fn wire_key_input(
                 {
                     let h = handles_rc.borrow();
                     if to_all {
-                        for handle in h.values() {
+                        for (id, handle) in h.iter() {
+                            register_app_command_capture(id, cmd.as_str());
                             handle.send_raw(bytes.clone());
                         }
                     } else if let Some(handle) = h.get(tab_id.as_str()) {
+                        register_app_command_capture(tab_id.as_str(), cmd.as_str());
                         handle.send_raw(bytes);
                     }
                 }
@@ -3330,15 +3348,48 @@ fn wire_key_input(
     // every group collapsed (default-collapsed view).
     let collapsed_quick_groups: Rc<RefCell<std::collections::HashSet<String>>> =
         Rc::new(RefCell::new(all_quick_group_names(&store.borrow())));
+    let quick_query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
+    let qcm_manage_query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
     {
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        window.on_search_quick_commands(move |query: SharedString| {
+            *quick_query.borrow_mut() = query.to_string();
+            if let Some(w) = weak.upgrade() {
+                w.set_quick_view(quick_cmd_view_model(
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &query,
+                ));
+            }
+        });
+    }
+    {
+        let store_rc = store.clone();
+        let weak = window.as_weak();
+        let collapsed = collapsed_quick_groups.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
+        window.on_search_qcm_commands(move |query: SharedString| {
+            *qcm_manage_query.borrow_mut() = query.to_string();
+            if let Some(w) = weak.upgrade() {
+                w.set_qcm_manage_commands(quick_cmd_view_model(
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &query,
+                ));
+            }
+        });
+    }
+    {
+        let store_rc = store.clone();
+        let weak = window.as_weak();
+        let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_add_quick_command(
-            move |name: SharedString,
-                  command: SharedString,
-                  group: SharedString,
-                  send_enter: bool| {
+            move |name: SharedString, command: SharedString, group: SharedString| {
                 let name = name.trim().to_string();
                 let command = command.to_string();
                 let group = group.trim().to_string();
@@ -3352,13 +3403,19 @@ fn wire_key_input(
                         name,
                         command,
                         group,
-                        send_enter,
+                        send_enter: true,
                     });
                     s.set_quick_commands(v);
                     let _ = s.save();
                 }
                 if let Some(w) = weak.upgrade() {
-                    w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                    sync_quick_command_models(
+                        &w,
+                        &store_rc.borrow(),
+                        &collapsed.borrow(),
+                        &quick_query.borrow(),
+                        &qcm_manage_query.borrow(),
+                    );
                 }
             },
         );
@@ -3367,6 +3424,8 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_delete_quick_command(move |index: i32| {
             {
                 let mut s = store_rc.borrow_mut();
@@ -3379,7 +3438,13 @@ fn wire_key_input(
                 let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
-                w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                sync_quick_command_models(
+                    &w,
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &quick_query.borrow(),
+                    &qcm_manage_query.borrow(),
+                );
             }
         });
     }
@@ -3387,6 +3452,8 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_toggle_quick_group(move |group: SharedString| {
             let g = group.to_string();
             {
@@ -3396,7 +3463,13 @@ fn wire_key_input(
                 }
             }
             if let Some(w) = weak.upgrade() {
-                w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                sync_quick_command_models(
+                    &w,
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &quick_query.borrow(),
+                    &qcm_manage_query.borrow(),
+                );
             }
         });
     }
@@ -3411,7 +3484,6 @@ fn wire_key_input(
                 w.set_qcm_name(c.name.into());
                 w.set_qcm_command(c.command.into());
                 w.set_qcm_group(c.group.into());
-                w.set_qcm_send_enter(c.send_enter);
                 w.set_qcm_edit_index(index);
                 w.set_quick_cmd_manage_open(true);
             }
@@ -3422,12 +3494,10 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_save_quick_command(
-            move |index: i32,
-                  name: SharedString,
-                  command: SharedString,
-                  group: SharedString,
-                  send_enter: bool| {
+            move |index: i32, name: SharedString, command: SharedString, group: SharedString| {
                 let name = name.trim().to_string();
                 let command = command.to_string();
                 let group = group.trim().to_string();
@@ -3436,19 +3506,27 @@ fn wire_key_input(
                 }
                 {
                     let mut s = store_rc.borrow_mut();
+                    let cmds = s.quick_commands();
+                    let name = disambiguate_quick_command_name(cmds, &group, &name, Some(index as usize));
                     s.update_quick_command(
                         index as usize,
                         crate::config::QuickCommand {
                             name,
                             command,
                             group,
-                            send_enter,
+                            send_enter: true,
                         },
                     );
                     let _ = s.save();
                 }
                 if let Some(w) = weak.upgrade() {
-                    w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                    sync_quick_command_models(
+                        &w,
+                        &store_rc.borrow(),
+                        &collapsed.borrow(),
+                        &quick_query.borrow(),
+                        &qcm_manage_query.borrow(),
+                    );
                 }
             },
         );
@@ -3458,13 +3536,16 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_duplicate_quick_command(move |index: i32| {
             {
                 let mut s = store_rc.borrow_mut();
                 let mut v = s.quick_commands().to_vec();
                 if let Some(c) = v.get(index as usize).cloned() {
+                    let name = duplicate_quick_command_name(&v, &c.group, &c.name);
                     let dup = crate::config::QuickCommand {
-                        name: format!("{} (copy)", c.name),
+                        name,
                         command: c.command,
                         group: c.group,
                         send_enter: c.send_enter,
@@ -3475,7 +3556,13 @@ fn wire_key_input(
                 }
             }
             if let Some(w) = weak.upgrade() {
-                w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                sync_quick_command_models(
+                    &w,
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &quick_query.borrow(),
+                    &qcm_manage_query.borrow(),
+                );
             }
         });
     }
@@ -3484,6 +3571,8 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_move_quick_command(move |index: i32, group: SharedString| {
             let target = group.to_string();
             let target = if target == "default" {
@@ -3494,37 +3583,110 @@ fn wire_key_input(
             {
                 let mut s = store_rc.borrow_mut();
                 let mut v = s.quick_commands().to_vec();
-                if let Some(c) = v.get_mut(index as usize) {
-                    c.group = target;
+                let i = index as usize;
+                if let Some(c) = v.get(i).cloned() {
+                    let name = disambiguate_quick_command_name(&v, &target, &c.name, Some(i));
+                    v[i].group = target;
+                    v[i].name = name;
                 }
                 s.set_quick_commands(v);
                 let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
-                w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                sync_quick_command_models(
+                    &w,
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &quick_query.borrow(),
+                    &qcm_manage_query.borrow(),
+                );
             }
         });
     }
     // Reorder inside the current group (#310). The stored Vec remains the
     // source of truth; the grouped display model preserves this relative order.
     {
+        let weak = window.as_weak();
+        window.on_qcm_drag_at(
+            move |list_top: f32, pointer_y: f32, drag_from: i32, drag_group_from: SharedString| {
+                let Some(w) = weak.upgrade() else {
+                    return;
+                };
+                let rows = quick_cmds_from_model(&w.get_qcm_manage_commands());
+                if drag_from >= 0 {
+                    if let Some(drop) = qcm_command_drop_at(&rows, list_top, pointer_y) {
+                        w.set_qcm_drop_group(drop.group.into());
+                        w.set_qcm_drop_before(drop.before_orig);
+                    }
+                } else if !drag_group_from.is_empty() {
+                    let before = qcm_group_drop_at(&rows, list_top, pointer_y);
+                    w.set_qcm_drop_before_group(before.into());
+                }
+            },
+        );
+    }
+    {
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
-        window.on_reorder_quick_command(move |index: i32, move_up: bool| {
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
+        window.on_drop_quick_command(
+            move |from: i32, target_group: SharedString, before_orig: i32| {
+                let changed = {
+                    let mut s = store_rc.borrow_mut();
+                    let mut commands = s.quick_commands().to_vec();
+                    let changed = drop_quick_command(
+                        &mut commands,
+                        from as usize,
+                        &target_group.to_string(),
+                        before_orig,
+                    );
+                    if changed {
+                        s.set_quick_commands(commands);
+                        let _ = s.save();
+                    }
+                    changed
+                };
+                if changed {
+                    if let Some(w) = weak.upgrade() {
+                        sync_quick_command_models(
+                            &w,
+                            &store_rc.borrow(),
+                            &collapsed.borrow(),
+                            &quick_query.borrow(),
+                            &qcm_manage_query.borrow(),
+                        );
+                    }
+                }
+            },
+        );
+    }
+    // Reorder quick-command groups in the manage dialog.
+    {
+        let store_rc = store.clone();
+        let weak = window.as_weak();
+        let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
+        window.on_drop_quick_group(move |from: SharedString, before: SharedString| {
             let changed = {
                 let mut s = store_rc.borrow_mut();
-                let mut commands = s.quick_commands().to_vec();
-                let changed = reorder_quick_command(&mut commands, index as usize, move_up);
+                let changed = s.reorder_quick_group(&from.to_string(), &before.to_string());
                 if changed {
-                    s.set_quick_commands(commands);
                     let _ = s.save();
                 }
                 changed
             };
             if changed {
                 if let Some(w) = weak.upgrade() {
-                    w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                    sync_quick_command_models(
+                        &w,
+                        &store_rc.borrow(),
+                        &collapsed.borrow(),
+                        &quick_query.borrow(),
+                        &qcm_manage_query.borrow(),
+                    );
                 }
             }
         });
@@ -3534,6 +3696,8 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_submit_quick_group(move |orig: SharedString, name: SharedString| {
             {
                 let mut s = store_rc.borrow_mut();
@@ -3545,7 +3709,13 @@ fn wire_key_input(
                 let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
-                w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                sync_quick_command_models(
+                    &w,
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &quick_query.borrow(),
+                    &qcm_manage_query.borrow(),
+                );
             }
         });
     }
@@ -3554,6 +3724,8 @@ fn wire_key_input(
         let store_rc = store.clone();
         let weak = window.as_weak();
         let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
         window.on_delete_quick_group(move |name: SharedString| {
             {
                 let mut s = store_rc.borrow_mut();
@@ -3561,7 +3733,13 @@ fn wire_key_input(
                 let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
-                w.set_quick_commands(quick_cmd_model(&store_rc.borrow(), &collapsed.borrow()));
+                sync_quick_command_models(
+                    &w,
+                    &store_rc.borrow(),
+                    &collapsed.borrow(),
+                    &quick_query.borrow(),
+                    &qcm_manage_query.borrow(),
+                );
             }
         });
     }
