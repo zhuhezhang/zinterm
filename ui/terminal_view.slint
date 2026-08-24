@@ -399,7 +399,7 @@ export component TerminalView inherits Rectangle {
     property <int> history-selected: -1;
     // Command-bar input height (draggable via the top edge); buttons stay 26px tall.
     // Min height must fit one line inside BorderedTextArea (8px pad ×2 + border).
-    property <length> cmd-bar-input-min-height: Theme.fs-md + 17px;
+    property <length> cmd-bar-input-min-height: Theme.input-min-height;
     property <length> cmd-bar-input-height: root.cmd-bar-input-min-height;
     property <bool> cmd-bar-resizing: false;
     property <length> cmd-bar-resize-base-height;
@@ -648,16 +648,15 @@ export component TerminalView inherits Rectangle {
         // the dock area in app.slint (#dock).
         dock-region := Rectangle {
             vertical-stretch: 1;
-            // Collapsed → shrink to the 36px ToolStrip icon bar at the docked edge
-            // (M5), click its icon to re-expand. The 4px splitter is gone collapsed.
-            // Side-docked SFTP needs enough room for its compact action row and a
-            // usable path field. Clamp legacy/saved widths below that floor instead
-            // of letting Slint squeeze controls out of alignment.
+            // Collapsed → side dock shows the 36px ToolStrip; top/bottom keep the
+            // full toolbar row tall enough for the path field (Theme.toolbar-row-height).
             property <length> sf-w: root.zen-mode ? 0px
                 : root.sftp-shut ? 36px
                 : root.sftp-horizontal ? max(300px, root.sftp-panel-width)
                 : root.sftp-panel-width;
-            property <length> sf-h: root.zen-mode ? 0px : root.sftp-shut ? 36px : root.sftp-panel-height;
+            property <length> sf-h: root.zen-mode ? 0px
+                : root.sftp-shut ? (root.sftp-horizontal ? 36px : Theme.toolbar-row-height)
+                : root.sftp-panel-height;
             property <length> sp: root.zen-mode || root.sftp-shut ? 0px : 4px;
             // The collapsed bar (sf-h) already reserves the bottom strip now.
             property <length> bottom-strip-h: 0px;
@@ -2215,9 +2214,8 @@ export component TerminalView inherits Rectangle {
                             root.set-sftp-collapsed(false);
                         }
                     } else {
-                        // Minimise: just collapse. sf-h becomes the 36px bar; the
-                        // panel height is preserved (no 30px poke that would pollute
-                        // the global default seeded into new sessions) (M5).
+                        // Minimise: just collapse. Top/bottom → toolbar-row-height bar;
+                        // side → 36px ToolStrip. Panel height is preserved separately (M5).
                         root.set-sftp-collapsed(true);
                     }
                 }

@@ -1,5 +1,5 @@
 ﻿import { Theme } from "theme.slint";
-import { TooltipArea } from "widgets.slint";
+import { TooltipArea, BorderedLineInput } from "widgets.slint";
 import { ScrollView } from "std-widgets.slint";
 import { TabInfo } from "tabs.slint";
 
@@ -55,13 +55,13 @@ component SftpMenuItem inherits Rectangle {
 component SftpToolBtn inherits Rectangle {
     in property <string> glyph;
     in property <string> tooltip;
-    in property <length> icon-size: Theme.fs-md;
+    in property <length> icon-size: Theme.fs-sm;
     in property <brush> fg: Theme.text-secondary;
     in property <brush> hover-bg: Theme.bg-hover;
     callback clicked();
 
-    width: 24px;
-    height: 22px;
+    width: 31px;
+    height: 29px;
     border-radius: Theme.radius-sm;
     background: touch.has-hover ? root.hover-bg : transparent;
 
@@ -161,6 +161,9 @@ export component SftpPanel inherits Rectangle {
     // Inter-row gutter — slightly less than bottom inset so it reads equal once the
     // path field's top border and icon baseline offset are accounted for.
     property <length> path-row-gutter: root.side-narrow-path ? 1px : 0px;
+    property <length> path-input-height: Theme.input-min-height;
+    property <length> toolbar-row-pad-y: 6px;
+    property <length> toolbar-row-height: Theme.toolbar-row-height;
 
     // --- Callbacks ---------------------------------------------------------
     callback toggle-collapsed();    // minimise / restore the panel
@@ -230,8 +233,8 @@ export component SftpPanel inherits Rectangle {
         // --- Toolbar (full width) ------------------------------------------
         Rectangle {
             height: root.narrow-toolbar
-                ? (6px + 22px + root.path-row-gutter + 22px + root.path-row-pad-bottom)
-                : 34px;
+                ? (6px + root.path-input-height + root.path-row-gutter + root.path-input-height + root.path-row-pad-bottom)
+                : root.toolbar-row-height;
             background: Theme.bg-panel-alt;
 
             VerticalLayout {
@@ -240,13 +243,14 @@ export component SftpPanel inherits Rectangle {
                 spacing: root.side-narrow-path ? root.path-row-gutter : 6px;
 
                 HorizontalLayout {
-                    height: root.side-narrow-path ? 22px : 34px;
+                    height: root.side-narrow-path ? root.path-input-height : root.toolbar-row-height;
+                    cross-axis-alignment: center;
                     // Collapsed top/bottom: leave 4px after the overlay folder icon
                     // (ToolStrip glyph at x=4, 30px wide → 38px).
                     padding-left: root.collapsed ? 38px : 4px;
                     padding-right: 6px;
-                    padding-top: root.side-narrow-path ? 0px : 6px;
-                    padding-bottom: root.side-narrow-path ? 0px : 6px;
+                    padding-top: root.side-narrow-path ? 0px : root.toolbar-row-pad-y;
+                    padding-bottom: root.side-narrow-path ? 0px : root.toolbar-row-pad-y;
                     spacing: 4px;
 
                     // Dedicated drag handle to re-dock the panel. The toolbar is full
@@ -255,8 +259,7 @@ export component SftpPanel inherits Rectangle {
                     // Hidden while collapsed so it doesn't sit under the folder icon.
                     if !root.collapsed: Rectangle {
                         width: 16px;
-                        y: root.side-narrow-path ? 0px : (parent.height - self.height) / 2;
-                        height: 22px;
+                        height: root.path-input-height;
                         grip-ta := TouchArea {
                             mouse-cursor: move;
                             moved => {
@@ -293,28 +296,16 @@ export component SftpPanel inherits Rectangle {
                         padding-right: 6px;
                         spacing: 0;
 
-                        Rectangle {
+                        path-input := BorderedLineInput {
                             horizontal-stretch: 1;
                             min-width: 0px;
-                            height: 22px;
-                            border-radius: Theme.radius-sm;
-                            background: Theme.bg-root;
-                            border-width: 1px;
-                            border-color: path-input.has-focus ? Theme.accent : Theme.border-subtle;
-                            path-input := TextInput {
-                                x: 6px;
-                                width: parent.width - 12px;
-                                height: parent.height;
-                                text: root.current-path;
-                                color: root.ready ? Theme.text-primary : Theme.text-muted;
-                                // CJK-capable font so typed Chinese isn't tofu (#54).
-                                font-family: Theme.ui-font-family;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                                single-line: true;
-                                read-only: !root.ready;
-                                accepted => { if (root.ready) { root.navigate(self.text); } }
-                            }
+                            height: root.path-input-height;
+                            font-size: Theme.fs-sm;
+                            pad-x: 6px;
+                            text-color: root.ready ? Theme.text-primary : Theme.text-muted;
+                            read-only: !root.ready;
+                            text: root.current-path;
+                            accepted(text) => { if (root.ready) { root.navigate(text); } }
                         }
                     }
 
@@ -323,12 +314,12 @@ export component SftpPanel inherits Rectangle {
                     if root.narrow-toolbar: Rectangle {
                         horizontal-stretch: 1;
                         min-width: 0px;
-                        height: 22px;
+                        height: root.path-input-height;
                     }
 
                     // Batch actions on checked entries — only when something's checked (#100).
                     if root.selected-count > 0 && !root.narrow-toolbar: HorizontalLayout {
-                        height: 22px;
+                        height: root.path-input-height;
                         padding-left: 4px;
                         padding-right: 4px;
                         // Use Material Icons for the check glyph (✓ may render as tofu
@@ -460,29 +451,18 @@ export component SftpPanel inherits Rectangle {
                 // toolbar bottom inset = outer padding-bottom above.
                 HorizontalLayout {
                     visible: root.narrow-toolbar;
-                    height: self.visible ? 22px : 0px;
+                    height: self.visible ? root.path-input-height : 0px;
                     padding-left: 6px;
                     padding-right: 6px;
-                    Rectangle {
+                    compact-path-input := BorderedLineInput {
                         horizontal-stretch: 1;
-                        height: 22px;
-                        border-radius: Theme.radius-sm;
-                        background: Theme.bg-root;
-                        border-width: 1px;
-                        border-color: compact-path-input.has-focus ? Theme.accent : Theme.border-subtle;
-                        compact-path-input := TextInput {
-                            x: 6px;
-                            width: parent.width - 12px;
-                            height: parent.height;
-                            text: root.current-path;
-                            color: root.ready ? Theme.text-primary : Theme.text-muted;
-                            font-family: Theme.ui-font-family;
-                            font-size: Theme.fs-sm;
-                            vertical-alignment: center;
-                            single-line: true;
-                            read-only: !root.ready;
-                            accepted => { if (root.ready) { root.navigate(self.text); } }
-                        }
+                        height: root.path-input-height;
+                        font-size: Theme.fs-sm;
+                        pad-x: 6px;
+                        text-color: root.ready ? Theme.text-primary : Theme.text-muted;
+                        read-only: !root.ready;
+                        text: root.current-path;
+                        accepted(text) => { if (root.ready) { root.navigate(text); } }
                     }
                 }
             }

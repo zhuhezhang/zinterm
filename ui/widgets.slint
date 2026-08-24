@@ -286,9 +286,17 @@ export component BorderedLineInput inherits Rectangle {
     in property <length> font-size: Theme.fs-md;
     in property <string> font-family: Theme.ui-font-family;
     in property <brush> idle-border: Theme.border-subtle;
+    in property <brush> text-color: Theme.text-primary;
     in property <string> leading-icon: "";   // Material Icons glyph shown inside the field
     in property <bool> auto-focus: false;
+    in property <bool> read-only: false;
     callback edited(string);
+    callback accepted(string);
+
+    public function select-all() { input.select-all(); }
+    public function copy() { input.copy(); }
+    public function paste() { input.paste(); }
+    public function clear-selection() { input.clear-selection(); }
 
     property <length> icon-gap: 4px;
     property <length> leading-inset: root.leading-icon != ""
@@ -338,12 +346,14 @@ export component BorderedLineInput inherits Rectangle {
             width: max(parent.width - self.text-cursor-width, self.preferred-width);
             height: parent.height;
             text <=> root.text;
-            color: Theme.text-primary;
+            color: root.text-color;
             font-family: root.font-family;
             font-size: root.font-size;
             vertical-alignment: center;
             single-line: true;
+            read-only: root.read-only;
             edited => { root.edited(self.text); }
+            accepted => { root.accepted(self.text); }
 
             cursor-position-changed(cursor-position) => {
                 if (cursor-position.x + self.computed_x < 0px) {

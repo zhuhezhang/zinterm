@@ -128,6 +128,10 @@ export global Theme {
     out property <length> fs-md: 13px * root.ui-scale;
     out property <length> fs-lg: 15px * root.ui-scale;
     out property <length> fs-xl: 18px * root.ui-scale;
+    // Compact single-line input chrome (command bar min height, SFTP path bar, …).
+    out property <length> input-min-height: root.fs-md + 17px;
+    // Single-row toolbar (input + 6px pad top/bottom), e.g. SFTP collapsed bar.
+    out property <length> toolbar-row-height: root.input-min-height + 12px;
 
     // Embedded glyph-complete monospace (Cascadia Mono under a unique name, #114).
     out property <string> font-mono: "Meatshell Mono";
