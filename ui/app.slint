@@ -94,6 +94,7 @@ export struct EditorFindResult {
     start: int,
     end: int,
     count: int,
+    index: int,   // 1-based match number (0 = none selected yet)
 }
 
 // A draggable splitter between two regions of the split layout (v0.5).
@@ -655,6 +656,7 @@ export component AppWindow inherits Window {
     in-out property <string> editor-find-query;
     in-out property <string> editor-replace-text;
     in-out property <int> editor-match-count: 0;
+    in-out property <int> editor-match-index: 0;  // 1-based; 0 until find next/prev
     in-out property <int> editor-find-position: -1;
     callback save-file();                     // Ctrl+S / Save button (edit only)
     callback close-editor();                  // X / Esc; discard unsaved edits (#287)
@@ -1899,9 +1901,10 @@ export component AppWindow inherits Window {
                 clip: true;
 
                 VerticalLayout {
-                    // Title bar — drag to move; the buttons stay on top.
+                    // Title bar — drag to move; find/replace lives here too (#287).
                     Rectangle {
-                        height: 40px;
+                        border-top-left-radius: Theme.radius-md;
+                        border-top-right-radius: Theme.radius-md;
                         background: Theme.popup-bg-alt;
                         ed-title-drag := TouchArea {
                             mouse-cursor: move;
@@ -1924,186 +1927,189 @@ export component AppWindow inherits Window {
                             }
                         }
 
-                        HorizontalLayout {
-                            padding-left: 14px;
-                            padding-right: 8px;
-                            // Centre the 28px buttons inside the 40px bar so the
-                            // Save button isn't glued to the top edge (#70).
-                            padding-top: 6px;
-                            padding-bottom: 6px;
-                            spacing: 8px;
-                            Text {
-                                text: root.editor-name
-                                    + (root.editor-readonly
-                                    ? "  ·  " + @tr("Read-only")
-                                    : (root.editor-dirty ? "  ·  " + @tr("Modified") : ""));
-                                color: Theme.text-primary;
-                                font-size: Theme.fs-md;
-                                font-weight: 600;
-                                font-family: Theme.ui-font-family;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                                overflow: elide;
-                            }
-
-                            if !root.editor-readonly: Rectangle {
-                                width: 76px;
-                                height: 28px;
-                                border-radius: Theme.radius-sm;
-                                background: ed-save-ta.has-hover ? Theme.accent-hover : Theme.accent;
-                                ed-save-ta := TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.save-file(); }
-                                }
-
+                        VerticalLayout {
+                            spacing: 0;
+                            HorizontalLayout {
+                                padding-left: 14px;
+                                padding-right: 8px;
+                                // Centre the 28px buttons inside the 40px bar so the
+                                // Save button isn't glued to the top edge (#70).
+                                padding-top: 6px;
+                                padding-bottom: 6px;
+                                spacing: 8px;
                                 Text {
-                                    text: @tr("Save");
-                                    color: #ffffff;
-                                    font-size: Theme.fs-sm;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-                            }
-                            Rectangle {
-                                width: 28px;
-                                height: 28px;
-                                border-radius: Theme.radius-sm;
-                                background: ed-close-ta.has-hover ? Theme.bg-hover : transparent;
-                                ed-close-ta := TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.close-editor(); }
-                                }
-
-                                Text {
-                                    text: "\u{E5CD}";
-                                    font-family: "Material Icons";
-                                    color: Theme.text-secondary;
+                                    text: root.editor-name
+                                        + (root.editor-readonly
+                                        ? "  ·  " + @tr("Read-only")
+                                        : (root.editor-dirty ? "  ·  " + @tr("Modified") : ""));
+                                    color: Theme.text-primary;
                                     font-size: Theme.fs-md;
-                                    horizontal-alignment: center;
+                                    font-weight: 600;
+                                    font-family: Theme.ui-font-family;
                                     vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                    overflow: elide;
                                 }
-                            }
-                        }
-                    }
 
-                    Rectangle {
-                        height: 1px;
-                        background: Theme.border-subtle;
-                    }
+                                if !root.editor-readonly: Rectangle {
+                                    width: 76px;
+                                    height: 28px;
+                                    border-radius: Theme.radius-sm;
+                                    background: ed-save-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                                    ed-save-ta := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { root.save-file(); }
+                                    }
 
-                    // Lightweight find/replace bar (#287). Replacement is
-                    // explicit; closing the editor never writes the file.
-                    Rectangle {
-                        height: 38px;
-                        background: Theme.popup-bg;
-                        HorizontalLayout {
-                            padding-left: 8px;
-                            padding-right: 8px;
-                            padding-top: 5px;
-                            padding-bottom: 5px;
-                            spacing: 6px;
-                            Text {
-                                text: @tr("Find");
-                                color: Theme.text-muted;
-                                vertical-alignment: center;
-                            }
-
-                            TextInput {
-                                horizontal-stretch: 1;
-                                single-line: true;
-                                text <=> root.editor-find-query;
-                                edited => {
-                                    root.editor-find-position = -1;
-                                    root.editor-match-count = root.editor-count-matches(
-                                        root.editor-content, root.editor-find-query);
-                                }
-                            }
-
-                            Text {
-                                width: 42px;
-                                text: root.editor-find-query == "" ? "" : root.editor-match-count;
-                                color: Theme.text-muted;
-                                vertical-alignment: center;
-                                horizontal-alignment: center;
-                            }
-
-                            Rectangle {
-                                width: 28px;
-                                border-radius: Theme.radius-sm;
-                                background: find-prev-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
-                                find-prev-ta := TouchArea {
-                                    enabled: root.editor-match-count > 0;
-                                    clicked => {
-                                        let found = root.editor-find-step(root.editor-content,
-                                            root.editor-find-query, root.editor-find-position, true);
-                                        root.editor-find-position = found.start;
-                                        root.editor-match-count = found.count;
-                                        edit-input.set-selection-offsets(found.start, found.end);
-                                        edit-input.focus();
+                                    Text {
+                                        text: @tr("Save");
+                                        color: #ffffff;
+                                        font-size: Theme.fs-sm;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
                                     }
                                 }
+                                Rectangle {
+                                    width: 28px;
+                                    height: 28px;
+                                    border-radius: Theme.radius-sm;
+                                    background: ed-close-ta.has-hover ? Theme.bg-hover : transparent;
+                                    ed-close-ta := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { root.close-editor(); }
+                                    }
 
-                                Text {
-                                    text: "↑";
-                                    color: Theme.text-primary;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
+                                    Text {
+                                        text: "\u{E5CD}";
+                                        font-family: "Material Icons";
+                                        color: Theme.text-secondary;
+                                        font-size: Theme.fs-md;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
                                 }
                             }
 
                             Rectangle {
-                                width: 28px;
-                                border-radius: Theme.radius-sm;
-                                background: find-next-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
-                                find-next-ta := TouchArea {
-                                    enabled: root.editor-match-count > 0;
-                                    clicked => {
-                                        let found = root.editor-find-step(root.editor-content,
-                                            root.editor-find-query, root.editor-find-position, false);
-                                        root.editor-find-position = found.start;
-                                        root.editor-match-count = found.count;
-                                        edit-input.set-selection-offsets(found.start, found.end);
-                                        edit-input.focus();
+                                height: 1px;
+                                background: Theme.border-subtle;
+                            }
+
+                            // Lightweight find/replace (#287). Replacement is
+                            // explicit; closing the editor never writes the file.
+                            HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                padding-top: 5px;
+                                padding-bottom: 5px;
+                                spacing: 6px;
+                                Text {
+                                    text: @tr("Find");
+                                    color: Theme.text-muted;
+                                    vertical-alignment: center;
+                                }
+
+                                BorderedLineInput {
+                                    horizontal-stretch: 1;
+                                    text <=> root.editor-find-query;
+                                    edited => {
+                                        root.editor-find-position = -1;
+                                        root.editor-match-index = 0;
+                                        root.editor-match-count = root.editor-count-matches(
+                                            root.editor-content, root.editor-find-query);
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 28px;
+                                    border-radius: Theme.radius-sm;
+                                    background: find-prev-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                                    find-prev-ta := TouchArea {
+                                        enabled: root.editor-match-count > 0;
+                                        clicked => {
+                                            let found = root.editor-find-step(root.editor-content,
+                                                root.editor-find-query, root.editor-find-position, true);
+                                            root.editor-find-position = found.start;
+                                            root.editor-match-count = found.count;
+                                            root.editor-match-index = found.index;
+                                            edit-input.set-selection-offsets(found.start, found.end);
+                                            edit-input.focus();
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "↑";
+                                        color: Theme.text-primary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 28px;
+                                    border-radius: Theme.radius-sm;
+                                    background: find-next-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                                    find-next-ta := TouchArea {
+                                        enabled: root.editor-match-count > 0;
+                                        clicked => {
+                                            let found = root.editor-find-step(root.editor-content,
+                                                root.editor-find-query, root.editor-find-position, false);
+                                            root.editor-find-position = found.start;
+                                            root.editor-match-count = found.count;
+                                            root.editor-match-index = found.index;
+                                            edit-input.set-selection-offsets(found.start, found.end);
+                                            edit-input.focus();
+                                        }
+                                    }
+
+                                    Text {
+                                        text: "↓";
+                                        color: Theme.text-primary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
                                     }
                                 }
 
                                 Text {
-                                    text: "↓";
-                                    color: Theme.text-primary;
-                                    horizontal-alignment: center;
+                                    width: 56px;
+                                    text: root.editor-find-query == "" ? ""
+                                        : (root.editor-match-index > 0
+                                            ? root.editor-match-index + "/" + root.editor-match-count
+                                            : root.editor-match-count);
+                                    color: Theme.text-muted;
                                     vertical-alignment: center;
-                                }
-                            }
-
-                            Text {
-                                text: @tr("Replace");
-                                color: Theme.text-muted;
-                                vertical-alignment: center;
-                            }
-
-                            TextInput {
-                                horizontal-stretch: 1;
-                                single-line: true;
-                                text <=> root.editor-replace-text;
-                            }
-
-                            Rectangle {
-                                width: 88px;
-                                border-radius: Theme.radius-sm;
-                                background: replace-all-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
-                                replace-all-ta := TouchArea {
-                                    enabled: !root.editor-readonly && root.editor-find-query != "";
-                                    clicked => {
-                                        root.editor-replace-all(root.editor-find-query, root.editor-replace-text);
-                                    }
+                                    horizontal-alignment: center;
                                 }
 
                                 Text {
-                                    text: @tr("Replace all");
-                                    color: replace-all-ta.enabled ? Theme.text-primary : Theme.text-muted;
-                                    font-size: Theme.fs-sm;
-                                    horizontal-alignment: center;
+                                    text: @tr("Replace");
+                                    color: Theme.text-muted;
                                     vertical-alignment: center;
+                                }
+
+                                BorderedLineInput {
+                                    horizontal-stretch: 1;
+                                    text <=> root.editor-replace-text;
+                                }
+
+                                Rectangle {
+                                    width: 88px;
+                                    border-radius: Theme.radius-sm;
+                                    background: replace-all-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                                    replace-all-ta := TouchArea {
+                                        enabled: !root.editor-readonly && root.editor-find-query != "";
+                                        clicked => {
+                                            root.editor-replace-all(root.editor-find-query, root.editor-replace-text);
+                                        }
+                                    }
+
+                                    Text {
+                                        text: @tr("Replace all");
+                                        color: replace-all-ta.enabled ? Theme.text-primary : Theme.text-muted;
+                                        font-size: Theme.fs-sm;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
                                 }
                             }
                         }
@@ -2121,17 +2127,23 @@ export component AppWindow inherits Window {
                     // vertical scroll via ed-scroll.viewport-y (#81).
                     Rectangle {
                         vertical-stretch: 1;
+                        border-bottom-left-radius: Theme.radius-md;
+                        border-bottom-right-radius: Theme.radius-md;
                         background: Theme.bg-root;
+                        clip: true;
                         HorizontalLayout {
                             spacing: 0;
                             Rectangle {
                                 width: 48px;
+                                vertical-stretch: 1;
+                                border-bottom-left-radius: Theme.radius-md;
                                 background: Theme.bg-panel-alt;
                                 clip: true;
                                 Text {
                                     x: 0;
                                     y: ed-scroll.viewport-y + 8px;
                                     width: parent.width - 6px;
+                                    height: edit-input.preferred-height;
                                     text: root.editor-line-numbers;
                                     horizontal-alignment: right;
                                     font-family: Theme.ui-font-family;
@@ -2146,6 +2158,8 @@ export component AppWindow inherits Window {
                             }
 
                             ed-scroll := ScrollView {
+                                horizontal-stretch: 1;
+                                vertical-stretch: 1;
                                 viewport-width: max(self.visible-width, edit-input.preferred-width + 16px);
                                 viewport-height: max(self.visible-height, edit-input.preferred-height + 16px);
                                 edit-input := TextInput {
@@ -2157,6 +2171,7 @@ export component AppWindow inherits Window {
                                     read-only: root.editor-readonly;
                                     single-line: false;
                                     wrap: no-wrap;
+                                    page-height: ed-scroll.visible-height;
                                     color: Theme.text-primary;
                                     font-family: Theme.ui-font-family;
                                     font-size: Theme.fs-md;
@@ -2165,6 +2180,19 @@ export component AppWindow inherits Window {
                                         root.editor-recount(root.editor-content);
                                         root.editor-match-count = root.editor-count-matches(
                                             root.editor-content, root.editor-find-query);
+                                    }
+
+                                    cursor-position-changed(cpos) => {
+                                        if (cpos.x + ed-scroll.viewport-x < 12px) {
+                                            ed-scroll.viewport-x = min(0px, max(ed-scroll.visible-width - self.width, -cpos.x + 12px));
+                                        } else if (cpos.x + ed-scroll.viewport-x > ed-scroll.visible-width - 12px) {
+                                            ed-scroll.viewport-x = min(0px, max(ed-scroll.visible-width - self.width, ed-scroll.visible-width - cpos.x - 12px));
+                                        }
+                                        if (cpos.y + ed-scroll.viewport-y < 12px) {
+                                            ed-scroll.viewport-y = min(0px, max(ed-scroll.visible-height - self.height, -cpos.y + 12px));
+                                        } else if (cpos.y + ed-scroll.viewport-y > ed-scroll.visible-height - 12px - 20px) {
+                                            ed-scroll.viewport-y = min(0px, max(ed-scroll.visible-height - self.height, ed-scroll.visible-height - cpos.y - 12px - 20px));
+                                        }
                                     }
                                 }
                             }
@@ -3756,8 +3784,8 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 320px;
-            height: 270px;
+            width: 300px;
+            height: 200px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -3767,21 +3795,13 @@ export component AppWindow inherits Window {
             TouchArea { }
 
             VerticalLayout {
-                padding: 18px;
-                spacing: 10px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: root.lang-en ? "Permissions" : "修改文件权限";
                     color: Theme.text-primary;
                     font-size: Theme.fs-lg;
                     font-weight: 700;
-                }
-
-                Text {
-                    text: root.chmod-name;
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                    font-family: Theme.ui-font-family;
-                    overflow: elide;
                 }
 
                 for grp in [
@@ -3830,13 +3850,10 @@ export component AppWindow inherits Window {
                     }
                 }
 
-                Rectangle {
-                    vertical-stretch: 1;
-                }
-
                 HorizontalLayout {
                     alignment: end;
                     spacing: 8px;
+                    height: 30px;
                     Button {
                         text: root.lang-en ? "Cancel" : "取消";
                         clicked => { root.chmod-open = false; }
@@ -3983,18 +4000,8 @@ export component AppWindow inherits Window {
                         }
 
                         ShortcutRow {
-                            keys: "Enter";
-                            desc: root.lang-en ? "Send command" : "发送命令";
-                        }
-
-                        ShortcutRow {
-                            keys: "↑ / ↓";
-                            desc: root.lang-en ? "Previous / next in history" : "上一条 / 下一条历史";
-                        }
-
-                        ShortcutRow {
                             keys: root.is-mac ? "⌃R" : "Ctrl+R";
-                            desc: root.lang-en ? "Search history (↑↓ select, Enter run, Esc close)" : "搜索命令历史(↑↓ 选择,回车执行,Esc 关闭)";
+                            desc: root.lang-en ? "Search history" : "搜索命令历史";
                         }
 
                         ShortcutRow {
@@ -4003,7 +4010,7 @@ export component AppWindow inherits Window {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌃A" : "Ctrl+A";
+                            keys: root.is-mac ? "⌃S" : "Ctrl+S";
                             desc: root.lang-en ? "Move to start of line" : "移到行首";
                         }
 

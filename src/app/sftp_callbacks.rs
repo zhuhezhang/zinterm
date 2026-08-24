@@ -694,6 +694,7 @@ pub(super) fn wire_sftp_callbacks(
             w.set_editor_find_query("".into());
             w.set_editor_replace_text("".into());
             w.set_editor_match_count(0);
+            w.set_editor_match_index(0);
             w.set_editor_find_position(-1);
         });
     }
@@ -717,6 +718,7 @@ pub(super) fn wire_sftp_callbacks(
                     start: 0,
                     end: 0,
                     count: 0,
+                    index: 0,
                 };
             }
             let positions: Vec<usize> = content
@@ -738,10 +740,20 @@ pub(super) fn wire_sftp_callbacks(
                     .or_else(|| positions.first().copied())
             };
             let start = selected.unwrap_or(0).min(i32::MAX as usize) as i32;
+            let index = selected
+                .and_then(|position| {
+                    positions
+                        .iter()
+                        .position(|candidate| *candidate == position)
+                        .map(|ordinal| ordinal.saturating_add(1))
+                })
+                .unwrap_or(0)
+                .min(i32::MAX as usize) as i32;
             EditorFindResult {
                 start,
                 end: start.saturating_add(query.len().min(i32::MAX as usize) as i32),
                 count: positions.len().min(i32::MAX as usize) as i32,
+                index,
             }
         },
     );
@@ -759,6 +771,7 @@ pub(super) fn wire_sftp_callbacks(
             w.set_editor_dirty(true);
             w.set_editor_line_numbers(line_numbers_for(&replaced).into());
             w.set_editor_match_count(0);
+            w.set_editor_match_index(0);
         });
     }
 }

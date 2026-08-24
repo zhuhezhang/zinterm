@@ -1375,7 +1375,7 @@ export component TerminalView inherits Rectangle {
                                         // ⌘R / Ctrl+R opens the searchable history dropdown and
                                         // focuses its search box — full keyboard history recall
                                         // (#140). Esc closes it / returns to terminal. (The
-                                        // Ctrl+A/E/K/U line-editing below stays on Ctrl — those
+                                        // Ctrl+S/E/K/U line-editing below stays on Ctrl — those
                                         // are the standard readline bindings on macOS too.)
                                         if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control)
                                             && (e.text == Key.Tab || e.text == Key.Backtab)) {
@@ -1400,8 +1400,8 @@ export component TerminalView inherits Rectangle {
                                             root.history-open = false;
                                             accept
                                             // --- readline line-editing keys (#103) ---
-                                            // Ctrl+A → start of line.
-                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control) && (e.text == "a" || e.text == "A" || e.text == "\u{0001}")) {
+                                            // Ctrl+S → start of line.
+                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control) && (e.text == "s" || e.text == "S" || e.text == "\u{0013}")) {
                                             cmd-input.set-selection-offsets(0, 0);
                                             accept
                                             // Ctrl+E → end of line.

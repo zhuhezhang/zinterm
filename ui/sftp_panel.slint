@@ -300,7 +300,7 @@ export component SftpPanel inherits Rectangle {
                             horizontal-stretch: 1;
                             min-width: 0px;
                             height: root.path-input-height;
-                            font-size: Theme.fs-sm;
+                            font-size: Theme.fs-md;
                             pad-x: 6px;
                             text-color: root.ready ? Theme.text-primary : Theme.text-muted;
                             read-only: !root.ready;
@@ -482,13 +482,18 @@ export component SftpPanel inherits Rectangle {
                 Rectangle {
                     height: 20px;
                     background: Theme.bg-root;
-                    Text {
-                        x: 8px;
-                        text: @tr("Directory tree");
-                        color: Theme.text-muted;
-                        font-size: Theme.fs-xs;
-                        vertical-alignment: center;
+                    HorizontalLayout {
                         height: parent.height;
+                        padding-left: 8px;
+                        padding-top: 2px;
+                        cross-axis-alignment: center;
+                        Text {
+                            height: parent.height;
+                            font-size: Theme.fs-xs;
+                            text: @tr("Directory tree");
+                            color: Theme.text-muted;
+                            vertical-alignment: center;
+                        }
                     }
                 }
 
@@ -591,9 +596,12 @@ export component SftpPanel inherits Rectangle {
                     height: 20px;
                     background: Theme.bg-root;
                     HorizontalLayout {
+                        height: parent.height;
                         padding-left: 8px;
                         padding-right: 8px;
+                        padding-top: 2px;
                         spacing: 8px;
+                        cross-axis-alignment: center;
                         // Spacer matching the rows' checkbox so the header columns
                         // line up with the values below them (#dock).
                         Rectangle {
@@ -601,6 +609,7 @@ export component SftpPanel inherits Rectangle {
                         }
 
                         Rectangle {
+                            height: parent.height;
                             horizontal-stretch: 1;
                             header-name-ta := TouchArea {
                                 mouse-cursor: pointer;
@@ -612,12 +621,14 @@ export component SftpPanel inherits Rectangle {
                                 color: root.sort-key == "name" ? Theme.accent : Theme.text-muted;
                                 font-size: Theme.fs-xs;
                                 width: parent.width;
+                                height: parent.height;
                                 horizontal-alignment: left;
                                 vertical-alignment: center;
                             }
                         }
 
                         if root.show-size-col: Rectangle {
+                            height: parent.height;
                             width: 72px;
                             header-size-ta := TouchArea {
                                 mouse-cursor: pointer;
@@ -629,11 +640,13 @@ export component SftpPanel inherits Rectangle {
                                 color: root.sort-key == "size" ? Theme.accent : Theme.text-muted;
                                 font-size: Theme.fs-xs;
                                 width: parent.width;
+                                height: parent.height;
                                 horizontal-alignment: right;
                                 vertical-alignment: center;
                             }
                         }
                         if root.show-modified-col: Rectangle {
+                            height: parent.height;
                             width: 116px;
                             header-modified-ta := TouchArea {
                                 mouse-cursor: pointer;
@@ -645,6 +658,7 @@ export component SftpPanel inherits Rectangle {
                                 color: root.sort-key == "modified" ? Theme.accent : Theme.text-muted;
                                 font-size: Theme.fs-xs;
                                 width: parent.width;
+                                height: parent.height;
                                 horizontal-alignment: right;
                                 vertical-alignment: center;
                             }
