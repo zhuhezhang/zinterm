@@ -315,6 +315,9 @@ msgstr "Quick commands"
 msgid "Type a command, click Send"
 msgstr "Type a command, click Send"
 
+msgid "History"
+msgstr "History"
+
 msgid "All sessions"
 msgstr "All sessions"
 
