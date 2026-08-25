@@ -76,8 +76,8 @@ export struct TerminalState {
 
 // One leaf pane of the split layout (v0.5). Geometry (x/y/w/h) is computed in Rust
 // from the split tree; `tabs` is the pane's own tab group and `active-id` the tab
-// it currently shows. `reserve-right` keeps room for the top-right toolbar icons on
-// whichever pane touches the top-right corner.
+// it currently shows. `reserve-right` is kept for layout compatibility (toolbar
+// icons live in the title bar now, so it is always 0).
 export struct PaneInfo {
     id: int,
     x: length,
@@ -107,16 +107,16 @@ export struct SplitterInfo {
     vertical: bool,   // true = vertical handle (drag left/right)
 }
 
-// A 26×26 top-bar icon button with a hover tooltip (right-aligned so it never
-// runs off the window edge). `active` keeps the hover background lit (e.g. while
-// its popup is open).
+// Shared 30×30 title-bar button size for toolbar icons and window controls.
 // A Windows-style window-control button (minimize / maximize / close) for the
 // custom title bar (#119). `danger` gives the close button its red hover.
 component WinBtn inherits Rectangle {
     in property <string> icon;
     in property <bool> danger: false;
     callback clicked();
-    width: 46px;
+    width: 30px;
+    height: 30px;
+    border-radius: Theme.radius-sm;
     background: ta.has-hover ? (root.danger ? #e81123 : Theme.bg-hover) : transparent;
     animate background { duration: 90ms; }
     ta := TouchArea {
@@ -128,20 +128,22 @@ component WinBtn inherits Rectangle {
         text: root.icon;
         font-family: "Material Icons";
         color: (root.danger && ta.has-hover) ? white : Theme.text-secondary;
-        font-size: 16px;
+        font-size: 17px;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
 }
 
+// A 30×30 top-bar icon button with a hover tooltip. `active` keeps the hover
+// background lit (e.g. while its popup is open).
 component IconBtn inherits Rectangle {
     in property <string> icon;
     in property <brush> icon-color: Theme.text-secondary;
     in property <string> tooltip;
     in property <bool> active;
     callback clicked();
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     border-radius: Theme.radius-sm;
     background: touch.has-hover || root.active ? Theme.bg-hover : transparent;
 
@@ -149,7 +151,7 @@ component IconBtn inherits Rectangle {
         text: root.icon;
         font-family: "Material Icons";
         color: root.icon-color;
-        font-size: Theme.fs-md;
+        font-size: 17px;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -253,7 +255,7 @@ export component AppWindow inherits Window {
     // macOS immersive title bar: Rust makes the native bar transparent and lets
     // content render under it, so we reserve this much space at the top for the
     // traffic-light buttons + a clean drag strip (0 elsewhere). See setup_macos_platform.
-    property <length> titlebar-inset: root.is-mac ? 28px : 0px;
+    property <length> titlebar-inset: root.is-mac ? 34px : 0px;
     in-out property <bool> window-maximized: false;
     callback win-minimize();
     callback win-maximize-toggle();
@@ -272,32 +274,11 @@ export component AppWindow inherits Window {
         : root.drag-ny < 0.22 ? "top"
         : root.drag-ny > 0.78 ? "bottom"
         : "";
-    // The top-right toolbar icons float over the tab row; when a sidebar docks
-    // top/right it covers that corner, so shift the icons to stay over the tabs.
-    property <length> toolbar-x-off:
-        ((root.welcome-as-sidebar && root.welcome-sidebar-dock == "right")
-        ? root.welcome-sidebar-taken
-        : 0px)
-        + ((root.quick-panel-open && root.quick-panel-dock == "right")
-        ? (root.quick-panel-collapsed
-        ? ((root.welcome-as-sidebar && root.welcome-collapsed
-        && root.welcome-sidebar-dock == "right")
-        ? 0px : 36px)
-        : root.quick-panel-width + 4px)
-        : 0px);
-    property <length> toolbar-y-off:
-        ((root.welcome-as-sidebar && root.welcome-sidebar-dock == "top")
-        ? root.welcome-sidebar-taken
-        : 0px)
-        + ((root.quick-panel-open && root.quick-panel-dock == "top")
-        ? (root.quick-panel-collapsed
-        ? ((root.welcome-as-sidebar && root.welcome-collapsed
-        && root.welcome-sidebar-dock == "top")
-        ? 0px : 36px)
-        : root.quick-panel-height + 4px)
-        : 0px);
-    property <length> toolbar-y:
-        (root.custom-titlebar ? 43px : 5px + root.titlebar-inset) + root.toolbar-y-off;
+    // Spacing between theme / download / settings (independent of caption buttons).
+    property <length> toolbar-btn-spacing: 8px;
+    // Bottom edge of the title strip — popups for settings/download drop below it.
+    property <length> titlebar-bottom:
+        root.custom-titlebar ? 38px : root.titlebar-inset;
     in-out property <bool> about-open: false;     // centered About dialog
     callback open-repo();                          // open the project's GitHub page
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103)
@@ -882,17 +863,47 @@ export component AppWindow inherits Window {
         // Frosted like the other panels (bg-panel) so it matches in both themes —
         // a plain transparent strip would show the raw wallpaper here and look dark
         // in light mode. Left as a plain reserve (no TouchArea) so macOS's own title
-        // bar keeps handling the window drag in this region.
+        // bar keeps handling the window drag in this region. App toolbar icons sit
+        // on the far right (macOS has no caption buttons there).
         if root.titlebar-inset > 0px: Rectangle {
             height: root.titlebar-inset;
             background: Theme.bg-panel;
+            HorizontalLayout {
+                padding-right: 8px;
+                Rectangle { horizontal-stretch: 1; }
+                VerticalLayout {
+                    alignment: center;
+                    HorizontalLayout {
+                        spacing: root.toolbar-btn-spacing;
+                        IconBtn {
+                            icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
+                            icon-color: Theme.dark ? #f5c542 : #5856d6;
+                            tooltip: root.lang-en ? "Toggle theme" : "切换主题";
+                            clicked => { root.toggle-theme(); }
+                        }
+
+                        IconBtn {
+                            icon: "\u{E2C4}";
+                            tooltip: root.lang-en ? "Download" : "下载";
+                            active: root.download-open;
+                            clicked => { root.download-open = !root.download-open; root.settings-open = false; }
+                        }
+
+                        IconBtn {
+                            icon: "\u{E8B8}";
+                            tooltip: root.lang-en ? "Settings" : "设置";
+                            active: root.settings-open;
+                            clicked => { root.settings-open = !root.settings-open; root.download-open = false; root.ssh-import-hint = ""; }
+                        }
+                    }
+                }
+            }
         }
 
         // Immersive custom title bar (#119) — only on frameless platforms
         // (Windows/Linux). App icon + name on the left, a draggable middle
         // (move window / double-click to maximize), then the toolbar icons and
-        // window controls on the right. macOS keeps its native title bar and
-        // shows the toolbar icons via the overlay further below.
+        // window controls on the right.
         if root.custom-titlebar: Rectangle {
             height: 38px;
             background: Theme.bg-panel;
@@ -907,6 +918,7 @@ export component AppWindow inherits Window {
 
             HorizontalLayout {
                 padding-left: 12px;
+                padding-right: 8px;
                 spacing: 8px;
                 // Vertical-centering wrappers so the icon and name line up (#119).
                 VerticalLayout {
@@ -930,24 +942,60 @@ export component AppWindow inherits Window {
                 Rectangle {
                     horizontal-stretch: 1;
                 }
-                // Window controls only — the app toolbar icons live in the tab
-                // row below, not here (#119).
-                // the code point of icons come from https://fonts.google.com/icons?icon.set=Material+Icons, 
-                // local file is fonts/MaterialIcons-Regular.ttf
-                WinBtn {
-                    icon: "\u{E15B}";
-                    clicked => { root.win-minimize(); }
+                // App toolbar (theme / download / settings) — own spacing via
+                // toolbar-btn-spacing; outer layout spacing keeps caption gaps at 8px.
+                // Icon code points: https://fonts.google.com/icons?icon.set=Material+Icons
+                // local file: fonts/MaterialIcons-Regular.ttf
+                VerticalLayout {
+                    alignment: center;
+                    HorizontalLayout {
+                        spacing: root.toolbar-btn-spacing;
+                        IconBtn {
+                            icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
+                            icon-color: Theme.dark ? #f5c542 : #5856d6;
+                            tooltip: root.lang-en ? "Toggle theme" : "切换主题";
+                            clicked => { root.toggle-theme(); }
+                        }
+
+                        IconBtn {
+                            icon: "\u{E2C4}";
+                            tooltip: root.lang-en ? "Download" : "下载";
+                            active: root.download-open;
+                            clicked => { root.download-open = !root.download-open; root.settings-open = false; }
+                        }
+
+                        IconBtn {
+                            icon: "\u{E8B8}";
+                            tooltip: root.lang-en ? "Settings" : "设置";
+                            active: root.settings-open;
+                            clicked => { root.settings-open = !root.settings-open; root.download-open = false; root.ssh-import-hint = ""; }
+                        }
+                    }
                 }
 
-                WinBtn {
-                    icon: root.window-maximized ? "\u{E3E0}" : "\u{E835}";
-                    clicked => { root.win-maximize-toggle(); }
+                VerticalLayout {
+                    alignment: center;
+                    WinBtn {
+                        icon: "\u{E15B}";
+                        clicked => { root.win-minimize(); }
+                    }
                 }
 
-                WinBtn {
-                    icon: "\u{E5CD}";
-                    danger: true;
-                    clicked => { root.win-close(); }
+                VerticalLayout {
+                    alignment: center;
+                    WinBtn {
+                        icon: root.window-maximized ? "\u{E3E0}" : "\u{E835}";
+                        clicked => { root.win-maximize-toggle(); }
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    WinBtn {
+                        icon: "\u{E5CD}";
+                        danger: true;
+                        clicked => { root.win-close(); }
+                    }
                 }
             }
         }
@@ -1216,8 +1264,7 @@ export component AppWindow inherits Window {
                                         // Tab strip.
                                         TabBar {
                                             horizontal-stretch: 1;
-                                            // Reserve room for the top-right toolbar icons that sit over
-                                            // this row so tabs don't slide underneath them (#122).
+                                            // Toolbar icons live in the title bar; reserve stays 0.
                                             reserve-right: pane.reserve-right;
                                             show-new-tab: !root.welcome-as-sidebar;
                                             can-merge-pane: root.panes.length > 1;
@@ -1676,36 +1723,6 @@ export component AppWindow inherits Window {
                 }
             }
         }
-    }
-
-    // App toolbar icons (settings/download/theme/sync). They sit at the top-right
-    // of the tab row — below the custom title bar when frameless (y offset), or
-    // at the very top on macOS where the native title bar is separate (#119).
-    IconBtn {
-        x: root.width - 34px - root.toolbar-x-off;
-        y: root.toolbar-y;
-        icon: "\u{E8B8}";
-        tooltip: root.lang-en ? "Settings" : "设置";
-        active: root.settings-open;
-        clicked => { root.settings-open = !root.settings-open; root.download-open = false; root.ssh-import-hint = ""; }
-    }
-
-    IconBtn {
-        x: root.width - 64px - root.toolbar-x-off;
-        y: root.toolbar-y;
-        icon: "\u{E2C4}";
-        tooltip: root.lang-en ? "Download" : "下载";
-        active: root.download-open;
-        clicked => { root.download-open = !root.download-open; root.settings-open = false; }
-    }
-
-    IconBtn {
-        x: root.width - 94px - root.toolbar-x-off;
-        y: root.toolbar-y;
-        icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
-        icon-color: Theme.dark ? #f5c542 : #5856d6;
-        tooltip: root.lang-en ? "Toggle theme" : "切换主题";
-        clicked => { root.toggle-theme(); }
     }
 
     // Frameless resize edges (#119): thin hit-zones that start an OS-level
@@ -2265,9 +2282,10 @@ export component AppWindow inherits Window {
     // Always present; toggled via `visible` (avoids destroying interactive
     // elements mid-event, which crashes when created/removed at the Window root).
     Rectangle {
-        // Follow the download button (shifts with the toolbar).
-        x: parent.width - 364px - root.toolbar-x-off;
-        y: (root.custom-titlebar ? 78px : 40px + root.titlebar-inset) + root.toolbar-y-off;
+        // Drop below the title-bar download button (far-right on macOS,
+        // left of caption buttons on Windows/Linux).
+        x: parent.width - 364px;
+        y: root.titlebar-bottom + 4px;
         width: 350px;
         height: 400px;
         visible: root.download-open;
@@ -2514,10 +2532,10 @@ export component AppWindow inherits Window {
         clicked => { root.settings-open = false; }
     }
     Rectangle {
-        // Follow the gear button: it shifts by toolbar-x/y-off with docked
-        // sidebars so the menu stays over the tabs.
-        x: parent.width - 196px - root.toolbar-x-off;
-        y: (root.custom-titlebar ? 78px : 40px + root.titlebar-inset) + root.toolbar-y-off;
+        // Keep fully inside the window (was width−196 with width 198 → 2px clip).
+        // 8px inset matches the title-bar button padding from the right edge.
+        x: parent.width - self.width - 8px;
+        y: root.titlebar-bottom + 4px;
         width: 198px;
         // Size to the menu's content so adding/removing items (or the
         // ~/.ssh/config import hint expanding) never overflows the card (#150-fix).

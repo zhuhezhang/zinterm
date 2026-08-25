@@ -3110,9 +3110,7 @@ fn refresh_panes(
                     })
                 })
                 .collect();
-            // Only the pane touching the top-right corner keeps room for the
-            // floating toolbar icons (#122).
-            let top_right = p.x + p.w >= cw - 0.5 && p.y <= 0.5;
+            // Toolbar icons live in the title bar now, so no tab-row reserve.
             PaneInfo {
                 id: p.id as i32,
                 x: p.x,
@@ -3121,7 +3119,7 @@ fn refresh_panes(
                 h: p.h,
                 active_id: p.active.clone().into(),
                 focused: p.focused,
-                reserve_right: if top_right { 140.0 } else { 0.0 },
+                reserve_right: 0.0,
                 tabs: ModelRc::from(Rc::new(VecModel::from(tabs))),
             }
         })

@@ -169,8 +169,7 @@ export component TabBar inherits Rectangle {
     in property <string> active-id;
     in property <bool> show-new-tab: true;
     in property <bool> can-merge-pane: false;
-    // Keep this much clear on the right so tabs don't slide under the app's
-    // top-right toolbar icons, which are positioned over the tab row (#122).
+    // Optional right inset (toolbar icons are in the title bar now; usually 0).
     in property <length> reserve-right: 0px;
     callback tab-selected(string);
     callback tab-closed(string);
@@ -249,7 +248,7 @@ export component TabBar inherits Rectangle {
             clicked => { all-tabs-menu.show(); }
         }
 
-        // Reserved gap for the external top-right toolbar icons (#122).
+        // Optional right inset from the parent (toolbar icons are in the title bar).
         Rectangle {
             width: root.reserve-right;
         }
