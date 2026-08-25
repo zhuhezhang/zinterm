@@ -101,11 +101,13 @@ component MenuItem inherits Rectangle {
 export component QuickDockPanel inherits Rectangle {
     in property <[QuickCmd]> commands;
     in property <string> dock-edge: "right";
+    callback fill(string /* command */);
     callback run(string /* command */);
     callback edit(int /* orig-index */);
     callback toggle-group(string);
     callback manage();
     callback close();
+    callback undock();
     callback dock-drag-move(length, length);
     callback dock-drag-end();
 
@@ -154,7 +156,51 @@ export component QuickDockPanel inherits Rectangle {
                 }
 
                 Rectangle {
-                    width: 28px;
+                    height: 25px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius-sm;
+                    background: manage-ta.has-hover ? Theme.bg-hover : Theme.bg-panel-alt;
+                    manage-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.manage(); }
+                    }
+        
+                    Text {
+                        text: @tr("Manage…");
+                        color: Theme.accent;
+                        font-size: Theme.fs-sm;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // Close docked panel → restore the command-bar Quick popup
+                // without clearing the "as sidebar" setting.
+                Rectangle {
+                    width: 25px;
+                    height: 25px;
+                    y: (parent.height - self.height) / 2;
+                    background: undock-ta.has-hover ? Theme.bg-hover : transparent;
+                    border-radius: Theme.radius-sm;
+                    undock-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.undock(); }
+                    }
+
+                    Text {
+                        text: "\u{E5CD}";
+                        font-family: "Material Icons";
+                        color: Theme.text-secondary;
+                        font-size: Theme.fs-md;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 25px;
+                    height: 25px;
+                    y: (parent.height - self.height) / 2;
                     background: close-ta.has-hover ? Theme.bg-hover : transparent;
                     border-radius: Theme.radius-sm;
                     close-ta := TouchArea {
@@ -163,10 +209,10 @@ export component QuickDockPanel inherits Rectangle {
                     }
 
                     Text {
-                        text: root.dock-edge == "right" ? "\u{E5CC}"
-                            : root.dock-edge == "top" ? "\u{E5CE}"
-                            : root.dock-edge == "bottom" ? "\u{E5CF}"
-                            : "\u{E5CB}";
+                        text: root.dock-edge == "right" ? "\u{EAC9}"
+                            : root.dock-edge == "top" ? "\u{EACF}"
+                            : root.dock-edge == "bottom" ? "\u{EAD0}"
+                            : "\u{EAC3}";
                         font-family: "Material Icons";
                         color: Theme.text-secondary;
                         font-size: Theme.fs-md;
@@ -231,18 +277,19 @@ export component QuickDockPanel inherits Rectangle {
                     if !q.collapsed && q.orig-index >= 0: Rectangle {
                         height: max(44px, item-col.preferred-height + 8px);
                         border-radius: Theme.radius-sm;
-                        background: q-edit-ta.has-hover || q-run.has-hover ? Theme.bg-hover : transparent;
+                        background: q-fill-ta.has-hover || q-run.has-hover || q-edit.has-hover
+                            ? Theme.bg-hover : transparent;
                         HorizontalLayout {
                             padding-left: 4px;
                             padding-right: 4px;
                             spacing: 1px;
                             Rectangle {
                                 horizontal-stretch: 1;
-                                q-edit-ta := TouchArea {
+                                q-fill-ta := TouchArea {
                                     width: parent.width;
                                     height: parent.height;
                                     mouse-cursor: pointer;
-                                    clicked => { root.edit(q.orig-index); }
+                                    clicked => { root.fill(q.command); }
                                 }
 
                                 item-col := VerticalLayout {
@@ -270,6 +317,7 @@ export component QuickDockPanel inherits Rectangle {
                                 }
                             }
 
+                            // Run (▶) — execute immediately.
                             Rectangle {
                                 width: 28px;
                                 y: (parent.height - self.height) / 2;
@@ -290,26 +338,31 @@ export component QuickDockPanel inherits Rectangle {
                                     vertical-alignment: center;
                                 }
                             }
+
+                            // Edit (✎) — open this command in the editor.
+                            Rectangle {
+                                width: 28px;
+                                y: (parent.height - self.height) / 2;
+                                height: 28px;
+                                border-radius: Theme.radius-sm;
+                                background: q-edit.has-hover ? Theme.bg-elevated : transparent;
+                                q-edit := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.edit(q.orig-index); }
+                                }
+
+                                Text {
+                                    text: "\u{E3C9}";
+                                    font-family: "Material Icons";
+                                    color: Theme.text-secondary;
+                                    font-size: Theme.fs-sm;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-
-        Rectangle {
-            height: 32px;
-            background: manage-ta.has-hover ? Theme.bg-hover : Theme.bg-panel-alt;
-            manage-ta := TouchArea {
-                mouse-cursor: pointer;
-                clicked => { root.manage(); }
-            }
-
-            Text {
-                text: @tr("Manage…");
-                color: Theme.accent;
-                font-size: Theme.fs-sm;
-                horizontal-alignment: center;
-                vertical-alignment: center;
             }
         }
     }
@@ -325,6 +378,8 @@ export component TerminalView inherits Rectangle {
     in property <bool> quick-panel-docked: false;
     in property <string> quick-external-command;
     in property <int> quick-external-sequence;
+    in property <string> quick-external-fill-command;
+    in property <int> quick-external-fill-sequence;
     in property <string> tab-id;
     in property <string> status-line: @tr("Not connected");
     in property <[TermSpan]> spans;     // coloured runs of the visible screen
@@ -491,6 +546,14 @@ export component TerminalView inherits Rectangle {
         if (root.active) {
             root.run-command(root.quick-external-command, root.send-to-all);
             root.focus-pending = true;
+        }
+    }
+
+    changed quick-external-fill-sequence => {
+        if (root.active) {
+            cmd-input.text = root.quick-external-fill-command;
+            cmd-input.set-selection-offsets(1000000, 1000000);
+            cmd-input.focus-input();
         }
     }
 

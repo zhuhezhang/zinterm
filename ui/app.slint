@@ -314,6 +314,8 @@ export component AppWindow inherits Window {
     in-out property <string> quick-panel-dock: "right";
     property <string> quick-external-command;
     property <int> quick-external-sequence;
+    property <string> quick-external-fill-command;
+    property <int> quick-external-fill-sequence;
     in property <[string]> command-history;          // oldest first (newest last, #113)
     in property <[HistoryViewItem]> history-view;    // filtered dropdown, newest first (#101, #331)
     in-out property <bool> send-to-all: false;       // shared across all terminal tabs (#55)
@@ -1348,6 +1350,8 @@ export component AppWindow inherits Window {
                                             quick-panel-docked: root.quick-panel-open;
                                             quick-external-command: root.quick-external-command;
                                             quick-external-sequence: root.quick-external-sequence;
+                                            quick-external-fill-command: root.quick-external-fill-command;
+                                            quick-external-fill-sequence: root.quick-external-fill-sequence;
                                             command-history: root.command-history;
                                             history-view: root.history-view;
                                             send-to-all <=> root.send-to-all;
@@ -1538,6 +1542,10 @@ export component AppWindow inherits Window {
                             root.quick-external-command = command;
                             root.quick-external-sequence += 1;
                         }
+                        fill(command) => {
+                            root.quick-external-fill-command = command;
+                            root.quick-external-fill-sequence += 1;
+                        }
                         edit(orig-index) => { root.edit-quick-command(orig-index); }
                         toggle-group(group) => { root.toggle-quick-group(group); }
                         manage => {
@@ -1548,6 +1556,10 @@ export component AppWindow inherits Window {
                             root.quick-cmd-manage-open = true;
                         }
                         close => { root.quick-panel-collapsed = true; }
+                        undock => {
+                            root.quick-panel-open = false;
+                            root.quick-panel-collapsed = false;
+                        }
                         dock-drag-move(ax, ay) => {
                             root.panel-dragging = true;
                             root.drag-nx = (ax - dock-area.absolute-position.x) / dock-area.width;
