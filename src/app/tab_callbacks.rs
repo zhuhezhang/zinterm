@@ -199,50 +199,6 @@ pub(super) fn wire_tab_callbacks(
         });
     }
 
-    // "+" in a pane's strip: focus the welcome page (there is a single welcome
-    // tab; move focus to whichever pane owns it and make it active).
-    {
-        let weak = window.as_weak();
-        let layout = layout.clone();
-        let content_size = content_size.clone();
-        let tabs_model = tabs_model.clone();
-        let panes_model = panes_model.clone();
-        let splitters_model = splitters_model.clone();
-        window.on_pane_new_tab(move |pane_id: i32| {
-            // In welcome-as-sidebar mode there is no welcome tab — the session list
-            // lives in the left panel, so "+" has nothing to open.
-            if weak
-                .upgrade()
-                .map(|w| w.get_welcome_as_sidebar())
-                .unwrap_or(false)
-            {
-                return;
-            }
-            {
-                let mut lay = layout.borrow_mut();
-                if let Some(owner) = lay.leaf_of_tab("welcome") {
-                    lay.focused = owner;
-                    if let Some(l) = lay.leaf_mut(owner) {
-                        l.active = "welcome".into();
-                    }
-                } else {
-                    lay.focused = pane_id as u64;
-                    lay.add_tab("welcome".into());
-                }
-            }
-            if let Some(w) = weak.upgrade() {
-                refresh_panes(
-                    &w,
-                    &layout.borrow(),
-                    content_size.get(),
-                    &tabs_model,
-                    &panes_model,
-                    &splitters_model,
-                );
-            }
-        });
-    }
-
     // Click anywhere in a pane → focus it (drives which terminal the sidebar and
     // key routing follow). A single pane is always focused, so this is a no-op
     // until splits exist.

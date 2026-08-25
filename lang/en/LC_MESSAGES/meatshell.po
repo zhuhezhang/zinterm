@@ -456,6 +456,9 @@ msgstr "Split right"
 msgid "Split down"
 msgstr "Split down"
 
+msgid "Cancel split"
+msgstr "Cancel split"
+
 msgid "Close tab"
 msgstr "Close tab"
 

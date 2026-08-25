@@ -987,8 +987,8 @@ pub fn run() -> Result<()> {
     let tabs_model: Rc<VecModel<TabInfo>> = Rc::new(VecModel::default());
     tabs_model.push(TabInfo {
         id: "welcome".into(),
-        title_len: tab_title_len(&t("新标签页", "New tab")),
-        title: t("新标签页", "New tab").into(),
+        title_len: tab_title_len(&t("欢迎页", "Welcome page")),
+        title: t("欢迎页", "Welcome page").into(),
         kind: "welcome".into(),
         connected: false,
     });
@@ -1180,8 +1180,8 @@ pub fn run() -> Result<()> {
             for i in 0..tabs_model.row_count() {
                 if let Some(mut row) = tabs_model.row_data(i) {
                     if row.id.as_str() == "welcome" {
-                        row.title_len = tab_title_len(&t("新标签页", "New tab"));
-                        row.title = t("新标签页", "New tab").into();
+                        row.title_len = tab_title_len(&t("欢迎页", "Welcome page"));
+                        row.title = t("欢迎页", "Welcome page").into();
                         tabs_model.set_row_data(i, row);
                     }
                 }
@@ -3778,11 +3778,11 @@ fn wire_key_input(
         // (key="", shift=true).  Used by the time-based Backspace filter below.
         let last_shift_time: Arc<Mutex<Option<std::time::Instant>>> = Arc::new(Mutex::new(None));
         window.on_send_key(move |tab_id: SharedString, key: SharedString, ctrl: bool, alt: bool, shift: bool| {
-            // ── Enter on a disconnected tab → reconnect in place (#79) ──────
-            // FinalShell-style: the tab shows "连接已断开,按 Enter 重新连接";
-            // pressing Enter re-spawns the shell + SFTP workers in the SAME tab
+            // ── R on a disconnected tab → reconnect in place (#79) ─────────
+            // FinalShell-style: the tab shows "连接已断开,按 R 重新连接";
+            // pressing R re-spawns the shell + SFTP workers in the SAME tab
             // with a fresh screen instead of forcing the user to open a new one.
-            if key.as_str() == "\n" && !ctrl && !alt {
+            if key.eq_ignore_ascii_case("r") && !ctrl && !alt {
                 let dead_session = {
                     let statuses = ctx.tab_statuses.lock().unwrap();
                     statuses
@@ -3824,12 +3824,6 @@ fn wire_key_input(
                     }
                     // Fresh session: the first OSC 7 after reconnect follows.
                     ctx.sftp_last_cwd.lock().unwrap().remove(tab_id.as_str());
-                    if let Some(w) = ctx.weak.upgrade() {
-                        set_terminal_row(&w, tab_id.as_str(), |t| {
-                            t.status =
-                                crate::i18n::t("重连中...", "Reconnecting...").into();
-                        });
-                    }
                     start_session_in_tab(tab_id.as_str(), session, &ctx);
                     return;
                 }

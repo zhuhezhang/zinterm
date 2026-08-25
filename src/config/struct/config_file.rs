@@ -175,7 +175,7 @@ pub struct ConfigFile {
     #[serde(default)]
     pub collapse_sftp_default: bool,
     /// Render the welcome page (session list) as a docked left sidebar instead of
-    /// a "New tab" tab (v0.5). Persisted so the layout choice sticks.
+    /// a "Welcome page" tab (v0.5). Persisted so the layout choice sticks.
     #[serde(default)]
     pub welcome_as_sidebar: bool,
     /// Width (logical px) of the welcome/session sidebar when docked (v0.5).

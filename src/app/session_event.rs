@@ -69,7 +69,11 @@ pub(super) fn apply_session_event_to_window(
 
     match event {
         SessionEvent::Status(status) => {
-            update_terminal(&|t| t.status = status.clone().into());
+            // Connection progress / info goes into the terminal like remote
+            // output (no separate status strip).
+            let chunk = format!("\r\n\x1b[90m{status}\x1b[0m\r\n");
+            let _ = ingest_terminal_output(bufs, tab_id, chunk.as_bytes());
+            request_tab_render_from_ui(win.as_weak(), tab_id, bufs, gates);
         }
         SessionEvent::Output(chunk) => {
             // Synthetic Output (disconnect hint, editor error, …) — rare, already
@@ -79,32 +83,34 @@ pub(super) fn apply_session_event_to_window(
         }
         SessionEvent::Connected => {
             update_tab(&|t| t.connected = true);
-            update_terminal(&|t| t.status = crate::i18n::t("已连接", "Connected").into());
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 1;
             }
         }
         SessionEvent::Closed(reason) => {
-            // Print the hint into the terminal itself (FinalShell-style), via a
-            // synthetic Output event so it reuses the normal render path (#79).
+            // Print disconnect info + reconnect hint into the terminal
+            // (FinalShell-style), via synthetic Output (#79).
+            let hint = crate::i18n::t(
+                "连接已断开,按 R 重新连接",
+                "Disconnected — press R to reconnect",
+            );
+            let body = if reason.trim().is_empty() {
+                hint.to_string()
+            } else {
+                format!(
+                    "{} — {reason}\r\n{hint}",
+                    crate::i18n::t("已断开", "Disconnected")
+                )
+            };
             apply_session_event_to_window(
                 win,
                 tab_id,
-                SessionEvent::Output(format!(
-                    "\r\n\x1b[31m{}\x1b[0m\r\n",
-                    crate::i18n::t(
-                        "连接已断开,按 Enter 重新连接",
-                        "Disconnected — press Enter to reconnect"
-                    )
-                )),
+                SessionEvent::Output(format!("\r\n\x1b[31m{body}\x1b[0m\r\n")),
                 bufs,
                 gates,
                 statuses,
             );
             update_tab(&|t| t.connected = false);
-            update_terminal(&|t| {
-                t.status = format!("{} — {reason}", crate::i18n::t("已断开", "Disconnected")).into()
-            });
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 2;
             }

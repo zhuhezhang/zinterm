@@ -32,7 +32,7 @@ export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd }
 
 // --- TerminalState ---------------------------------------------------------
 // Per-terminal view-model exposed to Rust. A TabInfo has the metadata; the
-// TerminalState carries the streaming log + status line. Kept as a parallel
+// TerminalState carries the streaming log (+ SFTP UI state). Kept as a parallel
 // model so opening/closing tabs doesn't churn the log strings.
 // One file-transfer record shown in the download manager.
 export struct TransferInfo {
@@ -740,7 +740,6 @@ export component AppWindow inherits Window {
     // Per-pane tab actions (v0.5): the int is the pane (leaf) id.
     callback pane-tab-selected(int /* pane-id */, string /* tab-id */);
     callback pane-tab-closed(int /* pane-id */, string /* tab-id */);
-    callback pane-new-tab(int /* pane-id */);
     callback pane-tab-reorder(int /* pane-id */, int /* from */, int /* dir */);
     callback pane-focus(int /* pane-id */);
     callback cycle-tab(bool /* reverse */);
@@ -1266,13 +1265,11 @@ export component AppWindow inherits Window {
                                             horizontal-stretch: 1;
                                             // Toolbar icons live in the title bar; reserve stays 0.
                                             reserve-right: pane.reserve-right;
-                                            show-new-tab: !root.welcome-as-sidebar;
                                             can-merge-pane: root.panes.length > 1;
                                             tabs: pane.tabs;
                                             active-id: pane.active-id;
                                             tab-selected(id) => { root.pane-tab-selected(pane.id, id); }
                                             tab-closed(id) => { root.pane-tab-closed(pane.id, id); }
-                                            new-tab() => { root.pane-new-tab(pane.id); }
                                             tab-reorder(from-index, direction) => {
                                                 root.pane-tab-reorder(pane.id, from-index, direction);
                                             }
@@ -1355,7 +1352,6 @@ export component AppWindow inherits Window {
                                             width: term.id == pane.active-id ? parent.width : 0px;
                                             height: term.id == pane.active-id ? parent.height : 0px;
                                             tab-id: term.id;
-                                            status-line: term.status;
                                             spans: term.spans;
                                             cursor-row: term.cursor-row;
                                             cursor-col: term.cursor-col;

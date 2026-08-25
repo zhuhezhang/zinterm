@@ -456,6 +456,9 @@ msgstr "向右拆分"
 msgid "Split down"
 msgstr "向下拆分"
 
+msgid "Cancel split"
+msgstr "取消拆分"
+
 msgid "Close tab"
 msgstr "关闭标签页"
 

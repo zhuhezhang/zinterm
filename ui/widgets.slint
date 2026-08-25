@@ -99,14 +99,15 @@ export component TooltipArea inherits TouchArea {
 }
 
 // --- IconButton ------------------------------------------------------------
-// A small square action button that accepts a single-character glyph (or short text).
-// Keeps visual language consistent across the app.
+// A small square action button that accepts a single-character glyph (or short
+// text). Set `font-family` to "Material Icons" for icon-font code points.
 export component IconButton inherits Rectangle {
     in property <string> glyph;
     in property <string> tooltip;
     in property <length> size: 28px;
     in property <brush> fg: Theme.text-secondary;
     in property <brush> fg-hover: Theme.text-primary;
+    in property <string> font-family;
     callback clicked();
 
     width: size;
@@ -118,6 +119,7 @@ export component IconButton inherits Rectangle {
     Text {
         text: glyph;
         color: touch.has-hover ? fg-hover : fg;
+        font-family: root.font-family;
         font-size: Theme.fs-md;
         horizontal-alignment: center;
         vertical-alignment: center;

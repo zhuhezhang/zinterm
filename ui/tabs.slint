@@ -118,8 +118,8 @@ component SingleTab inherits Rectangle {
         title-text := Text {
             text: info.title;
             color: active ? Theme.text-primary : Theme.text-secondary;
-            font-size: info.title_len > 24 ? 9px * Theme.ui-scale
-                : (info.title_len > 12 ? 10px * Theme.ui-scale : Theme.fs-sm);
+            font-size: info.title_len > 24 ? Theme.fs-sm
+                : (info.title_len > 12 ? 12.5px * Theme.ui-scale : Theme.fs-md);
             vertical-alignment: center;
             overflow: elide;
             horizontal-stretch: 1;
@@ -167,13 +167,11 @@ component TabMenuItem inherits Rectangle {
 export component TabBar inherits Rectangle {
     in property <[TabInfo]> tabs;
     in property <string> active-id;
-    in property <bool> show-new-tab: true;
     in property <bool> can-merge-pane: false;
     // Optional right inset (toolbar icons are in the title bar now; usually 0).
     in property <length> reserve-right: 0px;
     callback tab-selected(string);
     callback tab-closed(string);
-    callback new-tab();
     // Drag-to-reorder: move the tab at `from` one slot in `dir` (#v0.5).
     callback tab-reorder(int /* from */, int /* dir */);
     // Split this pane, peeling `tab-id` into a new pane on `dir` (#v0.5).
@@ -194,19 +192,20 @@ export component TabBar inherits Rectangle {
     height: 36px;
     background: Theme.bg-panel-alt;
 
-    // True only when the tabs are wider than the available strip width (#122).
-    // Computed from the TabBar's own width (set by the parent), not flick.width,
-    // so showing the arrows (which shrink the flickable) can't feed back into this
-    // condition and form a binding loop. The 64px allows for the two arrows.
+    // True when tabs are wider than the flickable strip (#122).
+    // 34px ≈ all-tabs button + padding/spacing. Overlay chrome must not sit in
+    // the layout tree or it feeds back into width / preferred-size.
     property <bool> tab-overflow:
-        strip.preferred-width > root.width - root.reserve-right - 94px;
+        strip.preferred-width > root.width - root.reserve-right - 34px;
+    property <length> tab-scroll-range:
+        max(0px, flick.viewport-width - flick.width);
 
     HorizontalLayout {
         padding: 3px;
         spacing: 2px;
 
-        // Horizontally-scrollable strip: when the tabs overflow the available
-        // width they stay reachable by the arrows or by dragging / trackpad (#122).
+        // Horizontally-scrollable strip; overflow uses the overlay bar below
+        // (and trackpad / mouse-wheel drag on the Flickable) (#122).
         flick := Flickable {
             horizontal-stretch: 1;
             viewport-height: self.height;
@@ -230,22 +229,23 @@ export component TabBar inherits Rectangle {
                     drag-moved(ax, ay) => { root.tab-drag-move(tab.id, ax, ay); }
                     drag-dropped(ax, ay) => { root.tab-drag-drop(tab.id, ax, ay); }
                 }
-                if root.show-new-tab: IconButton {
-                    glyph: "+";
-                    size: 28px;
-                    y: (parent.height - self.height) / 2;
-                    clicked => { root.new-tab(); }
-                }
             }
         }
 
         // A stable right-edge entry point for finding any open session when
         // the tab strip is crowded (#340).
         IconButton {
-            glyph: "\u{E5C5}";
+            glyph: all-tabs-menu.is-open ? "\u{EACF}" : "\u{EAD0}";
+            font-family: "Material Icons";
             size: 28px;
             y: (parent.height - self.height) / 2;
-            clicked => { all-tabs-menu.show(); }
+            clicked => {
+                if (all-tabs-menu.is-open) {
+                    all-tabs-menu.close();
+                } else {
+                    all-tabs-menu.show();
+                }
+            }
         }
 
         // Optional right inset from the parent (toolbar icons are in the title bar).
@@ -254,33 +254,51 @@ export component TabBar inherits Rectangle {
         }
     }
 
-    // Scroll arrows are absolute overlays so toggling them can't
-    // change the layout that `tab-overflow` reads (avoids a binding loop). Shown
-    // only on overflow, masking the edge tab beneath them (#122).
-    if root.tab-overflow: Rectangle {
-        x: 3px;
-        y: (parent.height - self.height) / 2;
-        width: 26px;
-        height: 26px;
-        background: Theme.bg-panel-alt;
-        IconButton {
-            glyph: "<";
-            size: 24px;
-            clicked => { flick.viewport-x = min(0px, flick.viewport-x + 120px); }
-        }
-    }
-    if root.tab-overflow: Rectangle {
-        x: root.width - root.reserve-right - 59px;
-        y: (parent.height - self.height) / 2;
-        width: 26px;
-        height: 26px;
-        background: Theme.bg-panel-alt;
-        IconButton {
-            glyph: ">";
-            size: 24px;
-            clicked => {
-                flick.viewport-x = max(flick.width - flick.viewport-width, flick.viewport-x - 120px);
+    // Horizontal scrollbar overlay along the bottom of the flickable — matches
+    // the terminal scrollbar colors; stays thin like ScrollView until hovered so
+    // it does not cover tab titles or change TabBar height.
+    if root.tab-overflow: sb := Rectangle {
+        x: flick.absolute-position.x - root.absolute-position.x + 4px;
+        width: max(0px, flick.width - 8px);
+        property <bool> expanded: track-ta.has-hover || track-ta.pressed;
+        // Idle: slim like std ScrollView; hover: terminal-scrollbar thickness.
+        height: self.expanded ? 8px : 3px;
+        y: root.height - self.height - 1px;
+        animate height { duration: 100ms; }
+        property <length> thumb-w:
+            max(28px, self.width * flick.width / max(1px, flick.viewport-width));
+        property <length> usable: max(1px, self.width - self.thumb-w);
+        track-ta := TouchArea {
+            mouse-cursor: default;
+            moved => {
+                if (self.pressed && root.tab-scroll-range > 0px) {
+                    flick.viewport-x = -clamp(
+                        (self.mouse-x - sb.thumb-w / 2) / sb.usable, 0.0, 1.0)
+                        * root.tab-scroll-range;
+                }
             }
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left
+                    && root.tab-scroll-range > 0px) {
+                    flick.viewport-x = -clamp(
+                        (self.mouse-x - sb.thumb-w / 2) / sb.usable, 0.0, 1.0)
+                        * root.tab-scroll-range;
+                }
+            }
+        }
+
+        Rectangle {
+            x: root.tab-scroll-range > 0px
+                ? (parent.width - self.width) * (-flick.viewport-x / root.tab-scroll-range)
+                : 0px;
+            y: (parent.height - self.height) / 2;
+            width: sb.thumb-w;
+            height: sb.expanded ? 6px : 2px;
+            border-radius: sb.expanded ? 3px : 1px;
+            background: sb.expanded
+                ? Theme.text-secondary : Theme.border-strong;
+            animate height { duration: 100ms; }
+            animate background { duration: 100ms; }
         }
     }
 
@@ -359,7 +377,7 @@ export component TabBar inherits Rectangle {
                 }
 
                 TabMenuItem {
-                    label: @tr("Merge panes");
+                    label: @tr("Cancel split");
                     enabled: root.can-merge-pane;
                     clicked => { root.merge-pane(); }
                 }

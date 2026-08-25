@@ -11,7 +11,7 @@ use crate::ssh::{CredentialResponder, HostKeyResponder, MfaResponder, SessionHan
 use crate::terminal::{RenderGates, TermBuffers};
 use crate::ui::AppWindow;
 
-/// Per-tab connection state used for reconnect (Enter) and tab duplicate.
+/// Per-tab connection state used for reconnect (R) and tab duplicate.
 #[derive(Clone, Default)]
 pub(crate) struct TabStatus {
     pub(crate) session_id: String,

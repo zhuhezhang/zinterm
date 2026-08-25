@@ -381,7 +381,6 @@ export component TerminalView inherits Rectangle {
     in property <string> quick-external-fill-command;
     in property <int> quick-external-fill-sequence;
     in property <string> tab-id;
-    in property <string> status-line: @tr("Not connected");
     in property <[TermSpan]> spans;     // coloured runs of the visible screen
     in property <int> cursor-row;       // cursor cell (grid coords)
     in property <int> cursor-col;
@@ -676,35 +675,6 @@ export component TerminalView inherits Rectangle {
 
     VerticalLayout {
         spacing: 0;
-
-        // --- Status strip ---------------------------------------------------
-        Rectangle {
-            visible: !root.zen-mode;
-            height: root.zen-mode ? 0px : 24px;
-            background: Theme.bg-panel-alt;
-            HorizontalLayout {
-                padding-left: 10px;
-                padding-right: 10px;
-                Text {
-                    text: root.status-line;
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-xs;
-                    vertical-alignment: center;
-                    horizontal-stretch: 1;
-                }
-                // Alt-screen indicator only.  IMPORTANT: never put cell-w / cell-h
-                // (a Text's preferred-size) inside another Text's `text` — doing so
-                // makes Slint compute one text layout *inside* another, which
-                // re-enters parley's FontContext RefCell and panics ("already
-                // borrowed").  A plain bool flag is safe.
-                if root.is-alt-screen: Text {
-                    text: "[ALT]";
-                    color: Theme.success;
-                    font-size: Theme.fs-xs;
-                    vertical-alignment: center;
-                }
-            }
-        }
 
         // SFTP docking region — terminal + command-bar (central) on one side,
         // the SFTP panel docked to the chosen edge. Absolute geometry, mirroring
