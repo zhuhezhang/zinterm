@@ -462,6 +462,27 @@ msgstr "Cancel split"
 msgid "Close tab"
 msgstr "Close tab"
 
+msgid "Close other tabs"
+msgstr "Close other tabs"
+
+msgid "Close tabs to the left"
+msgstr "Close tabs to the left"
+
+msgid "Close tabs to the right"
+msgstr "Close tabs to the right"
+
+msgid "Close all tabs"
+msgstr "Close all tabs"
+
+msgid "Find in terminal"
+msgstr "Find in terminal"
+
+msgid "Clear screen"
+msgstr "Clear screen"
+
+msgid "Save terminal output"
+msgstr "Save terminal output"
+
 msgid "Duplicate connection"
 msgstr "Duplicate connection"
 

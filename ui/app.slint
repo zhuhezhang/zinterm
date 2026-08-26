@@ -297,6 +297,8 @@ export component AppWindow inherits Window {
     property <int> quick-external-sequence;
     property <string> quick-external-fill-command;
     property <int> quick-external-fill-sequence;
+    property <string> find-request-tab;
+    property <int> find-request-seq;
     in property <[string]> command-history;          // oldest first (newest last, #113)
     in property <[HistoryViewItem]> history-view;    // filtered dropdown, newest first (#101, #331)
     in-out property <bool> send-to-all: false;       // shared across all terminal tabs (#55)
@@ -741,6 +743,10 @@ export component AppWindow inherits Window {
     callback pane-tab-selected(int /* pane-id */, string /* tab-id */);
     callback pane-tab-closed(int /* pane-id */, string /* tab-id */);
     callback pane-tab-reorder(int /* pane-id */, string /* tab-id */, int /* dir */);
+    callback pane-tab-close-others(int /* pane-id */, string /* tab-id */);
+    callback pane-tab-close-left(int /* pane-id */, string /* tab-id */);
+    callback pane-tab-close-right(int /* pane-id */, string /* tab-id */);
+    callback pane-tab-close-all(int /* pane-id */);
     callback pane-focus(int /* pane-id */);
     callback cycle-tab(bool /* reverse */);
     // Split pane `pane-id`, peeling `tab-id` into a new pane on `dir`
@@ -830,6 +836,8 @@ export component AppWindow inherits Window {
     callback copy-terminal-text(string /* tab-id */);
     // Clear a session's terminal buffer (its visible screen + scrollback).
     callback clear-terminal(string /* tab-id */);
+    // Save a session's scrollback + live screen to a text file.
+    callback save-terminal-output(string /* tab-id */);
     // Recompute search highlights for a session's visible screen.
     callback find-query-changed(string /* tab-id */, string /* query */);
     // Scroll a session's scrollback history by N lines (+ = up/older).
@@ -1276,6 +1284,17 @@ export component AppWindow inherits Window {
                                             tab-split(id, dir) => { root.pane-split(pane.id, id, dir); }
                                             merge-pane() => { root.pane-merge(pane.id); }
                                             tab-duplicate(id) => { root.tab-duplicate(id); }
+                                            tab-close-others(id) => { root.pane-tab-close-others(pane.id, id); }
+                                            tab-close-left(id) => { root.pane-tab-close-left(pane.id, id); }
+                                            tab-close-right(id) => { root.pane-tab-close-right(pane.id, id); }
+                                            tab-close-all() => { root.pane-tab-close-all(pane.id); }
+                                            tab-find(id) => {
+                                                root.pane-tab-selected(pane.id, id);
+                                                root.find-request-tab = id;
+                                                root.find-request-seq += 1;
+                                            }
+                                            tab-clear(id) => { root.clear-terminal(id); }
+                                            tab-save-output(id) => { root.save-terminal-output(id); }
                                             tab-drag-move(id, ax, ay) => {
                                                 root.tab-drag-move(id,
                                                 ax - pane-area.absolute-position.x,
@@ -1395,6 +1414,8 @@ export component AppWindow inherits Window {
                                             quick-external-sequence: root.quick-external-sequence;
                                             quick-external-fill-command: root.quick-external-fill-command;
                                             quick-external-fill-sequence: root.quick-external-fill-sequence;
+                                            find-request-tab: root.find-request-tab;
+                                            find-request-seq: root.find-request-seq;
                                             command-history: root.command-history;
                                             history-view: root.history-view;
                                             send-to-all <=> root.send-to-all;

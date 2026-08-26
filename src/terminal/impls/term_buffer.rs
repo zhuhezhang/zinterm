@@ -288,6 +288,16 @@ impl TermBuffer {
         out
     }
 
+    /// Full scrollback + live screen as plain text (for save/export).
+    pub(crate) fn extract_full_text(&self) -> String {
+        let (_live, live_used) = self.live_rows();
+        let combined_len = self.history.len() + live_used;
+        if combined_len == 0 {
+            return String::new();
+        }
+        self.extract_range_text((0, 0), (combined_len - 1, u16::MAX))
+    }
+
     /// Feed bytes to vt100 and capture scrolled-off lines into history.
     ///
     /// We detect scroll by diffing the screen before/after a `process`, which

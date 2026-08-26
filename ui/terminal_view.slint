@@ -380,6 +380,8 @@ export component TerminalView inherits Rectangle {
     in property <int> quick-external-sequence;
     in property <string> quick-external-fill-command;
     in property <int> quick-external-fill-sequence;
+    in property <string> find-request-tab: "";
+    in property <int> find-request-seq: 0;
     in property <string> tab-id;
     in property <[TermSpan]> spans;     // coloured runs of the visible screen
     in property <int> cursor-row;       // cursor cell (grid coords)
@@ -527,6 +529,7 @@ export component TerminalView inherits Rectangle {
     property <length> ctx-x;
     property <length> ctx-y;
     property <bool> find-active: false;
+    property <int> find-request-seq-seen: 0;
     // A context-menu click creates the conditional find bar while Slint is
     // still dispatching the popup event. Focusing its TextInput synchronously
     // can re-enter the Windows IME/accessibility plumbing and panic (#343).
@@ -553,6 +556,22 @@ export component TerminalView inherits Rectangle {
             cmd-input.text = root.quick-external-fill-command;
             cmd-input.set-selection-offsets(1000000, 1000000);
             cmd-input.focus-input();
+        }
+    }
+
+    function open-find-from-request() {
+        if (root.tab-id == root.find-request-tab) {
+            root.find-request-seq-seen = root.find-request-seq;
+            root.find-active = true;
+            root.find-focus-pending = true;
+        }
+    }
+
+    changed find-request-seq => { root.open-find-from-request(); }
+
+    changed active => {
+        if (root.active) {
+            root.open-find-from-request();
         }
     }
 

@@ -462,6 +462,27 @@ msgstr "取消拆分"
 msgid "Close tab"
 msgstr "关闭标签页"
 
+msgid "Close other tabs"
+msgstr "关闭其他标签页"
+
+msgid "Close tabs to the left"
+msgstr "关闭左侧标签页"
+
+msgid "Close tabs to the right"
+msgstr "关闭右侧标签页"
+
+msgid "Close all tabs"
+msgstr "关闭所有标签页"
+
+msgid "Find in terminal"
+msgstr "查找终端内容"
+
+msgid "Clear screen"
+msgstr "清屏"
+
+msgid "Save terminal output"
+msgstr "保存终端输出"
+
 msgid "Duplicate connection"
 msgstr "复制打开"
 

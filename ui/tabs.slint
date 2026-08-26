@@ -167,7 +167,9 @@ component SingleTab inherits Rectangle {
 // --- Tab context-menu item -------------------------------------------------
 component TabMenuItem inherits Rectangle {
     in property <string> label;
+    in property <string> hint: "";
     in property <bool> enabled: true;
+    in property <bool> danger: false;
     callback clicked();
     height: 28px;
     border-radius: Theme.radius-sm;
@@ -175,12 +177,21 @@ component TabMenuItem inherits Rectangle {
     HorizontalLayout {
         padding-left: 10px;
         padding-right: 10px;
+        spacing: 8px;
         Text {
             text: label;
-            color: enabled ? Theme.text-primary : Theme.text-muted;
+            color: enabled
+                ? (danger ? Theme.danger : Theme.text-primary)
+                : Theme.text-muted;
             font-size: Theme.fs-sm;
             vertical-alignment: center;
             horizontal-stretch: 1;
+        }
+        if root.hint != "": Text {
+            text: hint;
+            color: Theme.text-muted;
+            font-size: Theme.fs-xs;
+            vertical-alignment: center;
         }
     }
 
@@ -206,6 +217,13 @@ export component TabBar inherits Rectangle {
     callback tab-split(string /* tab-id */, string /* dir */);
     // Open another connection to the same session as `tab-id` (#v0.5).
     callback tab-duplicate(string /* tab-id */);
+    callback tab-close-others(string /* tab-id */);
+    callback tab-close-left(string /* tab-id */);
+    callback tab-close-right(string /* tab-id */);
+    callback tab-close-all();
+    callback tab-find(string /* tab-id */);
+    callback tab-clear(string /* tab-id */);
+    callback tab-save-output(string /* tab-id */);
     callback merge-pane();
     // Drag-to-split (#v0.5): cursor moved / dropped while dragging `tab-id`, in
     // absolute (window) coordinates.
@@ -216,6 +234,22 @@ export component TabBar inherits Rectangle {
     property <length> menu-x;
     property <length> menu-y;
     property <string> menu-target;
+    property <int> menu-target-index;
+    property <bool> can-close-left:
+        root.menu-target-index > 0
+        && (root.menu-target-index > 1 || root.tabs[0].id != "welcome");
+    property <bool> can-close-right:
+        root.menu-target-index < root.tabs.length - 1
+        && (root.menu-target-index < root.tabs.length - 2
+            || root.tabs[root.tabs.length - 1].id != "welcome");
+    property <bool> can-close-others:
+        root.menu-target != "welcome"
+        && (root.tabs.length > 2
+            || (root.tabs.length == 2 && root.tabs[0].id != "welcome"
+                && root.tabs[1].id != root.menu-target));
+    property <bool> can-close-all:
+        root.tabs.length > 1
+        || (root.tabs.length == 1 && root.tabs[0].id != "welcome");
     // Tab currently being drag-reordered (highlight + id for drag-move/drop).
     property <string> drag-id;
 
@@ -264,7 +298,7 @@ export component TabBar inherits Rectangle {
             strip := HorizontalLayout {
                 spacing: 2px;
                 alignment: start;
-                for tab in tabs: SingleTab {
+                for tab[i] in tabs: SingleTab {
                     info: tab;
                     active: tab.id == root.active-id;
                     drag-highlight: tab.id == root.drag-id;
@@ -276,6 +310,7 @@ export component TabBar inherits Rectangle {
                     drag-ended => { root.drag-id = ""; }
                     context-requested(ax, ay) => {
                         root.menu-target = tab.id;
+                        root.menu-target-index = i;
                         root.menu-x = ax - root.absolute-position.x;
                         root.menu-y = ay - root.absolute-position.y;
                         tab-menu.show();
@@ -408,22 +443,83 @@ export component TabBar inherits Rectangle {
     tab-menu := PopupWindow {
         x: root.menu-x;
         y: root.menu-y;
-        width: 140px;
-        height: 6 * 29px + 13px;
-        Rectangle {
+        width: 240px;
+        height: tab-menu-card.preferred-height;
+        tab-menu-card := Rectangle {
+            width: parent.width;
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
             border-width: 1px;
             border-color: Theme.border-strong;
             drop-shadow-blur: 12px;
             drop-shadow-color: #00000060;
-            VerticalLayout {
+            tab-menu-list := VerticalLayout {
                 padding: 4px;
                 spacing: 1px;
                 TabMenuItem {
+                    label: @tr("Close tab");
+                    enabled: root.menu-target != "welcome";
+                    clicked => { root.tab-closed(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Close other tabs");
+                    enabled: root.can-close-others;
+                    clicked => { root.tab-close-others(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Close tabs to the left");
+                    enabled: root.can-close-left;
+                    clicked => { root.tab-close-left(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Close tabs to the right");
+                    enabled: root.can-close-right;
+                    clicked => { root.tab-close-right(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Close all tabs");
+                    danger: true;
+                    enabled: root.can-close-all;
+                    clicked => { root.tab-close-all(); tab-menu.close(); }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }    
+
+                TabMenuItem {
+                    label: @tr("Find in terminal");
+                    hint: Theme.is-mac ? "⌘F" : "Ctrl+F";
+                    enabled: root.menu-target != "welcome";
+                    clicked => { root.tab-find(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Clear screen");
+                    enabled: root.menu-target != "welcome";
+                    clicked => { root.tab-clear(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Save terminal output");
+                    enabled: root.menu-target != "welcome";
+                    clicked => { root.tab-save-output(root.menu-target); tab-menu.close(); }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
+                TabMenuItem {
                     label: @tr("Duplicate connection");
                     enabled: root.menu-target != "welcome";
-                    clicked => { root.tab-duplicate(root.menu-target); }
+                    clicked => { root.tab-duplicate(root.menu-target); tab-menu.close(); }
                 }
 
                 Rectangle {
@@ -434,30 +530,19 @@ export component TabBar inherits Rectangle {
                 TabMenuItem {
                     label: @tr("Split right");
                     enabled: root.tabs.length > 1;
-                    clicked => { root.tab-split(root.menu-target, "right"); }
+                    clicked => { root.tab-split(root.menu-target, "right"); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Split down");
                     enabled: root.tabs.length > 1;
-                    clicked => { root.tab-split(root.menu-target, "down"); }
+                    clicked => { root.tab-split(root.menu-target, "down"); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Cancel split");
                     enabled: root.can-merge-pane;
-                    clicked => { root.merge-pane(); }
-                }
-
-                Rectangle {
-                    height: 1px;
-                    background: Theme.border-subtle;
-                }
-
-                TabMenuItem {
-                    label: @tr("Close tab");
-                    enabled: root.menu-target != "welcome";
-                    clicked => { root.tab-closed(root.menu-target); }
+                    clicked => { root.merge-pane(); tab-menu.close(); }
                 }
             }
         }

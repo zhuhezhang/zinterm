@@ -1,5 +1,139 @@
 use super::*;
 
+struct TabCloseCtx {
+    weak: slint::Weak<AppWindow>,
+    layout: Rc<RefCell<crate::layout::Layout>>,
+    content_size: Rc<std::cell::Cell<(f32, f32)>>,
+    tabs_model: Rc<VecModel<TabInfo>>,
+    terminals_model: Rc<VecModel<TerminalState>>,
+    handles: Rc<RefCell<HashMap<String, SessionHandle>>>,
+    bufs: TermBuffers,
+    render_gates: RenderGates,
+    sftp_handles: SftpHandles,
+    sftp_last_cwd: SftpLastCwd,
+    panes_model: Rc<VecModel<PaneInfo>>,
+    splitters_model: Rc<VecModel<SplitterInfo>>,
+}
+
+fn close_tab_id(ctx: &TabCloseCtx, id: &str) {
+    if id == "welcome" {
+        return;
+    }
+    if let Some(handle) = ctx.handles.borrow_mut().remove(id) {
+        handle.close();
+    }
+    if let Some(sftp) = ctx.sftp_handles.lock().unwrap().remove(id) {
+        sftp.close();
+    }
+    ctx.sftp_last_cwd.lock().unwrap().remove(id);
+    if let Some(gate) = ctx.render_gates.lock().unwrap().remove(id) {
+        gate.close();
+    }
+    ctx.bufs.lock().unwrap().remove(id);
+
+    let mut idx = None;
+    for i in 0..ctx.tabs_model.row_count() {
+        if ctx
+            .tabs_model
+            .row_data(i)
+            .map(|r| r.id.as_str() == id)
+            .unwrap_or(false)
+        {
+            idx = Some(i);
+            break;
+        }
+    }
+    if let Some(i) = idx {
+        ctx.tabs_model.remove(i);
+    }
+    let mut tidx = None;
+    for i in 0..ctx.terminals_model.row_count() {
+        if ctx
+            .terminals_model
+            .row_data(i)
+            .map(|r| r.id.as_str() == id)
+            .unwrap_or(false)
+        {
+            tidx = Some(i);
+            break;
+        }
+    }
+    if let Some(i) = tidx {
+        ctx.terminals_model.remove(i);
+    }
+
+    ctx.layout.borrow_mut().remove_tab(id);
+}
+
+fn refresh_after_tab_close(ctx: &TabCloseCtx) {
+    if let Some(w) = ctx.weak.upgrade() {
+        refresh_panes(
+            &w,
+            &ctx.layout.borrow(),
+            ctx.content_size.get(),
+            &ctx.tabs_model,
+            &ctx.panes_model,
+            &ctx.splitters_model,
+        );
+    }
+}
+
+fn tabs_to_close_left(lay: &crate::layout::Layout, pane_id: u64, tab_id: &str) -> Vec<String> {
+    lay.leaf(pane_id)
+        .and_then(|l| {
+            let pos = l.tabs.iter().position(|t| t == tab_id)?;
+            Some(
+                l.tabs
+                    .iter()
+                    .take(pos)
+                    .filter(|t| t.as_str() != "welcome")
+                    .cloned()
+                    .collect(),
+            )
+        })
+        .unwrap_or_default()
+}
+
+fn tabs_to_close_right(lay: &crate::layout::Layout, pane_id: u64, tab_id: &str) -> Vec<String> {
+    lay.leaf(pane_id)
+        .and_then(|l| {
+            let pos = l.tabs.iter().position(|t| t == tab_id)?;
+            Some(
+                l.tabs
+                    .iter()
+                    .skip(pos + 1)
+                    .filter(|t| t.as_str() != "welcome")
+                    .cloned()
+                    .collect(),
+            )
+        })
+        .unwrap_or_default()
+}
+
+fn tabs_to_close_others(lay: &crate::layout::Layout, pane_id: u64, tab_id: &str) -> Vec<String> {
+    lay.leaf(pane_id)
+        .map(|l| {
+            l.tabs
+                .iter()
+                .filter(|t| t.as_str() != "welcome" && t.as_str() != tab_id)
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn tabs_to_close_all(lay: &crate::layout::Layout, pane_id: u64) -> Vec<String> {
+    lay.leaf(pane_id)
+        .map(|l| {
+            l.tabs
+                .iter()
+                .filter(|t| t.as_str() != "welcome")
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 pub(super) fn wire_tab_callbacks(
     window: &AppWindow,
     tabs_model: Rc<VecModel<TabInfo>>,
@@ -170,77 +304,82 @@ pub(super) fn wire_tab_callbacks(
     // remove it from the split tree (which re-homes the pane's active tab and
     // collapses the pane if it becomes empty).
     {
-        let weak = window.as_weak();
-        let layout = layout.clone();
-        let content_size = content_size.clone();
-        let tabs_model = tabs_model.clone();
-        let terminals_model = terminals_model.clone();
-        let handles = handles.clone();
-        let bufs = bufs.clone();
-        let render_gates = render_gates.clone();
-        let sftp_handles = sftp_handles.clone();
-        let sftp_last_cwd = sftp_last_cwd.clone();
-        let panes_model = panes_model.clone();
-        let splitters_model = splitters_model.clone();
-        window.on_pane_tab_closed(move |_pane_id: i32, id: SharedString| {
-            let id = id.to_string();
-            if id == "welcome" {
-                return;
-            }
-            if let Some(handle) = handles.borrow_mut().remove(&id) {
-                handle.close();
-            }
-            if let Some(sftp) = sftp_handles.lock().unwrap().remove(&id) {
-                sftp.close();
-            }
-            sftp_last_cwd.lock().unwrap().remove(&id);
-            if let Some(gate) = render_gates.lock().unwrap().remove(&id) {
-                gate.close();
-            }
-            bufs.lock().unwrap().remove(&id);
-
-            // Remove from tabs + terminals models.
-            let mut idx = None;
-            for i in 0..tabs_model.row_count() {
-                if tabs_model
-                    .row_data(i)
-                    .map(|r| r.id.as_str() == id)
-                    .unwrap_or(false)
-                {
-                    idx = Some(i);
-                    break;
-                }
-            }
-            if let Some(i) = idx {
-                tabs_model.remove(i);
-            }
-            let mut tidx = None;
-            for i in 0..terminals_model.row_count() {
-                if terminals_model
-                    .row_data(i)
-                    .map(|r| r.id.as_str() == id)
-                    .unwrap_or(false)
-                {
-                    tidx = Some(i);
-                    break;
-                }
-            }
-            if let Some(i) = tidx {
-                terminals_model.remove(i);
-            }
-
-            layout.borrow_mut().remove_tab(&id);
-            if let Some(w) = weak.upgrade() {
-                refresh_panes(
-                    &w,
-                    &layout.borrow(),
-                    content_size.get(),
-                    &tabs_model,
-                    &panes_model,
-                    &splitters_model,
-                );
-            }
+        let close_ctx = Rc::new(TabCloseCtx {
+            weak: window.as_weak(),
+            layout: layout.clone(),
+            content_size: content_size.clone(),
+            tabs_model: tabs_model.clone(),
+            terminals_model: terminals_model.clone(),
+            handles: handles.clone(),
+            bufs: bufs.clone(),
+            render_gates: render_gates.clone(),
+            sftp_handles: sftp_handles.clone(),
+            sftp_last_cwd: sftp_last_cwd.clone(),
+            panes_model: panes_model.clone(),
+            splitters_model: splitters_model.clone(),
         });
+        {
+            let close_ctx = close_ctx.clone();
+            window.on_pane_tab_closed(move |_pane_id: i32, id: SharedString| {
+                close_tab_id(&close_ctx, &id.to_string());
+                refresh_after_tab_close(&close_ctx);
+            });
+        }
+        {
+            let close_ctx = close_ctx.clone();
+            window.on_pane_tab_close_others(move |pane_id: i32, tab_id: SharedString| {
+                let to_close =
+                    tabs_to_close_others(&close_ctx.layout.borrow(), pane_id as u64, tab_id.as_str());
+                let any = !to_close.is_empty();
+                for id in to_close {
+                    close_tab_id(&close_ctx, &id);
+                }
+                if any {
+                    refresh_after_tab_close(&close_ctx);
+                }
+            });
+        }
+        {
+            let close_ctx = close_ctx.clone();
+            window.on_pane_tab_close_left(move |pane_id: i32, tab_id: SharedString| {
+                let to_close =
+                    tabs_to_close_left(&close_ctx.layout.borrow(), pane_id as u64, tab_id.as_str());
+                let any = !to_close.is_empty();
+                for id in to_close {
+                    close_tab_id(&close_ctx, &id);
+                }
+                if any {
+                    refresh_after_tab_close(&close_ctx);
+                }
+            });
+        }
+        {
+            let close_ctx = close_ctx.clone();
+            window.on_pane_tab_close_right(move |pane_id: i32, tab_id: SharedString| {
+                let to_close =
+                    tabs_to_close_right(&close_ctx.layout.borrow(), pane_id as u64, tab_id.as_str());
+                let any = !to_close.is_empty();
+                for id in to_close {
+                    close_tab_id(&close_ctx, &id);
+                }
+                if any {
+                    refresh_after_tab_close(&close_ctx);
+                }
+            });
+        }
+        {
+            let close_ctx = close_ctx.clone();
+            window.on_pane_tab_close_all(move |pane_id: i32| {
+                let to_close = tabs_to_close_all(&close_ctx.layout.borrow(), pane_id as u64);
+                let any = !to_close.is_empty();
+                for id in to_close {
+                    close_tab_id(&close_ctx, &id);
+                }
+                if any {
+                    refresh_after_tab_close(&close_ctx);
+                }
+            });
+        }
     }
 
     // Click anywhere in a pane → focus it (drives which terminal the sidebar and

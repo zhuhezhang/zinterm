@@ -4173,6 +4173,32 @@ fn wire_key_input(
         });
     }
 
+    // Save scrollback + live screen to a user-chosen text file.
+    {
+        let bufs = bufs.clone();
+        window.on_save_terminal_output(move |tab_id: SharedString| {
+            let tid = tab_id.to_string();
+            let text = term_buf(&bufs, &tid)
+                .map(|h| h.lock().unwrap().extract_full_text())
+                .unwrap_or_default();
+            if text.is_empty() {
+                return;
+            }
+            let default_name = format!("terminal-{}.txt", tid);
+            if let Some(path) = rfd::FileDialog::new()
+                .set_title(crate::i18n::t("保存终端输出", "Save terminal output"))
+                .set_file_name(&default_name)
+                .save_file()
+            {
+                std::thread::spawn(move || {
+                    if let Err(e) = std::fs::write(&path, text) {
+                        tracing::warn!("save_terminal_output: {}", e);
+                    }
+                });
+            }
+        });
+    }
+
     // Middle-click / Ctrl+Shift+V: paste clipboard text into PTY.
     {
         let handles = handles.clone();
