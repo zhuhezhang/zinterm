@@ -129,6 +129,10 @@ pub struct ConfigFile {
     /// enabled for existing users (#300).
     #[serde(default)]
     pub extra_paste_shortcuts_disabled: bool,
+    /// Stored inverted so select-to-copy and right-click paste stay enabled for
+    /// existing users unless explicitly disabled in Interface settings.
+    #[serde(default)]
+    pub select_copy_right_paste_disabled: bool,
     /// Hide auxiliary panels and edge strips so the terminal fills the window.
     #[serde(default)]
     pub zen_mode: bool,

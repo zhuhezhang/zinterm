@@ -583,6 +583,7 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> download-always-ask;
     in-out property <bool> paste-confirm-enabled: true;
     in-out property <bool> extra-paste-shortcuts-enabled: true;
+    in-out property <bool> select-copy-right-paste-enabled: true;
     in-out property <bool> zen-mode: false;
     in-out property <bool> welcome-as-sidebar;
     in-out property <bool> quick-commands-as-sidebar;
@@ -624,6 +625,7 @@ export component InterfacePanel inherits Rectangle {
     callback set-download-always-ask(bool);
     callback set-paste-confirm-enabled(bool);
     callback set-extra-paste-shortcuts-enabled(bool);
+    callback set-select-copy-right-paste-enabled(bool);
     callback set-zen-mode(bool);
     callback set-welcome-as-sidebar(bool);
     callback set-quick-commands-as-sidebar(bool);
@@ -942,6 +944,20 @@ export component InterfacePanel inherits Rectangle {
                             Switch {
                                 on: root.paste-confirm-enabled;
                                 toggled(v) => { root.paste-confirm-enabled = v; root.set-paste-confirm-enabled(v); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Select to copy / right-click paste" : "选中复制/右键粘贴";
+                            desc: root.lang-en
+                                ? "Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead."
+                                : "选中文字自动复制到剪贴板；右键粘贴。关闭后恢复右键上下文菜单。";
+                            Switch {
+                                on: root.select-copy-right-paste-enabled;
+                                toggled(v) => {
+                                    root.select-copy-right-paste-enabled = v;
+                                    root.set-select-copy-right-paste-enabled(v);
+                                }
                             }
                         }
 

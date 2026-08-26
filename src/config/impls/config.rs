@@ -720,6 +720,14 @@ impl ConfigStore {
         self.cache.extra_paste_shortcuts_disabled = !enabled;
     }
 
+    pub fn select_copy_right_paste_enabled(&self) -> bool {
+        !self.cache.select_copy_right_paste_disabled
+    }
+
+    pub fn set_select_copy_right_paste_enabled(&mut self, enabled: bool) {
+        self.cache.select_copy_right_paste_disabled = !enabled;
+    }
+
     pub fn zen_mode(&self) -> bool {
         self.cache.zen_mode
     }
@@ -1963,6 +1971,7 @@ mod tests {
         store.cache = serde_json::from_str("{}").unwrap();
         assert!(store.paste_confirm_enabled());
         assert!(store.extra_paste_shortcuts_enabled());
+        assert!(store.select_copy_right_paste_enabled());
         assert!(!store.zen_mode());
         assert_eq!(store.terminal_line_spacing(), 1.0);
 
@@ -1973,9 +1982,11 @@ mod tests {
 
         store.set_paste_confirm_enabled(false);
         store.set_extra_paste_shortcuts_enabled(false);
+        store.set_select_copy_right_paste_enabled(false);
         store.set_zen_mode(true);
         assert!(!store.paste_confirm_enabled());
         assert!(!store.extra_paste_shortcuts_enabled());
+        assert!(!store.select_copy_right_paste_enabled());
         assert!(store.zen_mode());
     }
 

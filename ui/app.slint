@@ -535,7 +535,9 @@ export component AppWindow inherits Window {
     in-out property <bool> paste-confirm-enabled: true;
     callback set-paste-confirm-enabled(bool);
     in-out property <bool> extra-paste-shortcuts-enabled: true;
+    in-out property <bool> select-copy-right-paste-enabled: true;
     callback set-extra-paste-shortcuts-enabled(bool);
+    callback set-select-copy-right-paste-enabled(bool);
     in-out property <bool> zen-mode: false;
     callback set-zen-mode(bool);
     // Render the welcome/session list as a left sidebar instead of a tab (v0.5).
@@ -1378,6 +1380,7 @@ export component AppWindow inherits Window {
                                             cursor-color: root.term-cursor-color;
                                             terminal-line-spacing: root.terminal-line-spacing;
                                             extra-paste-shortcuts-enabled: root.extra-paste-shortcuts-enabled;
+                                            select-copy-right-paste-enabled: root.select-copy-right-paste-enabled;
                                             rows-used: term.rows-used;
                                             scroll-max: term.scroll-max;
                                             scroll-offset: term.scroll-offset;
@@ -4731,6 +4734,7 @@ export component AppWindow inherits Window {
                     download-always-ask <=> root.download-always-ask;
                     paste-confirm-enabled <=> root.paste-confirm-enabled;
                     extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
+                    select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
                     zen-mode <=> root.zen-mode;
                     welcome-as-sidebar <=> root.welcome-as-sidebar;
                     quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
@@ -4769,6 +4773,7 @@ export component AppWindow inherits Window {
                     set-download-always-ask(v) => { root.set-download-always-ask(v); }
                     set-paste-confirm-enabled(v) => { root.set-paste-confirm-enabled(v); }
                     set-extra-paste-shortcuts-enabled(v) => { root.set-extra-paste-shortcuts-enabled(v); }
+                    set-select-copy-right-paste-enabled(v) => { root.set-select-copy-right-paste-enabled(v); }
                     set-zen-mode(v) => { root.set-zen-mode(v); }
                     set-welcome-as-sidebar(v) => { root.set-welcome-as-sidebar(v); }
                     set-quick-commands-as-sidebar(v) => {

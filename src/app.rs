@@ -578,6 +578,7 @@ pub fn run() -> Result<()> {
     window.set_download_always_ask(store.borrow().download_always_ask());
     window.set_paste_confirm_enabled(store.borrow().paste_confirm_enabled());
     window.set_extra_paste_shortcuts_enabled(store.borrow().extra_paste_shortcuts_enabled());
+    window.set_select_copy_right_paste_enabled(store.borrow().select_copy_right_paste_enabled());
     window.set_zen_mode(store.borrow().zen_mode());
     {
         let store = store.clone();
@@ -600,6 +601,14 @@ pub fn run() -> Result<()> {
         window.on_set_extra_paste_shortcuts_enabled(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_extra_paste_shortcuts_enabled(enabled);
+            let _ = s.save();
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_set_select_copy_right_paste_enabled(move |enabled| {
+            let mut s = store.borrow_mut();
+            s.set_select_copy_right_paste_enabled(enabled);
             let _ = s.save();
         });
     }
@@ -3810,6 +3819,7 @@ fn wire_key_input(
 
         let handles = handles.clone();
         let bufs = bufs.clone();
+        let store_send = store.clone();
         // Shared timestamp: the last time the Shift key alone was pressed
         // (key="", shift=true).  Used by the time-based Backspace filter below.
         let last_shift_time: Arc<Mutex<Option<std::time::Instant>>> = Arc::new(Mutex::new(None));
@@ -3827,7 +3837,7 @@ fn wire_key_input(
                         .map(|st| st.session_id.clone())
                 };
                 if let Some(session_id) = dead_session {
-                    let Some(session) = store.borrow().get(&session_id).cloned() else {
+                    let Some(session) = store_send.borrow().get(&session_id).cloned() else {
                         return;
                     };
                     // Drop the dead shell/SFTP handles for this tab.
@@ -4541,9 +4551,11 @@ fn wire_key_input(
     }
     {
         let bufs_sel = bufs.clone();
+        let store_sel = store.clone();
         let weak = window.as_weak();
         window.on_term_select_end(move |tab_id: SharedString| {
             let tid = tab_id.to_string();
+            let auto_copy = store_sel.borrow().select_copy_right_paste_enabled();
             // Extract the selected text; a zero-area selection (a plain click)
             // is cleared instead of copied.
             let text = with_term_buf(&bufs_sel, &tid, |buf| {
@@ -4570,7 +4582,7 @@ fn wire_key_input(
             })
             .flatten();
             match text {
-                Some(t) if !t.is_empty() => {
+                Some(t) if !t.is_empty() && auto_copy => {
                     // Auto-copy on release (select-to-copy, PuTTY style).
                     std::thread::spawn(move || clipboard_set_text(t));
                 }
@@ -4583,9 +4595,11 @@ fn wire_key_input(
     }
     {
         let bufs_sel = bufs.clone();
+        let store_sel = store.clone();
         let weak = window.as_weak();
         window.on_term_select_word(move |tab_id: SharedString, row: i32, col: i32| {
             let tid = tab_id.to_string();
+            let auto_copy = store_sel.borrow().select_copy_right_paste_enabled();
             let text = with_term_buf(&bufs_sel, &tid, |buf| {
                 let (rows, cols) = buf.parser.screen().size();
                 let row = row.clamp(0, rows.saturating_sub(1) as i32) as u16;
@@ -4593,7 +4607,7 @@ fn wire_key_input(
                 buf.select_word_at(row, col)
             })
             .flatten();
-            if let Some(text) = text.filter(|text| !text.is_empty()) {
+            if let Some(text) = text.filter(|text| !text.is_empty() && auto_copy) {
                 std::thread::spawn(move || clipboard_set_text(text));
             }
             if let Some(win) = weak.upgrade() {
