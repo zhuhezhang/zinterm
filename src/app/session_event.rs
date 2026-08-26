@@ -70,8 +70,17 @@ pub(super) fn apply_session_event_to_window(
     match event {
         SessionEvent::Status(status) => {
             // Connection progress / info goes into the terminal like remote
-            // output (no separate status strip).
-            let chunk = format!("\r\n\x1b[90m{status}\x1b[0m\r\n");
+            // output (no separate status strip). Skip a leading newline when the
+            // cursor is already at column 0 so "Connecting..." / "Connected..."
+            // don't sit under a blank line on a fresh screen.
+            let at_col0 = term_buf(bufs, tab_id)
+                .map(|h| h.lock().unwrap().parser.screen().cursor_position().1 == 0)
+                .unwrap_or(true);
+            let chunk = if at_col0 {
+                format!("\x1b[90m{status}\x1b[0m\r\n")
+            } else {
+                format!("\r\n\x1b[90m{status}\x1b[0m\r\n")
+            };
             let _ = ingest_terminal_output(bufs, tab_id, chunk.as_bytes());
             request_tab_render_from_ui(win.as_weak(), tab_id, bufs, gates);
         }
@@ -91,15 +100,15 @@ pub(super) fn apply_session_event_to_window(
             // Print disconnect info + reconnect hint into the terminal
             // (FinalShell-style), via synthetic Output (#79).
             let hint = crate::i18n::t(
-                "连接已断开,按 R 重新连接",
-                "Disconnected — press R to reconnect",
+                "按 R 重新连接",
+                "Press R to reconnect",
             );
             let body = if reason.trim().is_empty() {
                 hint.to_string()
             } else {
                 format!(
                     "{} — {reason}\r\n{hint}",
-                    crate::i18n::t("已断开", "Disconnected")
+                    crate::i18n::t("连接已断开", "Disconnected")
                 )
             };
             apply_session_event_to_window(

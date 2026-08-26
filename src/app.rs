@@ -3779,7 +3779,7 @@ fn wire_key_input(
         let last_shift_time: Arc<Mutex<Option<std::time::Instant>>> = Arc::new(Mutex::new(None));
         window.on_send_key(move |tab_id: SharedString, key: SharedString, ctrl: bool, alt: bool, shift: bool| {
             // ── R on a disconnected tab → reconnect in place (#79) ─────────
-            // FinalShell-style: the tab shows "连接已断开,按 R 重新连接";
+            // FinalShell-style: the tab shows "按 R 重新连接";
             // pressing R re-spawns the shell + SFTP workers in the SAME tab
             // with a fresh screen instead of forcing the user to open a new one.
             if key.eq_ignore_ascii_case("r") && !ctrl && !alt {
