@@ -253,41 +253,6 @@ pub(super) fn history_view_model(store: &ConfigStore, query: &str) -> ModelRc<Hi
 #[path = "../../tests/app/command_history/mod.rs"]
 mod history_view_tests;
 
-/// Find every (case-insensitive) occurrence of `query` across the currently
-/// displayed rows and return highlight rectangles in GRID-COLUMN space (wide
-/// CJK glyphs count as two columns, so highlights line up over the text #132).
-pub(super) fn compute_find_matches(rows: &[String], query: &str) -> Vec<TermMatch> {
-    let mut out: Vec<TermMatch> = Vec::new();
-    if query.is_empty() {
-        return out;
-    }
-    let q: Vec<char> = query.chars().map(|c| c.to_ascii_lowercase()).collect();
-    if q.is_empty() {
-        return out;
-    }
-    for (r, line) in rows.iter().enumerate() {
-        let chars: Vec<char> = line.chars().collect();
-        let lower: Vec<char> = chars.iter().map(|c| c.to_ascii_lowercase()).collect();
-        let prefix = cell_prefix(&chars);
-        let mut i = 0usize;
-        while i + q.len() <= lower.len() {
-            if lower[i..i + q.len()] == q[..] {
-                let col = prefix[i] as i32;
-                let len = (prefix[i + q.len()] - prefix[i]) as i32;
-                out.push(TermMatch {
-                    row: r as i32,
-                    col,
-                    len,
-                });
-                i += q.len();
-            } else {
-                i += 1;
-            }
-        }
-    }
-    out
-}
-
 /// Apply a settled terminal size to the PTY + vt100 grid. Factored out of the
 /// resize callback so that callback can debounce — a layout reflow can briefly
 /// report a near-zero width, collapsing term-cols to its 10-col floor; applying
@@ -334,7 +299,11 @@ pub(super) fn rebuild_tab_display(win: &AppWindow, bufs: &TermBuffers, tab_id: &
     let data = with_term_buf(bufs, tab_id, |buf| {
         let cols = buf.parser.screen().size().1;
         let b = buf.render(); // also refreshes buf.displayed_text
-        let matches = compute_find_matches(&buf.displayed_text, &buf.find_query);
+        let matches = compute_find_matches(
+            &buf.displayed_text,
+            &buf.find_query,
+            &buf.find_options,
+        );
         let sel = buf.selection_rects_visible(cols);
         (b, matches, sel)
     });

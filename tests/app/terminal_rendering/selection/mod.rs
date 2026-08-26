@@ -137,13 +137,14 @@ fn find_matches_report_grid_columns_past_cjk() {
     // Highlight rects must sit at the GRID column, not the char index, so
     // they line up over the text after CJK glyphs (#132).
     let rows = vec!["提示: 1pctl".to_string()];
-    let m = compute_find_matches(&rows, "1pctl");
+    let opts = FindOptions::default();
+    let m = compute_find_matches(&rows, "1pctl", &opts);
     assert_eq!(m.len(), 1);
     assert_eq!(m[0].col, 6, "grid column 6, not char index 4");
     assert_eq!(m[0].len, 5);
 
     // A CJK query spans two grid cells per glyph.
-    let m2 = compute_find_matches(&rows, "提示");
+    let m2 = compute_find_matches(&rows, "提示", &opts);
     assert_eq!(m2.len(), 1);
     assert_eq!(m2[0].col, 0);
     assert_eq!(m2[0].len, 4, "two wide glyphs span four grid cells");

@@ -122,7 +122,7 @@ impl TermBuffer {
         if query.is_empty() || self.parser.screen().alternate_screen() {
             return false;
         }
-        let q = query.to_lowercase();
+        let opts = self.find_options;
         let (live, _) = self.live_rows();
         let rows = self.parser.screen().size().0 as usize;
         let hist_len = self.history.len();
@@ -132,7 +132,7 @@ impl TermBuffer {
             .iter()
             .map(|line| &line.0)
             .chain(live.iter().map(|line| &line.0))
-            .position(|line| line.to_lowercase().contains(&q))
+            .position(|line| crate::terminal::line_has_find_match(line, query, &opts))
         else {
             return false;
         };

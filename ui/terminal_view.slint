@@ -2,7 +2,7 @@ import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { SftpPanel, SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { TabInfo } from "tabs.slint";
-import { DockExpandButton, GhostButton, PrimaryButton, ToolStrip, TooltipArea, BorderedLineInput, BorderedTextArea } from "widgets.slint";
+import { DockExpandButton, GhostButton, PrimaryButton, ToolStrip, TooltipArea, BorderedLineInput, BorderedTextArea, IconButton } from "widgets.slint";
 
 // Embed the terminal fonts here too so the cell-probe Text below measures
 // with the CORRECT font (the built-in Meatshell Mono), not a system fallback.
@@ -85,13 +85,49 @@ component MenuItem inherits Rectangle {
             font-size: Theme.fs-sm;
             vertical-alignment: center;
         }
-
         Text {
             text: root.label;
             color: Theme.text-primary;
             font-size: Theme.fs-md;
             vertical-alignment: center;
             horizontal-stretch: 1;
+        }
+    }
+}
+
+// Compact on/off chip used by the floating find bar (Aa / W / .* ).
+component FindToggle inherits Rectangle {
+    in-out property <bool> on: false;
+    in property <string> label;
+    in property <string> tip;
+    callback toggled(bool);
+
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    background: root.on
+        ? Theme.accent.with-alpha(0.35)
+        : (ta.has-hover ? Theme.bg-hover : transparent);
+    border-width: root.on ? 1px : 0;
+    border-color: Theme.accent.with-alpha(0.7);
+
+    Text {
+        text: root.label;
+        color: root.on ? Theme.text-primary : Theme.text-secondary;
+        font-size: Theme.fs-sm;
+        font-weight: root.on ? 700 : 400;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    ta := TooltipArea {
+        mouse-cursor: pointer;
+        tooltip-text: root.tip;
+        anchor-width: root.width;
+        anchor-height: root.height;
+        activate => {
+            root.on = !root.on;
+            root.toggled(root.on);
         }
     }
 }
@@ -511,7 +547,7 @@ export component TerminalView inherits Rectangle {
     callback paste-from-clipboard();
     callback copy-terminal-text();
     callback clear-terminal();              // wipe this session's screen buffer
-    callback find-query-changed(string);    // recompute search highlights
+    callback find-query-changed(string /* query */, bool /* case */, bool /* whole */, bool /* regex */);
     callback terminal-scroll(int);          // scroll history by N lines (+ = up)
     // Wheel inside an alt-screen app (tmux/less/vim): forward to the program so it
     // scrolls, instead of doing nothing (#170). dir = +1 up / -1 down; col/row =
@@ -534,6 +570,10 @@ export component TerminalView inherits Rectangle {
     // still dispatching the popup event. Focusing its TextInput synchronously
     // can re-enter the Windows IME/accessibility plumbing and panic (#343).
     property <bool> find-focus-pending: false;
+    property <bool> find-case-sensitive: false;
+    property <bool> find-whole-word: false;
+    property <bool> find-regex: false;
+    property <int> find-match-index: 0; // 1-based; 0 when no selection yet
     property <bool> selecting: false;
     // Auto-scroll direction while drag-selecting past the visible edge.
     // 0 = none, -1 = above top (scroll to older), +1 = below bottom (newer).
@@ -564,6 +604,50 @@ export component TerminalView inherits Rectangle {
             root.find-request-seq-seen = root.find-request-seq;
             root.find-active = true;
             root.find-focus-pending = true;
+        }
+    }
+
+    function emit-find-query(query: string) {
+        root.find-query-changed(
+            query,
+            root.find-case-sensitive,
+            root.find-whole-word,
+            root.find-regex);
+    }
+
+    function close-find() {
+        root.emit-find-query("");
+        root.find-match-index = 0;
+        root.find-active = false;
+        ime-input.focus();
+    }
+
+    function find-next() {
+        if (root.find-matches.length <= 0) {
+            root.find-match-index = 0;
+            return;
+        }
+        root.find-match-index = root.find-match-index >= root.find-matches.length
+            ? 1
+            : root.find-match-index + 1;
+    }
+
+    function find-prev() {
+        if (root.find-matches.length <= 0) {
+            root.find-match-index = 0;
+            return;
+        }
+        root.find-match-index = root.find-match-index <= 1
+            ? root.find-matches.length
+            : root.find-match-index - 1;
+    }
+
+    changed find-matches => {
+        if (root.find-matches.length <= 0) {
+            root.find-match-index = 0;
+        } else if (root.find-match-index <= 0
+            || root.find-match-index > root.find-matches.length) {
+            root.find-match-index = 1;
         }
     }
 
@@ -888,12 +972,14 @@ export component TerminalView inherits Rectangle {
                                     }
 
                                     // Search-match highlights (behind the text).
-                                    for m in root.find-matches: Rectangle {
+                                    for m[idx] in root.find-matches: Rectangle {
                                         x: m.col * root.cell-w;
                                         y: m.row * root.cell-h;
                                         width: m.len * root.cell-w;
                                         height: root.cell-h;
-                                        background: Theme.warning.with-alpha(0.45);
+                                        background: (idx + 1 == root.find-match-index)
+                                            ? Theme.accent.with-alpha(0.55)
+                                            : Theme.warning.with-alpha(0.40);
                                         border-radius: 2px;
                                     }
 
@@ -1132,6 +1218,7 @@ export component TerminalView inherits Rectangle {
                                     && (event.text == "f" || event.text == "F"
                                     || event.text == "\u{0006}")) {
                                     root.find-active = true;
+                                    root.find-focus-pending = true;
                                     accept
                                 // ── Jump to command-history search: ⌘⇧R / Ctrl+Shift+R (#140) ──
                                 } else if (event.modifiers.control && event.modifiers.shift
@@ -1226,9 +1313,10 @@ export component TerminalView inherits Rectangle {
                         }
 
                         if root.find-active: Rectangle {
-                            x: 0;
-                            y: 0;
-                            width: parent.width;
+                            // Floating find bar — top-right, not full terminal width.
+                            x: max(8px, parent.width - self.width - 10px);
+                            y: 8px;
+                            width: min(460px, parent.width - 16px);
                             height: 34px;
                             background: Theme.popup-bg;
                             border-width: 1px;
@@ -1247,8 +1335,12 @@ export component TerminalView inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                padding: 6px;
-                                spacing: 6px;
+                                padding-left: 6px;
+                                padding-right: 4px;
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                spacing: 4px;
+
                                 Text {
                                     text: "\u{E8B6}";
                                     font-family: "Material Icons";
@@ -1261,6 +1353,7 @@ export component TerminalView inherits Rectangle {
                                     background: Theme.bg-root;
                                     border-radius: 3px;
                                     horizontal-stretch: 1;
+                                    min-width: 96px;
                                     find-input := TextInput {
                                         x: 6px;
                                         width: parent.width - 12px;
@@ -1274,13 +1367,21 @@ export component TerminalView inherits Rectangle {
                                         // have completed; synchronous focus crashes on
                                         // Windows when opened from right-click (#343).
                                         init => { root.find-focus-pending = true; }
-                                        edited => { root.find-query-changed(self.text); }
+                                        edited => {
+                                            root.find-match-index = 0;
+                                            root.emit-find-query(self.text);
+                                        }
                                         key-pressed(e) => {
-                                            if (e.text == "\u{001b}") {       // Esc closes find
-                                                root.find-active = false;
-                                                root.find-query-changed("");
-                                                self.text = "";
-                                                ime-input.focus();
+                                            if (e.text == Key.Escape) {       // Esc closes find
+                                                find-input.text = "";
+                                                root.close-find();
+                                                accept
+                                            } else if (e.text == Key.Return) {
+                                                if (e.modifiers.shift) {
+                                                    root.find-prev();
+                                                } else {
+                                                    root.find-next();
+                                                }
                                                 accept
                                             } else {
                                                 reject
@@ -1289,25 +1390,70 @@ export component TerminalView inherits Rectangle {
                                     }
                                 }
 
-                                Rectangle {
-                                    width: 24px;
-                                    close-ta := TouchArea {
-                                        mouse-cursor: pointer;
-                                        clicked => {
-                                            root.find-active = false;
-                                            root.find-query-changed("");
-                                            find-input.text = "";
-                                            ime-input.focus();
-                                        }
-                                    }
+                                Text {
+                                    min-width: 40px;
+                                    text: find-input.text == "" ? ""
+                                        : (root.find-match-index > 0
+                                            ? root.find-match-index + "/" + root.find-matches.length
+                                            : "" + root.find-matches.length);
+                                    color: Theme.text-muted;
+                                    font-size: Theme.fs-sm;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
+                                }
 
-                                    Text {
-                                        text: "\u{E5CD}";
-                                        font-family: "Material Icons";
-                                        color: close-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
-                                        font-size: Theme.fs-sm;
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
+                                FindToggle {
+                                    label: "Aa";
+                                    tip: @tr("Match case");
+                                    on <=> root.find-case-sensitive;
+                                    toggled(_) => {
+                                        root.find-match-index = 0;
+                                        root.emit-find-query(find-input.text);
+                                    }
+                                }
+
+                                FindToggle {
+                                    label: "W";
+                                    tip: @tr("Match whole word");
+                                    on <=> root.find-whole-word;
+                                    toggled(_) => {
+                                        root.find-match-index = 0;
+                                        root.emit-find-query(find-input.text);
+                                    }
+                                }
+
+                                FindToggle {
+                                    label: ".*";
+                                    tip: @tr("Use regular expression");
+                                    on <=> root.find-regex;
+                                    toggled(_) => {
+                                        root.find-match-index = 0;
+                                        root.emit-find-query(find-input.text);
+                                    }
+                                }
+
+                                IconButton {
+                                    size: 24px;
+                                    glyph: "↑";
+                                    tooltip: @tr("Previous match");
+                                    clicked => { root.find-prev(); }
+                                }
+
+                                IconButton {
+                                    size: 24px;
+                                    glyph: "↓";
+                                    tooltip: @tr("Next match");
+                                    clicked => { root.find-next(); }
+                                }
+
+                                IconButton {
+                                    size: 24px;
+                                    glyph: "\u{E5CD}";
+                                    font-family: "Material Icons";
+                                    tooltip: @tr("Close");
+                                    clicked => {
+                                        find-input.text = "";
+                                        root.close-find();
                                     }
                                 }
                             }

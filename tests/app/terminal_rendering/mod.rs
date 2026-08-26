@@ -20,6 +20,7 @@ fn make_buf(
     TermBuffer {
         parser,
         find_query: String::new(),
+        find_options: FindOptions::default(),
         is_dark: false,
         output_highlight: OutputHighlightPreset::Log,
         custom_highlight_rules: Vec::new(),

@@ -839,7 +839,7 @@ export component AppWindow inherits Window {
     // Save a session's scrollback + live screen to a text file.
     callback save-terminal-output(string /* tab-id */);
     // Recompute search highlights for a session's visible screen.
-    callback find-query-changed(string /* tab-id */, string /* query */);
+    callback find-query-changed(string /* tab-id */, string /* query */, bool /* case */, bool /* whole */, bool /* regex */);
     // Scroll a session's scrollback history by N lines (+ = up/older).
     callback terminal-scroll(string /* tab-id */, int /* delta-lines */);
     // Wheel forwarded to an alt-screen program (#170): tab-id, dir (+1 up/-1 down), col, row.
@@ -1525,7 +1525,9 @@ export component AppWindow inherits Window {
                                             paste-from-clipboard() => { root.paste-from-clipboard(term.id); }
                                             copy-terminal-text() => { root.copy-terminal-text(term.id); }
                                             clear-terminal() => { root.clear-terminal(term.id); }
-                                            find-query-changed(q) => { root.find-query-changed(term.id, q); }
+                                            find-query-changed(q, case-sensitive, whole-word, use-regex) => {
+                                                root.find-query-changed(term.id, q, case-sensitive, whole-word, use-regex);
+                                            }
                                             terminal-scroll(d) => { root.terminal-scroll(term.id, d); }
                                             terminal-wheel(d, c, r) => { root.terminal-wheel(term.id, d, c, r); }
                                             terminal-scroll-to(o) => { root.terminal-scroll-to(term.id, o); }

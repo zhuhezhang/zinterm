@@ -10,10 +10,19 @@ pub(crate) enum CtrlKeySide {
     Right,
 }
 
+/// Options for the in-terminal find bar (case / whole-word / regex).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct FindOptions {
+    pub(crate) case_sensitive: bool,
+    pub(crate) whole_word: bool,
+    pub(crate) regex: bool,
+}
+
 /// Per-terminal state used by normal and alternate-screen rendering.
 pub(crate) struct TermBuffer {
     pub(crate) parser: vt100::Parser,
     pub(crate) find_query: String,
+    pub(crate) find_options: FindOptions,
     pub(crate) is_dark: bool,
     pub(crate) output_highlight: OutputHighlightPreset,
     pub(crate) custom_highlight_rules: Vec<CompiledOutputRule>,

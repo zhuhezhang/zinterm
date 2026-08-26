@@ -146,10 +146,10 @@ use crate::ssh::{
 #[cfg(windows)]
 use crate::terminal::c0_letter_key_down;
 use crate::terminal::{
-    bare_ctrl_marker_workaround_enabled, cell_prefix, compile_output_rules,
+    bare_ctrl_marker_workaround_enabled, compile_output_rules, compute_find_matches,
     encode_command_bar_input, encode_pasted_text, key_to_pty_bytes, paste_requires_large_review,
-    should_drop_bare_ctrl_marker, terminal_uses_bracketed_paste, CsiState, OutputHighlightPreset,
-    RenderGates, TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
+    should_drop_bare_ctrl_marker, terminal_uses_bracketed_paste, CsiState, FindOptions,
+    OutputHighlightPreset, RenderGates, TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
 };
 #[cfg(test)]
 use crate::terminal::{
@@ -2921,6 +2921,7 @@ fn wire_session_callbacks(
                 Arc::new(Mutex::new(TermBuffer {
                     parser: vt100::Parser::new(24, 80, 5000),
                     find_query: String::new(),
+                    find_options: FindOptions::default(),
                     is_dark: is_dark_now,
                     output_highlight,
                     custom_highlight_rules,
@@ -4286,6 +4287,7 @@ fn wire_key_input(
                 let (rows, cols) = buf.parser.screen().size();
                 buf.parser = vt100::Parser::new(rows, cols, 5000);
                 buf.find_query.clear();
+                buf.find_options = FindOptions::default();
                 buf.history = VecDeque::new(); // recycle the session scrollback
                 buf.prev = Vec::new();
                 buf.view_offset = 0;
@@ -4317,31 +4319,44 @@ fn wire_key_input(
     {
         let bufs_find = bufs.clone();
         let weak = window.as_weak();
-        window.on_find_query_changed(move |tab_id: SharedString, query: SharedString| {
-            let tid = tab_id.to_string();
-            let q = query.to_string();
-            let (matches, jumped) = with_term_buf(&bufs_find, &tid, |buf| {
-                buf.find_query = q.clone();
-                let mut matches = compute_find_matches(&buf.displayed_text, &q);
-                let jumped = matches.is_empty() && buf.scroll_to_first_find_match(&q);
-                if jumped {
-                    buf.render();
-                    matches = compute_find_matches(&buf.displayed_text, &q);
+        window.on_find_query_changed(
+            move |tab_id: SharedString,
+                  query: SharedString,
+                  case_sensitive: bool,
+                  whole_word: bool,
+                  use_regex: bool| {
+                let tid = tab_id.to_string();
+                let q = query.to_string();
+                let opts = FindOptions {
+                    case_sensitive,
+                    whole_word,
+                    regex: use_regex,
+                };
+                let (matches, jumped) = with_term_buf(&bufs_find, &tid, |buf| {
+                    buf.find_query = q.clone();
+                    buf.find_options = opts;
+                    let mut matches =
+                        compute_find_matches(&buf.displayed_text, &q, &opts);
+                    let jumped = matches.is_empty() && buf.scroll_to_first_find_match(&q);
+                    if jumped {
+                        buf.render();
+                        matches = compute_find_matches(&buf.displayed_text, &q, &opts);
+                    }
+                    (matches, jumped)
+                })
+                .unwrap_or_default();
+                if let Some(win) = weak.upgrade() {
+                    if jumped {
+                        rebuild_tab_display(&win, &bufs_find, &tid);
+                        return;
+                    }
+                    let model = ModelRc::from(Rc::new(VecModel::from(matches)));
+                    set_terminal_row(&win, &tid, |row| {
+                        row.find_matches = model.clone();
+                    });
                 }
-                (matches, jumped)
-            })
-            .unwrap_or_default();
-            if let Some(win) = weak.upgrade() {
-                if jumped {
-                    rebuild_tab_display(&win, &bufs_find, &tid);
-                    return;
-                }
-                let model = ModelRc::from(Rc::new(VecModel::from(matches)));
-                set_terminal_row(&win, &tid, |row| {
-                    row.find_matches = model.clone();
-                });
-            }
-        });
+            },
+        );
     }
 
     // Mouse-wheel → scroll the scrollback history.

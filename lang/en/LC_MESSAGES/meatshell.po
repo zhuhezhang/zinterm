@@ -477,6 +477,24 @@ msgstr "Close all tabs"
 msgid "Find in terminal"
 msgstr "Find in terminal"
 
+msgid "Match case"
+msgstr "Match case"
+
+msgid "Match whole word"
+msgstr "Match whole word"
+
+msgid "Use regular expression"
+msgstr "Use regular expression"
+
+msgid "Previous match"
+msgstr "Previous match"
+
+msgid "Next match"
+msgstr "Next match"
+
+msgid "Close"
+msgstr "Close"
+
 msgid "Clear screen"
 msgstr "Clear screen"
 

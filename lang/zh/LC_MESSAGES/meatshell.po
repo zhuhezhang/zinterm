@@ -477,6 +477,24 @@ msgstr "关闭所有标签页"
 msgid "Find in terminal"
 msgstr "查找终端内容"
 
+msgid "Match case"
+msgstr "区分大小写"
+
+msgid "Match whole word"
+msgstr "全字匹配"
+
+msgid "Use regular expression"
+msgstr "使用正则表达式"
+
+msgid "Previous match"
+msgstr "上一个匹配"
+
+msgid "Next match"
+msgstr "下一个匹配"
+
+msgid "Close"
+msgstr "关闭"
+
 msgid "Clear screen"
 msgstr "清屏"
 

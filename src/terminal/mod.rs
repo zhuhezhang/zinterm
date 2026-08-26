@@ -3,6 +3,8 @@ mod state;
 
 #[path = "impls/encoding.rs"]
 mod encoding;
+#[path = "impls/find.rs"]
+mod find;
 #[path = "impls/input.rs"]
 mod input;
 #[path = "impls/json_output.rs"]
@@ -27,6 +29,7 @@ mod term_buffer;
 pub(crate) mod zmodem;
 
 pub(crate) use encoding::TerminalEncoding;
+pub(crate) use find::{compute_find_matches, line_has_find_match};
 #[cfg(windows)]
 pub(crate) use input::c0_letter_key_down;
 #[cfg(test)]
@@ -50,6 +53,6 @@ pub(crate) use render::{
 #[cfg(any(target_os = "windows", test))]
 pub(crate) use state::CtrlKeySide;
 pub(crate) use state::{
-    BuiltScreen, CompiledOutputRule, CsiState, HistSpan, Line, OutputHighlightPreset, RenderGates,
-    TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
+    BuiltScreen, CompiledOutputRule, CsiState, FindOptions, HistSpan, Line, OutputHighlightPreset,
+    RenderGates, TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
 };
