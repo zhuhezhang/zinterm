@@ -494,7 +494,7 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Find in terminal");
-                    hint: Theme.is-mac ? "⌘F" : "Ctrl+F";
+                    hint: Theme.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
                     enabled: root.menu-target != "welcome";
                     clicked => { root.tab-find(root.menu-target); tab-menu.close(); }
                 }

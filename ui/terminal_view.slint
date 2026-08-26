@@ -1213,8 +1213,8 @@ export component TerminalView inherits Rectangle {
                                     && (event.text == Key.Tab || event.text == Key.Backtab)) {
                                     root.cycle-tab(event.modifiers.shift || event.text == Key.Backtab);
                                     accept
-                                // ── Find: ⌘F / Ctrl+F (mirrors right-click → Find) ──
-                                } else if (event.modifiers.control && !event.modifiers.shift
+                                // ── Find: ⌘⇧F / Ctrl+Shift+F (mirrors right-click → Find) ──
+                                } else if (event.modifiers.control && event.modifiers.shift
                                     && (event.text == "f" || event.text == "F"
                                     || event.text == "\u{0006}")) {
                                     root.find-active = true;

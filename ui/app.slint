@@ -4020,11 +4020,6 @@ export component AppWindow inherits Window {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘F" : "Ctrl+F";
-                            desc: root.lang-en ? "Find in terminal" : "查找";
-                        }
-
-                        ShortcutRow {
                             keys: root.is-mac ? "⌘⇧R" : "Ctrl+Shift+R";
                             desc: root.lang-en ? "Jump to command history search" : "跳到命令历史搜索";
                         }
@@ -4037,6 +4032,36 @@ export component AppWindow inherits Window {
                         ShortcutRow {
                             keys: root.lang-en ? "Wheel / Scrollbar" : "滚轮 / 滚动条";
                             desc: root.lang-en ? "Scroll history" : "滚动历史";
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
+                            desc: root.lang-en ? "Open find bar" : "打开查找框";
+                        }
+
+                        Rectangle {
+                            height: 6px;
+                        }
+
+                        Text {
+                            text: root.lang-en ? "Find in terminal input" : "终端内容查找输入框";
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-xs;
+                        }
+
+                        ShortcutRow {
+                            keys: "Enter";
+                            desc: root.lang-en ? "Next match" : "下一个匹配";
+                        }
+
+                        ShortcutRow {
+                            keys: "Shift+Enter";
+                            desc: root.lang-en ? "Previous match" : "上一个匹配";
+                        }
+
+                        ShortcutRow {
+                            keys: "Esc";
+                            desc: root.lang-en ? "Close find bar" : "关闭查找框";
                         }
 
                         Rectangle {
