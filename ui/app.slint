@@ -2453,10 +2453,11 @@ export component AppWindow inherits Window {
                 }
             }
 
-            Flickable {
+            // ScrollView (not bare Flickable) so a scrollbar appears when the list overflows.
+            ScrollView {
                 vertical-stretch: 1;
-                viewport-width: self.width;
-                viewport-height: max(self.height, xfer-col.preferred-height);
+                viewport-width: self.visible-width;
+                viewport-height: max(self.visible-height, xfer-col.preferred-height);
                 xfer-col := VerticalLayout {
                     alignment: start;
                     spacing: 4px;
