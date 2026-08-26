@@ -168,6 +168,39 @@ fn tab_title_len(title: &str) -> i32 {
         .min(i32::MAX as usize) as i32
 }
 
+fn tab_title_by_id(tabs_model: &VecModel<TabInfo>, tab_id: &str) -> String {
+    use slint::Model as _;
+    (0..tabs_model.row_count())
+        .find_map(|i| {
+            let row = tabs_model.row_data(i)?;
+            (row.id.as_str() == tab_id).then(|| row.title.to_string())
+        })
+        .unwrap_or_else(|| tab_id.to_string())
+}
+
+fn filename_safe_segment(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '<' | '>' | '"' | '|' | '?' | '*' => '_',
+            c if (c as u32) < 0x20 => '_',
+            c => c,
+        })
+        .collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() {
+        "terminal".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn terminal_output_default_filename(tab_title: &str) -> String {
+    use chrono::Local;
+    let stamp = Local::now().format("%Y%m%d_%H%M%S");
+    format!("{}_{}.txt", stamp, filename_safe_segment(tab_title))
+}
+
 fn should_block_close(exit_confirmed: bool, has_live_sessions: bool) -> bool {
     !exit_confirmed && has_live_sessions
 }
@@ -1467,6 +1500,7 @@ pub fn run() -> Result<()> {
         bufs.clone(),
         last_term_size.clone(),
         store.clone(),
+        tabs_model.clone(),
         ConnectCtx {
             weak: window.as_weak(),
             runtime: runtime.clone(),
@@ -3248,6 +3282,7 @@ fn wire_key_input(
     bufs: TermBuffers,
     last_term_size: Arc<Mutex<(u32, u32)>>,
     store: Rc<RefCell<ConfigStore>>,
+    tabs_model: Rc<VecModel<TabInfo>>,
     ctx: ConnectCtx,
 ) {
     // --- Command bar (#55): run command + quick-command management ---------
@@ -4177,6 +4212,7 @@ fn wire_key_input(
     // Save scrollback + live screen to a user-chosen text file.
     {
         let bufs = bufs.clone();
+        let tabs_model = tabs_model.clone();
         window.on_save_terminal_output(move |tab_id: SharedString| {
             let tid = tab_id.to_string();
             let text = term_buf(&bufs, &tid)
@@ -4185,7 +4221,8 @@ fn wire_key_input(
             if text.is_empty() {
                 return;
             }
-            let default_name = format!("terminal-{}.txt", tid);
+            let tab_title = tab_title_by_id(tabs_model.as_ref(), &tid);
+            let default_name = terminal_output_default_filename(&tab_title);
             if let Some(path) = rfd::FileDialog::new()
                 .set_title(crate::i18n::t("保存终端输出", "Save terminal output"))
                 .set_file_name(&default_name)
