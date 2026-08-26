@@ -736,11 +736,11 @@ export component AppWindow inherits Window {
     callback tab-selected(string);
     callback tab-closed(string);
     callback new-tab-clicked();
-    callback tab-reorder(int /* from-index */, int /* dir: -1 left / +1 right */);
+    callback tab-reorder(string /* tab-id */, int /* dir: slots, neg=left / pos=right */);
     // Per-pane tab actions (v0.5): the int is the pane (leaf) id.
     callback pane-tab-selected(int /* pane-id */, string /* tab-id */);
     callback pane-tab-closed(int /* pane-id */, string /* tab-id */);
-    callback pane-tab-reorder(int /* pane-id */, int /* from */, int /* dir */);
+    callback pane-tab-reorder(int /* pane-id */, string /* tab-id */, int /* dir */);
     callback pane-focus(int /* pane-id */);
     callback cycle-tab(bool /* reverse */);
     // Split pane `pane-id`, peeling `tab-id` into a new pane on `dir`
@@ -1270,8 +1270,8 @@ export component AppWindow inherits Window {
                                             active-id: pane.active-id;
                                             tab-selected(id) => { root.pane-tab-selected(pane.id, id); }
                                             tab-closed(id) => { root.pane-tab-closed(pane.id, id); }
-                                            tab-reorder(from-index, direction) => {
-                                                root.pane-tab-reorder(pane.id, from-index, direction);
+                                            tab-reorder(tab-id, direction) => {
+                                                root.pane-tab-reorder(pane.id, tab-id, direction);
                                             }
                                             tab-split(id, dir) => { root.pane-split(pane.id, id, dir); }
                                             merge-pane() => { root.pane-merge(pane.id); }

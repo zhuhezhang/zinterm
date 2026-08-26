@@ -79,45 +79,89 @@ pub(super) fn wire_tab_callbacks(
         });
     }
 
-    // Drag-to-reorder within a pane's strip: move the tab at `from` one slot in
-    // `dir`. Only the pane's own tab order changes; content shows by active id.
+    // Drag-to-reorder within a pane's strip: move `tab_id` by `dir` slots
+    // (negative = left, positive = right). Updates the existing pane tab
+    // VecModel in place via set_row_data rotation so the TouchArea that holds
+    // the pointer grab survives and the user can hop across multiple tabs in
+    // one gesture.
     {
         let weak = window.as_weak();
         let layout = layout.clone();
-        let content_size = content_size.clone();
-        let tabs_model = tabs_model.clone();
         let panes_model = panes_model.clone();
-        let splitters_model = splitters_model.clone();
-        window.on_pane_tab_reorder(move |pane_id: i32, from: i32, dir: i32| {
-            {
+        window.on_pane_tab_reorder(move |pane_id: i32, tab_id: SharedString, dir: i32| {
+            let tab_id = tab_id.to_string();
+            if dir == 0 || tab_id.is_empty() {
+                return;
+            }
+            let (from, to) = {
                 let mut lay = layout.borrow_mut();
-                if let Some(l) = lay.leaf_mut(pane_id as u64) {
-                    let n = l.tabs.len() as i32;
-                    if n <= 1 {
-                        return;
-                    }
-                    let from = from.clamp(0, n - 1);
-                    let to = (from + dir).clamp(0, n - 1);
-                    if from == to {
-                        return;
-                    }
-                    let item = l.tabs.remove(from as usize);
-                    l.tabs.insert(to as usize, item);
+                let Some(l) = lay.leaf_mut(pane_id as u64) else {
+                    return;
+                };
+                let n = l.tabs.len() as i32;
+                if n <= 1 {
+                    return;
                 }
+                let Some(from) = l.tabs.iter().position(|t| t.as_str() == tab_id) else {
+                    return;
+                };
+                let from = from as i32;
+                let to = (from + dir).clamp(0, n - 1);
+                if from == to {
+                    return;
+                }
+                let item = l.tabs.remove(from as usize);
+                l.tabs.insert(to as usize, item);
+                (from as usize, to as usize)
+            };
+            // Mirror the move onto the live UI model without replacing ModelRc
+            // (a full refresh_panes would destroy the drag source mid-gesture).
+            for i in 0..panes_model.row_count() {
+                let Some(pane) = panes_model.row_data(i) else {
+                    continue;
+                };
+                if pane.id != pane_id {
+                    continue;
+                }
+                let Some(tm) = pane.tabs.as_any().downcast_ref::<VecModel<TabInfo>>() else {
+                    break;
+                };
+                // Prefer indices from the layout hop; fall back to a fresh id lookup
+                // if the UI model somehow drifted.
+                let from = (0..tm.row_count())
+                    .find(|&j| {
+                        tm.row_data(j)
+                            .map(|t| t.id.as_str() == tab_id)
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(from);
+                let to = to.min(tm.row_count().saturating_sub(1));
+                if from == to || from >= tm.row_count() {
+                    break;
+                }
+                let Some(moving) = tm.row_data(from) else {
+                    break;
+                };
+                if from < to {
+                    for j in from..to {
+                        if let Some(next) = tm.row_data(j + 1) {
+                            tm.set_row_data(j, next);
+                        }
+                    }
+                    tm.set_row_data(to, moving);
+                } else {
+                    for j in (to..from).rev() {
+                        if let Some(prev) = tm.row_data(j) {
+                            tm.set_row_data(j + 1, prev);
+                        }
+                    }
+                    tm.set_row_data(to, moving);
+                }
+                break;
             }
             if let Some(w) = weak.upgrade() {
-                // Reordering refreshes the tab model and replaces the original
-                // drag source before it can receive pointer-up. Clear the
-                // insertion caret on this same-pane path before refreshing.
+                // Same-pane hop: clear the cross-pane insertion caret if any.
                 w.set_drag_active(false);
-                refresh_panes(
-                    &w,
-                    &layout.borrow(),
-                    content_size.get(),
-                    &tabs_model,
-                    &panes_model,
-                    &splitters_model,
-                );
             }
         });
     }

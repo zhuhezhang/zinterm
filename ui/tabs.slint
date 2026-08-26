@@ -13,23 +13,37 @@ export struct TabInfo {
 component SingleTab inherits Rectangle {
     in property <TabInfo> info;
     in property <bool> active;
+    // True while THIS tab id is the one being reordered (may differ from the
+    // TouchArea that still holds the pointer after in-place model swaps).
+    in property <bool> drag-highlight;
     callback selected();
     callback closed();
     callback duplicated();
-    // Drag-to-reorder (v0.5): emitted while dragging when the tab should hop one
-    // slot left (-1) or right (+1). The model reorders and the tab follows.
-    callback reorder(int /* dir */);
+    // Drag-to-reorder (v0.5): move the grabbed tab by `dir` slots
+    // (negative = left, positive = right). Passes the frozen grab-id so hops
+    // stay correct after in-place row updates.
+    callback reorder(string /* tab-id */, int /* dir */);
+    callback drag-began(string /* tab-id */);
+    callback drag-ended();
     // Right-click (v0.5): request a context menu at the given absolute position.
     callback context-requested(length /* abs-x */, length /* abs-y */);
     // Drag-to-split (v0.5): report the absolute cursor while dragging, and the
     // drop point on release. The parent maps these to pane drop-zones.
     callback drag-moved(length /* abs-x */, length /* abs-y */);
     callback drag-dropped(length /* abs-x */, length /* abs-y */);
+    // Forward mouse-wheel / trackpad scroll so the parent can pan a horizontal strip.
+    callback wheel(length /* delta */);
 
     // Where inside the tab the drag began, and whether a drag (vs a click) is in
     // progress. `dragging` suppresses the select-on-release.
     property <length> grab-offset;
+    // Slot width frozen when the drag starts so hops stay stable if this
+    // TouchArea's bound `info` (and thus width) changes mid-drag.
+    property <length> hop-unit;
+    // Tab id at press time — kept across in-place row swaps on this element.
+    property <string> grab-id;
     property <bool> pressing;
+    property <int> hops;
     out property <bool> dragging;
 
     height: 30px;
@@ -38,7 +52,7 @@ component SingleTab inherits Rectangle {
     border-radius: Theme.radius-sm;
     border-width: active ? 2px : 0px;
     border-color: active ? Theme.accent : transparent;
-    background: dragging ? Theme.bg-active
+    background: drag-highlight ? Theme.bg-active
         : (active ? Theme.tab-active-bg
         : (touch.has-hover ? Theme.bg-hover : transparent));
     animate background { duration: 120ms; }
@@ -50,6 +64,8 @@ component SingleTab inherits Rectangle {
         pointer-event(e) => {
             if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                 root.grab-offset = self.mouse-x;
+                root.hop-unit = root.width + 2px;
+                root.grab-id = root.info.id;
                 root.pressing = true;
                 root.dragging = false;
             } else if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
@@ -63,38 +79,50 @@ component SingleTab inherits Rectangle {
                     root.drag-dropped(self.absolute-position.x + self.mouse-x,
                                       self.absolute-position.y + self.mouse-y);
                 }
+                if (root.dragging) {
+                    root.drag-ended();
+                }
                 root.pressing = false;
                 root.dragging = false;
+                root.grab-id = "";
             }
         }
         moved => {
             if (root.pressing) {
                 // A drag begins once the cursor drifts horizontally OR leaves the
                 // tab vertically (so a straight-down drag to split also counts).
-                if (abs(self.mouse-x - root.grab-offset) > 5px
-                    || self.mouse-y < -6px || self.mouse-y > root.height + 6px) {
+                if (!root.dragging && (abs(self.mouse-x - root.grab-offset) > 5px
+                    || self.mouse-y < -6px || self.mouse-y > root.height + 6px)) {
                     root.dragging = true;
+                    root.drag-began(root.grab-id);
                 }
                 // Tell the parent where the cursor is, for drop-to-split zones.
                 root.drag-moved(self.absolute-position.x + self.mouse-x,
                                 self.absolute-position.y + self.mouse-y);
                 // Reorder within the strip only while the cursor stays on the strip
                 // row; once it drops into a pane body we hand off to drag-to-split.
-                // One slot = the tab's own width + the 2px strip spacing; re-anchor
-                // grab-offset after each hop so the drift resets (no oscillation).
-                if (self.mouse-y > -10px && self.mouse-y < root.height + 10px) {
-                    if (self.mouse-x - root.grab-offset > (root.width + 2px) / 2) {
-                        root.reorder(1);
-                        root.grab-offset = self.mouse-x - (root.width + 2px);
-                    } else if (self.mouse-x - root.grab-offset < -(root.width + 2px) / 2) {
-                        root.reorder(-1);
-                        root.grab-offset = self.mouse-x + (root.width + 2px);
+                // Hop count from cursor drift (half-slot threshold); one callback
+                // can cross several tabs so a fast swipe keeps up with the pointer.
+                if (root.dragging && root.hop-unit > 0px
+                    && self.mouse-y > -10px && self.mouse-y < root.height + 10px) {
+                    hops = floor(
+                        ((self.mouse-x - root.grab-offset) + root.hop-unit / 2)
+                            / root.hop-unit);
+                    if (hops != 0) {
+                        root.reorder(root.grab-id, hops);
+                        root.grab-offset += hops * root.hop-unit;
                     }
                 }
             }
         }
         double-clicked => {
             if (root.info.kind != "welcome") { root.duplicated(); }
+        }
+        scroll-event(ev) => {
+            // Prefer genuine horizontal deltas; otherwise map vertical wheel to
+            // horizontal pan (typical mouse wheel on a tab strip).
+            root.wheel(abs(ev.delta-x) > abs(ev.delta-y) ? ev.delta-x : ev.delta-y);
+            return accept;
         }
     }
 
@@ -172,8 +200,8 @@ export component TabBar inherits Rectangle {
     in property <length> reserve-right: 0px;
     callback tab-selected(string);
     callback tab-closed(string);
-    // Drag-to-reorder: move the tab at `from` one slot in `dir` (#v0.5).
-    callback tab-reorder(int /* from */, int /* dir */);
+    // Drag-to-reorder: move `tab-id` by `dir` slots (#v0.5).
+    callback tab-reorder(string /* tab-id */, int /* dir */);
     // Split this pane, peeling `tab-id` into a new pane on `dir` (#v0.5).
     callback tab-split(string /* tab-id */, string /* dir */);
     // Open another connection to the same session as `tab-id` (#v0.5).
@@ -188,6 +216,8 @@ export component TabBar inherits Rectangle {
     property <length> menu-x;
     property <length> menu-y;
     property <string> menu-target;
+    // Tab currently being drag-reordered (highlight + id for drag-move/drop).
+    property <string> drag-id;
 
     height: 36px;
     background: Theme.bg-panel-alt;
@@ -200,34 +230,65 @@ export component TabBar inherits Rectangle {
     property <length> tab-scroll-range:
         max(0px, flick.viewport-width - flick.width);
 
+    // Pan the strip horizontally. Vertical mouse-wheel deltas are treated as
+    // horizontal so a normal wheel can move the overflow scrollbar thumb.
+    function scroll-strip(delta: length) {
+        if (root.tab-scroll-range <= 0px || delta == 0px) { return; }
+        flick.viewport-x = clamp(
+            flick.viewport-x + delta, -root.tab-scroll-range, 0px);
+    }
+
     HorizontalLayout {
         padding: 3px;
         spacing: 2px;
 
-        // Horizontally-scrollable strip; overflow uses the overlay bar below
-        // (and trackpad / mouse-wheel drag on the Flickable) (#122).
+        // Horizontally-scrollable strip; overflow uses the overlay scrollbar
+        // (and mouse-wheel / trackpad scroll). `interactive: false` so pressing
+        // a tab drags the tab, not the viewport — only the scrollbar thumb
+        // pans by pointer-drag; wheel is handled explicitly below (#122).
         flick := Flickable {
+            interactive: false;
             horizontal-stretch: 1;
             viewport-height: self.height;
             viewport-width: max(self.width, strip.preferred-width);
+            // Behind the tabs: wheel over empty strip padding still pans.
+            TouchArea {
+                width: flick.viewport-width;
+                height: 100%;
+                scroll-event(ev) => {
+                    root.scroll-strip(
+                        abs(ev.delta-x) > abs(ev.delta-y) ? ev.delta-x : ev.delta-y);
+                    return accept;
+                }
+            }
             strip := HorizontalLayout {
                 spacing: 2px;
                 alignment: start;
-                for tab[i] in tabs: SingleTab {
+                for tab in tabs: SingleTab {
                     info: tab;
                     active: tab.id == root.active-id;
+                    drag-highlight: tab.id == root.drag-id;
                     selected => { root.tab-selected(tab.id); }
                     closed => { root.tab-closed(tab.id); }
                     duplicated => { root.tab-duplicate(tab.id); }
-                    reorder(dir) => { root.tab-reorder(i, dir); }
+                    reorder(id, dir) => { root.tab-reorder(id, dir); }
+                    drag-began(id) => { root.drag-id = id; }
+                    drag-ended => { root.drag-id = ""; }
                     context-requested(ax, ay) => {
                         root.menu-target = tab.id;
                         root.menu-x = ax - root.absolute-position.x;
                         root.menu-y = ay - root.absolute-position.y;
                         tab-menu.show();
                     }
-                    drag-moved(ax, ay) => { root.tab-drag-move(tab.id, ax, ay); }
-                    drag-dropped(ax, ay) => { root.tab-drag-drop(tab.id, ax, ay); }
+                    // Prefer the frozen drag-id so move/drop stay on the grabbed
+                    // tab after in-place row swaps change this repeater's `tab`.
+                    drag-moved(ax, ay) => {
+                        root.tab-drag-move(root.drag-id != "" ? root.drag-id : tab.id, ax, ay);
+                    }
+                    drag-dropped(ax, ay) => {
+                        root.tab-drag-drop(root.drag-id != "" ? root.drag-id : tab.id, ax, ay);
+                    }
+                    wheel(delta) => { root.scroll-strip(delta); }
                 }
             }
         }
@@ -256,7 +317,8 @@ export component TabBar inherits Rectangle {
 
     // Horizontal scrollbar overlay along the bottom of the flickable — matches
     // the terminal scrollbar colors; stays thin like ScrollView until hovered so
-    // it does not cover tab titles or change TabBar height.
+    // it does not cover tab titles or change TabBar height. Only this track
+    // pans the strip; tab bodies keep their own TouchArea for drag-reorder.
     if root.tab-overflow: sb := Rectangle {
         x: flick.absolute-position.x - root.absolute-position.x + 4px;
         width: max(0px, flick.width - 8px);
@@ -284,6 +346,11 @@ export component TabBar inherits Rectangle {
                         (self.mouse-x - sb.thumb-w / 2) / sb.usable, 0.0, 1.0)
                         * root.tab-scroll-range;
                 }
+            }
+            scroll-event(ev) => {
+                root.scroll-strip(
+                    abs(ev.delta-x) > abs(ev.delta-y) ? ev.delta-x : ev.delta-y);
+                return accept;
             }
         }
 
