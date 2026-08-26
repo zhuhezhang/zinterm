@@ -62,7 +62,11 @@ fn main() -> anyhow::Result<()> {
 /// bastion disconnect reason — without setting RUST_LOG (#86).
 fn init_tracing() {
     use tracing_subscriber::prelude::*;
+    use tracing_subscriber::fmt::time::ChronoLocal;
     use tracing_subscriber::{fmt, EnvFilter};
+
+    // Wall-clock timestamps in the machine's local timezone (not UTC).
+    let timer = ChronoLocal::rfc_3339();
 
     // Third-party noise routed through `log` → tracing: ICU4X data-error warnings
     // (icu_provider dependency) and fontdb's "malformed font" warning for fonts it
@@ -86,6 +90,7 @@ fn init_tracing() {
         quiet_noise(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")));
     let stderr_layer = fmt::layer()
         .with_writer(std::io::stderr)
+        .with_timer(timer.clone())
         .with_filter(env_filter);
 
     // One file, capped at 50 MiB, auto-overwriting when full (5 MiB was too
@@ -96,6 +101,7 @@ fn init_tracing() {
             fmt::layer()
                 .with_ansi(false)
                 .with_writer(logging::CappedWriter::new(cf))
+                .with_timer(timer)
                 .with_filter(quiet_noise(EnvFilter::new("warn")))
         });
 
