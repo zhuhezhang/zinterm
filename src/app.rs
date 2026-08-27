@@ -3826,8 +3826,8 @@ fn wire_key_input(
         window.on_send_key(move |tab_id: SharedString, key: SharedString, ctrl: bool, alt: bool, shift: bool| {
             // ── R on a disconnected tab → reconnect in place (#79) ─────────
             // FinalShell-style: the tab shows "按 R 重新连接";
-            // pressing R re-spawns the shell + SFTP workers in the SAME tab
-            // with a fresh screen instead of forcing the user to open a new one.
+            // pressing R re-spawns the shell + SFTP workers in the SAME tab,
+            // keeping scrollback and prior output intact.
             if key.eq_ignore_ascii_case("r") && !ctrl && !alt {
                 let dead_session = {
                     let statuses = ctx.tab_statuses.lock().unwrap();
@@ -3847,21 +3847,13 @@ fn wire_key_input(
                     {
                         h.close();
                     }
-                    // Fresh screen: new parser, cleared history/selection.
-                    {
-                        if let Some(h) = term_buf(&ctx.bufs, tab_id.as_str()) {
-                            let mut b = h.lock().unwrap();
-                            let (rows, cols) = b.parser.screen().size();
-                            b.parser = vt100::Parser::new(rows, cols, 5000);
-                            b.history.clear();
-                            b.prev.clear();
-                            b.displayed_text.clear();
-                            b.view_offset = 0;
-                            b.sel_anchor = None;
-                            b.sel_focus = None;
-                            b.sel_ranges.clear();
-                            b.raw.clear();
-                        }
+                    // Snap back to the live bottom; new shell output appends below.
+                    if let Some(h) = term_buf(&ctx.bufs, tab_id.as_str()) {
+                        let mut b = h.lock().unwrap();
+                        b.view_offset = 0;
+                        b.sel_anchor = None;
+                        b.sel_focus = None;
+                        b.sel_ranges.clear();
                     }
                     if let Some(st) =
                         ctx.tab_statuses.lock().unwrap().get_mut(tab_id.as_str())
