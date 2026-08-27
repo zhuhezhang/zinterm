@@ -4,6 +4,9 @@ use super::*;
 /// already-registered tab. Used by the initial connect and by in-place
 /// reconnect (#79); the tab/terminal/parser must already exist.
 pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &ConnectCtx) {
+    if let Some(w) = ctx.weak.upgrade() {
+        update_tab_connection(&w, tab_id, 0, false);
+    }
     let has_sftp = session.kind == SessionKind::Ssh;
     let (initial_cols, initial_rows) = *ctx.last_term_size.lock().unwrap();
     let keepalive_secs = ctx

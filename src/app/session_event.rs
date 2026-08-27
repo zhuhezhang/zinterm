@@ -1,36 +1,28 @@
 use super::*;
 
-pub(super) fn apply_session_event_to_window(
+/// Clean / user-initiated closes: muted tab dot. Everything else (auth fail,
+/// handshake error, write/read failure, …) paints the failure red.
+fn is_normal_session_close(reason: &str) -> bool {
+    let reason = reason.trim();
+    reason.is_empty()
+        || reason == crate::i18n::t("连接已关闭", "connection closed")
+        || reason == crate::i18n::t("串口已关闭", "serial port closed")
+        || reason == crate::i18n::t("本地终端已退出", "local terminal exited")
+        || reason == crate::i18n::t("已取消登录", "login cancelled")
+}
+
+pub(super) fn update_tab_connection(
     win: &AppWindow,
     tab_id: &str,
-    event: SessionEvent,
-    bufs: &TermBuffers,
-    gates: &RenderGates,
-    statuses: &TabStatuses,
+    conn_state: i32,
+    connected: bool,
 ) {
     let tabs_rc = win.get_tabs();
-    let terminals_rc = win.get_terminals();
-    // `ModelRc::as_any` lets us downcast to the concrete `VecModel<T>`.
     let tabs = tabs_rc
         .as_any()
         .downcast_ref::<VecModel<TabInfo>>()
         .expect("tabs model must be a VecModel");
-    let terminals = terminals_rc
-        .as_any()
-        .downcast_ref::<VecModel<TerminalState>>()
-        .expect("terminals model must be a VecModel");
 
-    let update_terminal = |mutator: &dyn Fn(&mut TerminalState)| {
-        for i in 0..terminals.row_count() {
-            if let Some(mut row) = terminals.row_data(i) {
-                if row.id.as_str() == tab_id {
-                    mutator(&mut row);
-                    terminals.set_row_data(i, row);
-                    break;
-                }
-            }
-        }
-    };
     let update_tab = |mutator: &dyn Fn(&mut TabInfo)| {
         for i in 0..tabs.row_count() {
             if let Some(mut row) = tabs.row_data(i) {
@@ -41,10 +33,6 @@ pub(super) fn apply_session_event_to_window(
                 }
             }
         }
-        // The per-pane tab strips (v0.5 split panes) render snapshots copied from
-        // `tabs_model`, so they don't track this change on their own — propagate
-        // it into each pane's tab sub-model too (e.g. so the connected dot turns
-        // green without needing a tab switch).
         let panes = win.get_panes();
         if let Some(pm) = panes.as_any().downcast_ref::<VecModel<PaneInfo>>() {
             for pi in 0..pm.row_count() {
@@ -62,6 +50,38 @@ pub(super) fn apply_session_event_to_window(
                             break;
                         }
                     }
+                }
+            }
+        }
+    };
+
+    update_tab(&|t| {
+        t.conn_state = conn_state;
+        t.connected = connected;
+    });
+}
+
+pub(super) fn apply_session_event_to_window(
+    win: &AppWindow,
+    tab_id: &str,
+    event: SessionEvent,
+    bufs: &TermBuffers,
+    gates: &RenderGates,
+    statuses: &TabStatuses,
+) {
+    let terminals_rc = win.get_terminals();
+    let terminals = terminals_rc
+        .as_any()
+        .downcast_ref::<VecModel<TerminalState>>()
+        .expect("terminals model must be a VecModel");
+
+    let update_terminal = |mutator: &dyn Fn(&mut TerminalState)| {
+        for i in 0..terminals.row_count() {
+            if let Some(mut row) = terminals.row_data(i) {
+                if row.id.as_str() == tab_id {
+                    mutator(&mut row);
+                    terminals.set_row_data(i, row);
+                    break;
                 }
             }
         }
@@ -91,7 +111,7 @@ pub(super) fn apply_session_event_to_window(
             request_tab_render_from_ui(win.as_weak(), tab_id, bufs, gates);
         }
         SessionEvent::Connected => {
-            update_tab(&|t| t.connected = true);
+            update_tab_connection(win, tab_id, 1, true);
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 1;
             }
@@ -119,7 +139,14 @@ pub(super) fn apply_session_event_to_window(
                 gates,
                 statuses,
             );
-            update_tab(&|t| t.connected = false);
+            // Normal closes (user cancel, clean peer/local exit) stay muted;
+            // only connect/auth/IO failures paint the tab dot red.
+            let conn_state = if is_normal_session_close(&reason) {
+                2
+            } else {
+                3
+            };
+            update_tab_connection(win, tab_id, conn_state, false);
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 2;
             }

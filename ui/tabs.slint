@@ -9,6 +9,8 @@ export struct TabInfo {
     // Host / IP for ssh|telnet|local, serial port name for serial.
     endpoint: string,
     connected: bool,
+    // 0 connecting / 1 connected / 2 disconnected (normal) / 3 failed
+    conn-state: int,
 }
 
 // --- SingleTab -------------------------------------------------------------
@@ -185,7 +187,8 @@ component SingleTab inherits Rectangle {
         color: active ? Theme.text-primary : Theme.text-secondary;
     }
 
-    // Status indicator
+    // Status indicator — green when live, amber pulse while connecting,
+    // muted on a normal disconnect, red only on failure.
     Rectangle {
         x: root.dot-x;
         y: (parent.height - self.height) / 2;
@@ -193,7 +196,13 @@ component SingleTab inherits Rectangle {
         height: root.tab-dot-size;
         border-radius: root.tab-dot-size / 2;
         background: info.kind == "welcome" ? Theme.text-muted
-            : (info.connected ? Theme.success : Theme.warning);
+            : info.conn-state == 1 ? Theme.success
+            : info.conn-state == 0 ? Theme.warning
+            : info.conn-state == 3 ? Theme.danger
+            : Theme.text-muted;
+        opacity: info.kind != "welcome" && info.conn-state == 0
+            ? (0.35 + 0.65 * abs(sin(360deg * animation-tick() / 1.4s)))
+            : 1.0;
     }
 
     title-box := Rectangle {

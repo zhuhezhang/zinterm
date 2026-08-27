@@ -1033,6 +1033,7 @@ pub fn run() -> Result<()> {
         conn_kind: "".into(),
         endpoint: "".into(),
         connected: false,
+        conn_state: 0,
     });
     window.set_tabs(ModelRc::from(tabs_model.clone()));
     window.set_active_tab_id("welcome".into());
@@ -2894,6 +2895,7 @@ fn wire_session_callbacks(
                 conn_kind: session.kind.as_str().into(),
                 endpoint: tab_endpoint(&session).into(),
                 connected: false,
+                conn_state: 0,
             });
             // Each session keeps its own SFTP collapse state + sizes, seeded from
             // the global defaults (the "collapse SFTP by default" pref and the
