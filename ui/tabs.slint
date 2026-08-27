@@ -141,21 +141,25 @@ component SingleTab inherits Rectangle {
                     root.dragging = true;
                     root.drag-began(root.grab-id);
                 }
-                // Tell the parent where the cursor is, for drop-to-split zones.
-                root.drag-moved(self.absolute-position.x + self.mouse-x,
-                                self.absolute-position.y + self.mouse-y);
-                // Reorder within the strip only while the cursor stays on the strip
-                // row; once it drops into a pane body we hand off to drag-to-split.
-                // Hop count from cursor drift (half-slot threshold); one callback
-                // can cross several tabs so a fast swipe keeps up with the pointer.
-                if (root.dragging && root.hop-unit > 0px
-                    && self.mouse-y > -10px && self.mouse-y < root.height + 10px) {
-                    hops = floor(
-                        ((self.mouse-x - root.grab-offset) + root.hop-unit / 2)
-                            / root.hop-unit);
-                    if (hops != 0) {
-                        root.reorder(root.grab-id, hops);
-                        root.grab-offset += hops * root.hop-unit;
+                // Drop-to-split / cross-pane merge hints only during a real drag.
+                // Firing on every press (even a click) painted a stuck tab-strip
+                // insertion caret at the pointer (#122).
+                if (root.dragging) {
+                    root.drag-moved(self.absolute-position.x + self.mouse-x,
+                                    self.absolute-position.y + self.mouse-y);
+                    // Reorder within the strip only while the cursor stays on the strip
+                    // row; once it drops into a pane body we hand off to drag-to-split.
+                    // Hop count from cursor drift (half-slot threshold); one callback
+                    // can cross several tabs so a fast swipe keeps up with the pointer.
+                    if (root.hop-unit > 0px
+                        && self.mouse-y > -10px && self.mouse-y < root.height + 10px) {
+                        hops = floor(
+                            ((self.mouse-x - root.grab-offset) + root.hop-unit / 2)
+                                / root.hop-unit);
+                        if (hops != 0) {
+                            root.reorder(root.grab-id, hops);
+                            root.grab-offset += hops * root.hop-unit;
+                        }
                     }
                 }
             }
