@@ -93,8 +93,8 @@ async fn run_serial(
     }
 
     let _ = events.send(SessionEvent::Status(format!(
-        "{} {} @ {}",
-        t("打开串口", "Opening serial"),
+        "{} {}@{} ...",
+        t("正在打开串口", "Opening serial"),
         port_name,
         session.baud_rate
     )));
@@ -133,15 +133,9 @@ async fn run_serial(
     let writer = Arc::new(Mutex::new(writer));
 
     let _ = events.send(SessionEvent::Connected);
-    let _ = events.send(SessionEvent::Status(format!(
-        "{} {} @ {} {}{}{}",
-        t("已连接", "Connected"),
-        port_name,
-        session.baud_rate,
-        session.data_bits,
-        parity_letter(&session.parity),
-        session.stop_bits,
-    )));
+    let _ = events.send(SessionEvent::Status(
+        t("已连接！", "Connected!").into(),
+    ));
 
     // --- Reader thread ------------------------------------------------------
     let running = Arc::new(AtomicBool::new(true));
@@ -205,13 +199,4 @@ async fn run_serial(
         t("串口已关闭", "serial port closed").into(),
     ));
     Ok(())
-}
-
-/// Single-letter parity tag for the status line (8N1 style).
-fn parity_letter(parity: &str) -> &'static str {
-    match parity {
-        "odd" => "O",
-        "even" => "E",
-        _ => "N",
-    }
 }

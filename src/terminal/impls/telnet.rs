@@ -113,7 +113,7 @@ async fn run_telnet(
 
     let _ = events.send(SessionEvent::Status(format!(
         "{} {} ...",
-        t("Telnet 连接中", "Telnet connecting"),
+        t("正在Telnet连接", "Telnet connecting to"),
         addr
     )));
 
@@ -123,11 +123,9 @@ async fn run_telnet(
     let _ = stream.set_nodelay(true);
 
     let _ = events.send(SessionEvent::Connected);
-    let _ = events.send(SessionEvent::Status(format!(
-        "{} {}",
-        t("已连接", "Connected"),
-        addr
-    )));
+    let _ = events.send(SessionEvent::Status(
+        t("已连接！", "Connected!").into(),
+    ));
 
     let (mut rd, mut wr) = tokio::io::split(stream);
 

@@ -813,7 +813,7 @@ async fn run_session(
     let session_started = std::time::Instant::now();
     let _ = events.send(SessionEvent::Status(format!(
         "{} {}@{}:{} ...",
-        t("连接中", "Connecting"),
+        t("正在SSH连接", "SSH connecting to"),
         session.user,
         session.host,
         session.port
@@ -933,12 +933,9 @@ async fn run_session(
     );
 
     let _ = events.send(SessionEvent::Connected);
-    let _ = events.send(SessionEvent::Status(format!(
-        "{} {}@{}",
-        t("已连接", "Connected"),
-        session.user,
-        session.host
-    )));
+    let _ = events.send(SessionEvent::Status(
+        t("已连接！", "Connected!").into(),
+    ));
 
     // Whether we have already injected the PROMPT_COMMAND setup.
     // We wait for the first non-empty data chunk (the initial shell prompt)
