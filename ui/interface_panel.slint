@@ -656,7 +656,7 @@ export component InterfacePanel inherits Rectangle {
                 viewport-height: max(self.visible-height, nav-items.preferred-height);
                 nav-items := VerticalLayout {
                     width: nav-scroll.visible-width;
-                    padding: 10px;
+                    padding: 8px;
                     spacing: 2px;
                     alignment: start;
                     NavItem {
@@ -738,6 +738,7 @@ export component InterfacePanel inherits Rectangle {
                 }
             }
         }
+
         // --- Right content -------------------------------------------------
         Rectangle {
             horizontal-stretch: 1;
@@ -757,9 +758,9 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Font page ---------------------------------------------
                     if root.ifd-page == "font": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
 
@@ -926,9 +927,9 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Input page -------------------------------------------
                     if root.ifd-page == "input": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
 
@@ -973,11 +974,111 @@ export component InterfacePanel inherits Rectangle {
                         }
                     }
 
+                    // --- Renderer page (#280) ---------------------------------
+                    if root.ifd-page == "renderer": VerticalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
+                        spacing: 0;
+                        alignment: start;
+
+                        SectionHeader {
+                            text: root.lang-en ? "RENDERING" : "渲染";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Renderer" : "渲染器";
+                            desc: Theme.is-mac
+                                ? (root.lang-en
+                                ? "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
+                                : "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。")
+                                : (root.lang-en
+                                ? "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
+                                : "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。");
+                            show-divider: false;
+                            ComboBox {
+                                width: 150px;
+                                model: Theme.is-mac
+                                    ? ["CPU", "FemtoVG", "Skia"]
+                                    : (root.lang-en
+                                    ? ["Automatic", "GPU", "Software"]
+                                    : ["自动", "GPU", "软件"]);
+                                current-value: Theme.is-mac
+                                    ? (root.renderer-mode == "skia"
+                                    ? "Skia"
+                                    : root.renderer-mode == "femtovg" ? "FemtoVG" : "CPU")
+                                    : (root.renderer-mode == "auto"
+                                    ? (root.lang-en ? "Automatic" : "自动")
+                                    : root.renderer-mode == "gpu"
+                                    ? "GPU"
+                                    : (root.lang-en ? "Software" : "软件"));
+                                selected(v) => {
+                                    if (Theme.is-mac && v == "CPU"
+                                        && root.renderer-mode != "software") {
+                                        root.renderer-mode = "software";
+                                        root.set-renderer-mode("software");
+                                        root.renderer-restart-required = true;
+                                    } else if (Theme.is-mac && v == "FemtoVG"
+                                        && root.renderer-mode != "femtovg") {
+                                        root.renderer-mode = "femtovg";
+                                        root.set-renderer-mode("femtovg");
+                                        root.renderer-restart-required = true;
+                                    } else if (Theme.is-mac && v == "Skia"
+                                        && root.renderer-mode != "skia") {
+                                        root.renderer-mode = "skia";
+                                        root.set-renderer-mode("skia");
+                                        root.renderer-restart-required = true;
+                                    } else if (!Theme.is-mac && (v == "Automatic" || v == "自动")
+                                        && root.renderer-mode != "auto") {
+                                        root.renderer-mode = "auto";
+                                        root.set-renderer-mode("auto");
+                                        root.renderer-restart-required = true;
+                                    } else if (!Theme.is-mac && v == "GPU" && root.renderer-mode != "gpu") {
+                                        root.renderer-mode = "gpu";
+                                        root.set-renderer-mode("gpu");
+                                        root.renderer-restart-required = true;
+                                    } else if (!Theme.is-mac && (v == "Software" || v == "软件")
+                                        && root.renderer-mode != "software") {
+                                        root.renderer-mode = "software";
+                                        root.set-renderer-mode("software");
+                                        root.renderer-restart-required = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 10px;
+                        }
+
+                        Text {
+                            text: root.renderer-restart-required
+                                ? (root.lang-en
+                                ? "Restart MeatShell to apply the renderer change."
+                                : "重启 MeatShell 后渲染器设置才会生效。")
+                                : (root.lang-en
+                                ? (Theme.is-mac
+                                ? "CPU is the default renderer on macOS."
+                                : (root.is-windows
+                                ? "Software remains the compatibility default for existing installations."
+                                : "Automatic remains the default renderer on Linux."))
+                                : (Theme.is-mac
+                                ? "macOS 默认使用 CPU 渲染器。"
+                                : (root.is-windows
+                                ? "现有安装继续默认使用兼容性更好的软件渲染。"
+                                : "Linux 默认继续使用自动渲染器。")));
+                            color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
+                            font-size: 11px * Theme.panel-font;
+                            wrap: word-wrap;
+                        }
+                    }
+
                     // --- Output highlighting page -----------------------------
                     if root.ifd-page == "output": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
 
@@ -1291,9 +1392,9 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Wallpaper page ----------------------------------------
                     if root.ifd-page == "wallpaper": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
 
@@ -1614,136 +1715,11 @@ export component InterfacePanel inherits Rectangle {
                         }
                     }
 
-                    // --- Renderer page (#280) ---------------------------------
-                    if root.ifd-page == "renderer": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
-                        spacing: 0;
-                        alignment: start;
-
-                        SectionHeader {
-                            text: root.lang-en ? "RENDERING" : "渲染";
-                            height: 24px;
-                        }
-
-                        SettingRow {
-                            label: root.lang-en ? "Renderer" : "渲染器";
-                            desc: Theme.is-mac
-                                ? (root.lang-en
-                                ? "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
-                                : "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。")
-                                : (root.lang-en
-                                ? "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
-                                : "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。");
-                            show-divider: false;
-                            ComboBox {
-                                width: 150px;
-                                model: Theme.is-mac
-                                    ? ["CPU", "FemtoVG", "Skia"]
-                                    : (root.lang-en
-                                    ? ["Automatic", "GPU", "Software"]
-                                    : ["自动", "GPU", "软件"]);
-                                current-value: Theme.is-mac
-                                    ? (root.renderer-mode == "skia"
-                                    ? "Skia"
-                                    : root.renderer-mode == "femtovg" ? "FemtoVG" : "CPU")
-                                    : (root.renderer-mode == "auto"
-                                    ? (root.lang-en ? "Automatic" : "自动")
-                                    : root.renderer-mode == "gpu"
-                                    ? "GPU"
-                                    : (root.lang-en ? "Software" : "软件"));
-                                selected(v) => {
-                                    if (Theme.is-mac && v == "CPU"
-                                        && root.renderer-mode != "software") {
-                                        root.renderer-mode = "software";
-                                        root.set-renderer-mode("software");
-                                        root.renderer-restart-required = true;
-                                    } else if (Theme.is-mac && v == "FemtoVG"
-                                        && root.renderer-mode != "femtovg") {
-                                        root.renderer-mode = "femtovg";
-                                        root.set-renderer-mode("femtovg");
-                                        root.renderer-restart-required = true;
-                                    } else if (Theme.is-mac && v == "Skia"
-                                        && root.renderer-mode != "skia") {
-                                        root.renderer-mode = "skia";
-                                        root.set-renderer-mode("skia");
-                                        root.renderer-restart-required = true;
-                                    } else if (!Theme.is-mac && (v == "Automatic" || v == "自动")
-                                        && root.renderer-mode != "auto") {
-                                        root.renderer-mode = "auto";
-                                        root.set-renderer-mode("auto");
-                                        root.renderer-restart-required = true;
-                                    } else if (!Theme.is-mac && v == "GPU" && root.renderer-mode != "gpu") {
-                                        root.renderer-mode = "gpu";
-                                        root.set-renderer-mode("gpu");
-                                        root.renderer-restart-required = true;
-                                    } else if (!Theme.is-mac && (v == "Software" || v == "软件")
-                                        && root.renderer-mode != "software") {
-                                        root.renderer-mode = "software";
-                                        root.set-renderer-mode("software");
-                                        root.renderer-restart-required = true;
-                                    }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            height: 10px;
-                        }
-
-                        Text {
-                            text: root.renderer-restart-required
-                                ? (root.lang-en
-                                ? "Restart MeatShell to apply the renderer change."
-                                : "重启 MeatShell 后渲染器设置才会生效。")
-                                : (root.lang-en
-                                ? (Theme.is-mac
-                                ? "CPU is the default renderer on macOS."
-                                : (root.is-windows
-                                ? "Software remains the compatibility default for existing installations."
-                                : "Automatic remains the default renderer on Linux."))
-                                : (Theme.is-mac
-                                ? "macOS 默认使用 CPU 渲染器。"
-                                : (root.is-windows
-                                ? "现有安装继续默认使用兼容性更好的软件渲染。"
-                                : "Linux 默认继续使用自动渲染器。")));
-                            color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
-                            font-size: 11px * Theme.panel-font;
-                            wrap: word-wrap;
-                        }
-                    }
-
-                    // --- SFTP page ---------------------------------------------
-                    if root.ifd-page == "sftp": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
-                        spacing: 0;
-                        alignment: start;
-                        SectionHeader {
-                            text: "SFTP";
-                            height: 24px;
-                        }
-
-                        SettingRow {
-                            label: root.lang-en ? "SFTP follows terminal cd" : "SFTP 跟随 cd 更新";
-                            desc: root.lang-en
-                                ? "A cd in the terminal switches the SFTP panel to the same directory."
-                                : "终端里执行 cd 时,SFTP 面板自动切到相同目录。";
-                            show-divider: false;
-                            Switch {
-                                on: root.sftp-follow-cd;
-                                toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
-                            }
-                        }
-                    }
-
                     // --- SSH page ----------------------------------------------
                     if root.ifd-page == "ssh": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
                         SectionHeader {
@@ -1771,11 +1747,36 @@ export component InterfacePanel inherits Rectangle {
                         }
                     }
 
+                    // --- SFTP page ---------------------------------------------
+                    if root.ifd-page == "sftp": VerticalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: "SFTP";
+                            height: 24px;
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "SFTP follows terminal cd" : "SFTP 跟随 cd 更新";
+                            desc: root.lang-en
+                                ? "A cd in the terminal switches the SFTP panel to the same directory."
+                                : "终端里执行 cd 时,SFTP 面板自动切到相同目录。";
+                            show-divider: false;
+                            Switch {
+                                on: root.sftp-follow-cd;
+                                toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
+                            }
+                        }
+                    }
+
                     // --- Sidebars page -----------------------------------------
                     if root.ifd-page == "sidebar": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
                         SectionHeader {
@@ -1822,10 +1823,10 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     // --- Welcome page ------------------------------------------
-                if (root.ifd-page == "welcome"): VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                    if (root.ifd-page == "welcome"): VerticalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
                         SectionHeader {
@@ -1851,9 +1852,9 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Download page -----------------------------------------
                     if root.ifd-page == "download": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
                         SectionHeader {
@@ -1876,9 +1877,9 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Update check page (#184) ------------------------------
                     if root.ifd-page == "update": VerticalLayout {
-                        padding-left: 20px;
-                        padding-right: 20px;
-                        padding-top: 14px;
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
                         spacing: 0;
                         alignment: start;
                         SectionHeader {

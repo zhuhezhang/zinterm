@@ -260,24 +260,39 @@ export component QuickDockPanel inherits Rectangle {
         }
 
         // ScrollView (not bare Flickable) so a scrollbar appears when the list overflows.
-        ScrollView {
+        quick-scroll := ScrollView {
             vertical-stretch: 1;
             viewport-width: self.visible-width;
-            viewport-height: max(self.visible-height, list.preferred-height);
-            list := VerticalLayout {
-                padding: 6px;
-                spacing: 2px;
+            scroll-content := VerticalLayout {
+                min-height: quick-scroll.visible-height;
                 alignment: start;
-                if root.commands.length == 0: Text {
-                    height: 36px;
-                    text: @tr("No quick commands yet");
-                    color: Theme.text-muted;
-                    font-size: Theme.fs-xs;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                height: root.commands.length == 0
+                    ? self.min-height
+                    : max(self.min-height, list.preferred-height);
+                if root.commands.length == 0: VerticalLayout {
+                    min-height: scroll-content.min-height;
+                    alignment: center;
+                    Text {
+                        text: @tr("No quick commands yet");
+                        color: Theme.text-muted;
+                        font-size: Theme.fs-xs;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
                 }
+                list := VerticalLayout {
+                visible: root.commands.length > 0;
+                padding: 6px;
+                spacing: 0px;
+                alignment: start;
+                // Pin list height to content so ScrollView does not stretch rows
+                // apart when the panel is taller than the command list (#215).
+                height: self.preferred-height;
                 for q in root.commands: VerticalLayout {
                     spacing: 1px;
+                    // Lock each row to its natural height so extra panel space
+                    // is not distributed between groups (#215).
+                    height: self.preferred-height;
                     if q.group-header != "": Rectangle {
                         height: 26px;
                         border-radius: Theme.radius-sm;
@@ -400,6 +415,8 @@ export component QuickDockPanel inherits Rectangle {
                     }
                 }
             }
+            }
+            viewport-height: max(self.visible-height, scroll-content.preferred-height);
         }
     }
 }

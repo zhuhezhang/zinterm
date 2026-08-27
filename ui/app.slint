@@ -2323,8 +2323,8 @@ export component AppWindow inherits Window {
         TouchArea { }
 
         VerticalLayout {
-            padding: 14px;
-            spacing: 10px;
+            padding: 8px;
+            spacing: 8px;
 
             HorizontalLayout {
                 Text {
@@ -2812,7 +2812,7 @@ export component AppWindow inherits Window {
     }
 
     // --- Group create / rename dialog (#41) -------------------------------
-        if root.group-dialog-open: Rectangle {
+    if root.group-dialog-open: Rectangle {
         width: parent.width;
         height: parent.height;
         background: #00000080;
@@ -3670,8 +3670,8 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 340px;
-            height: 178px;
+            width: 300px;
+            height: 150px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -3681,8 +3681,8 @@ export component AppWindow inherits Window {
             TouchArea { }   // swallow inside clicks
 
             VerticalLayout {
-                padding: 18px;
-                spacing: 12px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: root.sftp-prompt-kind == "rename"
                         ? @tr("Rename")
@@ -3775,8 +3775,8 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 340px;
-            height: 168px;
+            width: 300px;
+            height: 110px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -3786,8 +3786,8 @@ export component AppWindow inherits Window {
             TouchArea { }
 
             VerticalLayout {
-                padding: 18px;
-                spacing: 12px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: root.lang-en ? "Close meatshell?" : "确定关闭 meatshell?";
                     color: Theme.text-primary;
@@ -3946,7 +3946,7 @@ export component AppWindow inherits Window {
             TouchArea { }
 
             VerticalLayout {
-                padding: 18px;
+                padding: 8px;
                 spacing: 5px;
 
                 HorizontalLayout {
@@ -4359,7 +4359,7 @@ export component AppWindow inherits Window {
         TouchArea {
             clicked => { root.batch-import-open = false; }
         }   // backdrop closes
-        Rectangle {
+        bi-card := Rectangle {
             width: 540px;
             height: 440px;
             x: (parent.width - self.width) / 2;
@@ -4373,8 +4373,8 @@ export component AppWindow inherits Window {
             TouchArea { }   // swallow clicks inside the card
 
             VerticalLayout {
-                padding: 20px;
-                spacing: 10px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: root.lang-en ? "Batch import connections" : "批量导入连接";
                     color: Theme.text-primary;
@@ -4391,36 +4391,11 @@ export component AppWindow inherits Window {
                     wrap: word-wrap;
                 }
                 // Paste area — themed multiline input.
-                Rectangle {
-                    vertical-stretch: 1;
-                    border-radius: Theme.radius-sm;
-                    border-width: 1px;
-                    border-color: bi-input.has-focus ? Theme.accent : Theme.border-subtle;
-                    background: Theme.bg-root;
-                    clip: true;
-                    Flickable {
-                        viewport-height: max(self.height, bi-input.preferred-height + 16px);
-                        bi-input := TextInput {
-                            x: 10px;
-                            y: 8px;
-                            width: parent.width - 20px;
-                            text <=> root.batch-import-text;
-                            color: Theme.text-primary;
-                            font-family: Theme.font-mono;
-                            font-size: Theme.fs-md;
-                            single-line: false;
-                            wrap: no-wrap;
-                        }
-                    }
-
-                    if root.batch-import-text == "": Text {
-                        x: 10px;
-                        y: 8px;
-                        text: "192.168.1.108|22|root|pass@123|服务器1";
-                        color: Theme.text-muted;
-                        font-family: Theme.font-mono;
-                        font-size: Theme.fs-md;
-                    }
+                bi-input := BorderedTextArea {
+                    area-height: bi-card.height - 132px;
+                    font-size: Theme.fs-md;
+                    text <=> root.batch-import-text;
+                    placeholder: "192.168.1.108|22|root|pass@123|服务器1";
                 }
 
                 HorizontalLayout {
