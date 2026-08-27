@@ -160,12 +160,11 @@ use crate::terminal::{
 use crate::terminal::{windows_process_ctrl_release, CtrlKeySide};
 use crate::ui::*;
 
-fn tab_title_len(title: &str) -> i32 {
-    title
-        .chars()
-        .map(|ch| if ch.is_ascii() { 1usize } else { 2usize })
-        .sum::<usize>()
-        .min(i32::MAX as usize) as i32
+fn tab_endpoint(session: &Session) -> String {
+    match session.kind {
+        SessionKind::Serial => session.serial_port.clone(),
+        _ => session.host.clone(),
+    }
 }
 
 fn tab_title_by_id(tabs_model: &VecModel<TabInfo>, tab_id: &str) -> String {
@@ -1029,9 +1028,10 @@ pub fn run() -> Result<()> {
     let tabs_model: Rc<VecModel<TabInfo>> = Rc::new(VecModel::default());
     tabs_model.push(TabInfo {
         id: "welcome".into(),
-        title_len: tab_title_len(&t("欢迎页", "Welcome page")),
         title: t("欢迎页", "Welcome page").into(),
         kind: "welcome".into(),
+        conn_kind: "".into(),
+        endpoint: "".into(),
         connected: false,
     });
     window.set_tabs(ModelRc::from(tabs_model.clone()));
@@ -1222,7 +1222,6 @@ pub fn run() -> Result<()> {
             for i in 0..tabs_model.row_count() {
                 if let Some(mut row) = tabs_model.row_data(i) {
                     if row.id.as_str() == "welcome" {
-                        row.title_len = tab_title_len(&t("欢迎页", "Welcome page"));
                         row.title = t("欢迎页", "Welcome page").into();
                         tabs_model.set_row_data(i, row);
                     }
@@ -2890,9 +2889,10 @@ fn wire_session_callbacks(
             // Register tab + terminal state (SFTP fields start empty/loading).
             tabs_model.push(TabInfo {
                 id: tab_id.clone().into(),
-                title_len: tab_title_len(&tab_title),
                 title: tab_title.into(),
                 kind: "terminal".into(),
+                conn_kind: session.kind.as_str().into(),
+                endpoint: tab_endpoint(&session).into(),
                 connected: false,
             });
             // Each session keeps its own SFTP collapse state + sizes, seeded from

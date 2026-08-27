@@ -1,11 +1,13 @@
 import { Theme } from "theme.slint";
-import { IconButton } from "widgets.slint";
+import { IconButton, TooltipArea } from "widgets.slint";
 
 export struct TabInfo {
     id: string,
     title: string,
-    title_len: int,
     kind: string,   // "welcome" | "terminal"
+    conn-kind: string, // "" | "ssh" | "serial" | "telnet" | "local"
+    // Host / IP for ssh|telnet|local, serial port name for serial.
+    endpoint: string,
     connected: bool,
 }
 
@@ -47,8 +49,48 @@ component SingleTab inherits Rectangle {
     out property <bool> dragging;
 
     height: 30px;
-    width: clamp(100px, 64px + info.title_len * 7px * Theme.ui-scale, 320px);
+    // Uniform tab width: long titles elide, short titles leave blank space.
+    property <length> tab-width: 160px;
+    width: tab-width;
+    preferred-width: tab-width;
     horizontal-stretch: 0;
+    clip: true;
+
+    // Fixed tab chrome — spacing must not shift with title length.
+    property <length> tab-pad-left: 8px;
+    property <length> tab-pad-right: 6px;
+    property <length> tab-gap: 6px;
+    property <length> tab-icon-size: 14px;
+    property <length> tab-dot-size: 8px;
+    property <length> tab-close-size: 20px;
+    property <bool> show-close: info.kind != "welcome";
+    property <string> conn-icon:
+        info.kind == "welcome" ? "\u{E88A}"       // home
+        : info.conn-kind == "serial" ? "\u{E1E0}" // usb
+        : info.conn-kind == "telnet" ? "\u{E328}" // router
+        : info.conn-kind == "local" ? "\u{E30A}"  // desktop_windows
+        : "\u{E0DA}";                             // vpn_key (ssh)
+    property <string> conn-label:
+        info.conn-kind == "serial" ? @tr("Serial")
+        : info.conn-kind == "telnet" ? "Telnet"
+        : info.conn-kind == "local" ? @tr("Local")
+        : "SSH";
+    // e.g. "SSH 192.168.1.1 · 主机1" / "Serial COM3 · switch"
+    // Local shells skip the tooltip — the tab title is already clear.
+    property <string> tip-text:
+        info.kind == "welcome" || info.conn-kind == "local" ? ""
+        : info.endpoint == ""
+            ? (conn-label + " · " + info.title)
+            : (conn-label + " " + info.endpoint + " · " + info.title);
+    property <length> icon-x: tab-pad-left;
+    property <length> dot-x: icon-x + tab-icon-size + tab-gap;
+    property <length> title-x: dot-x + tab-dot-size + tab-gap;
+    property <length> title-w: max(
+        0px,
+        (show-close
+            ? (root.width - tab-pad-right - tab-close-size - tab-gap)
+            : (root.width - tab-pad-right))
+            - title-x);
     border-radius: Theme.radius-sm;
     border-width: active ? 2px : 0px;
     border-color: active ? Theme.accent : transparent;
@@ -57,10 +99,13 @@ component SingleTab inherits Rectangle {
         : (touch.has-hover ? Theme.bg-hover : transparent));
     animate background { duration: 120ms; }
 
-    // Declared FIRST so the HorizontalLayout's children (close button) are at
-    // a higher z-order and receive their own click events.
-    touch := TouchArea {
+    // Declared FIRST so the icon / close button overlays are at a higher z-order
+    // and receive their own click events. TooltipArea inherits TouchArea.
+    touch := TooltipArea {
         mouse-cursor: pointer;
+        tooltip-text: root.dragging ? "" : root.tip-text;
+        anchor-width: root.width;
+        anchor-height: root.height;
         pointer-event(e) => {
             if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                 root.grab-offset = self.mouse-x;
@@ -126,39 +171,50 @@ component SingleTab inherits Rectangle {
         }
     }
 
-    HorizontalLayout {
-        width: parent.width - (info.kind != "welcome" ? 28px : 0px);
-        padding-left: 10px;
-        padding-right: 4px;
-        spacing: 8px;
-        alignment: start;
+    // Connection-type icon (left of the status dot).
+    Text {
+        x: root.icon-x;
+        y: (parent.height - self.preferred-height) / 2;
+        text: root.conn-icon;
+        font-family: "Material Icons";
+        font-size: root.tab-icon-size;
+        color: active ? Theme.text-primary : Theme.text-secondary;
+    }
 
-        // Status indicator
-        Rectangle {
-            width: 8px;
-            height: 8px;
-            y: (parent.height - self.height) / 2;
-            border-radius: 4px;
-            background: info.kind == "welcome" ? Theme.text-muted
-                : (info.connected ? Theme.success : Theme.warning);
-        }
+    // Status indicator
+    Rectangle {
+        x: root.dot-x;
+        y: (parent.height - self.height) / 2;
+        width: root.tab-dot-size;
+        height: root.tab-dot-size;
+        border-radius: root.tab-dot-size / 2;
+        background: info.kind == "welcome" ? Theme.text-muted
+            : (info.connected ? Theme.success : Theme.warning);
+    }
 
+    title-box := Rectangle {
+        x: root.title-x;
+        width: root.title-w;
+        height: parent.height;
+        clip: true;
+        // Natural text height (not height:100%) so FemtoVG won't visually
+        // scale glyphs differently for short vs long / elided titles.
         title-text := Text {
+            width: parent.width;
+            y: (parent.height - self.preferred-height) / 2;
             text: info.title;
             color: active ? Theme.text-primary : Theme.text-secondary;
-            font-size: info.title_len > 24 ? Theme.fs-sm
-                : (info.title_len > 12 ? 12.5px * Theme.ui-scale : Theme.fs-md);
-            vertical-alignment: center;
+            font-family: Theme.ui-font-family;
+            font-size: Theme.fs-sm;
+            wrap: no-wrap;
             overflow: elide;
-            horizontal-stretch: 1;
         }
     }
 
-    // Keep close pinned to the far right even when the title is very short.
-    if info.kind != "welcome": IconButton {
+    if root.show-close: IconButton {
         glyph: "×";
-        size: 20px;
-        x: parent.width - self.width - 6px;
+        size: root.tab-close-size;
+        x: parent.width - root.tab-pad-right - root.tab-close-size;
         y: (parent.height - self.height) / 2;
         clicked => { root.closed(); }
     }
@@ -172,9 +228,11 @@ component TabMenuItem inherits Rectangle {
     in property <bool> danger: false;
     callback clicked();
     height: 28px;
+    clip: true;
     border-radius: Theme.radius-sm;
     background: enabled && ta.has-hover ? Theme.bg-hover : transparent;
     HorizontalLayout {
+        width: 100%;
         padding-left: 10px;
         padding-right: 10px;
         spacing: 8px;
@@ -186,12 +244,14 @@ component TabMenuItem inherits Rectangle {
             font-size: Theme.fs-sm;
             vertical-alignment: center;
             horizontal-stretch: 1;
+            overflow: elide;
         }
         if root.hint != "": Text {
             text: hint;
             color: Theme.text-muted;
             font-size: Theme.fs-xs;
             vertical-alignment: center;
+            horizontal-stretch: 0;
         }
     }
 
@@ -425,8 +485,10 @@ export component TabBar inherits Rectangle {
                 viewport-width: self.width;
                 viewport-height: max(self.height, all-tabs-list.preferred-height);
                 all-tabs-list := VerticalLayout {
+                    width: parent.width;
                     spacing: 1px;
                     for tab in root.tabs: TabMenuItem {
+                        width: parent.width;
                         label: (tab.id == root.active-id ? "●  " : "    ") + tab.title;
                         clicked => {
                             root.tab-selected(tab.id);
