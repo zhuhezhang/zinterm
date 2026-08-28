@@ -116,13 +116,16 @@ export component IconButton inherits Rectangle {
     background: touch.has-hover ? Theme.bg-hover : transparent;
     animate background { duration: 120ms; }
 
+    // Preferred-height + y offset (not height:100%) — same FemtoVG-safe
+    // centering pattern as tab titles in tabs.slint.
     Text {
+        width: 100%;
+        y: (parent.height - self.preferred-height) / 2;
         text: glyph;
         color: touch.has-hover ? fg-hover : fg;
         font-family: root.font-family;
         font-size: Theme.fs-md;
         horizontal-alignment: center;
-        vertical-alignment: center;
     }
 
     touch := TooltipArea {

@@ -403,11 +403,12 @@ export component TabBar inherits Rectangle {
 
         // A stable right-edge entry point for finding any open session when
         // the tab strip is crowded (#340).
+        // Match SingleTab height (30px) so the layout cross-axis fills evenly;
+        // IconButton centers its glyph internally (y on a layout child is ignored).
         IconButton {
-            glyph: all-tabs-menu.is-open ? "\u{EACF}" : "\u{EAD0}";
+            glyph: all-tabs-menu.is-open ? "\u{E316}" : "\u{E313}";
             font-family: "Material Icons";
-            size: 28px;
-            y: (parent.height - self.height) / 2;
+            size: 30px;
             clicked => {
                 if (all-tabs-menu.is-open) {
                     all-tabs-menu.close();

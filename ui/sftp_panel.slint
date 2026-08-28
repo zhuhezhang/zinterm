@@ -113,14 +113,14 @@ export component SftpPanel inherits Rectangle {
     in property <string> dock-edge: "right"; // left | right | top | bottom — drives collapse/expand chevrons
     // Collapse toward the docked edge; expand away from it (matches QuickDockPanel).
     property <string> collapse-toggle-glyph: root.collapsed
-        ? (root.dock-edge == "right" ? "\u{EAC3}"   // chevron_left
-            : root.dock-edge == "top" ? "\u{EAD0}"   // expand_more
-            : root.dock-edge == "bottom" ? "\u{EACF}"   // expand_less
-            : "\u{EAC9}")                               // chevron_right (left dock)
-        : (root.dock-edge == "right" ? "\u{EAC9}"   // chevron_right
-            : root.dock-edge == "top" ? "\u{EACF}"   // expand_less
-            : root.dock-edge == "bottom" ? "\u{EAD0}"   // expand_more
-            : "\u{EAC3}");                              // chevron_left (left dock)
+        ? (root.dock-edge == "right" ? "\u{E314}"   // chevron_left
+            : root.dock-edge == "top" ? "\u{E313}"   // expand_more
+            : root.dock-edge == "bottom" ? "\u{E316}"   // expand_less
+            : "\u{E315}")                               // chevron_right (left dock)
+        : (root.dock-edge == "right" ? "\u{E315}"   // chevron_right
+            : root.dock-edge == "top" ? "\u{E316}"   // expand_less
+            : root.dock-edge == "bottom" ? "\u{E313}"   // expand_more
+            : "\u{E314}");                              // chevron_left (left dock)
     // Panel width as set by the parent (sf-w or full dock-region width). Used
     // instead of root.width for responsive layout so toolbar height can't feed
     // back into the width that narrow-toolbar reads (binding loop, cf. TabBar).
@@ -390,7 +390,7 @@ export component SftpPanel inherits Rectangle {
                     }
 
                     up-btn := SftpToolBtn {
-                        glyph: "\u{E2EA}";
+                        glyph: "\u{E5C4}";
                         tooltip: @tr("Parent directory");
                         clicked => { root.navigate(".."); }
                     }

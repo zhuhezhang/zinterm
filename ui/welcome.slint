@@ -369,7 +369,6 @@ export component Welcome inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: root.compact ? 12px : 24px;
         spacing: root.compact ? 12px : 20px;
 
         // Header (title + tagline) — pinned to the top at its natural height so
@@ -377,6 +376,7 @@ export component Welcome inherits Rectangle {
         // quick-connect card below takes all the remaining height (#dock). Hidden
         // in compact/sidebar mode.
         if !root.compact: VerticalLayout {
+            padding: 8px;
             vertical-stretch: 0;
             alignment: start;
             spacing: 4px;
@@ -401,12 +401,11 @@ export component Welcome inherits Rectangle {
         Rectangle {
             vertical-stretch: 1;
             background: Theme.bg-panel;
-            border-radius: Theme.radius-md;
             border-width: 1px;
             border-color: Theme.border-subtle;
 
             VerticalLayout {
-                padding: 16px;
+                padding: 8px;
                 spacing: 12px;
 
                 Rectangle {
@@ -424,7 +423,8 @@ export component Welcome inherits Rectangle {
                     }
 
                     header-row := HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 4px;
+                        padding-right: root.compact ? -8px : 0px;
                         if root.compact && root.dock-edge != "left": CollapseButton {
                             glyph: root.dock-edge == "right" ? "\u{E5CC}"
                                 : root.dock-edge == "top" ? "\u{E5CE}"
@@ -441,7 +441,7 @@ export component Welcome inherits Rectangle {
                         }
 
                         if root.compact && root.dock-edge == "left": CollapseButton {
-                            glyph: "\u{E5CB}";
+                            glyph: "\u{E314}";
                             clicked => { root.collapse(); }
                         }
                         Text {
