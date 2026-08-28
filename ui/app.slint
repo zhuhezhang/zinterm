@@ -25,6 +25,7 @@ import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel, HistoryVie
 } from "terminal_view.slint";
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { InterfacePanel, OutputRuleItem } from "interface_panel.slint";
+import { MockData } from "mock_data.slint";
 import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette, TextEdit
 } from "std-widgets.slint";
 
@@ -209,6 +210,12 @@ component ShortcutRow inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
+    // =============================================================================
+    // TODO(styling): temporary mock data — see mock_data.slint; set false when done
+    property <bool> qcm-use-mock: false;
+    property <bool> welcome-use-mock: true;
+    // =============================================================================
+
     title: "meatshell";
     icon: @image-url("../assets/icon.png");
     // Frameless when we draw our own title bar (#119); Rust sets custom-titlebar
@@ -310,93 +317,9 @@ export component AppWindow inherits Window {
     callback search-quick-commands(string /* query */); // filter the quick-command popup
     callback search-qcm-commands(string /* query */);   // filter the manage-dialog list
     in-out property <string> qcm-search: "";
-    // TODO(styling): temporary mock data for the manage-dialog list — set qcm-use-mock false or remove when done
-    property <bool> qcm-use-mock: false;
-    property <[QuickCmd]> qcm-mock-commands: [
-        {
-            name: "查看磁盘",
-            command: "df -h",
-            summary: "df -h",
-            group: "default",
-            group-header: "default",
-            collapsed: false,
-            orig-index: 0,
-        },
-        {
-            name: "重启 Nginx",
-            command: "sudo systemctl restart nginx && sudo systemctl status nginx --no-pager",
-            summary: "sudo systemctl restart nginx && sudo systemctl status nginx --no-pager",
-            group: "default",
-            group-header: "",
-            collapsed: false,
-            orig-index: 1,
-        },
-        {
-            name: "打包发布",
-            command: "cargo build --release && tar czf dist/meatshell-$(date +%Y%m%d).tar.gz target/release/meatshell",
-            summary: "cargo build --release && tar czf dist/meatshell-$(date +%Y%m%d).tar.gz …",
-            group: "default",
-            group-header: "",
-            collapsed: false,
-            orig-index: 2,
-        },
-        {
-            name: "",
-            command: "",
-            summary: "",
-            group: "staging",
-            group-header: "staging",
-            collapsed: false,
-            orig-index: -1,
-        },
-        {
-            name: "SSH 跳板",
-            command: "ssh -J bastion@10.0.0.1 deploy@prod-web-01",
-            summary: "ssh -J bastion@10.0.0.1 deploy@prod-web-01",
-            group: "运维",
-            group-header: "运维",
-            collapsed: false,
-            orig-index: 3,
-        },
-        {
-            name: "滚动日志",
-            command: "journalctl -u meatshell -f --since \"1 hour ago\"",
-            summary: "journalctl -u meatshell -f --since \"1 hour ago\"",
-            group: "运维",
-            group-header: "",
-            collapsed: false,
-            orig-index: 4,
-        },
-        {
-            name: "Very Long Command Name For Layout Testing",
-            command: "echo \"line1\" && echo \"line2\" && echo \"line3\" && echo \"done\"",
-            summary: "echo \"line1\" && echo \"line2\" && echo \"line3\" …",
-            group: "运维",
-            group-header: "",
-            collapsed: false,
-            orig-index: 5,
-        },
-        {
-            name: "Git 状态",
-            command: "git status -sb && git log --oneline -5",
-            summary: "git status -sb && git log --oneline -5",
-            group: "开发",
-            group-header: "开发",
-            collapsed: false,
-            orig-index: 6,
-        },
-        {
-            name: "运行测试",
-            command: "cargo test --workspace -- --nocapture",
-            summary: "cargo test --workspace -- --nocapture",
-            group: "开发",
-            group-header: "",
-            collapsed: false,
-            orig-index: 7,
-        },
-    ];
     in property <[QuickCmd]> qcm-manage-commands;
-    property <[QuickCmd]> qcm-display-commands: root.qcm-use-mock ? root.qcm-mock-commands : root.qcm-manage-commands;
+    property <[QuickCmd]> qcm-display-commands: root.qcm-use-mock
+        ? MockData.qcm-mock-commands : root.qcm-manage-commands;
     in-out property <bool> quick-cmd-manage-open: root.qcm-use-mock;  // manage dialog
     in-out property <length> qcm-dialog-width: 560px;
     in-out property <length> qcm-dialog-height: 560px;
@@ -541,7 +464,7 @@ export component AppWindow inherits Window {
     in-out property <bool> zen-mode: false;
     callback set-zen-mode(bool);
     // Render the welcome/session list as a left sidebar instead of a tab (v0.5).
-    in-out property <bool> welcome-as-sidebar: false;
+    in-out property <bool> welcome-as-sidebar: root.welcome-use-mock;
     callback set-welcome-as-sidebar(bool);         // apply + persist
     in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
@@ -669,6 +592,8 @@ export component AppWindow inherits Window {
 
     // --- Session list ------------------------------------------------------
     in property <[SessionInfo]> sessions;
+    property <[SessionInfo]> welcome-display-sessions: root.welcome-use-mock
+        ? MockData.welcome-mock-sessions : root.sessions;
 
     // --- Tabs --------------------------------------------------------------
     in property <[TabInfo]> tabs;
@@ -1110,7 +1035,7 @@ export component AppWindow inherits Window {
                     height: parent.height;
                     compact: true;
                     dock-edge: root.welcome-sidebar-dock;
-                    sessions: root.sessions;
+                    sessions: root.welcome-display-sessions;
                     import-hint: root.ssh-import-hint;
                     collapse => {
                         root.welcome-collapsed = true;
@@ -1337,7 +1262,7 @@ export component AppWindow inherits Window {
                                         if pane.active-id == "welcome": Welcome {
                                             width: parent.width;
                                             height: parent.height;
-                                            sessions: root.sessions;
+                                            sessions: root.welcome-display-sessions;
                                             import-hint: root.ssh-import-hint;
                                             new-session => { root.new-session-clicked(); }
                                             connect-session(id) => { root.connect-session(id); }
