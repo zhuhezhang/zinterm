@@ -2,9 +2,9 @@
 name = "meatshell"
 version = "0.6.12"
 edition = "2021"
-authors = ["meatshell contributors"]
+authors = ["ZinTerm contributors"]
 description = "A lightweight FinalShell-style SSH/terminal client written in Rust + Slint"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/your/meatshell"
 readme = "README.md"
 rust-version = "1.75"

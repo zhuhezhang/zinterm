@@ -161,4 +161,4 @@ meatshell/
 
 ## License
 
-MIT OR Apache-2.0（双许可）。
+MIT。详见 [LICENSE](LICENSE)。
