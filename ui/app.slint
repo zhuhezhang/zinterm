@@ -2748,8 +2748,8 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 340px;
-            height: 208px;
+            width: 300px;
+            height: 180px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -2759,8 +2759,8 @@ export component AppWindow inherits Window {
             TouchArea { }   // swallow inside clicks
 
             VerticalLayout {
-                padding: 18px;
-                spacing: 12px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: root.group-dialog-orig == ""
                         ? (root.lang-en ? "New group" : "新建分组")
@@ -2779,7 +2779,6 @@ export component AppWindow inherits Window {
                 ge-input := LineEdit {
                     text <=> root.group-dialog-name;
                     font-family: Theme.ui-font-family; // CJK-capable (#54)
-                    placeholder-text: @tr("Group name");
                     edited => { root.group-dialog-error = ""; }
                     // Enter confirms when non-empty.
                     accepted => {
