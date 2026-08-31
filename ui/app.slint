@@ -1975,7 +1975,7 @@ export component AppWindow inherits Window {
                                 padding-right: 8px;
                                 padding-top: 5px;
                                 padding-bottom: 5px;
-                                spacing: 6px;
+                                spacing: 8px;
                                 Text {
                                     text: @tr("Find");
                                     color: Theme.text-muted;
@@ -2107,7 +2107,7 @@ export component AppWindow inherits Window {
                         HorizontalLayout {
                             spacing: 0;
                             Rectangle {
-                                width: 48px;
+                                width: 40px;
                                 vertical-stretch: 1;
                                 border-bottom-left-radius: Theme.radius-md;
                                 background: Theme.bg-panel-alt;
@@ -2760,7 +2760,7 @@ export component AppWindow inherits Window {
                 spacing: 8px;
                 Text {
                     text: root.group-dialog-mode == "rename"
-                        ? (root.lang-en ? "Edit group" : "编辑分组")
+                        ? (root.lang-en ? "Rename group" : "重命名分组")
                         : root.group-dialog-mode == "child"
                             ? (root.lang-en ? "New child group" : "新建子分组")
                             : (root.lang-en ? "New sibling group" : "新建同级分组");
@@ -3039,58 +3039,50 @@ export component AppWindow inherits Window {
                         vertical-stretch: 1;
                         viewport-width: self.visible-width;
                         viewport-height: max(self.visible-height, qcm-list.preferred-height);
-                    qcm-list := VerticalLayout {
-                        alignment: start;
-                        spacing: 0px;
-                        if root.qcm-display-commands.length == 0: Text {
-                            text: root.qcm-search != "" ? @tr("No match") : @tr("No quick commands yet");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                        }
-                        for q in root.qcm-display-commands: VerticalLayout {
-                            property <length> row-h: (q.group-header != "" ? 26px : 0px)
-                                + (!q.collapsed && q.orig-index >= 0 ? 38px : 0px);
-                            height: row-h > 0px ? row-h + 2px : 0px;
-                            // Group header on the first row of each group (#55).
-                            if q.group-header != "": Rectangle {
-                                height: 26px;
-                                property <length> gmx;
-                                property <length> gmy;
-                                property <bool> grp-moved: false;
-                                property <bool> grp-pressing: false;
-                                property <length> grp-grab-x: 0px;
-                                border-radius: Theme.radius-sm;
-                                background: root.qcm-drag-group-from == q.group ? Theme.bg-active
-                                    : ((root.qcm-drag-from >= 0
+                        qcm-list := VerticalLayout {
+                            alignment: start;
+                            spacing: 0px;
+                            if root.qcm-display-commands.length == 0: Text {
+                                text: root.qcm-search != "" ? @tr("No match") : @tr("No quick commands yet");
+                                color: Theme.text-muted;
+                                font-size: Theme.fs-xs;
+                            }
+                            for q in root.qcm-display-commands: VerticalLayout {
+                                alignment: start;
+                                spacing: 0px;
+                                property <length> row-h: (q.group-header != "" ? 32px : 0px)
+                                    + (!q.collapsed && q.orig-index >= 0 ? 32px : 0px);
+                                height: row-h > 0px ? row-h + 1px : 0px;
+                                // Group header on the first row of each group (#55).
+                                if q.group-header != "": Rectangle {
+                                    height: 32px;
+                                    property <length> gmx;
+                                    property <length> gmy;
+                                    property <bool> grp-moved: false;
+                                    property <bool> grp-pressing: false;
+                                    property <length> grp-grab-x: 0px;
+                                    border-radius: Theme.radius-sm;
+                                    background: root.qcm-drag-group-from == q.group ? Theme.bg-active
+                                        : ((root.qcm-drag-from >= 0
                                             && root.qcm-drop-group == q.group
                                             && root.qcm-drop-before < 0)
                                         || (root.qcm-drag-group-from != ""
                                             && root.qcm-drop-before-group == q.group
                                             && root.qcm-drag-group-from != q.group)
-                                        ? Theme.accent.with-alpha(0.12) : transparent);
+                                        ? Theme.accent.with-alpha(0.12)
+                                        : (grp-header-ta.has-hover ? Theme.bg-hover : transparent));
 
-                                HorizontalLayout {
-                                    padding-left: 4px;
-                                    padding-top: 3px;
-                                    Rectangle {
-                                        width: 20px;
-                                        height: 20px;
-                                        border-radius: Theme.radius-sm;
-
+                                    HorizontalLayout {
+                                        padding-left: 8px;
+                                        padding-right: 4px;
                                         Text {
                                             text: q.collapsed ? "\u{E5CC}" : "\u{E5CF}";
                                             font-family: "Material Icons";
                                             color: Theme.text-muted;
                                             font-size: Theme.fs-sm;
-                                            horizontal-alignment: center;
                                             vertical-alignment: center;
                                         }
-                                    }
 
-                                    HorizontalLayout {
-                                        horizontal-stretch: 1;
-                                        height: 20px;
-                                        spacing: 4px;
                                         Text {
                                             text: "\u{E2C7}";
                                             font-family: "Material Icons";
@@ -3102,362 +3094,363 @@ export component AppWindow inherits Window {
                                         Text {
                                             text: q.group;
                                             color: Theme.text-muted;
-                                            font-size: Theme.fs-xs;
+                                            font-size: Theme.fs-sm;
                                             font-weight: 700;
                                             vertical-alignment: center;
                                             horizontal-stretch: 1;
                                             horizontal-alignment: left;
                                         }
                                     }
-                                }
 
-                                grp-header-ta := TouchArea {
-                                    width: parent.width;
-                                    height: parent.height;
-                                    mouse-cursor: q.group != "default"
-                                        ? (root.qcm-grp-dragging && root.qcm-drag-group-from == q.group
-                                            ? grabbing : grab)
-                                        : pointer;
-                                    pointer-event(e) => {
-                                        if (e.kind == PointerEventKind.down
-                                            && e.button == PointerEventButton.left) {
-                                            grp-pressing = true;
-                                            grp-moved = false;
-                                            grp-grab-x = self.mouse-x;
-                                            root.qcm-drag-from = -1;
-                                            root.qcm-cmd-dragging = false;
-                                        } else if (e.kind == PointerEventKind.down
-                                            && e.button == PointerEventButton.right) {
-                                            gmx = self.mouse-x;
-                                            gmy = self.mouse-y;
-                                            qgrp-menu.show();
-                                        } else if (e.kind == PointerEventKind.up) {
-                                            if (grp-pressing
-                                                && q.group != "default"
-                                                && root.qcm-grp-dragging
-                                                && grp-moved) {
-                                                root.drop-quick-group(
-                                                    root.qcm-drag-group-from,
-                                                    root.qcm-drop-before-group,
-                                                );
-                                                root.qcm-drag-group-from = "";
-                                                root.qcm-drop-before-group = "";
-                                            } else if (grp-pressing && !grp-moved) {
-                                                root.toggle-quick-group(q.group);
-                                            }
-                                            grp-pressing = false;
-                                            root.qcm-grp-dragging = false;
-                                        }
-                                    }
-                                    moved => {
-                                        if (grp-pressing && q.group != "default") {
-                                            if (!grp-moved
-                                                && abs(self.mouse-x - grp-grab-x) > 5px) {
-                                                grp-moved = true;
-                                                root.qcm-drag-group-from = q.group;
-                                                root.qcm-drop-before-group = q.group;
-                                                root.qcm-grp-dragging = true;
-                                            }
-                                            if (root.qcm-grp-dragging) {
-                                                root.qcm-drag-at(
-                                                    qcm-list.absolute-position.y,
-                                                    self.absolute-position.y + self.mouse-y,
-                                                    root.qcm-drag-from,
-                                                    root.qcm-drag-group-from,
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-
-                                qgrp-menu := PopupWindow {
-                                    x: gmx;
-                                    y: gmy;
-                                    width: 150px;
-                                    height: (q.orig-index == -1 ? 3 : 2) * 30px + 9px;
-                                    Rectangle {
-                                        background: Theme.popup-bg;
-                                        border-radius: Theme.radius-sm;
-                                        border-width: 1px;
-                                        border-color: Theme.border-strong;
-                                        drop-shadow-blur: 10px;
-                                        drop-shadow-color: #00000050;
-                                        VerticalLayout {
-                                            padding: 4px;
-                                            spacing: 1px;
-                                            Rectangle {
-                                                height: 30px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qeg-ta.has-hover ? Theme.bg-hover : transparent;
-                                                qeg-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => {
-                                                        root.qcg-orig = q.group;
-                                                        root.qcg-name = q.group;
-                                                        root.qcg-open = true;
-                                                    }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E3C9}";
-                                                        font-family: "Material Icons";
-                                                        color: Theme.text-secondary;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: root.lang-en ? "Rename group" : "重命名分组";
-                                                        color: Theme.text-primary;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-
-                                            if q.orig-index == -1: Rectangle {
-                                                height: 30px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qdg-ta.has-hover ? #cc333320 : transparent;
-                                                qdg-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => { root.delete-quick-group(q.group); }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E872}";
-                                                        font-family: "Material Icons";
-                                                        color: #cc3333;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: root.lang-en ? "Delete group" : "删除分组";
-                                                        color: #cc3333;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-                                            Rectangle {
-                                                height: 30px;
-                                                border-radius: Theme.radius-sm;
-                                                background: qng-ta.has-hover ? Theme.bg-hover : transparent;
-                                                qng-ta := TouchArea {
-                                                    mouse-cursor: pointer;
-                                                    clicked => {
-                                                        root.qcg-orig = "";
-                                                        root.qcg-name = "";
-                                                        root.qcg-open = true;
-                                                    }
-                                                }
-
-                                                HorizontalLayout {
-                                                    padding-left: 10px;
-                                                    spacing: 8px;
-                                                    Text {
-                                                        text: "\u{E2CC}";
-                                                        font-family: "Material Icons";
-                                                        color: Theme.text-secondary;
-                                                        font-size: Theme.fs-sm;
-                                                        vertical-alignment: center;
-                                                    }
-
-                                                    Text {
-                                                        text: root.lang-en ? "New group" : "新建分组";
-                                                        color: Theme.text-primary;
-                                                        font-size: Theme.fs-md;
-                                                        vertical-alignment: center;
-                                                        horizontal-stretch: 1;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Command row (skip the empty-group placeholder; hidden when collapsed).
-                            if !q.collapsed && q.orig-index >= 0: Rectangle {
-                                height: 38px;
-                                property <bool> cmd-moved: false;
-                                property <bool> cmd-pressing: false;
-                                property <length> cmd-grab-x: 0px;
-                                border-radius: Theme.radius-sm;
-                                background: root.qcm-drag-from == q.orig-index ? Theme.bg-active
-                                    : (root.qcm-drag-from >= 0
-                                        && root.qcm-drop-before == q.orig-index
-                                        && root.qcm-drag-from != q.orig-index
-                                        ? Theme.accent.with-alpha(0.12) : Theme.bg-root);
-
-                                HorizontalLayout {
-                                    padding-left: 4px;
-                                    padding-right: 6px;
-                                    spacing: 4px;
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        body-ta := TouchArea {
-                                            width: parent.width;
-                                            height: parent.height;
-                                            mouse-cursor: root.qcm-drag-from == q.orig-index ? grabbing : grab;
-                                            double-clicked => {
-                                                cmd-pressing = false;
-                                                cmd-moved = false;
-                                                root.qcm-cmd-dragging = false;
+                                    grp-header-ta := TouchArea {
+                                        width: parent.width;
+                                        height: parent.height;
+                                        mouse-cursor: q.group != "default"
+                                            ? (root.qcm-grp-dragging && root.qcm-drag-group-from == q.group
+                                                ? grabbing : grab)
+                                            : pointer;
+                                        pointer-event(e) => {
+                                            if (e.kind == PointerEventKind.down
+                                                && e.button == PointerEventButton.left) {
+                                                grp-pressing = true;
+                                                grp-moved = false;
+                                                grp-grab-x = self.mouse-x;
                                                 root.qcm-drag-from = -1;
-                                                root.edit-quick-command(q.orig-index);
-                                            }
-                                            pointer-event(e) => {
-                                                if (e.kind == PointerEventKind.down
-                                                    && e.button == PointerEventButton.left) {
-                                                    cmd-pressing = true;
-                                                    cmd-moved = false;
-                                                    cmd-grab-x = self.mouse-x;
-                                                    root.qcm-drop-group = q.group;
-                                                    root.qcm-drop-before = q.orig-index;
+                                                root.qcm-cmd-dragging = false;
+                                            } else if (e.kind == PointerEventKind.down
+                                                && e.button == PointerEventButton.right) {
+                                                gmx = self.mouse-x;
+                                                gmy = self.mouse-y;
+                                                qgrp-menu.show();
+                                            } else if (e.kind == PointerEventKind.up) {
+                                                if (grp-pressing
+                                                    && q.group != "default"
+                                                    && root.qcm-grp-dragging
+                                                    && grp-moved) {
+                                                    root.drop-quick-group(
+                                                        root.qcm-drag-group-from,
+                                                        root.qcm-drop-before-group,
+                                                    );
                                                     root.qcm-drag-group-from = "";
-                                                } else if (e.kind == PointerEventKind.up) {
-                                                    if (cmd-pressing
-                                                        && root.qcm-cmd-dragging
-                                                        && cmd-moved) {
-                                                        root.drop-quick-command(
-                                                            root.qcm-drag-from,
-                                                            root.qcm-drop-group,
-                                                            root.qcm-drop-before,
-                                                        );
+                                                    root.qcm-drop-before-group = "";
+                                                } else if (grp-pressing && !grp-moved) {
+                                                    root.toggle-quick-group(q.group);
+                                                }
+                                                grp-pressing = false;
+                                                root.qcm-grp-dragging = false;
+                                            }
+                                        }
+                                        moved => {
+                                            if (grp-pressing && q.group != "default") {
+                                                if (!grp-moved
+                                                    && abs(self.mouse-x - grp-grab-x) > 5px) {
+                                                    grp-moved = true;
+                                                    root.qcm-drag-group-from = q.group;
+                                                    root.qcm-drop-before-group = q.group;
+                                                    root.qcm-grp-dragging = true;
+                                                }
+                                                if (root.qcm-grp-dragging) {
+                                                    root.qcm-drag-at(
+                                                        qcm-list.absolute-position.y,
+                                                        self.absolute-position.y + self.mouse-y,
+                                                        root.qcm-drag-from,
+                                                        root.qcm-drag-group-from,
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    qgrp-menu := PopupWindow {
+                                        x: gmx;
+                                        y: gmy;
+                                        width: 150px;
+                                        height: (q.orig-index == -1 ? 3 : 2) * 30px + 9px;
+                                        Rectangle {
+                                            background: Theme.popup-bg;
+                                            border-radius: Theme.radius-sm;
+                                            border-width: 1px;
+                                            border-color: Theme.border-strong;
+                                            drop-shadow-blur: 10px;
+                                            drop-shadow-color: #00000050;
+                                            VerticalLayout {
+                                                padding: 4px;
+                                                spacing: 1px;
+                                                Rectangle {
+                                                    height: 30px;
+                                                    border-radius: Theme.radius-sm;
+                                                    background: qeg-ta.has-hover ? Theme.bg-hover : transparent;
+                                                    qeg-ta := TouchArea {
+                                                        mouse-cursor: pointer;
+                                                        clicked => {
+                                                            root.qcg-orig = q.group;
+                                                            root.qcg-name = q.group;
+                                                            root.qcg-open = true;
+                                                        }
                                                     }
+
+                                                    HorizontalLayout {
+                                                        padding-left: 10px;
+                                                        spacing: 8px;
+                                                        Text {
+                                                            text: "\u{E3C9}";
+                                                            font-family: "Material Icons";
+                                                            color: Theme.text-secondary;
+                                                            font-size: Theme.fs-sm;
+                                                            vertical-alignment: center;
+                                                        }
+
+                                                        Text {
+                                                            text: root.lang-en ? "Rename group" : "重命名分组";
+                                                            color: Theme.text-primary;
+                                                            font-size: Theme.fs-md;
+                                                            vertical-alignment: center;
+                                                            horizontal-stretch: 1;
+                                                        }
+                                                    }
+                                                }
+
+                                                if q.orig-index == -1: Rectangle {
+                                                    height: 30px;
+                                                    border-radius: Theme.radius-sm;
+                                                    background: qdg-ta.has-hover ? #cc333320 : transparent;
+                                                    qdg-ta := TouchArea {
+                                                        mouse-cursor: pointer;
+                                                        clicked => { root.delete-quick-group(q.group); }
+                                                    }
+
+                                                    HorizontalLayout {
+                                                        padding-left: 10px;
+                                                        spacing: 8px;
+                                                        Text {
+                                                            text: "\u{E872}";
+                                                            font-family: "Material Icons";
+                                                            color: #cc3333;
+                                                            font-size: Theme.fs-sm;
+                                                            vertical-alignment: center;
+                                                        }
+
+                                                        Text {
+                                                            text: root.lang-en ? "Delete group" : "删除分组";
+                                                            color: #cc3333;
+                                                            font-size: Theme.fs-md;
+                                                            vertical-alignment: center;
+                                                            horizontal-stretch: 1;
+                                                        }
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    height: 30px;
+                                                    border-radius: Theme.radius-sm;
+                                                    background: qng-ta.has-hover ? Theme.bg-hover : transparent;
+                                                    qng-ta := TouchArea {
+                                                        mouse-cursor: pointer;
+                                                        clicked => {
+                                                            root.qcg-orig = "";
+                                                            root.qcg-name = "";
+                                                            root.qcg-open = true;
+                                                        }
+                                                    }
+
+                                                    HorizontalLayout {
+                                                        padding-left: 10px;
+                                                        spacing: 8px;
+                                                        Text {
+                                                            text: "\u{E2CC}";
+                                                            font-family: "Material Icons";
+                                                            color: Theme.text-secondary;
+                                                            font-size: Theme.fs-sm;
+                                                            vertical-alignment: center;
+                                                        }
+
+                                                        Text {
+                                                            text: root.lang-en ? "New group" : "新建分组";
+                                                            color: Theme.text-primary;
+                                                            font-size: Theme.fs-md;
+                                                            vertical-alignment: center;
+                                                            horizontal-stretch: 1;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Command row (skip the empty-group placeholder; hidden when collapsed).
+                                if !q.collapsed && q.orig-index >= 0: Rectangle {
+                                    height: 32px;
+                                    property <bool> cmd-moved: false;
+                                    property <bool> cmd-pressing: false;
+                                    property <length> cmd-grab-x: 0px;
+                                    border-radius: Theme.radius-sm;
+                                    background: root.qcm-drag-from == q.orig-index ? Theme.bg-active
+                                        : (root.qcm-drag-from >= 0
+                                            && root.qcm-drop-before == q.orig-index
+                                            && root.qcm-drag-from != q.orig-index
+                                            ? Theme.accent.with-alpha(0.12)
+                                            : (body-ta.has-hover || run-ta.has-hover || dup-ta.has-hover || del-ta.has-hover
+                                                ? Theme.bg-hover : transparent));
+
+                                    HorizontalLayout {
+                                        padding-left: 4px;
+                                        padding-right: 6px;
+                                        spacing: 4px;
+                                        Rectangle {
+                                            horizontal-stretch: 1;
+                                            body-ta := TouchArea {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                mouse-cursor: root.qcm-drag-from == q.orig-index ? grabbing : grab;
+                                                double-clicked => {
                                                     cmd-pressing = false;
+                                                    cmd-moved = false;
                                                     root.qcm-cmd-dragging = false;
                                                     root.qcm-drag-from = -1;
-                                                    root.qcm-drop-before = -1;
-                                                    root.qcm-drop-group = "";
+                                                    root.edit-quick-command(q.orig-index);
+                                                }
+                                                pointer-event(e) => {
+                                                    if (e.kind == PointerEventKind.down
+                                                        && e.button == PointerEventButton.left) {
+                                                        cmd-pressing = true;
+                                                        cmd-moved = false;
+                                                        cmd-grab-x = self.mouse-x;
+                                                        root.qcm-drop-group = q.group;
+                                                        root.qcm-drop-before = q.orig-index;
+                                                        root.qcm-drag-group-from = "";
+                                                    } else if (e.kind == PointerEventKind.up) {
+                                                        if (cmd-pressing
+                                                            && root.qcm-cmd-dragging
+                                                            && cmd-moved) {
+                                                            root.drop-quick-command(
+                                                                root.qcm-drag-from,
+                                                                root.qcm-drop-group,
+                                                                root.qcm-drop-before,
+                                                            );
+                                                        }
+                                                        cmd-pressing = false;
+                                                        root.qcm-cmd-dragging = false;
+                                                        root.qcm-drag-from = -1;
+                                                        root.qcm-drop-before = -1;
+                                                        root.qcm-drop-group = "";
+                                                    }
+                                                }
+                                                moved => {
+                                                    if (cmd-pressing) {
+                                                        if (!cmd-moved
+                                                            && abs(self.mouse-x - cmd-grab-x) > 5px) {
+                                                            cmd-moved = true;
+                                                            root.qcm-drag-from = q.orig-index;
+                                                            root.qcm-cmd-dragging = true;
+                                                            root.qcm-grp-dragging = false;
+                                                        }
+                                                        if (root.qcm-cmd-dragging) {
+                                                            root.qcm-drag-at(
+                                                                qcm-list.absolute-position.y,
+                                                                self.absolute-position.y + self.mouse-y,
+                                                                root.qcm-drag-from,
+                                                                root.qcm-drag-group-from,
+                                                            );
+                                                        }
+                                                    }
                                                 }
                                             }
-                                            moved => {
-                                                if (cmd-pressing) {
-                                                    if (!cmd-moved
-                                                        && abs(self.mouse-x - cmd-grab-x) > 5px) {
-                                                        cmd-moved = true;
-                                                        root.qcm-drag-from = q.orig-index;
-                                                        root.qcm-cmd-dragging = true;
-                                                        root.qcm-grp-dragging = false;
-                                                    }
-                                                    if (root.qcm-cmd-dragging) {
-                                                        root.qcm-drag-at(
-                                                            qcm-list.absolute-position.y,
-                                                            self.absolute-position.y + self.mouse-y,
-                                                            root.qcm-drag-from,
-                                                            root.qcm-drag-group-from,
-                                                        );
-                                                    }
+
+                                            VerticalLayout {
+                                                alignment: center;
+                                                padding-left: 2px;
+                                                Text {
+                                                    text: q.name;
+                                                    color: Theme.text-primary;
+                                                    font-size: Theme.fs-sm;
+                                                    overflow: elide;
+                                                }
+
+                                                Text {
+                                                    text: q.summary;
+                                                    color: Theme.text-muted;
+                                                    font-size: Theme.fs-xs;
+                                                    overflow: elide;
+                                                    font-family: Theme.ui-font-family;
                                                 }
                                             }
                                         }
 
-                                        VerticalLayout {
-                                            alignment: center;
-                                            padding-left: 2px;
+                                        Rectangle {
+                                            width: 24px;
+                                            height: 28px;
+                                            y: (parent.height - self.height) / 2;
+                                            border-radius: Theme.radius-sm;
+                                            background: run-ta.has-hover ? Theme.accent.with-alpha(0.25) : transparent;
+                                            run-ta := TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => { root.run-command(root.active-tab-id, q.command, false); }
+                                            }
+
                                             Text {
-                                                text: q.name;
-                                                color: Theme.text-primary;
+                                                text: "\u{E037}";
+                                                font-family: "Material Icons";
+                                                color: Theme.accent;
+                                                font-size: Theme.fs-md;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width: 24px;
+                                            height: 28px;
+                                            y: (parent.height - self.height) / 2;
+                                            border-radius: Theme.radius-sm;
+                                            background: dup-ta.has-hover ? Theme.bg-hover : transparent;
+                                            dup-ta := TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => { root.duplicate-quick-command(q.orig-index); }
+                                            }
+
+                                            Text {
+                                                text: "\u{E14D}";
+                                                font-family: "Material Icons";
+                                                color: Theme.text-secondary;
                                                 font-size: Theme.fs-sm;
-                                                overflow: elide;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width: 28px;
+                                            height: 28px;
+                                            y: (parent.height - self.height) / 2;
+                                            border-radius: Theme.radius-sm;
+                                            background: del-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
+                                            del-ta := TouchArea {
+                                                mouse-cursor: pointer;
+                                                clicked => { root.delete-quick-command(q.orig-index); }
                                             }
 
                                             Text {
-                                                text: q.summary;
-                                                color: Theme.text-muted;
-                                                font-size: Theme.fs-xs;
-                                                overflow: elide;
-                                                font-family: Theme.ui-font-family;
+                                                text: "\u{E872}";
+                                                font-family: "Material Icons";
+                                                color: Theme.danger;
+                                                font-size: Theme.fs-md;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
                                             }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        width: 24px;
-                                        height: 28px;
-                                        y: (parent.height - self.height) / 2;
-                                        border-radius: Theme.radius-sm;
-                                        background: run-ta.has-hover ? Theme.accent.with-alpha(0.25) : transparent;
-                                        run-ta := TouchArea {
-                                            mouse-cursor: pointer;
-                                            clicked => { root.run-command(root.active-tab-id, q.command, false); }
-                                        }
-
-                                        Text {
-                                            text: "\u{E037}";
-                                            font-family: "Material Icons";
-                                            color: Theme.accent;
-                                            font-size: Theme.fs-md;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        width: 24px;
-                                        height: 28px;
-                                        y: (parent.height - self.height) / 2;
-                                        border-radius: Theme.radius-sm;
-                                        background: dup-ta.has-hover ? Theme.bg-hover : transparent;
-                                        dup-ta := TouchArea {
-                                            mouse-cursor: pointer;
-                                            clicked => { root.duplicate-quick-command(q.orig-index); }
-                                        }
-
-                                        Text {
-                                            text: "\u{E14D}";
-                                            font-family: "Material Icons";
-                                            color: Theme.text-secondary;
-                                            font-size: Theme.fs-sm;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        width: 28px;
-                                        height: 28px;
-                                        y: (parent.height - self.height) / 2;
-                                        border-radius: Theme.radius-sm;
-                                        background: del-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
-                                        del-ta := TouchArea {
-                                            mouse-cursor: pointer;
-                                            clicked => { root.delete-quick-command(q.orig-index); }
-                                        }
-
-                                        Text {
-                                            text: "\u{E872}";
-                                            font-family: "Material Icons";
-                                            color: Theme.danger;
-                                            font-size: Theme.fs-md;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
                                         }
                                     }
                                 }
                             }
-                        }
-                        // Drop at end of the list (append group to the end).
-                        Rectangle {
-                            height: 10px;
-                            background: root.qcm-drag-group-from != "" && root.qcm-drop-before-group == ""
-                                ? Theme.accent.with-alpha(0.12) : transparent;
-                            qcm-append-ta := TouchArea { }
+                            // Drop at end of the list (append group to the end).
+                            Rectangle {
+                                height: 10px;
+                                background: root.qcm-drag-group-from != "" && root.qcm-drop-before-group == ""
+                                    ? Theme.accent.with-alpha(0.12) : transparent;
+                                qcm-append-ta := TouchArea { }
+                            }
                         }
                     }
                 }
-            }
             }
 
             // Bottom-right resize grip. The chosen size is retained while the

@@ -289,12 +289,13 @@ export component QuickDockPanel inherits Rectangle {
                 // apart when the panel is taller than the command list (#215).
                 height: self.preferred-height;
                 for q in root.commands: VerticalLayout {
-                    spacing: 1px;
-                    // Lock each row to its natural height so extra panel space
-                    // is not distributed between groups (#215).
-                    height: self.preferred-height;
+                    alignment: start;
+                    spacing: 0px;
+                    property <length> row-h: (q.group-header != "" ? 32px : 0px)
+                        + (!q.collapsed && q.orig-index >= 0 ? 32px : 0px);
+                    height: row-h > 0px ? row-h + 1px : 0px;
                     if q.group-header != "": Rectangle {
-                        height: 26px;
+                        height: 32px;
                         border-radius: Theme.radius-sm;
                         background: group-ta.has-hover ? Theme.bg-hover : transparent;
                         group-ta := TouchArea {
@@ -303,9 +304,8 @@ export component QuickDockPanel inherits Rectangle {
                         }
 
                         HorizontalLayout {
-                            padding-left: 6px;
-                            padding-right: 6px;
-                            spacing: 5px;
+                            padding-left: 8px;
+                            padding-right: 4px;
                             Text {
                                 text: q.collapsed ? "\u{E5CC}" : "\u{E5CF}";
                                 font-family: "Material Icons";
@@ -315,9 +315,17 @@ export component QuickDockPanel inherits Rectangle {
                             }
 
                             Text {
+                                text: "\u{E2C7}";
+                                font-family: "Material Icons";
+                                color: Theme.text-muted;
+                                font-size: Theme.fs-sm;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
                                 text: q.group;
                                 color: Theme.text-muted;
-                                font-size: Theme.fs-xs;
+                                font-size: Theme.fs-sm;
                                 font-weight: 700;
                                 vertical-alignment: center;
                                 overflow: elide;
@@ -326,14 +334,14 @@ export component QuickDockPanel inherits Rectangle {
                         }
                     }
                     if !q.collapsed && q.orig-index >= 0: Rectangle {
-                        height: max(44px, item-col.preferred-height + 8px);
+                        height: 32px;
                         border-radius: Theme.radius-sm;
                         background: q-fill-ta.has-hover || q-run.has-hover || q-edit.has-hover
                             ? Theme.bg-hover : transparent;
                         HorizontalLayout {
                             padding-left: 4px;
-                            padding-right: 4px;
-                            spacing: 1px;
+                            padding-right: 6px;
+                            spacing: 4px;
                             Rectangle {
                                 horizontal-stretch: 1;
                                 q-fill-ta := TouchArea {
@@ -343,18 +351,14 @@ export component QuickDockPanel inherits Rectangle {
                                     clicked => { root.fill(q.command); }
                                 }
 
-                                item-col := VerticalLayout {
-                                    padding-left: 5px;
-                                    padding-right: 5px;
-                                    padding-top: 4px;
-                                    padding-bottom: 4px;
-                                    spacing: 1px;
+                                VerticalLayout {
+                                    alignment: center;
+                                    padding-left: 2px;
                                     Text {
                                         text: q.name;
                                         color: Theme.text-primary;
                                         font-size: Theme.fs-sm;
-                                        wrap: word-wrap;
-                                        vertical-alignment: center;
+                                        overflow: elide;
                                     }
 
                                     Text {
@@ -363,14 +367,13 @@ export component QuickDockPanel inherits Rectangle {
                                         font-size: Theme.fs-xs;
                                         overflow: elide;
                                         font-family: Theme.ui-font-family;
-                                        vertical-alignment: center;
                                     }
                                 }
                             }
 
                             // Run (▶) — execute immediately.
                             Rectangle {
-                                width: 28px;
+                                width: 24px;
                                 y: (parent.height - self.height) / 2;
                                 height: 28px;
                                 border-radius: Theme.radius-sm;
@@ -392,7 +395,7 @@ export component QuickDockPanel inherits Rectangle {
 
                             // Edit (✎) — open this command in the editor.
                             Rectangle {
-                                width: 28px;
+                                width: 24px;
                                 y: (parent.height - self.height) / 2;
                                 height: 28px;
                                 border-radius: Theme.radius-sm;
@@ -423,7 +426,7 @@ export component QuickDockPanel inherits Rectangle {
 
 // --- TerminalView ----------------------------------------------------------
 export component TerminalView inherits Rectangle {
-    in property <bool> active: true;
+    in property <bool> active: false;
     in property <bool> zen-mode: false;
     in property <float> terminal-line-spacing: 1.0;
     in property <bool> extra-paste-shortcuts-enabled: true;
@@ -1783,7 +1786,9 @@ export component TerminalView inherits Rectangle {
                                             // Group header on the first row of each group (#55) —
                                             // click to collapse/expand the whole group.
                                             if q.group-header != "": Rectangle {
-                                                height: 24px;
+                                                height: 30px;
+                                                border-radius: Theme.radius-sm;
+                                                background: grp-ta.has-hover ? Theme.bg-hover : transparent;
                                                 property <length> gmx;
                                                 property <length> gmy;
                                                 grp-ta := TouchArea {
@@ -1799,9 +1804,8 @@ export component TerminalView inherits Rectangle {
                                                 }
 
                                                 HorizontalLayout {
-                                                    padding-left: 4px;
-                                                    padding-top: 4px;
-                                                    spacing: 4px;
+                                                    padding-left: 8px;
+                                                    padding-right: 4px;
                                                     Text {
                                                         text: q.collapsed ? "\u{E5CC}" : "\u{E5CF}"; // chevron ▶/▼
                                                             font-family: "Material Icons";
@@ -1821,7 +1825,7 @@ export component TerminalView inherits Rectangle {
                                                     Text {
                                                         text: q.group;
                                                         color: Theme.text-muted;
-                                                        font-size: Theme.fs-xs;
+                                                        font-size: Theme.fs-sm;
                                                         font-weight: 700;
                                                         vertical-alignment: center;
                                                         horizontal-stretch: 1;
@@ -1943,7 +1947,6 @@ export component TerminalView inherits Rectangle {
                                                 HorizontalLayout {
                                                     padding-left: 4px;
                                                     padding-right: 4px;
-                                                    spacing: 1px;
                                                     Rectangle {
                                                         horizontal-stretch: 1;
                                                         q-item-ta := TouchArea {
@@ -2171,7 +2174,6 @@ export component TerminalView inherits Rectangle {
                                             HorizontalLayout {
                                                 padding-left: 8px;
                                                 padding-right: 4px;
-                                                spacing: 1px;
                                                 Text {
                                                     text: h.summary;
                                                     color: Theme.text-secondary;

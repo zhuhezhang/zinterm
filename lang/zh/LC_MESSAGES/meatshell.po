@@ -99,8 +99,8 @@ msgstr "工作目录"
 msgid "Root"
 msgstr "根目录"
 
-msgid "Host / IP"
-msgstr "主机 / IP"
+msgid "Host / IP / Serial Port"
+msgstr "主机 / IP / 串口"
 
 msgid "Port"
 msgstr "端口"
@@ -265,7 +265,7 @@ msgid "Delete"
 msgstr "删除"
 
 msgid "Duplicate"
-msgstr "复制副本"
+msgstr "复制"
 
 msgid "New group"
 msgstr "新建分组"
@@ -276,8 +276,8 @@ msgstr "新建同级分组"
 msgid "New child group"
 msgstr "新建子分组"
 
-msgid "Edit group"
-msgstr "编辑分组"
+msgid "Rename group"
+msgstr "重命名分组"
 
 msgid "Delete group"
 msgstr "删除分组"

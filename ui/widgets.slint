@@ -39,6 +39,10 @@ export component TooltipPopup inherits PopupWindow {
     in property <length> anchor-x;
     in property <length> anchor-y;
     in property <bool> align-right: true;
+    // When set, left edge starts at cursor-x (relative to the anchor) and the
+    // tip extends rightward; still clamped so it stays inside the window.
+    in property <bool> from-cursor: false;
+    in property <length> cursor-x: 0px;
     in property <length> gap: 4px;
 
     close-policy: no-auto-close;
@@ -49,8 +53,9 @@ export component TooltipPopup inherits PopupWindow {
 
     width: surface.width;
     height: surface.height;
-    property <length> x-below: root.align-right ? (root.anchor-width - self.width) : 0px;
-    x: max(-root.anchor-x, min(root.x-below, Theme.window-width - self.width - root.anchor-x));
+    property <length> x-preferred: root.from-cursor ? root.cursor-x
+        : (root.align-right ? (root.anchor-width - self.width) : 0px);
+    x: max(-root.anchor-x, min(root.x-preferred, Theme.window-width - self.width - root.anchor-x));
     y: root.flip-above ? (-self.height - root.gap) : (root.anchor-height + root.gap);
 
     surface := TooltipSurface {
@@ -67,6 +72,8 @@ export component TooltipArea inherits TouchArea {
     in property <length> anchor-width;
     in property <length> anchor-height;
     in property <duration> show-delay: 400ms;
+    // Anchor the tip at the pointer's x and grow it rightward (session rows).
+    in property <bool> tip-from-cursor: false;
     callback activate();
 
     tip-popup := TooltipPopup {
@@ -75,6 +82,8 @@ export component TooltipArea inherits TouchArea {
         anchor-height: root.anchor-height;
         anchor-x: parent.absolute-position.x;
         anchor-y: parent.absolute-position.y;
+        from-cursor: root.tip-from-cursor;
+        cursor-x: root.mouse-x;
     }
 
     show-timer := Timer {

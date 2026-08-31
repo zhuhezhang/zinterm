@@ -99,8 +99,8 @@ msgstr "Working directory"
 msgid "Root"
 msgstr "Root"
 
-msgid "Host / IP"
-msgstr "Host / IP"
+msgid "Host / IP / Serial Port"
+msgstr "Host / IP / Serial Port"
 
 msgid "Port"
 msgstr "Port"
@@ -276,8 +276,8 @@ msgstr "New sibling group"
 msgid "New child group"
 msgstr "New child group"
 
-msgid "Edit group"
-msgstr "Edit group"
+msgid "Rename group"
+msgstr "Rename group"
 
 msgid "Delete group"
 msgstr "Delete group"

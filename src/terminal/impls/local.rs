@@ -204,7 +204,6 @@ fn default_shell(encoding: &str) -> (String, Vec<String>) {
 }
 
 fn resolve_shell(shell: &str, encoding: &str) -> (String, Vec<String>) {
-    let lower = shell.to_ascii_lowercase();
     let base = Path::new(shell)
         .file_name()
         .and_then(|s| s.to_str())
@@ -213,6 +212,7 @@ fn resolve_shell(shell: &str, encoding: &str) -> (String, Vec<String>) {
 
     #[cfg(windows)]
     {
+        let lower = shell.to_ascii_lowercase();
         if lower == "cmd" || base == "cmd.exe" || base == "cmd" {
             return cmd_program(shell, encoding);
         }
