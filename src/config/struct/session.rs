@@ -136,6 +136,14 @@ pub struct Session {
     #[serde(default = "default_encoding")]
     pub encoding: String,
 
+    // --- Local-only fields (ignored unless kind == Local) -------------------
+    /// Shell program or path. Empty = platform default ($SHELL / PowerShell).
+    #[serde(default)]
+    pub shell: String,
+    /// Working directory. Empty = the user's home directory.
+    #[serde(default)]
+    pub working_directory: String,
+
     /// Skip the shell-integration setup (the cwd-follow PROMPT_COMMAND hook).
     /// That assumes a POSIX shell; on a Windows server whose shell is pwsh/cmd
     /// the injected hook breaks the shell. Turn this on for such servers (#140).
@@ -170,6 +178,8 @@ impl Session {
             parity: default_parity(),
             flow_control: default_flow(),
             encoding: default_encoding(),
+            shell: String::new(),
+            working_directory: String::new(),
             disable_shell_integration: false,
             note: String::new(),
         }

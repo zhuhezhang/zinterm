@@ -33,6 +33,14 @@ pub(crate) fn default_sftp_tree_width() -> f32 {
     160.0
 }
 
+pub(crate) fn default_welcome_session_col_name() -> f32 {
+    180.0
+}
+
+pub(crate) fn default_welcome_session_col_host() -> f32 {
+    180.0
+}
+
 pub(crate) fn default_quick_panel_width() -> f32 {
     260.0
 }
@@ -192,6 +200,11 @@ pub struct ConfigFile {
     /// None means the user has not explicitly collapsed/expanded it yet.
     #[serde(default)]
     pub welcome_collapsed: Option<bool>,
+    /// Welcome session list column widths (logical px) when not in compact mode.
+    #[serde(default = "default_welcome_session_col_name")]
+    pub welcome_session_col_name: f32,
+    #[serde(default = "default_welcome_session_col_host")]
+    pub welcome_session_col_host: f32,
     /// Frosted-panel opacity over a wallpaper (0.30–1.00); user-adjustable via the
     /// Interface › Wallpaper opacity slider. 0 = use the current default.
     #[serde(default)]

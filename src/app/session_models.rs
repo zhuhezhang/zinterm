@@ -1,4 +1,105 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use super::*;
+
+fn session_endpoint(session: &Session) -> String {
+    match session.kind {
+        SessionKind::Serial => session.serial_port.clone(),
+        SessionKind::Local => {
+            let shell = session.shell.trim();
+            if !shell.is_empty() {
+                shell.to_string()
+            } else {
+                session.working_directory.trim().to_string()
+            }
+        }
+        _ => session.host.clone(),
+    }
+}
+
+#[derive(Default)]
+struct GroupTreeNode {
+    full_path: String,
+    children: BTreeMap<String, GroupTreeNode>,
+}
+
+fn collect_user_group_paths(store: &ConfigStore) -> BTreeSet<String> {
+    let mut paths = BTreeSet::new();
+    for group in store.groups() {
+        let group = group.trim();
+        if group.is_empty() || is_reserved_session_group(group) {
+            continue;
+        }
+        paths.insert(group.to_string());
+        for ancestor in ancestor_paths(group) {
+            paths.insert(ancestor);
+        }
+    }
+    for session in store.sessions() {
+        let group = session.group.trim();
+        if group.is_empty() || is_reserved_session_group(group) {
+            continue;
+        }
+        paths.insert(group.to_string());
+        for ancestor in ancestor_paths(group) {
+            paths.insert(ancestor);
+        }
+    }
+    paths
+}
+
+fn ancestor_paths(path: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = path;
+    while let Some(idx) = rest.rfind('/') {
+        rest = &rest[..idx];
+        out.push(rest.to_string());
+    }
+    out
+}
+
+fn build_user_group_tree(paths: &BTreeSet<String>) -> BTreeMap<String, GroupTreeNode> {
+    let mut roots = BTreeMap::new();
+    for path in paths {
+        let mut built = String::new();
+        let mut current = &mut roots;
+        for (i, segment) in path.split('/').enumerate() {
+            if segment.is_empty() {
+                continue;
+            }
+            if i > 0 {
+                built.push('/');
+            }
+            built.push_str(segment);
+            let node = current
+                .entry(segment.to_string())
+                .or_insert_with(|| GroupTreeNode {
+                    full_path: built.clone(),
+                    children: BTreeMap::new(),
+                });
+            current = &mut node.children;
+        }
+    }
+    roots
+}
+
+fn group_depth(path: &str) -> i32 {
+    path.matches('/').count() as i32
+}
+
+fn ordered_user_group_paths(store: &ConfigStore) -> Vec<String> {
+    let paths = collect_user_group_paths(store);
+    let roots = build_user_group_tree(&paths);
+    let mut out = Vec::new();
+    fn walk(nodes: &BTreeMap<String, GroupTreeNode>, out: &mut Vec<String>) {
+        for node in nodes.values() {
+            out.push(node.full_path.clone());
+            walk(&node.children, out);
+        }
+    }
+    walk(&roots, &mut out);
+    out
+}
 
 pub(super) fn parse_batch_import(text: &str) -> Vec<Session> {
     let mut out = Vec::new();
@@ -47,28 +148,12 @@ pub(super) fn parse_batch_import(text: &str) -> Vec<Session> {
     out
 }
 
-/// Distinct named groups (explicit folders ∪ the groups sessions are filed under),
-/// de-duplicated and sorted alphabetically — feeds the new/edit dialog's group
+/// Distinct named groups in tree order — feeds the new/edit dialog's group
 /// dropdown (#179). Ungrouped ("") is excluded; the dialog leaves the field blank
-/// for that case.
+/// for that case (root of the Quick Connect tree).
 pub(super) fn session_groups_model(store: &ConfigStore) -> ModelRc<SharedString> {
-    let sessions = store.sessions();
-    let mut named: Vec<String> = store
-        .groups()
-        .iter()
-        .filter(|group| !is_reserved_session_group(group.trim()))
-        .cloned()
-        .chain(
-            sessions
-                .iter()
-                .filter(|s| !s.group.is_empty() && !is_reserved_session_group(s.group.trim()))
-                .map(|s| s.group.clone()),
-        )
-        .collect();
-    named.sort_by_key(|g| g.to_lowercase());
-    named.dedup();
     ModelRc::from(Rc::new(VecModel::from(
-        named
+        ordered_user_group_paths(store)
             .into_iter()
             .map(SharedString::from)
             .collect::<Vec<_>>(),
@@ -76,9 +161,6 @@ pub(super) fn session_groups_model(store: &ConfigStore) -> ModelRc<SharedString>
 }
 
 pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<SessionInfo>) {
-    // Group sessions by their `group` (named groups alphabetically, ungrouped
-    // last), then by name within each group, and tag the first row of every
-    // group with a header so the welcome list can render a folder heading (#41).
     let sessions = store.sessions();
     let collapsed_groups = store.collapsed_session_groups();
     let group_is_collapsed = |group: &str| {
@@ -87,36 +169,6 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
             .unwrap_or(true)
     };
 
-    // Ordered list of display groups:
-    //  - "default" only when there are ungrouped sessions (group == "")
-    //  - named groups: explicit folders (incl. empty ones) ∪ sessions' groups,
-    //    de-duplicated, alphabetical.
-    let has_default = sessions
-        .iter()
-        .any(|s| s.group.is_empty() || is_reserved_session_group(s.group.trim()));
-    let mut named: Vec<String> = store
-        .groups()
-        .iter()
-        .filter(|group| !is_reserved_session_group(group.trim()))
-        .cloned()
-        .chain(
-            sessions
-                .iter()
-                .filter(|s| !s.group.is_empty() && !is_reserved_session_group(s.group.trim()))
-                .map(|s| s.group.clone()),
-        )
-        .collect();
-    named.sort_by_key(|g| g.to_lowercase());
-    named.dedup();
-
-    let mut display_groups: Vec<String> = Vec::new();
-    if has_default {
-        display_groups.push("default".to_string());
-    }
-    display_groups.extend(named);
-
-    // Placeholder row for an empty folder; id == "" marks it as a group header
-    // with no session (used by the UI to gate the "delete group" action).
     let blank = |group: &str| SessionInfo {
         id: "".into(),
         name: "".into(),
@@ -127,103 +179,162 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
         last_used: "".into(),
         group: group.into(),
         group_header: group.into(),
+        group_label: group_path_segment(group).into(),
+        group_depth: group_depth(group),
         collapsed: group_is_collapsed(group),
         builtin: false,
+        conn_kind: "".into(),
+        endpoint: "".into(),
     };
 
     let mut rows: Vec<SessionInfo> = Vec::new();
-    for (i, s) in builtin_local_sessions().iter().enumerate() {
-        rows.push(SessionInfo {
-            id: s.id.clone().into(),
-            name: s.name.clone().into(),
-            host: s.host.clone().into(),
-            port: 0,
-            user: s.user.clone().into(),
-            auth: s.kind.as_str().into(),
-            last_used: "".into(),
-            group: "system".into(),
-            group_header: if i == 0 { "system".into() } else { "".into() },
-            collapsed: group_is_collapsed("system"),
-            builtin: true,
-        });
-    }
-    for group in &display_groups {
-        let mut gs: Vec<&Session> = if group == "default" {
-            sessions
-                .iter()
-                .filter(|s| s.group.is_empty() || is_reserved_session_group(s.group.trim()))
-                .collect()
-        } else {
-            sessions.iter().filter(|s| &s.group == group).collect()
-        };
-        gs.sort_by_key(|s| s.name.to_lowercase());
 
-        if gs.is_empty() {
+    // Groups first (tree order, ascending), then ungrouped root sessions.
+    let user_tree = build_user_group_tree(&collect_user_group_paths(store));
+
+    fn emit_group_branch(
+        sessions: &[Session],
+        node: &GroupTreeNode,
+        rows: &mut Vec<SessionInfo>,
+        group_is_collapsed: &impl Fn(&str) -> bool,
+        blank: &impl Fn(&str) -> SessionInfo,
+    ) {
+        let group = node.full_path.as_str();
+        if ancestor_collapsed(group, group_is_collapsed) {
+            return;
+        }
+        let collapsed = group_is_collapsed(group);
+        let depth = group_depth(group);
+        let label = group_path_segment(group);
+
+        let mut direct: Vec<&Session> = sessions
+            .iter()
+            .filter(|s| s.group == group)
+            .collect();
+        direct.sort_by(|a, b| {
+            a.name
+                .to_lowercase()
+                .cmp(&b.name.to_lowercase())
+                .then_with(|| a.name.cmp(&b.name))
+        });
+
+        if direct.is_empty() && node.children.is_empty() {
+            rows.push(blank(group));
+            return;
+        }
+
+        // Header always leads the group. When the folder has direct sessions,
+        // use a sentinel id so the delete action stays hidden (id "" = empty).
+        if direct.is_empty() {
             rows.push(blank(group));
         } else {
-            for (i, s) in gs.iter().enumerate() {
-                rows.push(SessionInfo {
-                    id: s.id.clone().into(),
-                    name: s.name.clone().into(),
-                    host: s.host.clone().into(),
-                    port: s.port as i32,
-                    user: s.user.clone().into(),
-                    auth: s.auth.as_str().into(),
-                    last_used: s
-                        .last_used
-                        .clone()
-                        .unwrap_or_else(|| "never".to_string())
-                        .into(),
-                    group: group.clone().into(),
-                    group_header: if i == 0 {
-                        group.clone().into()
-                    } else {
-                        "".into()
-                    },
-                    collapsed: group_is_collapsed(group),
-                    builtin: false,
-                });
-            }
+            rows.push(group_header_row(group, depth, label, collapsed));
+        }
+
+        if collapsed {
+            return;
+        }
+
+        // Same-level child folders before this group's own sessions.
+        for child in node.children.values() {
+            emit_group_branch(sessions, child, rows, group_is_collapsed, blank);
+        }
+
+        for s in direct {
+            rows.push(session_row(s, group, false, depth, label, false));
         }
     }
+
+    for root in user_tree.values() {
+        emit_group_branch(
+            sessions,
+            root,
+            &mut rows,
+            &group_is_collapsed,
+            &blank,
+        );
+    }
+
+    // Ungrouped sessions sit at the root of the tree (no folder header), below groups.
+    let mut root_sessions: Vec<&Session> = sessions
+        .iter()
+        .filter(|s| s.group.trim().is_empty() || is_reserved_session_group(s.group.trim()))
+        .collect();
+    root_sessions.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    for s in root_sessions {
+        rows.push(session_row(s, "", false, 0, "", false));
+    }
+
     model.set_vec(rows);
 }
 
-pub(super) fn builtin_local_sessions() -> Vec<Session> {
-    let mut out = Vec::new();
-    #[cfg(windows)]
-    {
-        out.push(builtin_local_session(
-            "system:powershell",
-            "PowerShell",
-            "powershell",
-        ));
-        out.push(builtin_local_session("system:cmd", "CMD", "cmd"));
+fn ancestor_collapsed(path: &str, group_is_collapsed: &impl Fn(&str) -> bool) -> bool {
+    let mut rest = path;
+    while let Some(idx) = rest.rfind('/') {
+        rest = &rest[..idx];
+        if group_is_collapsed(rest) {
+            return true;
+        }
     }
-    #[cfg(not(windows))]
-    {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        let name = std::path::Path::new(&shell)
-            .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("Shell")
-            .to_string();
-        out.push(builtin_local_session("system:shell", name, "shell"));
-    }
-    out
+    false
 }
 
-pub(super) fn builtin_local_session(id: &str, name: impl Into<String>, host: &str) -> Session {
-    let mut s = Session::new_empty();
-    s.id = id.to_string();
-    s.name = name.into();
-    s.host = host.to_string();
-    s.user = std::env::var("USERNAME")
-        .or_else(|_| std::env::var("USER"))
-        .unwrap_or_default();
-    s.group = "system".to_string();
-    s.kind = SessionKind::Local;
-    s
+/// Header row for a non-empty group. Sentinel id keeps Delete hidden and skips
+/// SessionRow rendering in the welcome list.
+fn group_header_row(group: &str, depth: i32, label: &str, collapsed: bool) -> SessionInfo {
+    SessionInfo {
+        id: "__group__".into(),
+        name: "".into(),
+        host: "".into(),
+        port: 0,
+        user: "".into(),
+        auth: "".into(),
+        last_used: "".into(),
+        group: group.into(),
+        group_header: group.into(),
+        group_label: label.into(),
+        group_depth: depth,
+        collapsed,
+        builtin: false,
+        conn_kind: "".into(),
+        endpoint: "".into(),
+    }
+}
+
+fn session_row(
+    s: &Session,
+    group: &str,
+    header: bool,
+    depth: i32,
+    label: &str,
+    collapsed: bool,
+) -> SessionInfo {
+    SessionInfo {
+        id: s.id.clone().into(),
+        name: s.name.clone().into(),
+        host: s.host.clone().into(),
+        port: s.port as i32,
+        user: s.user.clone().into(),
+        auth: s.auth.as_str().into(),
+        last_used: s
+            .last_used
+            .clone()
+            .unwrap_or_else(|| "never".to_string())
+            .into(),
+        group: group.into(),
+        group_header: if header { group.into() } else { "".into() },
+        group_label: if header { label.into() } else { "".into() },
+        group_depth: if header { depth } else { depth },
+        collapsed,
+        builtin: false,
+        conn_kind: s.kind.as_str().into(),
+        endpoint: session_endpoint(s).into(),
+    }
 }
 
 // ---------------------------------------------------------------------------

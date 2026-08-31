@@ -81,6 +81,24 @@ msgstr "e.g. production web-01"
 msgid "e.g. Production / Database"
 msgstr "e.g. Production / Database"
 
+msgid "leave empty → root"
+msgstr "leave empty → root"
+
+msgid "leave empty → system default"
+msgstr "leave empty → system default"
+
+msgid "leave empty → home directory"
+msgstr "leave empty → home directory"
+
+msgid "Shell"
+msgstr "Shell"
+
+msgid "Working directory"
+msgstr "Working directory"
+
+msgid "Root"
+msgstr "Root"
+
 msgid "Host / IP"
 msgstr "Host / IP"
 
@@ -251,6 +269,12 @@ msgstr "Duplicate"
 
 msgid "New group"
 msgstr "New group"
+
+msgid "New sibling group"
+msgstr "New sibling group"
+
+msgid "New child group"
+msgstr "New child group"
 
 msgid "Edit group"
 msgstr "Edit group"

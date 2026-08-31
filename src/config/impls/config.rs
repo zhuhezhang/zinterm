@@ -354,10 +354,40 @@ fn repair_history_newlines(cmd: String) -> String {
     out
 }
 
-/// Display-only session groups that must never be persisted as user folders.
-/// `default` maps to an empty group; `system` is owned by built-in local shells.
+/// Legacy display-only group names that must never be persisted as user folders.
+/// Older builds used `default` for ungrouped sessions and `system` for built-in
+/// local shells; both now map to an empty (root) group.
 pub(crate) fn is_reserved_session_group(name: &str) -> bool {
     name.eq_ignore_ascii_case("default") || name.eq_ignore_ascii_case("system")
+}
+
+/// Last path segment of a nested group (`"a/b/c"` → `"c"`).
+pub(crate) fn group_path_segment(path: &str) -> &str {
+    path.rsplit('/').next().unwrap_or(path)
+}
+
+/// Parent path (`"a/b/c"` → `"a/b"`, top-level → `""`).
+pub(crate) fn group_parent_path(path: &str) -> String {
+    path.rfind('/')
+        .map(|idx| path[..idx].to_string())
+        .unwrap_or_default()
+}
+
+/// Join a parent path and a single segment (`("", "x")` → `"x"`).
+pub(crate) fn group_join(parent: &str, segment: &str) -> String {
+    let parent = parent.trim();
+    let segment = segment.trim();
+    if parent.is_empty() {
+        segment.to_string()
+    } else {
+        format!("{parent}/{segment}")
+    }
+}
+
+/// User-entered segment: non-empty, no `/`, not a reserved name.
+pub(crate) fn is_valid_group_segment(segment: &str) -> bool {
+    let s = segment.trim();
+    !s.is_empty() && !s.contains('/') && !is_reserved_session_group(s)
 }
 
 /// Repair configurations created before #316/#324, when the Move-to menu exposed
@@ -1101,6 +1131,28 @@ impl ConfigStore {
     pub fn set_welcome_collapsed(&mut self, v: bool) {
         self.cache.welcome_collapsed = Some(v);
     }
+    pub fn welcome_session_col_name(&self) -> f32 {
+        let w = self.cache.welcome_session_col_name;
+        if w > 0.0 {
+            w
+        } else {
+            default_welcome_session_col_name()
+        }
+    }
+    pub fn set_welcome_session_col_name(&mut self, v: f32) {
+        self.cache.welcome_session_col_name = v.clamp(64.0, 600.0);
+    }
+    pub fn welcome_session_col_host(&self) -> f32 {
+        let w = self.cache.welcome_session_col_host;
+        if w > 0.0 {
+            w
+        } else {
+            default_welcome_session_col_host()
+        }
+    }
+    pub fn set_welcome_session_col_host(&mut self, v: f32) {
+        self.cache.welcome_session_col_host = v.clamp(64.0, 600.0);
+    }
     /// Whether the startup new-version check is enabled (#184).
     pub fn update_check_enabled(&self) -> bool {
         !self.cache.update_check_disabled
@@ -1224,21 +1276,15 @@ impl ConfigStore {
     /// folder so expanding one folder does not accidentally expand the rest.
     pub fn set_session_group_collapsed(&mut self, name: &str, collapsed: bool) {
         if self.cache.collapsed_session_groups.is_none() {
-            let mut groups = vec!["system".to_string()];
-            if self
-                .cache
-                .sessions
-                .iter()
-                .any(|session| session.group.is_empty())
-            {
-                groups.push("default".to_string());
-            }
-            groups.extend(self.cache.groups.iter().cloned());
+            let mut groups = self.cache.groups.clone();
             groups.extend(
                 self.cache
                     .sessions
                     .iter()
-                    .filter(|session| !session.group.is_empty())
+                    .filter(|session| {
+                        let group = session.group.trim();
+                        !group.is_empty() && !is_reserved_session_group(group)
+                    })
                     .map(|session| session.group.clone()),
             );
             groups.sort();
@@ -1286,10 +1332,21 @@ impl ConfigStore {
         }
     }
 
-    /// Delete a group. Any session still in it falls back to ungrouped — the UI
-    /// only offers delete on empty groups, but we clear sessions defensively.
+    /// Delete a group. Refuses when nested child groups still exist. Any session
+    /// still in it falls back to ungrouped — the UI only offers delete on empty
+    /// groups, but we clear sessions defensively.
     pub fn remove_group(&mut self, name: &str) {
         if is_reserved_session_group(name.trim()) {
+            return;
+        }
+        let prefix = format!("{name}/");
+        let has_children = self.cache.groups.iter().any(|g| g.starts_with(&prefix))
+            || self
+                .cache
+                .sessions
+                .iter()
+                .any(|s| s.group.starts_with(&prefix));
+        if has_children {
             return;
         }
         self.cache.groups.retain(|g| g != name);
@@ -1303,31 +1360,44 @@ impl ConfigStore {
         }
     }
 
-    /// Rename a group, moving its sessions along. No-op for reserved names.
+    /// Rename a group path, moving its sessions and nested descendants along.
+    /// No-op for reserved names.
     pub fn rename_group(&mut self, old: &str, new: String) {
+        let old = old.trim();
         let n = new.trim().to_string();
         if n.is_empty()
-            || is_reserved_session_group(old.trim())
+            || is_reserved_session_group(old)
             || is_reserved_session_group(&n)
             || n == old
             || (!n.eq_ignore_ascii_case(old) && self.session_group_exists(&n))
         {
             return;
         }
+        let old_prefix = format!("{old}/");
+        let new_prefix = format!("{n}/");
         for g in &mut self.cache.groups {
             if g == old {
                 *g = n.clone();
+            } else if g.starts_with(&old_prefix) {
+                *g = format!("{new_prefix}{}", g.strip_prefix(&old_prefix).unwrap_or(g));
             }
         }
         for s in &mut self.cache.sessions {
             if s.group == old {
                 s.group = n.clone();
+            } else if s.group.starts_with(&old_prefix) {
+                s.group = format!("{new_prefix}{}", s.group.strip_prefix(&old_prefix).unwrap_or(&s.group));
             }
         }
         if let Some(groups) = &mut self.cache.collapsed_session_groups {
             for group in groups.iter_mut() {
                 if group == old {
                     *group = n.clone();
+                } else if group.starts_with(&old_prefix) {
+                    *group = format!(
+                        "{new_prefix}{}",
+                        group.strip_prefix(&old_prefix).unwrap_or(group)
+                    );
                 }
             }
             groups.sort();
@@ -1634,7 +1704,8 @@ mod tests {
         let collapsed = store.collapsed_session_groups().unwrap();
         assert!(!collapsed.iter().any(|group| group == "production"));
         assert!(collapsed.iter().any(|group| group == "staging"));
-        assert!(collapsed.iter().any(|group| group == "system"));
+        assert!(!collapsed.iter().any(|group| group == "system"));
+        assert!(!collapsed.iter().any(|group| group == "default"));
 
         store.set_session_group_collapsed("production", true);
         assert!(store
@@ -1667,8 +1738,8 @@ mod tests {
         assert_eq!(cfg.groups, ["prod"]);
         assert!(cfg.sessions.iter().all(|session| session.group.is_empty()));
         assert!(cfg.sessions[0].password.is_empty());
-        // The built-in system folder's collapse preference is display state,
-        // not a user-created group, so normalization must preserve it.
+        // Collapse preferences for legacy reserved labels are display state and
+        // may linger; normalization only repairs groups/sessions.
         assert_eq!(
             cfg.collapsed_session_groups.as_deref(),
             Some(["system".to_string(), "prod".to_string()].as_slice())

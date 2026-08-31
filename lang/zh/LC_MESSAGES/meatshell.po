@@ -81,6 +81,24 @@ msgstr "例如：生产环境 web-01"
 msgid "e.g. Production / Database"
 msgstr "例如：生产 / 数据库"
 
+msgid "leave empty → root"
+msgstr "留空 → 根目录"
+
+msgid "leave empty → system default"
+msgstr "留空 → 系统默认"
+
+msgid "leave empty → home directory"
+msgstr "留空 → 用户家目录"
+
+msgid "Shell"
+msgstr "Shell"
+
+msgid "Working directory"
+msgstr "工作目录"
+
+msgid "Root"
+msgstr "根目录"
+
 msgid "Host / IP"
 msgstr "主机 / IP"
 
@@ -251,6 +269,12 @@ msgstr "复制副本"
 
 msgid "New group"
 msgstr "新建分组"
+
+msgid "New sibling group"
+msgstr "新建同级分组"
+
+msgid "New child group"
+msgstr "新建子分组"
 
 msgid "Edit group"
 msgstr "编辑分组"

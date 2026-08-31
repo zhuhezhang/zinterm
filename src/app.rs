@@ -133,7 +133,8 @@ use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use tokio::runtime::Runtime;
 
 use crate::config::{
-    is_reserved_session_group, AuthMethod, ConfigStore, OutputHighlightRule, Secret, Session,
+    is_reserved_session_group, group_join, group_parent_path, group_path_segment,
+    is_valid_group_segment, AuthMethod, ConfigStore, OutputHighlightRule, Secret, Session,
     SessionKind,
 };
 use crate::i18n::t;
@@ -163,6 +164,14 @@ use crate::ui::*;
 fn tab_endpoint(session: &Session) -> String {
     match session.kind {
         SessionKind::Serial => session.serial_port.clone(),
+        SessionKind::Local => {
+            let shell = session.shell.trim();
+            if !shell.is_empty() {
+                shell.to_string()
+            } else {
+                session.working_directory.trim().to_string()
+            }
+        }
         _ => session.host.clone(),
     }
 }
@@ -653,6 +662,8 @@ pub fn run() -> Result<()> {
         window.set_welcome_sidebar_width(s.welcome_sidebar_width());
         window.set_welcome_sidebar_dock(welcome_sidebar_dock.into());
         window.set_welcome_collapsed(welcome_collapsed);
+        window.set_welcome_session_col_name(s.welcome_session_col_name());
+        window.set_welcome_session_col_host(s.welcome_session_col_host());
         window.set_wallpaper_overlay(s.wallpaper_overlay());
         window.set_update_check_enabled(s.update_check_enabled()); // #184
         window.set_ssh_keepalive_secs(s.ssh_keepalive_secs() as i32);
@@ -894,6 +905,15 @@ pub fn run() -> Result<()> {
         window.on_persist_sftp_tree_width(move |width| {
             let mut s = store.borrow_mut();
             s.set_sftp_tree_width(width);
+            let _ = s.save();
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_persist_welcome_session_cols(move |name, host| {
+            let mut s = store.borrow_mut();
+            s.set_welcome_session_col_name(name);
+            s.set_welcome_session_col_host(host);
             let _ = s.save();
         });
     }
@@ -2371,6 +2391,8 @@ fn wire_session_callbacks(
             w.set_dialog_parity("none".into());
             w.set_dialog_flow("none".into());
             w.set_dialog_encoding("UTF-8".into());
+            w.set_dialog_shell("".into());
+            w.set_dialog_working_directory("".into());
             w.set_dialog_disable_shell_integration(false);
             w.set_dialog_note("".into());
             w.set_dialog_editing(false);
@@ -2507,6 +2529,8 @@ fn wire_session_callbacks(
                 w.set_dialog_parity(session.parity.clone().into());
                 w.set_dialog_flow(session.flow_control.clone().into());
                 w.set_dialog_encoding(session.encoding.clone().into());
+                w.set_dialog_shell(session.shell.clone().into());
+                w.set_dialog_working_directory(session.working_directory.clone().into());
                 w.set_dialog_disable_shell_integration(session.disable_shell_integration);
                 w.set_dialog_note(session.note.clone().into());
                 w.set_dialog_editing(true);
@@ -2572,14 +2596,16 @@ fn wire_session_callbacks(
                 let mut s = store.borrow_mut();
                 if let Some(orig) = s.get(&id.to_string()).cloned() {
                     let mut moved = orig;
-                    // "default" is the display label for ungrouped → store empty.
-                    moved.group = if group.as_str().eq_ignore_ascii_case("default") {
+                    // Empty / legacy "default" = root of the Quick Connect tree.
+                    let target = group.as_str().trim();
+                    moved.group = if target.is_empty()
+                        || target.eq_ignore_ascii_case("default")
+                    {
                         String::new()
-                    } else if is_reserved_session_group(group.as_str().trim()) {
-                        // `system` belongs exclusively to built-in local shells.
+                    } else if is_reserved_session_group(target) {
                         return;
                     } else {
-                        group.to_string()
+                        target.to_string()
                     };
                     s.upsert(moved);
                     if let Err(err) = s.save() {
@@ -2602,33 +2628,22 @@ fn wire_session_callbacks(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         window.on_toggle_group(move |group: SharedString| {
-            use slint::Model as _;
             let target = group.to_string();
-            let n = sessions_model.row_count();
-            // New state = the opposite of the group's first row.
-            let mut new_state = false;
-            for i in 0..n {
-                if let Some(row) = sessions_model.row_data(i) {
-                    if row.group.as_str() == target {
-                        new_state = !row.collapsed;
-                        break;
-                    }
-                }
-            }
-            for i in 0..n {
-                if let Some(mut row) = sessions_model.row_data(i) {
-                    if row.group.as_str() == target {
-                        row.collapsed = new_state;
-                        sessions_model.set_row_data(i, row);
-                    }
-                }
-            }
+            let new_state = {
+                let store = store.borrow();
+                let collapsed = store
+                    .collapsed_session_groups()
+                    .map(|groups| groups.iter().any(|g| g == &target))
+                    .unwrap_or(true);
+                !collapsed
+            };
             {
                 let mut store = store.borrow_mut();
                 store.set_session_group_collapsed(&target, new_state);
                 if let Err(err) = store.save() {
                     tracing::warn!("failed to save Quick Connect folder state: {err:#}");
                 }
+                sync_sessions_to_model(&store, &sessions_model);
             }
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -2639,18 +2654,70 @@ fn wire_session_callbacks(
     // Group create / rename (#41).
     {
         let weak = window.as_weak();
+        window.on_begin_sibling_group(move |path: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                w.set_group_dialog_orig("".into());
+                w.set_group_dialog_parent(group_parent_path(path.as_str()).into());
+                w.set_group_dialog_mode("sibling".into());
+                w.set_group_dialog_name("".into());
+                w.set_group_dialog_error("".into());
+                w.set_group_dialog_open(true);
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
+        window.on_begin_child_group(move |path: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                w.set_group_dialog_orig("".into());
+                w.set_group_dialog_parent(path);
+                w.set_group_dialog_mode("child".into());
+                w.set_group_dialog_name("".into());
+                w.set_group_dialog_error("".into());
+                w.set_group_dialog_open(true);
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
+        window.on_begin_rename_group(move |path: SharedString, label: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                w.set_group_dialog_orig(path);
+                w.set_group_dialog_parent("".into());
+                w.set_group_dialog_mode("rename".into());
+                w.set_group_dialog_name(label);
+                w.set_group_dialog_error("".into());
+                w.set_group_dialog_open(true);
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
-        window.on_submit_group(move |orig: SharedString, name: SharedString| {
-            let trimmed = name.trim();
+        window.on_submit_group(move |orig: SharedString, segment: SharedString, parent: SharedString| {
+            let segment = segment.trim();
+            let parent = parent.trim();
+            if segment.is_empty() {
+                return SharedString::from(t("请输入分组名称", "Enter a group name"));
+            }
+            let new_full = if orig.is_empty() {
+                group_join(parent, segment)
+            } else {
+                group_join(group_parent_path(orig.as_str()).as_str(), segment)
+            };
             let error = {
                 let s = store.borrow();
-                if trimmed.is_empty() {
-                    Some(t("请输入分组名称", "Enter a group name"))
-                } else if is_reserved_session_group(trimmed) {
-                    Some(t("该名称为系统保留分组", "This group name is reserved"))
-                } else if (orig.is_empty() || !trimmed.eq_ignore_ascii_case(orig.as_str()))
-                    && s.session_group_exists(trimmed)
+                if !is_valid_group_segment(segment) {
+                    Some(t(
+                        "分组名称不能包含“/”或为系统保留名",
+                        "Group name cannot contain “/” or be a reserved name",
+                    ))
+                } else if orig.is_empty() && s.session_group_exists(&new_full) {
+                    Some(t("分组已存在", "Group already exists"))
+                } else if !orig.is_empty()
+                    && !new_full.eq_ignore_ascii_case(orig.as_str())
+                    && s.session_group_exists(&new_full)
                 {
                     Some(t("分组已存在", "Group already exists"))
                 } else {
@@ -2663,9 +2730,9 @@ fn wire_session_callbacks(
             {
                 let mut s = store.borrow_mut();
                 if orig.is_empty() {
-                    s.add_group(trimmed.to_string());
+                    s.add_group(new_full);
                 } else {
-                    s.rename_group(orig.as_str(), trimmed.to_string());
+                    s.rename_group(orig.as_str(), new_full);
                 }
                 if let Err(err) = s.save() {
                     tracing::warn!("failed to save config: {err:#}");
@@ -2736,16 +2803,28 @@ fn wire_session_callbacks(
                 draft.private_key_path.to_string().replace('\\', "/")
             };
             let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
-            // Auto-name: serial → port label; otherwise user@host, or just the
-            // host when no username was given (#110).
+            // Auto-name: serial → port label; local → shell/Local; otherwise
+            // user@host, or just the host when no username was given (#110).
             let auto_name = match kind {
                 crate::config::SessionKind::Serial => {
                     format!("{} @{}", draft.serial_port, draft.baud_rate)
                 }
+                crate::config::SessionKind::Local => {
+                    let shell = draft.shell.trim();
+                    if shell.is_empty() {
+                        t("本地终端", "Local").to_string()
+                    } else {
+                        std::path::Path::new(shell)
+                            .file_name()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or(shell)
+                            .to_string()
+                    }
+                }
                 _ if draft.user.trim().is_empty() => draft.host.to_string(),
                 _ => format!("{}@{}", draft.user, draft.host),
             };
-            // Telnet defaults to port 23, SSH to 22; serial ignores port.
+            // Telnet defaults to port 23, SSH to 22; serial/local ignore port.
             let default_port = if kind == crate::config::SessionKind::Telnet {
                 23
             } else {
@@ -2783,7 +2862,13 @@ fn wire_session_callbacks(
                 stop_bits: draft.stop_bits as u8,
                 parity: draft.parity.to_string(),
                 flow_control: draft.flow_control.to_string(),
-                encoding: draft.encoding.to_string(),
+                encoding: if draft.encoding.trim().is_empty() {
+                    "UTF-8".to_string()
+                } else {
+                    draft.encoding.to_string()
+                },
+                shell: draft.shell.to_string(),
+                working_directory: draft.working_directory.to_string(),
                 disable_shell_integration: draft.disable_shell_integration,
                 note: draft.note.to_string(),
             };
@@ -2862,16 +2947,9 @@ fn wire_session_callbacks(
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         window.on_connect_session(move |id: SharedString| {
             let id = id.to_string();
-            let session = if id.starts_with("system:") {
-                match builtin_local_sessions().into_iter().find(|s| s.id == id) {
-                    Some(s) => s,
-                    None => return,
-                }
-            } else {
-                match store.borrow().get(&id).cloned() {
-                    Some(s) => s,
-                    None => return,
-                }
+            let session = match store.borrow().get(&id).cloned() {
+                Some(s) => s,
+                None => return,
             };
             let tab_id = format!("term-{}", uuid::Uuid::new_v4());
             let tab_title = session.name.clone();

@@ -5,7 +5,7 @@ import { LabeledInput, PrimaryButton, GhostButton } from "widgets.slint";
 export struct SessionDraft {
     id: string,
     name: string,
-    kind: string,      // "ssh" | "serial" | "telnet"
+    kind: string,      // "ssh" | "serial" | "telnet" | "local"
     host: string,
     port: int,
     user: string,
@@ -14,7 +14,7 @@ export struct SessionDraft {
     private-key-path: string,
     private-key-inline: string,
     private-key-inline-mode: bool,
-    group: string,     // folder/group name ("" = ungrouped)
+    group: string,     // folder/group name ("" = root / ungrouped)
     // Serial-only (ignored unless kind == "serial")
     serial-port: string,
     baud-rate: int,
@@ -23,6 +23,9 @@ export struct SessionDraft {
     parity: string,        // "none" | "odd" | "even"
     flow-control: string,  // "none" | "hardware" | "software"
     encoding: string,
+    // Local-only (ignored unless kind == "local")
+    shell: string,              // "" = platform default
+    working-directory: string,  // "" = user home
     // Skip the POSIX shell-integration setup (cwd-follow hook) for
     // Windows / pwsh servers where it breaks the shell (#140).
     disable-shell-integration: bool,
@@ -159,7 +162,7 @@ component GroupCombo inherits VerticalLayout {
     }
 }
 
-// Modal dialog for creating / editing a session (SSH / Serial / Telnet).
+// Modal dialog for creating / editing a session (SSH / Serial / Telnet / Local).
 // The dialog is purely presentational — it stores values in mutable
 // properties and emits `submit` / `cancel` callbacks up to the main window.
 export component SessionDialog inherits Rectangle {
@@ -187,6 +190,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-parity: "none";
     in-out property <string> draft-flow: "none";
     in-out property <string> draft-encoding: "UTF-8";
+    in-out property <string> draft-shell;
+    in-out property <string> draft-working-directory;
     in-out property <bool> draft-disable-shell-integration: false;
     in-out property <string> draft-note;
 
@@ -333,6 +338,12 @@ export component SessionDialog inherits Rectangle {
                                     root.draft-kind = "telnet";
                                 }
                             }
+
+                            SegOption {
+                                label: @tr("Local");
+                                active: root.draft-kind == "local";
+                                clicked => { root.draft-kind = "local"; }
+                            }
                         }
                     }
 
@@ -345,16 +356,16 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // Optional group/folder to organize sessions by business (#41).
-                    // Editable + dropdown of existing groups (#179).
+                    // Editable + dropdown of existing groups (#179). Blank = root.
                     GroupCombo {
                         label: @tr("Group");
-                        placeholder: @tr("e.g. Production / Database");
+                        placeholder: @tr("leave empty → root");
                         value <=> root.draft-group;
                         groups: root.session-groups;
                     }
 
                     // Free-form note — extra info to keep with the session (B站 suggestion).
-                    LabeledInput {
+                    if root.draft-kind != "local": LabeledInput {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Note (optional)");
@@ -362,8 +373,40 @@ export component SessionDialog inherits Rectangle {
                         value <=> root.draft-note;
                     }
 
+                    // ── Local: shell / cwd / encoding ───────────────────────────────
+                    if root.draft-kind == "local": LabeledInput {
+                        input-background: Theme.bg-elevated;
+                        idle-border: Theme.border-strong;
+                        label: @tr("Shell");
+                        placeholder: @tr("leave empty → system default");
+                        value <=> root.draft-shell;
+                    }
+
+                    if root.draft-kind == "local": LabeledInput {
+                        input-background: Theme.bg-elevated;
+                        idle-border: Theme.border-strong;
+                        label: @tr("Working directory");
+                        placeholder: @tr("leave empty → home directory");
+                        value <=> root.draft-working-directory;
+                    }
+
+                    if root.draft-kind == "local": VerticalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: @tr("Terminal character encoding");
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                        }
+
+                        ComboBox {
+                            model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
+                            current-value: root.draft-encoding;
+                            selected(value) => { root.draft-encoding = value; }
+                        }
+                    }
+
                     // ── SSH / Telnet share host + port ──────────────────────────────
-                    if root.draft-kind != "serial": HorizontalLayout {
+                    if root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
                         spacing: 10px;
                         LabeledInput {
                             input-background: Theme.bg-elevated;
@@ -385,7 +428,7 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // Inline error when a host-less SSH/Telnet session is submitted (#110).
-                    if root.host-missing && root.draft-host == "" && root.draft-kind != "serial": Text {
+                    if root.host-missing && root.draft-host == "" && root.draft-kind != "serial" && root.draft-kind != "local": Text {
                         text: @tr("Please enter a host / IP address.");
                         color: Theme.danger;
                         font-size: Theme.fs-sm;
@@ -819,7 +862,7 @@ export component SessionDialog inherits Rectangle {
                             text: is-editing ? @tr("Save") : @tr("Create");
                             clicked => {
                                 // SSH/Telnet need a host; block submit and flag it (#110).
-                                if (root.draft-kind != "serial" && root.draft-host == "") {
+                                if (root.draft-kind != "serial" && root.draft-kind != "local" && root.draft-host == "") {
                                     root.host-missing = true;
                                     return;
                                 }
@@ -844,6 +887,8 @@ export component SessionDialog inherits Rectangle {
                                     parity: root.draft-parity,
                                     flow-control: root.draft-flow,
                                     encoding: root.draft-encoding,
+                                    shell: root.draft-shell,
+                                    working-directory: root.draft-working-directory,
                                     disable-shell-integration: root.draft-disable-shell-integration,
                                     note: root.draft-note,
                                 });
