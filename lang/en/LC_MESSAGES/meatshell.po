@@ -282,6 +282,18 @@ msgstr "Rename group"
 msgid "Delete group"
 msgstr "Delete group"
 
+msgid "Expand all groups"
+msgstr "Expand all groups"
+
+msgid "Collapse all groups"
+msgstr "Collapse all groups"
+
+msgid "Expand all children"
+msgstr "Expand all children"
+
+msgid "Collapse all children"
+msgstr "Collapse all children"
+
 msgid "Group name"
 msgstr "Group name"
 

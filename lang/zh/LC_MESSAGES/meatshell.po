@@ -282,6 +282,18 @@ msgstr "重命名分组"
 msgid "Delete group"
 msgstr "删除分组"
 
+msgid "Expand all groups"
+msgstr "展开所有分组"
+
+msgid "Collapse all groups"
+msgstr "收起所有分组"
+
+msgid "Expand all children"
+msgstr "展开该分组所有子项"
+
+msgid "Collapse all children"
+msgstr "收起该分组所有子项"
+
 msgid "Group name"
 msgstr "分组名称"
 

@@ -466,6 +466,23 @@ export component AppWindow inherits Window {
     // Render the welcome/session list as a left sidebar instead of a tab (v0.5).
     in-out property <bool> welcome-as-sidebar: root.welcome-use-mock;
     callback set-welcome-as-sidebar(bool);         // apply + persist
+    // Welcome list delete confirmations (Interface › Welcome page).
+    in-out property <bool> confirm-delete-group-enabled: true;
+    callback set-confirm-delete-group-enabled(bool);
+    in-out property <bool> confirm-delete-session-enabled: false;
+    callback set-confirm-delete-session-enabled(bool);
+    // Welcome list: single-click connects (default off → double-click).
+    in-out property <bool> welcome-single-click-connect: false;
+    callback set-welcome-single-click-connect(bool);
+    in-out property <bool> welcome-delete-open: false;
+    in-out property <string> welcome-delete-kind;   // "group" | "session"
+    in-out property <string> welcome-delete-target; // group path or session id
+    in-out property <string> welcome-delete-detail; // display label in the dialog
+    // Settings › Data: confirm before wiping known_hosts / all sessions.
+    in-out property <bool> data-clear-open: false;
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions"
+    callback clear-known-hosts();
+    callback clear-all-sessions();
     in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).
@@ -545,6 +562,17 @@ export component AppWindow inherits Window {
     callback begin-child-group(string /* ref path */);
     callback begin-rename-group(string /* path */, string /* label */);
     callback delete-group(string /* name */);
+    callback new-session-in-group(string /* group */);
+    callback drop-welcome-session(string /* id */, string /* target-group */);
+    callback drop-welcome-group(string /* path */, string /* target-parent */);
+    callback welcome-drag-at(length /* list-top-y */, length /* pointer-y */, string /* kind */, string /* from */);
+    in-out property <string> welcome-drag-kind;
+    in-out property <string> welcome-drag-from;
+    in-out property <string> welcome-drop-target;
+    callback expand-all-groups();
+    callback collapse-all-groups();
+    callback expand-group-children(string /* group */);
+    callback collapse-group-children(string /* group */);
     callback submit-group(string /* orig */, string /* segment */, string /* parent */) -> string;
     callback toggle-theme();               // flip dark ↔ light
     in-out property <length> sftp-panel-height: 220px; // shared; lets Rust locate the drop zone
@@ -665,7 +693,6 @@ export component AppWindow inherits Window {
     callback connect-session(string /* session-id */);
     callback edit-session(string /* session-id */);
     callback duplicate-session(string /* session-id */);
-    callback move-session(string /* session-id */, string /* group */);
     callback toggle-group(string /* group */);
     callback remove-session(string /* session-id */);
     callback session-dialog-submit(SessionDraft);
@@ -1046,7 +1073,26 @@ export component AppWindow inherits Window {
                     compact: true;
                     dock-edge: root.welcome-sidebar-dock;
                     sessions: root.welcome-display-sessions;
+                    single-click-connect: root.welcome-single-click-connect;
                     import-hint: root.ssh-import-hint;
+                    welcome-drag-kind <=> root.welcome-drag-kind;
+                    welcome-drag-from <=> root.welcome-drag-from;
+                    welcome-drop-target <=> root.welcome-drop-target;
+                    welcome-drag-at(list-top, pointer-y, kind, from) => {
+                        root.welcome-drag-at(list-top, pointer-y, kind, from);
+                    }
+                    drop-welcome-session(id, target) => {
+                        root.welcome-drag-kind = "";
+                        root.welcome-drag-from = "";
+                        root.welcome-drop-target = "";
+                        root.drop-welcome-session(id, target);
+                    }
+                    drop-welcome-group(path, parent) => {
+                        root.welcome-drag-kind = "";
+                        root.welcome-drag-from = "";
+                        root.welcome-drop-target = "";
+                        root.drop-welcome-group(path, parent);
+                    }
                     collapse => {
                         root.welcome-collapsed = true;
                         root.set-welcome-collapsed(true);
@@ -1067,16 +1113,38 @@ export component AppWindow inherits Window {
                         root.panel-dragging = false;
                     }
                     new-session => { root.new-session-clicked(); }
+                    new-session-in-group(group) => { root.new-session-in-group(group); }
                     connect-session(id) => { root.connect-session(id); }
                     edit-session(id) => { root.edit-session(id); }
                     duplicate-session(id) => { root.duplicate-session(id); }
-                    move-session(id, group) => { root.move-session(id, group); }
                     toggle-group(group) => { root.toggle-group(group); }
+                    expand-all-groups => { root.expand-all-groups(); }
+                    collapse-all-groups => { root.collapse-all-groups(); }
+                    expand-group-children(group) => { root.expand-group-children(group); }
+                    collapse-group-children(group) => { root.collapse-group-children(group); }
                     new-sibling-group(g) => { root.begin-sibling-group(g); }
                     new-child-group(g) => { root.begin-child-group(g); }
                     edit-group(path, label) => { root.begin-rename-group(path, label); }
-                    delete-group(name) => { root.delete-group(name); }
-                    remove-session(id) => { root.remove-session(id); }
+                    delete-group(name) => {
+                        if (root.confirm-delete-group-enabled) {
+                            root.welcome-delete-kind = "group";
+                            root.welcome-delete-target = name;
+                            root.welcome-delete-detail = name;
+                            root.welcome-delete-open = true;
+                        } else {
+                            root.delete-group(name);
+                        }
+                    }
+                    remove-session(id, name) => {
+                        if (root.confirm-delete-session-enabled) {
+                            root.welcome-delete-kind = "session";
+                            root.welcome-delete-target = id;
+                            root.welcome-delete-detail = name;
+                            root.welcome-delete-open = true;
+                        } else {
+                            root.remove-session(id);
+                        }
+                    }
                 }
 
                 Rectangle {
@@ -1264,23 +1332,64 @@ export component AppWindow inherits Window {
                                             width: parent.width;
                                             height: parent.height;
                                             sessions: root.welcome-display-sessions;
+                                            single-click-connect: root.welcome-single-click-connect;
                                             import-hint: root.ssh-import-hint;
+                                            welcome-drag-kind <=> root.welcome-drag-kind;
+                                            welcome-drag-from <=> root.welcome-drag-from;
+                                            welcome-drop-target <=> root.welcome-drop-target;
+                                            welcome-drag-at(list-top, pointer-y, kind, from) => {
+                                                root.welcome-drag-at(list-top, pointer-y, kind, from);
+                                            }
+                                            drop-welcome-session(id, target) => {
+                                                root.welcome-drag-kind = "";
+                                                root.welcome-drag-from = "";
+                                                root.welcome-drop-target = "";
+                                                root.drop-welcome-session(id, target);
+                                            }
+                                            drop-welcome-group(path, parent) => {
+                                                root.welcome-drag-kind = "";
+                                                root.welcome-drag-from = "";
+                                                root.welcome-drop-target = "";
+                                                root.drop-welcome-group(path, parent);
+                                            }
                                             session-col-name <=> root.welcome-session-col-name;
                                             session-col-host <=> root.welcome-session-col-host;
                                             persist-session-cols(name, host) => {
                                                 root.persist-welcome-session-cols(name, host);
                                             }
                                             new-session => { root.new-session-clicked(); }
+                                            new-session-in-group(group) => { root.new-session-in-group(group); }
                                             connect-session(id) => { root.connect-session(id); }
                                             edit-session(id) => { root.edit-session(id); }
                                             duplicate-session(id) => { root.duplicate-session(id); }
-                                            move-session(id, group) => { root.move-session(id, group); }
                                             toggle-group(group) => { root.toggle-group(group); }
+                                            expand-all-groups => { root.expand-all-groups(); }
+                                            collapse-all-groups => { root.collapse-all-groups(); }
+                                            expand-group-children(group) => { root.expand-group-children(group); }
+                                            collapse-group-children(group) => { root.collapse-group-children(group); }
                                             new-sibling-group(g) => { root.begin-sibling-group(g); }
                                             new-child-group(g) => { root.begin-child-group(g); }
                                             edit-group(path, label) => { root.begin-rename-group(path, label); }
-                                            delete-group(name) => { root.delete-group(name); }
-                                            remove-session(id) => { root.remove-session(id); }
+                                            delete-group(name) => {
+                                                if (root.confirm-delete-group-enabled) {
+                                                    root.welcome-delete-kind = "group";
+                                                    root.welcome-delete-target = name;
+                                                    root.welcome-delete-detail = name;
+                                                    root.welcome-delete-open = true;
+                                                } else {
+                                                    root.delete-group(name);
+                                                }
+                                            }
+                                            remove-session(id, name) => {
+                                                if (root.confirm-delete-session-enabled) {
+                                                    root.welcome-delete-kind = "session";
+                                                    root.welcome-delete-target = id;
+                                                    root.welcome-delete-detail = name;
+                                                    root.welcome-delete-open = true;
+                                                } else {
+                                                    root.remove-session(id);
+                                                }
+                                            }
                                             cycle-tab(reverse) => { root.cycle-tab(reverse); }
                                         }
 
@@ -2746,7 +2855,7 @@ export component AppWindow inherits Window {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             width: 300px;
-            height: 180px;
+            height: 160px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -2798,11 +2907,7 @@ export component AppWindow inherits Window {
                     text: root.group-dialog-error;
                     color: Theme.danger;
                     font-size: Theme.fs-xs;
-                    height: 18px;
-                }
-
-                Rectangle {
-                    vertical-stretch: 1;
+                    height: 20px;
                 }
 
                 HorizontalLayout {
@@ -4228,6 +4333,33 @@ export component AppWindow inherits Window {
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
     }
 
+    // Welcome list: optional confirm before deleting a group or session.
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.welcome-delete-open;
+        covered: root.confirm-close-open;
+        title: @tr("Confirm delete");
+        message: root.welcome-delete-kind == "group"
+            ? (root.lang-en
+                ? "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."
+                : "确定删除该分组？其下的子分组和会话也会一并删除，此操作不可撤销。")
+            : (root.lang-en
+                ? "Delete this session? This cannot be undone."
+                : "确定删除该会话？此操作不可撤销。");
+        detail: root.welcome-delete-detail;
+        confirm-label: @tr("Delete");
+        confirm => {
+            if (root.welcome-delete-kind == "group") {
+                root.delete-group(root.welcome-delete-target);
+            } else {
+                root.remove-session(root.welcome-delete-target);
+            }
+            root.welcome-delete-open = false;
+        }
+        cancel => { root.welcome-delete-open = false; }
+    }
+
     // Multi-line paste can execute several shell commands at once. Keep the
     // prompt explicit and require a button click; clicking the backdrop never
     // accepts the paste (#262).
@@ -4632,6 +4764,9 @@ export component AppWindow inherits Window {
                     select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
                     zen-mode <=> root.zen-mode;
                     welcome-as-sidebar <=> root.welcome-as-sidebar;
+                    confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
+                    confirm-delete-session-enabled <=> root.confirm-delete-session-enabled;
+                    welcome-single-click-connect <=> root.welcome-single-click-connect;
                     quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
                     update-check-enabled <=> root.update-check-enabled;
                     ssh-keepalive-secs <=> root.ssh-keepalive-secs;
@@ -4671,6 +4806,9 @@ export component AppWindow inherits Window {
                     set-select-copy-right-paste-enabled(v) => { root.set-select-copy-right-paste-enabled(v); }
                     set-zen-mode(v) => { root.set-zen-mode(v); }
                     set-welcome-as-sidebar(v) => { root.set-welcome-as-sidebar(v); }
+                    set-confirm-delete-group-enabled(v) => { root.set-confirm-delete-group-enabled(v); }
+                    set-confirm-delete-session-enabled(v) => { root.set-confirm-delete-session-enabled(v); }
+                    set-welcome-single-click-connect(v) => { root.set-welcome-single-click-connect(v); }
                     set-quick-commands-as-sidebar(v) => {
                         root.quick-commands-as-sidebar = v;
                         if (!v) {
@@ -4682,6 +4820,14 @@ export component AppWindow inherits Window {
                     set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
                     set-ssh-keepalive-secs(v) => { root.set-ssh-keepalive-secs(v); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
+                    request-clear-known-hosts => {
+                        root.data-clear-kind = "known-hosts";
+                        root.data-clear-open = true;
+                    }
+                    request-clear-sessions => {
+                        root.data-clear-kind = "sessions";
+                        root.data-clear-open = true;
+                    }
                 }
             }
 
@@ -4726,5 +4872,31 @@ export component AppWindow inherits Window {
                 }
             }
         }
+    }
+
+    // Settings › Data destructive clears — stacked above the settings overlay.
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.data-clear-open;
+        covered: root.confirm-close-open;
+        title: @tr("Confirm delete");
+        message: root.data-clear-kind == "known-hosts"
+            ? (root.lang-en
+                ? "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
+                : "确定清除所有已记住的 SSH 主机公钥？下次连接各主机时会再次要求确认信任。")
+            : (root.lang-en
+                ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
+                : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");
+        confirm-label: root.lang-en ? "Clear" : "清除";
+        confirm => {
+            if (root.data-clear-kind == "known-hosts") {
+                root.clear-known-hosts();
+            } else {
+                root.clear-all-sessions();
+            }
+            root.data-clear-open = false;
+        }
+        cancel => { root.data-clear-open = false; }
     }
 }

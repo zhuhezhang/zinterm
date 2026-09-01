@@ -361,6 +361,16 @@ pub(crate) fn is_reserved_session_group(name: &str) -> bool {
     name.eq_ignore_ascii_case("default") || name.eq_ignore_ascii_case("system")
 }
 
+/// Empty / reserved display names all mean the Quick Connect root.
+pub(crate) fn normalize_session_group(group: &str) -> String {
+    let g = group.trim();
+    if g.is_empty() || is_reserved_session_group(g) {
+        String::new()
+    } else {
+        g.to_string()
+    }
+}
+
 /// Last path segment of a nested group (`"a/b/c"` → `"c"`).
 pub(crate) fn group_path_segment(path: &str) -> &str {
     path.rsplit('/').next().unwrap_or(path)
@@ -599,6 +609,12 @@ impl ConfigStore {
         if is_reserved_session_group(session.group.trim()) {
             session.group.clear();
         }
+        let exclude = Some(session.id.as_str());
+        session.name = self.disambiguate_session_name(
+            session.group.trim(),
+            session.name.trim(),
+            exclude,
+        );
         if let Some(existing) = self.cache.sessions.iter_mut().find(|s| s.id == session.id) {
             *existing = session;
         } else {
@@ -610,8 +626,169 @@ impl ConfigStore {
         self.cache.sessions.retain(|s| s.id != id);
     }
 
+    /// Delete every saved session and group folder (Quick Connect tree).
+    pub fn clear_sessions_and_groups(&mut self) {
+        self.cache.sessions.clear();
+        self.cache.groups.clear();
+        self.cache.collapsed_session_groups = None;
+    }
+
     pub fn get(&self, id: &str) -> Option<&Session> {
         self.cache.sessions.iter().find(|s| s.id == id)
+    }
+
+    /// True when another session in `group` already uses `name` (exact match).
+    pub fn session_name_taken_in_group(
+        &self,
+        group: &str,
+        name: &str,
+        exclude_id: Option<&str>,
+    ) -> bool {
+        let group = normalize_session_group(group);
+        let name = name.trim();
+        if name.is_empty() {
+            return false;
+        }
+        self.cache.sessions.iter().any(|s| {
+            exclude_id.map(|id| s.id != id).unwrap_or(true)
+                && normalize_session_group(&s.group) == group
+                && s.name == name
+        })
+    }
+
+    /// Keep `desired` when unique among sessions in `group`; else append
+    /// `（1）`, `（2）`, … until free. `exclude_id` ignores that session (self).
+    pub fn disambiguate_session_name(
+        &self,
+        group: &str,
+        desired: &str,
+        exclude_id: Option<&str>,
+    ) -> String {
+        let desired = desired.trim();
+        if desired.is_empty() {
+            return String::new();
+        }
+        if !self.session_name_taken_in_group(group, desired, exclude_id) {
+            return desired.to_string();
+        }
+        for n in 1.. {
+            let candidate = format!("{desired}（{n}）");
+            if !self.session_name_taken_in_group(group, &candidate, exclude_id) {
+                return candidate;
+            }
+        }
+        unreachable!("unbounded session name suffix search");
+    }
+
+    /// All known group paths, including ancestors inferred from nested paths.
+    fn known_group_paths(&self) -> std::collections::BTreeSet<String> {
+        let mut paths = std::collections::BTreeSet::new();
+        let mut insert = |raw: &str| {
+            let g = raw.trim();
+            if g.is_empty() || is_reserved_session_group(g) {
+                return;
+            }
+            paths.insert(g.to_string());
+            let mut rest = g;
+            while let Some(idx) = rest.rfind('/') {
+                rest = &rest[..idx];
+                if !rest.is_empty() {
+                    paths.insert(rest.to_string());
+                }
+            }
+        };
+        for group in &self.cache.groups {
+            insert(group);
+        }
+        for session in &self.cache.sessions {
+            insert(&session.group);
+        }
+        paths
+    }
+
+    /// Whether `path` is already a known group (excluding `exclude` full path).
+    pub fn group_path_taken(&self, path: &str, exclude: Option<&str>) -> bool {
+        let path = path.trim();
+        if path.is_empty() {
+            return false;
+        }
+        self.known_group_paths().iter().any(|g| {
+            exclude
+                .map(|e| !g.eq_ignore_ascii_case(e.trim()))
+                .unwrap_or(true)
+                && g.eq_ignore_ascii_case(path)
+        })
+    }
+
+    /// Keep `desired` segment under `parent` when unique; else append `（1）`…
+    pub fn disambiguate_group_segment(
+        &self,
+        parent: &str,
+        desired: &str,
+        exclude_full_path: Option<&str>,
+    ) -> String {
+        let desired = desired.trim();
+        if desired.is_empty() {
+            return String::new();
+        }
+        let parent = normalize_session_group(parent);
+        let candidate = |seg: &str| group_join(&parent, seg);
+        if !self.group_path_taken(&candidate(desired), exclude_full_path) {
+            return desired.to_string();
+        }
+        for n in 1.. {
+            let seg = format!("{desired}（{n}）");
+            if !self.group_path_taken(&candidate(&seg), exclude_full_path) {
+                return seg;
+            }
+        }
+        unreachable!("unbounded group segment suffix search");
+    }
+
+    /// Move a session into `target_group` ("" = root). Renames on conflict.
+    pub fn move_session_to_group(&mut self, id: &str, target_group: &str) -> bool {
+        let target = normalize_session_group(target_group);
+        let Some(idx) = self.cache.sessions.iter().position(|s| s.id == id) else {
+            return false;
+        };
+        let current = normalize_session_group(&self.cache.sessions[idx].group);
+        if current == target {
+            return false;
+        }
+        let name = self.cache.sessions[idx].name.clone();
+        let name = self.disambiguate_session_name(&target, &name, Some(id));
+        self.cache.sessions[idx].group = target;
+        self.cache.sessions[idx].name = name;
+        true
+    }
+
+    /// Re-parent a group under `new_parent` ("" = top-level). Renames the
+    /// segment on conflict. Rejects moves into self or a descendant.
+    pub fn move_group_to_parent(&mut self, old: &str, new_parent: &str) -> bool {
+        let old = old.trim();
+        let new_parent = normalize_session_group(new_parent);
+        if old.is_empty() || is_reserved_session_group(old) {
+            return false;
+        }
+        if !new_parent.is_empty()
+            && (new_parent.eq_ignore_ascii_case(old)
+                || new_parent
+                    .to_ascii_lowercase()
+                    .starts_with(&format!("{}/", old.to_ascii_lowercase())))
+        {
+            return false;
+        }
+        if group_parent_path(old) == new_parent {
+            return false;
+        }
+        let segment = group_path_segment(old).to_string();
+        let segment = self.disambiguate_group_segment(&new_parent, &segment, Some(old));
+        let new_full = group_join(&new_parent, &segment);
+        if new_full.eq_ignore_ascii_case(old) {
+            return false;
+        }
+        self.rename_group(old, new_full);
+        true
     }
 
     pub fn download_dir(&self) -> &str {
@@ -1103,6 +1280,24 @@ impl ConfigStore {
     pub fn set_welcome_as_sidebar(&mut self, v: bool) {
         self.cache.welcome_as_sidebar = v;
     }
+    pub fn confirm_delete_group(&self) -> bool {
+        !self.cache.confirm_delete_group_disabled
+    }
+    pub fn set_confirm_delete_group(&mut self, enabled: bool) {
+        self.cache.confirm_delete_group_disabled = !enabled;
+    }
+    pub fn confirm_delete_session(&self) -> bool {
+        self.cache.confirm_delete_session
+    }
+    pub fn set_confirm_delete_session(&mut self, enabled: bool) {
+        self.cache.confirm_delete_session = enabled;
+    }
+    pub fn welcome_single_click_connect(&self) -> bool {
+        self.cache.welcome_single_click_connect
+    }
+    pub fn set_welcome_single_click_connect(&mut self, enabled: bool) {
+        self.cache.welcome_single_click_connect = enabled;
+    }
     pub fn welcome_sidebar_width(&self) -> f32 {
         let w = self.cache.welcome_sidebar_width;
         if w <= 0.0 {
@@ -1275,22 +1470,7 @@ impl ConfigStore {
     /// interaction, materialise the default-collapsed state for every existing
     /// folder so expanding one folder does not accidentally expand the rest.
     pub fn set_session_group_collapsed(&mut self, name: &str, collapsed: bool) {
-        if self.cache.collapsed_session_groups.is_none() {
-            let mut groups = self.cache.groups.clone();
-            groups.extend(
-                self.cache
-                    .sessions
-                    .iter()
-                    .filter(|session| {
-                        let group = session.group.trim();
-                        !group.is_empty() && !is_reserved_session_group(group)
-                    })
-                    .map(|session| session.group.clone()),
-            );
-            groups.sort();
-            groups.dedup();
-            self.cache.collapsed_session_groups = Some(groups);
-        }
+        self.ensure_collapsed_session_groups();
 
         let groups = self.cache.collapsed_session_groups.as_mut().unwrap();
         groups.retain(|group| group != name);
@@ -1299,6 +1479,78 @@ impl ConfigStore {
             groups.sort();
             groups.dedup();
         }
+    }
+
+    /// Expand or collapse every Quick Connect folder at once.
+    pub fn set_all_session_groups_collapsed(&mut self, collapsed: bool) {
+        let all = self.collect_session_group_paths();
+        self.cache.collapsed_session_groups = Some(if collapsed { all } else { Vec::new() });
+    }
+
+    /// Expand or collapse every descendant of `path`. When expanding, the
+    /// folder itself is also opened so the children become visible; when
+    /// collapsing, only descendants are closed so their headers stay shown.
+    pub fn set_session_group_children_collapsed(&mut self, path: &str, collapsed: bool) {
+        let path = path.trim();
+        if path.is_empty() || is_reserved_session_group(path) {
+            return;
+        }
+        let all = self.collect_session_group_paths();
+        self.ensure_collapsed_session_groups();
+        let prefix = format!("{path}/");
+        let groups = self.cache.collapsed_session_groups.as_mut().unwrap();
+        if collapsed {
+            groups.retain(|group| group != path && !group.starts_with(&prefix));
+            for group in &all {
+                if group.starts_with(&prefix) {
+                    groups.push(group.clone());
+                }
+            }
+            groups.sort();
+            groups.dedup();
+        } else {
+            groups.retain(|group| group != path && !group.starts_with(&prefix));
+        }
+    }
+
+    fn ensure_collapsed_session_groups(&mut self) {
+        if self.cache.collapsed_session_groups.is_some() {
+            return;
+        }
+        self.cache.collapsed_session_groups = Some(self.collect_session_group_paths());
+    }
+
+    fn collect_session_group_paths(&self) -> Vec<String> {
+        let mut groups = self.cache.groups.clone();
+        groups.extend(
+            self.cache
+                .sessions
+                .iter()
+                .filter(|session| {
+                    let group = session.group.trim();
+                    !group.is_empty() && !is_reserved_session_group(group)
+                })
+                .map(|session| session.group.clone()),
+        );
+        // Also materialise ancestor folders implied by nested paths.
+        let nested: Vec<String> = groups
+            .iter()
+            .flat_map(|group| {
+                let mut out = Vec::new();
+                let mut rest = group.as_str();
+                while let Some(idx) = rest.rfind('/') {
+                    rest = &rest[..idx];
+                    if !rest.is_empty() {
+                        out.push(rest.to_string());
+                    }
+                }
+                out
+            })
+            .collect();
+        groups.extend(nested);
+        groups.sort();
+        groups.dedup();
+        groups
     }
 
     /// Whether a user group already exists, including groups inferred from
@@ -1707,6 +1959,41 @@ mod tests {
     }
 
     #[test]
+    fn expand_collapse_all_and_children_session_groups() {
+        let mut store = temp_store();
+        store.cache.groups = vec![
+            "prod".into(),
+            "prod/web".into(),
+            "prod/web/edge".into(),
+            "staging".into(),
+        ];
+
+        store.set_all_session_groups_collapsed(false);
+        assert!(store.collapsed_session_groups().unwrap().is_empty());
+
+        store.set_all_session_groups_collapsed(true);
+        let collapsed = store.collapsed_session_groups().unwrap();
+        assert!(collapsed.iter().any(|g| g == "prod"));
+        assert!(collapsed.iter().any(|g| g == "prod/web"));
+        assert!(collapsed.iter().any(|g| g == "prod/web/edge"));
+        assert!(collapsed.iter().any(|g| g == "staging"));
+
+        store.set_session_group_children_collapsed("prod", false);
+        let collapsed = store.collapsed_session_groups().unwrap();
+        assert!(!collapsed.iter().any(|g| g == "prod"));
+        assert!(!collapsed.iter().any(|g| g == "prod/web"));
+        assert!(!collapsed.iter().any(|g| g == "prod/web/edge"));
+        assert!(collapsed.iter().any(|g| g == "staging"));
+
+        store.set_session_group_children_collapsed("prod", true);
+        let collapsed = store.collapsed_session_groups().unwrap();
+        assert!(!collapsed.iter().any(|g| g == "prod"));
+        assert!(collapsed.iter().any(|g| g == "prod/web"));
+        assert!(collapsed.iter().any(|g| g == "prod/web/edge"));
+        assert!(collapsed.iter().any(|g| g == "staging"));
+    }
+
+    #[test]
     fn issue_316_reserved_system_groups_are_repaired_and_rejected() {
         let mut system_session = sample_session("misfiled");
         system_session.group = "system".into();
@@ -2035,6 +2322,9 @@ mod tests {
         assert!(store.extra_paste_shortcuts_enabled());
         assert!(store.select_copy_right_paste_enabled());
         assert!(!store.zen_mode());
+        assert!(store.confirm_delete_group());
+        assert!(!store.confirm_delete_session());
+        assert!(!store.welcome_single_click_connect());
         assert_eq!(store.terminal_line_spacing(), 1.0);
 
         store.set_terminal_line_spacing(0.1);
@@ -2046,10 +2336,16 @@ mod tests {
         store.set_extra_paste_shortcuts_enabled(false);
         store.set_select_copy_right_paste_enabled(false);
         store.set_zen_mode(true);
+        store.set_confirm_delete_group(false);
+        store.set_confirm_delete_session(true);
+        store.set_welcome_single_click_connect(true);
         assert!(!store.paste_confirm_enabled());
         assert!(!store.extra_paste_shortcuts_enabled());
         assert!(!store.select_copy_right_paste_enabled());
         assert!(store.zen_mode());
+        assert!(!store.confirm_delete_group());
+        assert!(store.confirm_delete_session());
+        assert!(store.welcome_single_click_connect());
     }
 
     #[test]
@@ -2077,5 +2373,73 @@ mod tests {
             store.materialized_quick_groups(),
             vec!["gamma", "alpha", "beta"]
         );
+    }
+
+    #[test]
+    fn session_name_disambiguates_within_group_only() {
+        let mut store = temp_store();
+        let mut a = sample_session("web");
+        a.id = "1".into();
+        a.group = "prod".into();
+        store.upsert(a);
+        let mut b = sample_session("web");
+        b.id = "2".into();
+        b.group = "dev".into();
+        store.upsert(b);
+
+        assert_eq!(
+            store.disambiguate_session_name("prod", "web", None),
+            "web（1）"
+        );
+        assert_eq!(
+            store.disambiguate_session_name("dev", "web", Some("2")),
+            "web"
+        );
+        assert_eq!(
+            store.disambiguate_session_name("other", "web", None),
+            "web"
+        );
+
+        let mut c = sample_session("web");
+        c.id = "3".into();
+        c.group = "prod".into();
+        store.upsert(c);
+        assert_eq!(store.get("3").unwrap().name, "web（1）");
+
+        let mut d = sample_session("web");
+        d.id = "4".into();
+        d.group = "prod".into();
+        store.upsert(d);
+        assert_eq!(store.get("4").unwrap().name, "web（2）");
+    }
+
+    #[test]
+    fn move_session_and_group_disambiguate_on_conflict() {
+        let mut store = temp_store();
+        store.add_group("prod".into());
+        store.add_group("dev".into());
+        store.add_group("dev/web".into());
+
+        let mut a = sample_session("api");
+        a.id = "s1".into();
+        a.group = "prod".into();
+        store.upsert(a);
+        let mut b = sample_session("api");
+        b.id = "s2".into();
+        b.group = "dev".into();
+        store.upsert(b);
+
+        assert!(store.move_session_to_group("s1", "dev"));
+        assert_eq!(store.get("s1").unwrap().group, "dev");
+        assert_eq!(store.get("s1").unwrap().name, "api（1）");
+
+        store.add_group("web".into());
+        assert!(store.move_group_to_parent("web", "dev"));
+        assert!(store.session_group_exists("dev/web（1）"));
+        assert!(!store.session_group_exists("web"));
+
+        // Cannot move a group into itself or a descendant.
+        assert!(!store.move_group_to_parent("dev", "dev/web"));
+        assert!(!store.move_group_to_parent("dev", "dev"));
     }
 }

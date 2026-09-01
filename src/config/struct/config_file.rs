@@ -190,6 +190,18 @@ pub struct ConfigFile {
     /// a "Welcome page" tab (v0.5). Persisted so the layout choice sticks.
     #[serde(default)]
     pub welcome_as_sidebar: bool,
+    /// Stored inverted so deleting a session group still asks for confirmation
+    /// unless the user opts out in Welcome settings (cascades to child groups
+    /// and sessions, so the safe default is on).
+    #[serde(default)]
+    pub confirm_delete_group_disabled: bool,
+    /// Prompt before deleting a saved session from the welcome list. Default off.
+    #[serde(default)]
+    pub confirm_delete_session: bool,
+    /// Connect from the welcome session list with a single click. Default off
+    /// (double-click to connect).
+    #[serde(default)]
+    pub welcome_single_click_connect: bool,
     /// Width (logical px) of the welcome/session sidebar when docked (v0.5).
     #[serde(default)]
     pub welcome_sidebar_width: f32,

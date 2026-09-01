@@ -55,11 +55,21 @@ component NavItem inherits Rectangle {
 }
 
 // Small muted group heading (字体 / 预览 / SFTP …).
+// Fixed height leaves CJK ascent room on macOS (Heiti/Songti metrics, #129).
 component SectionHeader inherits Text {
     font-size: 11px * Theme.panel-font;
     font-weight: 700;
     color: Theme.text-muted;
     vertical-alignment: center;
+    height: 26px * Theme.panel-font;
+}
+
+// Muted page-level hint under a section / setting (same metrics as SettingRow.desc).
+component SettingHint inherits Text {
+    color: Theme.text-muted;
+    font-size: 11px * Theme.panel-font;
+    wrap: word-wrap;
+    min-height: 15px * Theme.panel-font;
 }
 
 // A settings row: label (+ optional description) on the left, a control slot on
@@ -76,7 +86,8 @@ component SettingRow inherits Rectangle {
             VerticalLayout {
                 horizontal-stretch: 1;
                 alignment: center;
-                spacing: 3px;
+                // 5px (was 3) so CJK desc ascent doesn't collide with the label.
+                spacing: 5px;
                 Text {
                     text: root.label;
                     font-size: 13px * Theme.panel-font;
@@ -88,6 +99,8 @@ component SettingRow inherits Rectangle {
                     font-size: 11px * Theme.panel-font;
                     color: Theme.text-muted;
                     wrap: word-wrap;
+                    // Preferred height can undershoot CJK ink on macOS.
+                    min-height: 15px * Theme.panel-font;
                 }
             }
 
@@ -586,6 +599,9 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> select-copy-right-paste-enabled: true;
     in-out property <bool> zen-mode: false;
     in-out property <bool> welcome-as-sidebar;
+    in-out property <bool> confirm-delete-group-enabled: true;
+    in-out property <bool> confirm-delete-session-enabled: false;
+    in-out property <bool> welcome-single-click-connect: false;
     in-out property <bool> quick-commands-as-sidebar;
     in-out property <bool> update-check-enabled;
     in-out property <int> ssh-keepalive-secs: 0;
@@ -628,12 +644,17 @@ export component InterfacePanel inherits Rectangle {
     callback set-select-copy-right-paste-enabled(bool);
     callback set-zen-mode(bool);
     callback set-welcome-as-sidebar(bool);
+    callback set-confirm-delete-group-enabled(bool);
+    callback set-confirm-delete-session-enabled(bool);
+    callback set-welcome-single-click-connect(bool);
     callback set-quick-commands-as-sidebar(bool);
     callback set-update-check-enabled(bool);   // startup new-version check (#184)
     callback set-ssh-keepalive-secs(int);
     callback persist-wallpaper-overlay(float);   // save the overlay opacity
     callback set-wallpaper(string);    // none / builtin selection
     callback pick-wallpaper-file();    // open the OS file dialog (Rust)
+    callback request-clear-known-hosts();
+    callback request-clear-sessions();
 
     HorizontalLayout {
         // --- Left nav ------------------------------------------------------
@@ -723,6 +744,13 @@ export component InterfacePanel inherits Rectangle {
                     }
 
                     NavItem {
+                        icon: "\u{E1DB}";
+                        label: root.lang-en ? "Data" : "数据";
+                        active: root.ifd-page == "data";
+                        clicked => { root.ifd-page = "data"; }
+                    }
+
+                    NavItem {
                         icon: "\u{E2C4}";
                         label: root.lang-en ? "Download" : "下载";
                         active: root.ifd-page == "download";
@@ -766,7 +794,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "FONT" : "字体";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -903,7 +930,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "PREVIEW" : "预览";
-                            height: 22px;
                         }
 
                         Rectangle {
@@ -935,7 +961,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "INPUT" : "输入";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -984,7 +1009,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "RENDERING" : "渲染";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1052,7 +1076,7 @@ export component InterfacePanel inherits Rectangle {
                             height: 10px;
                         }
 
-                        Text {
+                        SettingHint {
                             text: root.renderer-restart-required
                                 ? (root.lang-en
                                 ? "Restart MeatShell to apply the renderer change."
@@ -1069,8 +1093,6 @@ export component InterfacePanel inherits Rectangle {
                                 ? "现有安装继续默认使用兼容性更好的软件渲染。"
                                 : "Linux 默认继续使用自动渲染器。")));
                             color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
-                            font-size: 11px * Theme.panel-font;
-                            wrap: word-wrap;
                         }
                     }
 
@@ -1084,7 +1106,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "OUTPUT HIGHLIGHTING" : "输出高亮";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1144,7 +1165,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "PREVIEW" : "预览";
-                            height: 22px;
                         }
 
                         Rectangle {
@@ -1199,16 +1219,12 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "CUSTOM RULES" : "自定义规则";
-                            height: 22px;
                         }
 
-                        Text {
+                        SettingHint {
                             text: root.lang-en
                                 ? "Custom rules run before the built-in preset and never overwrite ANSI colours."
                                 : "自定义规则优先于内置规则，且不会覆盖程序输出的 ANSI 颜色。";
-                            color: Theme.text-muted;
-                            font-size: 11px * Theme.panel-font;
-                            wrap: word-wrap;
                         }
 
                         Rectangle {
@@ -1301,17 +1317,13 @@ export component InterfacePanel inherits Rectangle {
                             }
                         }
 
-                        if root.output-highlight-rule-status != "": Text {
+                        if root.output-highlight-rule-status != "": SettingHint {
                             text: root.output-highlight-rule-status;
                             color: Theme.danger;
-                            font-size: 11px * Theme.panel-font;
-                            wrap: word-wrap;
                         }
 
-                        if root.output-highlight-rules.length == 0: Text {
+                        if root.output-highlight-rules.length == 0: SettingHint {
                             text: root.lang-en ? "No custom rules yet." : "暂无自定义规则。";
-                            color: Theme.text-muted;
-                            font-size: 11px * Theme.panel-font;
                             height: 34px;
                             vertical-alignment: center;
                         }
@@ -1400,16 +1412,12 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "WALLPAPER" : "壁纸";
-                            height: 24px;
                         }
 
-                        Text {
+                        SettingHint {
                             text: root.lang-en
                                 ? "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
                                 : "选一张壁纸,界面会沉浸式地适配它的颜色(强调色、面板、深浅)。";
-                            color: Theme.text-muted;
-                            font-size: 11px * Theme.panel-font;
-                            wrap: word-wrap;
                         }
 
                         Rectangle {
@@ -1609,7 +1617,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "CUSTOM" : "自定义";
-                            height: 22px;
                         }
 
                         HorizontalLayout {
@@ -1683,7 +1690,6 @@ export component InterfacePanel inherits Rectangle {
 
                         SectionHeader {
                             text: root.lang-en ? "OVERLAY" : "遮罩";
-                            height: 22px;
                         }
 
                         SettingRow {
@@ -1724,7 +1730,6 @@ export component InterfacePanel inherits Rectangle {
                         alignment: start;
                         SectionHeader {
                             text: "SSH";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1756,7 +1761,6 @@ export component InterfacePanel inherits Rectangle {
                         alignment: start;
                         SectionHeader {
                             text: "SFTP";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1781,7 +1785,6 @@ export component InterfacePanel inherits Rectangle {
                         alignment: start;
                         SectionHeader {
                             text: root.lang-en ? "SIDEBARS" : "侧栏";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1831,7 +1834,6 @@ export component InterfacePanel inherits Rectangle {
                         alignment: start;
                         SectionHeader {
                             text: root.lang-en ? "WELCOME PAGE" : "欢迎页";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1839,13 +1841,90 @@ export component InterfacePanel inherits Rectangle {
                             desc: root.lang-en
                                 ? "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center."
                                 : "把会话列表停靠在左侧,不再用「欢迎页」标签;打开的会话占据中央区域。";
-                            show-divider: false;
                             Switch {
                                 on: root.welcome-as-sidebar;
                         // Applying this binding destroys/recreates the Welcome
                         // subtree. Rust defers that work until this Switch
                         // callback has returned, so do not mutate it here (#323).
                         toggled(v) => { root.set-welcome-as-sidebar(v); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Confirm before deleting a group" : "删除分组前确认";
+                            desc: root.lang-en
+                                ? "Ask before removing a group (also deletes nested groups and sessions inside)."
+                                : "删除分组前弹出确认（会一并删除其下的子分组和会话）。";
+                            Switch {
+                                on: root.confirm-delete-group-enabled;
+                                toggled(v) => {
+                                    root.confirm-delete-group-enabled = v;
+                                    root.set-confirm-delete-group-enabled(v);
+                                }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Confirm before deleting a session" : "删除会话前确认";
+                            desc: root.lang-en
+                                ? "Ask before removing a saved session from the list."
+                                : "从列表删除已保存的会话前弹出确认。";
+                            Switch {
+                                on: root.confirm-delete-session-enabled;
+                                toggled(v) => {
+                                    root.confirm-delete-session-enabled = v;
+                                    root.set-confirm-delete-session-enabled(v);
+                                }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Single-click to connect" : "单击会话连接";
+                            desc: root.lang-en
+                                ? "Connect with one click. When off, double-click a session to connect."
+                                : "开启后单击会话即可连接；关闭时需双击连接。";
+                            show-divider: false;
+                            Switch {
+                                on: root.welcome-single-click-connect;
+                                toggled(v) => {
+                                    root.welcome-single-click-connect = v;
+                                    root.set-welcome-single-click-connect(v);
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Data page ---------------------------------------------
+                    if root.ifd-page == "data": VerticalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: root.lang-en ? "DATA" : "数据";
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Clear SSH known hosts" : "清除 SSH 已知主机公钥";
+                            desc: root.lang-en
+                                ? "Forget remembered server host keys. The next connection to each host will ask you to trust the key again."
+                                : "清除已记住的服务器主机公钥。下次连接各主机时会再次要求确认信任。";
+                            GhostButton {
+                                text: root.lang-en ? "Clear" : "清除";
+                                clicked => { root.request-clear-known-hosts(); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Clear all groups and sessions" : "清除所有分组和会话";
+                            desc: root.lang-en
+                                ? "Permanently delete every saved Quick Connect group and session. Open tabs are not closed."
+                                : "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。";
+                            show-divider: false;
+                            GhostButton {
+                                text: root.lang-en ? "Clear" : "清除";
+                                clicked => { root.request-clear-sessions(); }
                             }
                         }
                     }
@@ -1859,7 +1938,6 @@ export component InterfacePanel inherits Rectangle {
                         alignment: start;
                         SectionHeader {
                             text: root.lang-en ? "DOWNLOAD" : "下载";
-                            height: 24px;
                         }
 
                         SettingRow {
@@ -1884,7 +1962,6 @@ export component InterfacePanel inherits Rectangle {
                         alignment: start;
                         SectionHeader {
                             text: root.lang-en ? "UPDATE CHECK" : "新版本提示";
-                            height: 24px;
                         }
 
                         SettingRow {

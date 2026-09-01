@@ -109,3 +109,15 @@ pub fn remember(host: &str, port: u16, key: &PublicKey) -> Result<()> {
     std::fs::write(&p, out).with_context(|| format!("write {}", p.display()))?;
     Ok(())
 }
+
+/// Wipe the known_hosts file so every host is treated as unknown again.
+pub fn clear() -> Result<()> {
+    let Some(p) = path() else {
+        return Ok(());
+    };
+    match std::fs::remove_file(&p) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e).with_context(|| format!("remove {}", p.display())),
+    }
+}

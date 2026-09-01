@@ -337,6 +337,49 @@ fn session_row(
     }
 }
 
+/// Layout metrics for welcome-list drag hit-testing (`ui/welcome.slint`).
+const WELCOME_ROW_GAP: f32 = 2.0;
+const WELCOME_GROUP_HDR: f32 = 30.0;
+const WELCOME_SESSION_ROW: f32 = 30.0;
+
+/// Hit-test the welcome session list while dragging. Returns the group path to
+/// drop into (`""` = Quick Connect root / ungrouped).
+pub(super) fn welcome_drop_target_at(
+    rows: &[SessionInfo],
+    list_top: f32,
+    pointer_y: f32,
+) -> String {
+    let mut y = list_top;
+    for row in rows {
+        if !row.group_header.is_empty() {
+            if (y..y + WELCOME_GROUP_HDR).contains(&pointer_y) {
+                return row.group.to_string();
+            }
+            y += WELCOME_GROUP_HDR + WELCOME_ROW_GAP;
+            continue;
+        }
+        if row.id.is_empty() || row.id == "__group__" || row.collapsed {
+            continue;
+        }
+        if (y..y + WELCOME_SESSION_ROW).contains(&pointer_y) {
+            return row.group.to_string();
+        }
+        y += WELCOME_SESSION_ROW + WELCOME_ROW_GAP;
+    }
+    String::new()
+}
+
+pub(super) fn session_infos_from_model(model: &ModelRc<SessionInfo>) -> Vec<SessionInfo> {
+    use slint::Model as _;
+    let mut out = Vec::with_capacity(model.row_count());
+    for i in 0..model.row_count() {
+        if let Some(row) = model.row_data(i) {
+            out.push(row);
+        }
+    }
+    out
+}
+
 // ---------------------------------------------------------------------------
 // Session callbacks (welcome page + dialog)
 // ---------------------------------------------------------------------------

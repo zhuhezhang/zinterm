@@ -133,7 +133,7 @@ use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use tokio::runtime::Runtime;
 
 use crate::config::{
-    is_reserved_session_group, group_join, group_parent_path, group_path_segment,
+    group_join, group_parent_path, group_path_segment, is_reserved_session_group,
     is_valid_group_segment, AuthMethod, ConfigStore, OutputHighlightRule, Secret, Session,
     SessionKind,
 };
@@ -588,6 +588,9 @@ pub fn run() -> Result<()> {
     window.set_extra_paste_shortcuts_enabled(store.borrow().extra_paste_shortcuts_enabled());
     window.set_select_copy_right_paste_enabled(store.borrow().select_copy_right_paste_enabled());
     window.set_zen_mode(store.borrow().zen_mode());
+    window.set_confirm_delete_group_enabled(store.borrow().confirm_delete_group());
+    window.set_confirm_delete_session_enabled(store.borrow().confirm_delete_session());
+    window.set_welcome_single_click_connect(store.borrow().welcome_single_click_connect());
     {
         let store = store.clone();
         window.on_set_download_always_ask(move |ask| {
@@ -625,6 +628,37 @@ pub fn run() -> Result<()> {
         window.on_set_zen_mode(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_zen_mode(enabled);
+            let _ = s.save();
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_set_confirm_delete_group_enabled(move |enabled| {
+            let mut s = store.borrow_mut();
+            s.set_confirm_delete_group(enabled);
+            let _ = s.save();
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_set_confirm_delete_session_enabled(move |enabled| {
+            let mut s = store.borrow_mut();
+            s.set_confirm_delete_session(enabled);
+            let _ = s.save();
+        });
+    }
+    {
+        window.on_clear_known_hosts(|| {
+            if let Err(err) = crate::ssh::known_hosts::clear() {
+                tracing::warn!("failed to clear known_hosts: {err:#}");
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_set_welcome_single_click_connect(move |enabled| {
+            let mut s = store.borrow_mut();
+            s.set_welcome_single_click_connect(enabled);
             let _ = s.save();
         });
     }
@@ -1044,6 +1078,24 @@ pub fn run() -> Result<()> {
     let sessions_model: Rc<VecModel<SessionInfo>> = Rc::new(VecModel::default());
     window.set_sessions(ModelRc::from(sessions_model.clone()));
     sync_sessions_to_model(&store.borrow(), &sessions_model);
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_clear_all_sessions(move || {
+            {
+                let mut s = store.borrow_mut();
+                s.clear_sessions_and_groups();
+                if let Err(err) = s.save() {
+                    tracing::warn!("failed to save config after clearing sessions: {err:#}");
+                }
+            }
+            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            if let Some(w) = weak.upgrade() {
+                let _ = w.get_sessions();
+            }
+        });
+    }
 
     let tabs_model: Rc<VecModel<TabInfo>> = Rc::new(VecModel::default());
     tabs_model.push(TabInfo {
@@ -2368,37 +2420,20 @@ fn wire_session_callbacks(
     let store_ng = store.clone();
     window.on_new_session_clicked(move || {
         if let Some(w) = weak.upgrade() {
-            w.set_session_groups(session_groups_model(&store_ng.borrow()));
-            let empty = Session::new_empty();
-            w.set_dialog_id(empty.id.into());
-            w.set_dialog_name("".into());
-            w.set_dialog_host("".into());
-            w.set_dialog_port("22".into());
-            // No default username (#110): leaving it blank makes the connect-time
-            // prompt ask for it, Xshell-style.
-            w.set_dialog_user("".into());
-            w.set_dialog_auth("password".into());
-            w.set_dialog_password("".into());
-            w.set_dialog_key_path("".into());
-            w.set_dialog_key_inline("".into());
-            w.set_dialog_key_inline_mode(false);
-            w.set_dialog_group("".into());
-            w.set_dialog_kind("ssh".into());
-            w.set_dialog_serial_port("".into());
-            w.set_dialog_baud("115200".into());
-            w.set_dialog_data_bits("8".into());
-            w.set_dialog_stop_bits("1".into());
-            w.set_dialog_parity("none".into());
-            w.set_dialog_flow("none".into());
-            w.set_dialog_encoding("UTF-8".into());
-            w.set_dialog_shell("".into());
-            w.set_dialog_working_directory("".into());
-            w.set_dialog_disable_shell_integration(false);
-            w.set_dialog_note("".into());
-            w.set_dialog_editing(false);
-            w.set_dialog_open(true);
+            open_new_session_dialog(&w, &store_ng.borrow(), "");
         }
     });
+
+    // New session rooted in a Quick Connect folder (group context menu).
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        window.on_new_session_in_group(move |group: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                open_new_session_dialog(&w, &store.borrow(), group.as_str());
+            }
+        });
+    }
 
     // Export all sessions to a portable JSON file (issue #46). Passwords are
     // obfuscated with the built-in export key; host/user/port stay plaintext.
@@ -2586,40 +2621,6 @@ fn wire_session_callbacks(
         });
     }
 
-    // Move a session to another group (#41).
-    {
-        let weak = window.as_weak();
-        let store = store.clone();
-        let sessions_model = sessions_model.clone();
-        window.on_move_session(move |id: SharedString, group: SharedString| {
-            {
-                let mut s = store.borrow_mut();
-                if let Some(orig) = s.get(&id.to_string()).cloned() {
-                    let mut moved = orig;
-                    // Empty / legacy "default" = root of the Quick Connect tree.
-                    let target = group.as_str().trim();
-                    moved.group = if target.is_empty()
-                        || target.eq_ignore_ascii_case("default")
-                    {
-                        String::new()
-                    } else if is_reserved_session_group(target) {
-                        return;
-                    } else {
-                        target.to_string()
-                    };
-                    s.upsert(moved);
-                    if let Err(err) = s.save() {
-                        tracing::warn!("failed to save config: {err:#}");
-                    }
-                }
-            }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
-            if let Some(w) = weak.upgrade() {
-                let _ = w.get_sessions();
-            }
-        });
-    }
-
     // Collapse / expand a group in the welcome list (#41). Toggling flips the
     // `collapsed` flag on every row of that group in place — no full re-sync —
     // so the open/closed state stays put until the list is actually rebuilt.
@@ -2648,6 +2649,50 @@ fn wire_session_callbacks(
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
+        });
+    }
+
+    // Expand / collapse every Quick Connect folder, or only one folder's children.
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_expand_all_groups(move || {
+            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
+                s.set_all_session_groups_collapsed(false);
+            });
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_collapse_all_groups(move || {
+            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
+                s.set_all_session_groups_collapsed(true);
+            });
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_expand_group_children(move |group: SharedString| {
+            let path = group.to_string();
+            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
+                s.set_session_group_children_collapsed(&path, false);
+            });
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_collapse_group_children(move |group: SharedString| {
+            let path = group.to_string();
+            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
+                s.set_session_group_children_collapsed(&path, true);
+            });
         });
     }
 
@@ -2763,6 +2808,62 @@ fn wire_session_callbacks(
                 let _ = w.get_sessions();
             }
         });
+    }
+
+    // Drag-drop: move a session into another group (root = "").
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_drop_welcome_session(move |id: SharedString, target_group: SharedString| {
+            {
+                let mut s = store.borrow_mut();
+                if !s.move_session_to_group(id.as_str(), target_group.as_str()) {
+                    return;
+                }
+                if let Err(err) = s.save() {
+                    tracing::warn!("failed to save config: {err:#}");
+                }
+            }
+            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            if let Some(w) = weak.upgrade() {
+                let _ = w.get_sessions();
+            }
+        });
+    }
+    // Drag-drop: re-parent a group under another folder (root = "").
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        window.on_drop_welcome_group(move |path: SharedString, target_parent: SharedString| {
+            {
+                let mut s = store.borrow_mut();
+                if !s.move_group_to_parent(path.as_str(), target_parent.as_str()) {
+                    return;
+                }
+                if let Err(err) = s.save() {
+                    tracing::warn!("failed to save config: {err:#}");
+                }
+            }
+            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            if let Some(w) = weak.upgrade() {
+                let _ = w.get_sessions();
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
+        window.on_welcome_drag_at(
+            move |list_top: f32, pointer_y: f32, _drag_kind: SharedString, _drag_from: SharedString| {
+                let Some(w) = weak.upgrade() else {
+                    return;
+                };
+                let rows = session_infos_from_model(&w.get_sessions());
+                let target = welcome_drop_target_at(&rows, list_top, pointer_y);
+                w.set_welcome_drop_target(target.into());
+            },
+        );
     }
 
     // Dialog submit -> persist + (optionally) connect.
@@ -3129,6 +3230,57 @@ fn wire_session_callbacks(
                 w.invoke_connect_session(session_id.into());
             }
         });
+    }
+}
+
+fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
+    win.set_session_groups(session_groups_model(store));
+    let empty = Session::new_empty();
+    win.set_dialog_id(empty.id.into());
+    win.set_dialog_name("".into());
+    win.set_dialog_host("".into());
+    win.set_dialog_port("22".into());
+    // No default username (#110): leaving it blank makes the connect-time
+    // prompt ask for it, Xshell-style.
+    win.set_dialog_user("".into());
+    win.set_dialog_auth("password".into());
+    win.set_dialog_password("".into());
+    win.set_dialog_key_path("".into());
+    win.set_dialog_key_inline("".into());
+    win.set_dialog_key_inline_mode(false);
+    win.set_dialog_group(group.into());
+    win.set_dialog_kind("ssh".into());
+    win.set_dialog_serial_port("".into());
+    win.set_dialog_baud("115200".into());
+    win.set_dialog_data_bits("8".into());
+    win.set_dialog_stop_bits("1".into());
+    win.set_dialog_parity("none".into());
+    win.set_dialog_flow("none".into());
+    win.set_dialog_encoding("UTF-8".into());
+    win.set_dialog_shell("".into());
+    win.set_dialog_working_directory("".into());
+    win.set_dialog_disable_shell_integration(false);
+    win.set_dialog_note("".into());
+    win.set_dialog_editing(false);
+    win.set_dialog_open(true);
+}
+
+fn apply_session_group_collapse(
+    weak: &slint::Weak<AppWindow>,
+    store: &Rc<RefCell<ConfigStore>>,
+    sessions_model: &Rc<VecModel<SessionInfo>>,
+    mutate: impl FnOnce(&mut ConfigStore),
+) {
+    {
+        let mut store = store.borrow_mut();
+        mutate(&mut store);
+        if let Err(err) = store.save() {
+            tracing::warn!("failed to save Quick Connect folder state: {err:#}");
+        }
+        sync_sessions_to_model(&store, sessions_model);
+    }
+    if let Some(w) = weak.upgrade() {
+        let _ = w.get_sessions();
     }
 }
 
