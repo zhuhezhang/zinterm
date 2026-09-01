@@ -795,10 +795,8 @@ export component Welcome inherits Rectangle {
                                     animate background { duration: 120ms; }
 
                                     property <bool> grp-nesting: true;
-                                    property <int> grp-menu-count:
-                                        (grp-nesting ? 1 : 0)
-                                        + (session.id == "" && grp-nesting ? 1 : 0)
-                                        + (grp-nesting ? 2 : 0);
+                                    // rename + delete + sibling + child
+                                    property <int> grp-menu-count: grp-nesting ? 4 : 0;
                                     // Right-click popup anchor.
                                     property <length> gmx;
                                     property <length> gmy;
@@ -918,8 +916,8 @@ export component Welcome inherits Rectangle {
                                                         }
                                                     }
                                                 }
-                                                // Delete group — only when it has no sessions (id == "")
-                                                if session.id == "" && grp-nesting: Rectangle {
+                                                // Delete group — cascades to child groups and sessions.
+                                                if grp-nesting: Rectangle {
                                                     height: 28px;
                                                     border-radius: Theme.radius-sm;
                                                     background: dg-ta.has-hover ? #cc333320 : transparent;

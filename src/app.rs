@@ -2745,7 +2745,7 @@ fn wire_session_callbacks(
             SharedString::new()
         });
     }
-    // Group delete (#41) — UI only offers this on empty groups.
+    // Group delete (#41) — cascades: child groups and sessions inside are removed.
     {
         let weak = window.as_weak();
         let store = store.clone();

@@ -1332,32 +1332,23 @@ impl ConfigStore {
         }
     }
 
-    /// Delete a group. Refuses when nested child groups still exist. Any session
-    /// still in it falls back to ungrouped — the UI only offers delete on empty
-    /// groups, but we clear sessions defensively.
+    /// Delete a group and cascade: nested child groups and all sessions in this
+    /// group or any descendant are removed as well.
     pub fn remove_group(&mut self, name: &str) {
-        if is_reserved_session_group(name.trim()) {
+        let name = name.trim();
+        if name.is_empty() || is_reserved_session_group(name) {
             return;
         }
         let prefix = format!("{name}/");
-        let has_children = self.cache.groups.iter().any(|g| g.starts_with(&prefix))
-            || self
-                .cache
-                .sessions
-                .iter()
-                .any(|s| s.group.starts_with(&prefix));
-        if has_children {
-            return;
-        }
-        self.cache.groups.retain(|g| g != name);
+        self.cache
+            .groups
+            .retain(|g| g != name && !g.starts_with(&prefix));
         if let Some(groups) = &mut self.cache.collapsed_session_groups {
-            groups.retain(|group| group != name);
+            groups.retain(|g| g != name && !g.starts_with(&prefix));
         }
-        for s in &mut self.cache.sessions {
-            if s.group == name {
-                s.group.clear();
-            }
-        }
+        self.cache
+            .sessions
+            .retain(|s| s.group != name && !s.group.starts_with(&prefix));
     }
 
     /// Rename a group path, moving its sessions and nested descendants along.
