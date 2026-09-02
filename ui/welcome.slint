@@ -692,7 +692,7 @@ export component Welcome inherits Rectangle {
                         }
 
                         header-row := HorizontalLayout {
-                            spacing: 4px;
+                            spacing: 11px;
                             padding-right: root.compact ? -8px : 0px;
                             if root.compact && root.dock-edge != "left": CollapseButton {
                                 glyph: root.dock-edge == "right" ? "\u{E5CC}"
@@ -741,7 +741,8 @@ export component Welcome inherits Rectangle {
                     }
 
                     if root.compact: HorizontalLayout {
-                        spacing: 8px;
+                        padding-left: -1px;
+                        spacing: root.compact ? 7px : 0px;
                         BorderedLineInput {
                             horizontal-stretch: 1;
                             height: 30px;
