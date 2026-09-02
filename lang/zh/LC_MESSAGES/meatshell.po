@@ -408,6 +408,21 @@ msgstr "高级（字符集）"
 msgid "Terminal character encoding"
 msgstr "终端字符集"
 
+msgid "Backspace mode"
+msgstr "退格键模式"
+
+msgid "Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial."
+msgstr "设置发送给设备的退格编码。Auto：SSH/Local 用 DEL，Telnet/Serial 用 BS。"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "DEL (0x7F)"
+msgstr "DEL (0x7F)"
+
+msgid "BS (0x08)"
+msgstr "BS (0x08)"
+
 msgid "Use GBK for servers configured for GB2312 or GBK output."
 msgstr "远端使用 GB2312 或 GBK 输出时请选择 GBK。"
 

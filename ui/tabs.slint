@@ -11,6 +11,8 @@ export struct TabInfo {
     connected: bool,
     // 0 connecting / 1 connected / 2 disconnected (normal) / 3 failed
     conn-state: int,
+    // "auto" | "del" | "bs" — Backspace byte mode for this tab's session.
+    backspace-mode: string,
 }
 
 // --- SingleTab -------------------------------------------------------------
@@ -237,13 +239,18 @@ component SingleTab inherits Rectangle {
 component TabMenuItem inherits Rectangle {
     in property <string> label;
     in property <string> hint: "";
+    // When true, `hint` is a Material Icons codepoint (e.g. submenu chevron).
+    in property <bool> hint-icon: false;
     in property <bool> enabled: true;
     in property <bool> danger: false;
+    // Highlight as hovered even when the pointer is over a flyout submenu.
+    in property <bool> force-hover: false;
     callback clicked();
+    callback hovered(bool);
     height: 28px;
     clip: true;
     border-radius: Theme.radius-sm;
-    background: enabled && ta.has-hover ? Theme.bg-hover : transparent;
+    background: enabled && (ta.has-hover || root.force-hover) ? Theme.bg-hover : transparent;
     HorizontalLayout {
         width: 100%;
         padding-left: 10px;
@@ -262,7 +269,8 @@ component TabMenuItem inherits Rectangle {
         if root.hint != "": Text {
             text: hint;
             color: Theme.text-muted;
-            font-size: Theme.fs-xs;
+            font-family: root.hint-icon ? "Material Icons" : Theme.ui-font-family;
+            font-size: root.hint-icon ? Theme.fs-md : Theme.fs-xs;
             vertical-alignment: center;
             horizontal-stretch: 0;
         }
@@ -272,6 +280,7 @@ component TabMenuItem inherits Rectangle {
         enabled: root.enabled;
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
+        changed has-hover => { root.hovered(self.has-hover); }
     }
 }
 
@@ -297,6 +306,7 @@ export component TabBar inherits Rectangle {
     callback tab-find(string /* tab-id */);
     callback tab-clear(string /* tab-id */);
     callback tab-save-output(string /* tab-id */);
+    callback tab-set-backspace-mode(string /* tab-id */, string /* mode */);
     callback merge-pane();
     // Drag-to-split (#v0.5): cursor moved / dropped while dragging `tab-id`, in
     // absolute (window) coordinates.
@@ -323,8 +333,53 @@ export component TabBar inherits Rectangle {
     property <bool> can-close-all:
         root.tabs.length > 1
         || (root.tabs.length == 1 && root.tabs[0].id != "welcome");
+    // Current Backspace mode of the right-clicked tab (for submenu checkmarks).
+    property <string> menu-backspace-mode:
+        root.menu-target-index >= 0 && root.menu-target-index < root.tabs.length
+            ? root.tabs[root.menu-target-index].backspace-mode
+            : "auto";
+    // Flyout submenu: stay open while the trigger OR the panel is hovered
+    // (classic context-menu behavior; no second PopupWindow). A short close
+    // timer bridges the gap when the pointer travels trigger → panel.
+    property <bool> bs-trigger-hover: false;
+    property <bool> bs-panel-hover: false;
+    property <bool> bs-submenu-armed: false;
+    property <bool> backspace-submenu-open:
+        root.menu-target != "welcome" && root.bs-submenu-armed;
     // Tab currently being drag-reordered (highlight + id for drag-move/drop).
     property <string> drag-id;
+
+    function arm-backspace-submenu() {
+        bs-close-timer.running = false;
+        root.bs-submenu-armed = true;
+    }
+
+    function dismiss-backspace-submenu() {
+        bs-close-timer.running = false;
+        root.bs-trigger-hover = false;
+        root.bs-panel-hover = false;
+        root.bs-submenu-armed = false;
+    }
+
+    function schedule-dismiss-backspace-submenu() {
+        if (root.bs-trigger-hover || root.bs-panel-hover) {
+            bs-close-timer.running = false;
+            return;
+        }
+        bs-close-timer.running = false;
+        bs-close-timer.running = true;
+    }
+
+    bs-close-timer := Timer {
+        interval: 150ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            if (!root.bs-trigger-hover && !root.bs-panel-hover) {
+                root.bs-submenu-armed = false;
+            }
+        }
+    }
 
     height: 36px;
     background: Theme.bg-panel-alt;
@@ -386,6 +441,7 @@ export component TabBar inherits Rectangle {
                         root.menu-target-index = i;
                         root.menu-x = ax - root.absolute-position.x;
                         root.menu-y = ay - root.absolute-position.y;
+                        root.dismiss-backspace-submenu();
                         tab-menu.show();
                     }
                     // Prefer the frozen drag-id so move/drop stay on the grabbed
@@ -516,13 +572,18 @@ export component TabBar inherits Rectangle {
 
     // Right-click context menu (v0.5): split this pane by peeling the clicked tab
     // into a new pane. Splitting needs at least two tabs so the source pane survives.
+    // Backspace mode uses an in-popup flyout (hover to open) — not a second
+    // PopupWindow — so the parent menu stays open like a normal OS/context menu.
     tab-menu := PopupWindow {
         x: root.menu-x;
         y: root.menu-y;
-        width: 240px;
+        // Always reserve flyout width so opening the submenu does not resize
+        // (and shift) the primary menu.
+        width: 396px;
         height: tab-menu-card.preferred-height;
         tab-menu-card := Rectangle {
-            width: parent.width;
+            x: 0px;
+            width: 240px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
             border-width: 1px;
@@ -535,24 +596,28 @@ export component TabBar inherits Rectangle {
                 TabMenuItem {
                     label: @tr("Close tab");
                     enabled: root.menu-target != "welcome";
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-closed(root.menu-target); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Close other tabs");
                     enabled: root.can-close-others;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-others(root.menu-target); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Close tabs to the left");
                     enabled: root.can-close-left;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-left(root.menu-target); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Close tabs to the right");
                     enabled: root.can-close-right;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-right(root.menu-target); tab-menu.close(); }
                 }
 
@@ -560,31 +625,59 @@ export component TabBar inherits Rectangle {
                     label: @tr("Close all tabs");
                     danger: true;
                     enabled: root.can-close-all;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-all(); tab-menu.close(); }
                 }
 
                 Rectangle {
                     height: 1px;
                     background: Theme.border-subtle;
-                }    
+                }
 
                 TabMenuItem {
                     label: @tr("Find in terminal");
                     hint: Theme.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
                     enabled: root.menu-target != "welcome";
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-find(root.menu-target); tab-menu.close(); }
-                }
-
-                TabMenuItem {
-                    label: @tr("Clear screen");
-                    enabled: root.menu-target != "welcome";
-                    clicked => { root.tab-clear(root.menu-target); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Save terminal output");
                     enabled: root.menu-target != "welcome";
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-save-output(root.menu-target); tab-menu.close(); }
+                }
+
+                TabMenuItem {
+                    label: @tr("Clear screen");
+                    enabled: root.menu-target != "welcome";
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
+                    clicked => { root.tab-clear(root.menu-target); tab-menu.close(); }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
+                bs-trigger := TabMenuItem {
+                    label: @tr("Backspace mode");
+                    hint: "\u{E5CC}";
+                    hint-icon: true;
+                    enabled: root.menu-target != "welcome";
+                    force-hover: root.backspace-submenu-open;
+                    hovered(h) => {
+                        if (root.menu-target == "welcome") { return; }
+                        root.bs-trigger-hover = h;
+                        if (h) {
+                            root.arm-backspace-submenu();
+                        } else {
+                            root.schedule-dismiss-backspace-submenu();
+                        }
+                    }
+                    // Click still opens (touch / accessibility); hover is primary.
+                    clicked => { root.arm-backspace-submenu(); }
                 }
 
                 Rectangle {
@@ -595,6 +688,7 @@ export component TabBar inherits Rectangle {
                 TabMenuItem {
                     label: @tr("Duplicate connection");
                     enabled: root.menu-target != "welcome";
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-duplicate(root.menu-target); tab-menu.close(); }
                 }
 
@@ -606,19 +700,108 @@ export component TabBar inherits Rectangle {
                 TabMenuItem {
                     label: @tr("Split right");
                     enabled: root.tabs.length > 1;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-split(root.menu-target, "right"); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Split down");
                     enabled: root.tabs.length > 1;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-split(root.menu-target, "down"); tab-menu.close(); }
                 }
 
                 TabMenuItem {
                     label: @tr("Cancel split");
                     enabled: root.can-merge-pane;
+                    hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.merge-pane(); tab-menu.close(); }
+                }
+            }
+        }
+
+        // Flyout aligned with the trigger; overlaps 4px so the pointer can
+        // travel from trigger → panel without closing (zauterm-style).
+        if root.backspace-submenu-open: bs-panel := Rectangle {
+            x: 236px;
+            y: bs-trigger.y;
+            width: 160px;
+            height: bs-panel-list.preferred-height;
+            background: Theme.popup-bg;
+            border-radius: Theme.radius-sm;
+            border-width: 1px;
+            border-color: Theme.border-strong;
+            drop-shadow-blur: 12px;
+            drop-shadow-color: #00000060;
+
+            // Underlay first so menu items (drawn later) still receive clicks;
+            // has-hover stays true while the pointer is anywhere on the panel.
+            TouchArea {
+                changed has-hover => {
+                    root.bs-panel-hover = self.has-hover;
+                    if (self.has-hover) {
+                        root.arm-backspace-submenu();
+                    } else {
+                        root.schedule-dismiss-backspace-submenu();
+                    }
+                }
+            }
+
+            bs-panel-list := VerticalLayout {
+                padding: 4px;
+                spacing: 1px;
+                TabMenuItem {
+                    label: @tr("Auto");
+                    hint: root.menu-backspace-mode == "auto" ? "✓" : "";
+                    hovered(h) => {
+                        root.bs-panel-hover = h;
+                        if (h) {
+                            root.arm-backspace-submenu();
+                        } else {
+                            root.schedule-dismiss-backspace-submenu();
+                        }
+                    }
+                    clicked => {
+                        root.tab-set-backspace-mode(root.menu-target, "auto");
+                        root.dismiss-backspace-submenu();
+                        tab-menu.close();
+                    }
+                }
+
+                TabMenuItem {
+                    label: @tr("DEL (0x7F)");
+                    hint: root.menu-backspace-mode == "del" ? "✓" : "";
+                    hovered(h) => {
+                        root.bs-panel-hover = h;
+                        if (h) {
+                            root.arm-backspace-submenu();
+                        } else {
+                            root.schedule-dismiss-backspace-submenu();
+                        }
+                    }
+                    clicked => {
+                        root.tab-set-backspace-mode(root.menu-target, "del");
+                        root.dismiss-backspace-submenu();
+                        tab-menu.close();
+                    }
+                }
+
+                TabMenuItem {
+                    label: @tr("BS (0x08)");
+                    hint: root.menu-backspace-mode == "bs" ? "✓" : "";
+                    hovered(h) => {
+                        root.bs-panel-hover = h;
+                        if (h) {
+                            root.arm-backspace-submenu();
+                        } else {
+                            root.schedule-dismiss-backspace-submenu();
+                        }
+                    }
+                    clicked => {
+                        root.tab-set-backspace-mode(root.menu-target, "bs");
+                        root.dismiss-backspace-submenu();
+                        tab-menu.close();
+                    }
                 }
             }
         }

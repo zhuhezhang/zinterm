@@ -17,48 +17,57 @@ pub(super) fn update_tab_connection(
     conn_state: i32,
     connected: bool,
 ) {
+    mutate_tab_info(win, tab_id, &|t| {
+        t.conn_state = conn_state;
+        t.connected = connected;
+    });
+}
+
+/// Update `backspace_mode` on a tab (root model + every pane copy) so the
+/// context-menu checkmark stays in sync after a live switch or session edit.
+pub(super) fn update_tab_backspace_mode(win: &AppWindow, tab_id: &str, mode: &str) {
+    let mode: SharedString = normalize_backspace_mode(mode).into();
+    mutate_tab_info(win, tab_id, &|t| {
+        t.backspace_mode = mode.clone();
+    });
+}
+
+fn mutate_tab_info(win: &AppWindow, tab_id: &str, mutator: &dyn Fn(&mut TabInfo)) {
     let tabs_rc = win.get_tabs();
     let tabs = tabs_rc
         .as_any()
         .downcast_ref::<VecModel<TabInfo>>()
         .expect("tabs model must be a VecModel");
 
-    let update_tab = |mutator: &dyn Fn(&mut TabInfo)| {
-        for i in 0..tabs.row_count() {
-            if let Some(mut row) = tabs.row_data(i) {
-                if row.id.as_str() == tab_id {
-                    mutator(&mut row);
-                    tabs.set_row_data(i, row);
-                    break;
-                }
+    for i in 0..tabs.row_count() {
+        if let Some(mut row) = tabs.row_data(i) {
+            if row.id.as_str() == tab_id {
+                mutator(&mut row);
+                tabs.set_row_data(i, row);
+                break;
             }
         }
-        let panes = win.get_panes();
-        if let Some(pm) = panes.as_any().downcast_ref::<VecModel<PaneInfo>>() {
-            for pi in 0..pm.row_count() {
-                let Some(pane) = pm.row_data(pi) else {
-                    continue;
-                };
-                let Some(tm) = pane.tabs.as_any().downcast_ref::<VecModel<TabInfo>>() else {
-                    continue;
-                };
-                for ti in 0..tm.row_count() {
-                    if let Some(mut row) = tm.row_data(ti) {
-                        if row.id.as_str() == tab_id {
-                            mutator(&mut row);
-                            tm.set_row_data(ti, row);
-                            break;
-                        }
+    }
+    let panes = win.get_panes();
+    if let Some(pm) = panes.as_any().downcast_ref::<VecModel<PaneInfo>>() {
+        for pi in 0..pm.row_count() {
+            let Some(pane) = pm.row_data(pi) else {
+                continue;
+            };
+            let Some(tm) = pane.tabs.as_any().downcast_ref::<VecModel<TabInfo>>() else {
+                continue;
+            };
+            for ti in 0..tm.row_count() {
+                if let Some(mut row) = tm.row_data(ti) {
+                    if row.id.as_str() == tab_id {
+                        mutator(&mut row);
+                        tm.set_row_data(ti, row);
+                        break;
                     }
                 }
             }
         }
-    };
-
-    update_tab(&|t| {
-        t.conn_state = conn_state;
-        t.connected = connected;
-    });
+    }
 }
 
 pub(super) fn apply_session_event_to_window(

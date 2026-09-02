@@ -146,10 +146,11 @@ use crate::ssh::{
 #[cfg(windows)]
 use crate::terminal::c0_letter_key_down;
 use crate::terminal::{
-    bare_ctrl_marker_workaround_enabled, compile_output_rules, compute_find_matches,
-    encode_command_bar_input, encode_pasted_text, key_to_pty_bytes, paste_requires_large_review,
-    should_drop_bare_ctrl_marker, terminal_uses_bracketed_paste, CsiState, FindOptions,
-    OutputHighlightPreset, RenderGates, TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
+    apply_backspace_mode, bare_ctrl_marker_workaround_enabled, compile_output_rules,
+    compute_find_matches, encode_command_bar_input, encode_pasted_text, key_to_pty_bytes,
+    normalize_backspace_mode, paste_requires_large_review, should_drop_bare_ctrl_marker,
+    terminal_uses_bracketed_paste, CsiState, FindOptions, OutputHighlightPreset, RenderGates,
+    TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
 };
 #[cfg(test)]
 use crate::terminal::{
@@ -1124,6 +1125,7 @@ pub fn run() -> Result<()> {
         endpoint: "".into(),
         connected: false,
         conn_state: 0,
+        backspace_mode: "auto".into(),
     });
     window.set_tabs(ModelRc::from(tabs_model.clone()));
     window.set_active_tab_id("welcome".into());
@@ -2570,6 +2572,9 @@ fn wire_session_callbacks(
                 w.set_dialog_parity(session.parity.clone().into());
                 w.set_dialog_flow(session.flow_control.clone().into());
                 w.set_dialog_encoding(session.encoding.clone().into());
+                w.set_dialog_backspace_mode(
+                    normalize_backspace_mode(&session.backspace_mode).into(),
+                );
                 w.set_dialog_shell(session.shell.clone().into());
                 w.set_dialog_working_directory(session.working_directory.clone().into());
                 w.set_dialog_disable_shell_integration(session.disable_shell_integration);
@@ -2914,6 +2919,7 @@ fn wire_session_callbacks(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let tab_statuses = tab_statuses.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft| {
             let id = draft.id.to_string();
             // The edit dialog never echoes the real password (issue #10): a blank
@@ -3011,12 +3017,15 @@ fn wire_session_callbacks(
                 } else {
                     draft.encoding.to_string()
                 },
+                backspace_mode: normalize_backspace_mode(&draft.backspace_mode).to_string(),
                 shell: draft.shell.to_string(),
                 working_directory: draft.working_directory.to_string(),
                 disable_shell_integration: draft.disable_shell_integration,
                 enable_sftp: draft.enable_sftp,
                 enable_command_panel: draft.enable_command_panel,
             };
+            let saved_id = new_session.id.clone();
+            let saved_backspace = new_session.backspace_mode.clone();
             {
                 let mut s = store.borrow_mut();
                 s.upsert(new_session);
@@ -3026,6 +3035,16 @@ fn wire_session_callbacks(
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
+                let affected: Vec<String> = tab_statuses
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .filter(|(_, st)| st.session_id == saved_id)
+                    .map(|(id, _)| id.clone())
+                    .collect();
+                for tid in affected {
+                    update_tab_backspace_mode(&w, &tid, &saved_backspace);
+                }
                 w.set_dialog_open(false);
             }
         });
@@ -3130,6 +3149,7 @@ fn wire_session_callbacks(
                 endpoint: tab_endpoint(&session).into(),
                 connected: false,
                 conn_state: 0,
+                backspace_mode: normalize_backspace_mode(&session.backspace_mode).into(),
             });
             // Each session keeps its own SFTP collapse state + sizes, seeded from
             // the global defaults (the "collapse SFTP by default" pref and the
@@ -3289,6 +3309,52 @@ fn wire_session_callbacks(
             }
         });
     }
+
+    // Live Backspace-mode switch from the tab context submenu: update the
+    // saved session, persist, and refresh open-tab checkmarks. send_key reads
+    // the store on every keystroke so the new mode applies immediately.
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let tab_statuses = tab_statuses.clone();
+        window.on_tab_set_backspace_mode(move |tab_id: SharedString, mode: SharedString| {
+            let tab_id = tab_id.to_string();
+            let mode = normalize_backspace_mode(&mode).to_string();
+            let session_id = tab_statuses
+                .lock()
+                .unwrap()
+                .get(&tab_id)
+                .map(|s| s.session_id.clone())
+                .unwrap_or_default();
+            if session_id.is_empty() {
+                return;
+            }
+            {
+                let mut s = store.borrow_mut();
+                let Some(mut session) = s.get(&session_id).cloned() else {
+                    return;
+                };
+                session.backspace_mode = mode.clone();
+                s.upsert(session);
+                if let Err(err) = s.save() {
+                    tracing::warn!("failed to save backspace mode: {err:#}");
+                }
+            }
+            if let Some(w) = weak.upgrade() {
+                // Keep every open tab of this session's checkmark in sync.
+                let affected: Vec<String> = tab_statuses
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .filter(|(_, st)| st.session_id == session_id)
+                    .map(|(id, _)| id.clone())
+                    .collect();
+                for tid in affected {
+                    update_tab_backspace_mode(&w, &tid, &mode);
+                }
+            }
+        });
+    }
 }
 
 fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
@@ -3315,6 +3381,7 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
     win.set_dialog_parity("none".into());
     win.set_dialog_flow("none".into());
     win.set_dialog_encoding("UTF-8".into());
+    win.set_dialog_backspace_mode("auto".into());
     win.set_dialog_shell("".into());
     win.set_dialog_working_directory("".into());
     win.set_dialog_disable_shell_integration(false);
@@ -4384,7 +4451,23 @@ fn wire_key_input(
                 return;
             }
 
-            let bytes = key_to_pty_bytes(key.as_str(), ctrl, alt, app_cursor);
+            let mut bytes = key_to_pty_bytes(key.as_str(), ctrl, alt, app_cursor);
+            if !bytes.is_empty() {
+                // Remap DEL/BS per the saved session's backspace mode (hot-switchable).
+                let (mode, kind) = {
+                    let session_id = ctx
+                        .tab_statuses
+                        .lock()
+                        .unwrap()
+                        .get(tab_id.as_str())
+                        .map(|st| st.session_id.clone());
+                    session_id
+                        .and_then(|sid| store_send.borrow().get(&sid).cloned())
+                        .map(|s| (s.backspace_mode, s.kind))
+                        .unwrap_or_else(|| ("auto".into(), SessionKind::Ssh))
+                };
+                bytes = apply_backspace_mode(bytes, &mode, kind);
+            }
             if cfg!(target_os = "macos")
                 && (ctrl || key.chars().any(|c| (0x10..=0x18).contains(&(c as u32))))
             {

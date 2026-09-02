@@ -59,6 +59,10 @@ fn default_encoding() -> String {
     "UTF-8".to_string()
 }
 
+fn default_backspace_mode() -> String {
+    "auto".to_string()
+}
+
 /// Older configs always had SFTP (SSH) / the command panel available; keep that
 /// when the field is absent. New sessions still default off via [`Session::new_empty`].
 fn default_feature_enabled_compat() -> bool {
@@ -140,6 +144,12 @@ pub struct Session {
     #[serde(default = "default_encoding")]
     pub encoding: String,
 
+    /// Byte sent for the Backspace key: `"auto"` | `"del"` | `"bs"`.
+    /// Auto keeps DEL for SSH/Local and maps DEL→BS for Telnet/Serial so more
+    /// gear accepts erase; Del/Bs force 0x7F / 0x08 respectively.
+    #[serde(default = "default_backspace_mode")]
+    pub backspace_mode: String,
+
     // --- Local-only fields (ignored unless kind == Local) -------------------
     /// Shell program or path. Empty = platform default ($SHELL / PowerShell).
     #[serde(default)]
@@ -192,6 +202,7 @@ impl Session {
             parity: default_parity(),
             flow_control: default_flow(),
             encoding: default_encoding(),
+            backspace_mode: default_backspace_mode(),
             shell: String::new(),
             working_directory: String::new(),
             disable_shell_integration: false,

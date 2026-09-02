@@ -122,3 +122,45 @@ fn macos_ime_bare_ctrl_backspace_marker_is_platform_scoped() {
 fn alt_letter_still_sends_esc_prefix() {
     assert_eq!(key_to_pty_bytes("a", false, true, false), vec![0x1b, b'a']);
 }
+
+#[test]
+fn backspace_key_defaults_to_del() {
+    assert_eq!(key_to_pty_bytes("\u{0008}", false, false, false), vec![0x7f]);
+}
+
+#[test]
+fn apply_backspace_mode_auto_maps_telnet_and_serial_to_bs() {
+    use crate::config::SessionKind;
+    let del = vec![0x7f];
+    assert_eq!(
+        apply_backspace_mode(del.clone(), "auto", SessionKind::Ssh),
+        vec![0x7f]
+    );
+    assert_eq!(
+        apply_backspace_mode(del.clone(), "auto", SessionKind::Local),
+        vec![0x7f]
+    );
+    assert_eq!(
+        apply_backspace_mode(del.clone(), "auto", SessionKind::Telnet),
+        vec![0x08]
+    );
+    assert_eq!(
+        apply_backspace_mode(del, "auto", SessionKind::Serial),
+        vec![0x08]
+    );
+}
+
+#[test]
+fn apply_backspace_mode_forces_del_or_bs() {
+    use crate::config::SessionKind;
+    assert_eq!(
+        apply_backspace_mode(vec![0x08], "del", SessionKind::Telnet),
+        vec![0x7f]
+    );
+    assert_eq!(
+        apply_backspace_mode(vec![0x7f], "bs", SessionKind::Ssh),
+        vec![0x08]
+    );
+    assert_eq!(normalize_backspace_mode("DEL"), "del");
+    assert_eq!(normalize_backspace_mode("nope"), "auto");
+}

@@ -408,6 +408,21 @@ msgstr "Advanced (encoding)"
 msgid "Terminal character encoding"
 msgstr "Terminal character encoding"
 
+msgid "Backspace mode"
+msgstr "Backspace mode"
+
+msgid "Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial."
+msgstr "Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial."
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "DEL (0x7F)"
+msgstr "DEL (0x7F)"
+
+msgid "BS (0x08)"
+msgstr "BS (0x08)"
+
 msgid "Use GBK for servers configured for GB2312 or GBK output."
 msgstr "Use GBK for servers configured for GB2312 or GBK output."
 

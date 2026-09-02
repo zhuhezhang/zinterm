@@ -23,6 +23,8 @@ export struct SessionDraft {
     parity: string,        // "none" | "odd" | "even"
     flow-control: string,  // "none" | "hardware" | "software"
     encoding: string,
+    // "auto" | "del" | "bs" — byte sent for Backspace (shared by all kinds).
+    backspace-mode: string,
     // Local-only (ignored unless kind == "local")
     shell: string,              // "" = platform default
     working-directory: string,  // "" = user home
@@ -89,6 +91,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-parity: "none";
     in-out property <string> draft-flow: "none";
     in-out property <string> draft-encoding: "UTF-8";
+    // "auto" | "del" | "bs"
+    in-out property <string> draft-backspace-mode: "auto";
     in-out property <string> draft-shell;
     in-out property <string> draft-working-directory;
     in-out property <bool> draft-disable-shell-integration: false;
@@ -686,6 +690,44 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
+                    // ── Backspace mode (all connection kinds) ───────────────────────
+                    VerticalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: @tr("Backspace mode");
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 6px;
+                            SegOption {
+                                label: @tr("Auto");
+                                active: root.draft-backspace-mode == "auto";
+                                clicked => { root.draft-backspace-mode = "auto"; }
+                            }
+
+                            SegOption {
+                                label: @tr("DEL (0x7F)");
+                                active: root.draft-backspace-mode == "del";
+                                clicked => { root.draft-backspace-mode = "del"; }
+                            }
+
+                            SegOption {
+                                label: @tr("BS (0x08)");
+                                active: root.draft-backspace-mode == "bs";
+                                clicked => { root.draft-backspace-mode = "bs"; }
+                            }
+                        }
+
+                        Text {
+                            text: @tr("Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial.");
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-xs;
+                            wrap: word-wrap;
+                        }
+                    }
+
                     // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
                     if root.draft-kind == "ssh": VerticalLayout {
                         spacing: 6px;
@@ -929,6 +971,7 @@ export component SessionDialog inherits Rectangle {
                                     parity: root.draft-parity,
                                     flow-control: root.draft-flow,
                                     encoding: root.draft-encoding,
+                                    backspace-mode: root.draft-backspace-mode,
                                     shell: root.draft-shell,
                                     working-directory: root.draft-working-directory,
                                     disable-shell-integration: root.draft-disable-shell-integration,

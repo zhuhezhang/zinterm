@@ -662,6 +662,7 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-parity: "none";
     in-out property <string> dialog-flow: "none";
     in-out property <string> dialog-encoding: "UTF-8";
+    in-out property <string> dialog-backspace-mode: "auto";
     in-out property <string> dialog-shell;
     in-out property <string> dialog-working-directory;
     in-out property <bool> dialog-disable-shell-integration: false;
@@ -720,6 +721,8 @@ export component AppWindow inherits Window {
     callback pane-merge(int /* pane-id */);
     // Open another connection to the same session as `tab-id` (a new tab).
     callback tab-duplicate(string /* tab-id */);
+    // Change the Backspace byte mode for the session behind `tab-id` and persist.
+    callback tab-set-backspace-mode(string /* tab-id */, string /* mode */);
     // Drag-to-split (v0.5): cursor moved / dropped while dragging `tab-id`, in
     // pane-area coordinates. Rust hit-tests the pane + edge zone.
     callback tab-drag-move(string /* tab-id */, length /* x */, length /* y */);
@@ -1283,6 +1286,9 @@ export component AppWindow inherits Window {
                                             tab-split(id, dir) => { root.pane-split(pane.id, id, dir); }
                                             merge-pane() => { root.pane-merge(pane.id); }
                                             tab-duplicate(id) => { root.tab-duplicate(id); }
+                                            tab-set-backspace-mode(id, mode) => {
+                                                root.tab-set-backspace-mode(id, mode);
+                                            }
                                             tab-close-others(id) => { root.pane-tab-close-others(pane.id, id); }
                                             tab-close-left(id) => { root.pane-tab-close-left(pane.id, id); }
                                             tab-close-right(id) => { root.pane-tab-close-right(pane.id, id); }
@@ -4307,6 +4313,7 @@ export component AppWindow inherits Window {
         draft-parity <=> root.dialog-parity;
         draft-flow <=> root.dialog-flow;
         draft-encoding <=> root.dialog-encoding;
+        draft-backspace-mode <=> root.dialog-backspace-mode;
         draft-shell <=> root.dialog-shell;
         draft-working-directory <=> root.dialog-working-directory;
         draft-disable-shell-integration <=> root.dialog-disable-shell-integration;

@@ -3,7 +3,43 @@ use std::sync::OnceLock;
 
 #[cfg(any(target_os = "windows", test))]
 use super::state::CtrlKeySide;
+use crate::config::SessionKind;
 use crate::terminal::TermBuffers;
+
+/// Canonicalise a persisted / UI backspace mode. Unknown values fall back to
+/// `"auto"` (same as zauterm).
+pub(crate) fn normalize_backspace_mode(mode: &str) -> &'static str {
+    match mode.trim().to_ascii_lowercase().as_str() {
+        "del" => "del",
+        "bs" => "bs",
+        _ => "auto",
+    }
+}
+
+/// Remap DEL (0x7F) / BS (0x08) in outbound PTY bytes according to the
+/// session's backspace mode. Auto: SSH/Local keep DEL; Telnet/Serial map
+/// DEL→BS for devices that only erase with BS.
+pub(crate) fn apply_backspace_mode(
+    bytes: Vec<u8>,
+    mode: &str,
+    kind: SessionKind,
+) -> Vec<u8> {
+    match normalize_backspace_mode(mode) {
+        "del" => bytes
+            .into_iter()
+            .map(|b| if b == 0x08 { 0x7f } else { b })
+            .collect(),
+        "bs" => bytes
+            .into_iter()
+            .map(|b| if b == 0x7f { 0x08 } else { b })
+            .collect(),
+        _ if matches!(kind, SessionKind::Telnet | SessionKind::Serial) => bytes
+            .into_iter()
+            .map(|b| if b == 0x7f { 0x08 } else { b })
+            .collect(),
+        _ => bytes,
+    }
+}
 
 /// Normalize clipboard line endings to the single CR byte expected for Enter
 /// by a terminal, including inside bracketed-paste payloads.
