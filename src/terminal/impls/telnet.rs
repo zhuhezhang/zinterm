@@ -21,6 +21,7 @@ use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use crate::config::Session;
 use crate::i18n::t;
 use crate::ssh::{SessionCommand, SessionEvent, SessionHandle};
+use crate::terminal::TerminalEncoding;
 
 // Telnet protocol bytes (RFC 854).
 const IAC: u8 = 255;
@@ -128,6 +129,8 @@ async fn run_telnet(
     ));
 
     let (mut rd, mut wr) = tokio::io::split(stream);
+    let encoder = TerminalEncoding::new(&session.encoding);
+    let mut decoder = TerminalEncoding::new(&session.encoding);
 
     // Proactively advertise the options we support: we will suppress go-ahead
     // and report our window size. Most gear replies DO and starts echoing.
@@ -146,6 +149,8 @@ async fn run_telnet(
                     Some(SessionCommand::RawInput(bytes)) => {
                         // Never log keystroke bytes — they can be passwords (#15).
                         tracing::debug!("telnet write len={} bytes", bytes.len());
+                        // UI sends Unicode text as UTF-8 bytes; re-encode for the session charset.
+                        let bytes = encoder.encode(&bytes);
                         // Escape IAC (0xFF) in user data per RFC 854.
                         let mut out = Vec::with_capacity(bytes.len());
                         for b in bytes {
@@ -178,7 +183,7 @@ async fn run_telnet(
                             let _ = wr.flush().await;
                         }
                         if !data.is_empty() {
-                            let text = String::from_utf8_lossy(&data).into_owned();
+                            let text = decoder.decode(&data);
                             let _ = events.send(SessionEvent::Output(text));
                         }
                     }

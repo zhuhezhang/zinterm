@@ -22,6 +22,7 @@ use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use crate::config::Session;
 use crate::i18n::t;
 use crate::ssh::{SessionCommand, SessionEvent, SessionHandle};
+use crate::terminal::TerminalEncoding;
 
 /// Spawn a serial-port session. See module docs for why the signature mirrors
 /// `spawn_session` (minus the PTY size, which a serial line has no notion of).
@@ -131,6 +132,7 @@ async fn run_serial(
         .try_clone()
         .context("failed to clone serial handle for writing")?;
     let writer = Arc::new(Mutex::new(writer));
+    let encoder = Arc::new(Mutex::new(TerminalEncoding::new(&session.encoding)));
 
     let _ = events.send(SessionEvent::Connected);
     let _ = events.send(SessionEvent::Status(
@@ -141,6 +143,7 @@ async fn run_serial(
     let running = Arc::new(AtomicBool::new(true));
     let reader_running = running.clone();
     let reader_events = events.clone();
+    let mut decoder = TerminalEncoding::new(&session.encoding);
     let reader_handle = std::thread::spawn(move || {
         let mut port = port;
         let mut buf = [0u8; 4096];
@@ -148,7 +151,7 @@ async fn run_serial(
             match port.read(&mut buf) {
                 Ok(0) => {}
                 Ok(n) => {
-                    let text = String::from_utf8_lossy(&buf[..n]).into_owned();
+                    let text = decoder.decode(&buf[..n]);
                     if reader_events.send(SessionEvent::Output(text)).is_err() {
                         break;
                     }
@@ -172,10 +175,12 @@ async fn run_serial(
             SessionCommand::RawInput(bytes) => {
                 // Never log keystroke bytes — they can be passwords (#15).
                 tracing::debug!("serial write len={} bytes", bytes.len());
+                // UI sends Unicode text as UTF-8 bytes; re-encode for the session charset.
+                let encoded = encoder.lock().unwrap().encode(&bytes);
                 let w = writer.clone();
                 let res = tokio::task::spawn_blocking(move || {
                     let mut guard = w.lock().unwrap();
-                    guard.write_all(&bytes).and_then(|_| guard.flush())
+                    guard.write_all(&encoded).and_then(|_| guard.flush())
                 })
                 .await;
                 if let Ok(Err(e)) = res {

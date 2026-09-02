@@ -715,6 +715,37 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
+                    if root.draft-kind == "serial": VerticalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: @tr("Terminal character encoding");
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                        }
+
+                        ComboBox {
+                            model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
+                            current-value: root.draft-encoding;
+                            selected(value) => { root.draft-encoding = value; }
+                        }
+                    }
+
+                    // ── Telnet: encoding ────────────────────────────────────────────
+                    if root.draft-kind == "telnet": VerticalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: @tr("Terminal character encoding");
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                        }
+
+                        ComboBox {
+                            model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
+                            current-value: root.draft-encoding;
+                            selected(value) => { root.draft-encoding = value; }
+                        }
+                    }
+
                     // ── Advanced (collapsed by default): encoding / shell opts ─
                     if root.draft-kind == "ssh": Rectangle {
                         height: 26px;
