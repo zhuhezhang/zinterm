@@ -433,6 +433,8 @@ export component TerminalView inherits Rectangle {
     in property <bool> select-copy-right-paste-enabled: true;
     in property <bool> quick-sidebar-enabled: false;
     in property <bool> quick-panel-docked: false;
+    // Session opted into the bottom command panel (quick cmds + input + history).
+    in property <bool> command-panel-available: false;
     in property <string> quick-external-command;
     in property <int> quick-external-sequence;
     in property <string> quick-external-fill-command;
@@ -505,6 +507,12 @@ export component TerminalView inherits Rectangle {
     in-out property <bool> send-to-all: false;
     property <bool> quick-open: false;         // quick-command popup visibility
     property <bool> history-open: false;       // history dropdown visibility
+    changed command-panel-available => {
+        if (!self.command-panel-available) {
+            self.quick-open = false;
+            self.history-open = false;
+        }
+    }
     property <bool> history-autocomplete: false; // live suggestions from command input (#349)
     property <int> history-cursor: -1;         // ↑/↓ recall index (-1 = live input)
     // Keyboard-driven selection in the open history dropdown (#140): ↑/↓ move it,
@@ -807,14 +815,14 @@ export component TerminalView inherits Rectangle {
             vertical-stretch: 1;
             // Collapsed → side dock shows the 36px ToolStrip; top/bottom keep the
             // full toolbar row tall enough for the path field (Theme.toolbar-row-height).
-            property <length> sf-w: root.zen-mode ? 0px
+            property <length> sf-w: root.zen-mode || !root.sftp-available ? 0px
                 : root.sftp-shut ? 36px
                 : root.sftp-horizontal ? max(300px, root.sftp-panel-width)
                 : root.sftp-panel-width;
-            property <length> sf-h: root.zen-mode ? 0px
+            property <length> sf-h: root.zen-mode || !root.sftp-available ? 0px
                 : root.sftp-shut ? (root.sftp-horizontal ? 36px : Theme.toolbar-row-height)
                 : root.sftp-panel-height;
-            property <length> sp: root.zen-mode || root.sftp-shut ? 0px : 4px;
+            property <length> sp: root.zen-mode || !root.sftp-available || root.sftp-shut ? 0px : 4px;
             // The collapsed bar (sf-h) already reserves the bottom strip now.
             property <length> bottom-strip-h: 0px;
 
@@ -1491,8 +1499,8 @@ export component TerminalView inherits Rectangle {
 
                     // --- Command bar (#55): quick commands + input box + history ---------
                     cmd-bar := Rectangle {
-                        visible: !root.zen-mode;
-                        height: root.zen-mode ? 0px : root.cmd-bar-input-height + 12px;
+                        visible: !root.zen-mode && root.command-panel-available;
+                        height: root.zen-mode || !root.command-panel-available ? 0px : root.cmd-bar-input-height + 12px;
                         background: Theme.bg-panel-alt;
                         border-width: 0;
 
@@ -2519,7 +2527,8 @@ export component TerminalView inherits Rectangle {
 
             // Collapsed → a ToolStrip icon bar at the docked edge (M5), filling the
             // 36px slot the panel shrank to; click the icon to re-expand.
-            if root.sftp-shut: ToolStrip {
+            // Hidden entirely when this session has SFTP disabled.
+            if root.sftp-available && root.sftp-shut: ToolStrip {
                 x: root.sftp-dock == "right" ? parent.width - parent.sf-w : 0px;
                 y: root.sftp-dock == "bottom" ? parent.height - parent.sf-h : 0px;
                 // Top/bottom keep the SFTP path bar; only cover the folder icon so

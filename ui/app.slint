@@ -73,6 +73,7 @@ export struct TerminalState {
     sftp-panel-height: length,  // SFTP panel extent (bottom dock) — per session
     sftp-panel-width: length,   // SFTP panel extent (side dock) — per session
     sftp-saved-height: length,  // height to restore on un-collapse — per session
+    command-panel-available: bool, // session opted into the bottom command panel
 }
 
 // One leaf pane of the split layout (v0.5). Geometry (x/y/w/h) is computed in Rust
@@ -300,6 +301,9 @@ export component AppWindow inherits Window {
     in-out property <length> quick-panel-width: 260px;
     in-out property <length> quick-panel-height: 220px;
     in-out property <string> quick-panel-dock: "right";
+    // Focused terminal opted into the command panel; welcome keeps the docked panel.
+    in-out property <bool> active-command-panel-available: true;
+    property <bool> quick-panel-effective: root.quick-panel-open && root.active-command-panel-available;
     property <string> quick-external-command;
     property <int> quick-external-sequence;
     property <string> quick-external-fill-command;
@@ -659,6 +663,8 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-shell;
     in-out property <string> dialog-working-directory;
     in-out property <bool> dialog-disable-shell-integration: false;
+    in-out property <bool> dialog-enable-sftp: false;
+    in-out property <bool> dialog-enable-command-panel: false;
 
     // Delete-confirmation modal state (#28).
     in-out property <bool> confirm-delete-open: false;
@@ -981,11 +987,11 @@ export component AppWindow inherits Window {
             // on the same edge. Only when no such strip exists does it reserve its
             // own outermost 36px slot (#215).
             property <bool> quick-merge-welcome:
-                root.quick-panel-open && root.quick-panel-collapsed
+                root.quick-panel-effective && root.quick-panel-collapsed
                 && root.welcome-as-sidebar && root.welcome-collapsed
                 && root.quick-panel-dock == root.welcome-sidebar-dock;
             property <length> quick-outer-strip:
-                !root.zen-mode && root.quick-panel-open && root.quick-panel-collapsed
+                !root.zen-mode && root.quick-panel-effective && root.quick-panel-collapsed
                 && !dock-area.quick-merge-welcome
                 ? 36px : 0px;
             property <bool> quick-outer-horizontal:
@@ -1223,20 +1229,20 @@ export component AppWindow inherits Window {
                     property <bool> quick-horizontal:
                     root.quick-panel-dock == "left" || root.quick-panel-dock == "right";
                     property <length> quick-w:
-                    !root.zen-mode && root.quick-panel-open && !root.quick-panel-collapsed ? root.quick-panel-width : 0px;
+                    !root.zen-mode && root.quick-panel-effective && !root.quick-panel-collapsed ? root.quick-panel-width : 0px;
                     property <length> quick-h:
-                    !root.zen-mode && root.quick-panel-open && !root.quick-panel-collapsed ? root.quick-panel-height : 0px;
+                    !root.zen-mode && root.quick-panel-effective && !root.quick-panel-collapsed ? root.quick-panel-height : 0px;
                     property <length> quick-sp:
-                    !root.zen-mode && root.quick-panel-open && !root.quick-panel-collapsed ? 4px : 0px;
+                    !root.zen-mode && root.quick-panel-effective && !root.quick-panel-collapsed ? 4px : 0px;
 
                     central := Rectangle {
-                        x: root.quick-panel-open && !root.quick-panel-collapsed && root.quick-panel-dock == "left"
+                        x: root.quick-panel-effective && !root.quick-panel-collapsed && root.quick-panel-dock == "left"
                             ? parent.quick-w + parent.quick-sp : 0px;
-                        y: root.quick-panel-open && !root.quick-panel-collapsed && root.quick-panel-dock == "top"
+                        y: root.quick-panel-effective && !root.quick-panel-collapsed && root.quick-panel-dock == "top"
                             ? parent.quick-h + parent.quick-sp : 0px;
-                        width: root.quick-panel-open && !root.quick-panel-collapsed && parent.quick-horizontal
+                        width: root.quick-panel-effective && !root.quick-panel-collapsed && parent.quick-horizontal
                             ? parent.width - parent.quick-w - parent.quick-sp : parent.width;
-                        height: root.quick-panel-open && !root.quick-panel-collapsed && !parent.quick-horizontal
+                        height: root.quick-panel-effective && !root.quick-panel-collapsed && !parent.quick-horizontal
                             ? parent.height - parent.quick-h - parent.quick-sp : parent.height;
                         clip: true;
                         // Split-pane area (v0.5): panes tile this rect; each pane has its own
@@ -1438,8 +1444,9 @@ export component AppWindow inherits Window {
                                             sftp-ready: term.sftp-ready;
                                             quick-commands: root.quick-commands;
                                             quick-view: root.quick-view;
+                                            command-panel-available: term.command-panel-available && !root.zen-mode;
                                             quick-sidebar-enabled: root.quick-commands-as-sidebar;
-                                            quick-panel-docked: root.quick-panel-open;
+                                            quick-panel-docked: root.quick-panel-effective && term.command-panel-available;
                                             quick-external-command: root.quick-external-command;
                                             quick-external-sequence: root.quick-external-sequence;
                                             quick-external-fill-command: root.quick-external-fill-command;
@@ -1627,7 +1634,7 @@ export component AppWindow inherits Window {
                         }
                     }
 
-                    if root.quick-panel-open && !root.quick-panel-collapsed: QuickDockPanel {
+                    if root.quick-panel-effective && !root.quick-panel-collapsed: QuickDockPanel {
                         x: root.quick-panel-dock == "right" ? parent.width - parent.quick-w : 0px;
                         y: root.quick-panel-dock == "bottom" ? parent.height - parent.quick-h : 0px;
                         width: parent.quick-horizontal ? parent.quick-w : parent.width;
@@ -1675,7 +1682,7 @@ export component AppWindow inherits Window {
                     }
 
                     Rectangle {
-                        visible: root.quick-panel-open && !root.quick-panel-collapsed;
+                        visible: root.quick-panel-effective && !root.quick-panel-collapsed;
                         x: root.quick-panel-dock == "left" ? parent.quick-w
                             : root.quick-panel-dock == "right" ? parent.width - parent.quick-w - 4px
                             : 0px;
@@ -4299,6 +4306,8 @@ export component AppWindow inherits Window {
         draft-shell <=> root.dialog-shell;
         draft-working-directory <=> root.dialog-working-directory;
         draft-disable-shell-integration <=> root.dialog-disable-shell-integration;
+        draft-enable-sftp <=> root.dialog-enable-sftp;
+        draft-enable-command-panel <=> root.dialog-enable-command-panel;
         submit(draft) => { root.session-dialog-submit(draft); }
         cancel => { root.session-dialog-cancel(); }
         pick-key-file => { root.session-dialog-pick-key(); }

@@ -474,6 +474,18 @@ msgstr "禁用 shell 集成(Windows / pwsh 服务端)"
 msgid "Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell."
 msgstr "Windows 服务端请勾选:跳过假定 POSIX shell 的 cwd 跟随注入与资源监控,否则它们会把 shell 弄坏。"
 
+msgid "Enable SFTP panel"
+msgstr "启用 SFTP 面板"
+
+msgid "When off, the SFTP side panel is hidden for this session."
+msgstr "关闭后,此会话不显示 SFTP 侧栏。"
+
+msgid "Enable command panel"
+msgstr "启用命令面板"
+
+msgid "When off, the command panel (quick commands, input box, and history) is hidden for this session."
+msgstr "关闭后,此会话不显示命令面板(快捷命令、输入框与历史命令)。"
+
 msgid "Split right"
 msgstr "向右拆分"
 

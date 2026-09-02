@@ -59,6 +59,12 @@ fn default_encoding() -> String {
     "UTF-8".to_string()
 }
 
+/// Older configs always had SFTP (SSH) / the command panel available; keep that
+/// when the field is absent. New sessions still default off via [`Session::new_empty`].
+fn default_feature_enabled_compat() -> bool {
+    true
+}
+
 /// How a session authenticates.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -147,6 +153,21 @@ pub struct Session {
     /// the injected hook breaks the shell. Turn this on for such servers (#140).
     #[serde(default)]
     pub disable_shell_integration: bool,
+
+    /// Enable the SFTP side panel (SSH only). New sessions default off; missing
+    /// field in older configs deserializes as on so existing SSH sessions keep SFTP.
+    #[serde(default = "default_feature_enabled_compat")]
+    pub enable_sftp: bool,
+
+    /// Enable the bottom command panel (quick commands + input + history).
+    /// New sessions default off; missing field in older configs stays on.
+    /// Accepts the previous `enable_quick_commands` key for configs saved
+    /// before the rename.
+    #[serde(
+        default = "default_feature_enabled_compat",
+        alias = "enable_quick_commands"
+    )]
+    pub enable_command_panel: bool,
 }
 
 impl Session {
@@ -174,6 +195,8 @@ impl Session {
             shell: String::new(),
             working_directory: String::new(),
             disable_shell_integration: false,
+            enable_sftp: false,
+            enable_command_panel: false,
         }
     }
 }

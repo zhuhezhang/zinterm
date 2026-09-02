@@ -2570,6 +2570,8 @@ fn wire_session_callbacks(
                 w.set_dialog_shell(session.shell.clone().into());
                 w.set_dialog_working_directory(session.working_directory.clone().into());
                 w.set_dialog_disable_shell_integration(session.disable_shell_integration);
+                w.set_dialog_enable_sftp(session.enable_sftp);
+                w.set_dialog_enable_command_panel(session.enable_command_panel);
                 w.set_dialog_editing(true);
                 w.set_dialog_open(true);
             }
@@ -3009,6 +3011,8 @@ fn wire_session_callbacks(
                 shell: draft.shell.to_string(),
                 working_directory: draft.working_directory.to_string(),
                 disable_shell_integration: draft.disable_shell_integration,
+                enable_sftp: draft.enable_sftp,
+                enable_command_panel: draft.enable_command_panel,
             };
             {
                 let mut s = store.borrow_mut();
@@ -3092,8 +3096,9 @@ fn wire_session_callbacks(
             let tab_id = format!("term-{}", uuid::Uuid::new_v4());
             let tab_title = session.name.clone();
 
-            // Serial / Telnet have no SFTP side-channel.
-            let has_sftp = session.kind == SessionKind::Ssh;
+            // Serial / Telnet / Local have no SFTP; SSH only when the session opts in.
+            let has_sftp = session.kind == SessionKind::Ssh && session.enable_sftp;
+            let has_command_panel = session.enable_command_panel;
 
             tab_statuses.lock().unwrap().insert(
                 tab_id.clone(),
@@ -3142,6 +3147,8 @@ fn wire_session_callbacks(
                 sftp_entries: ModelRc::from(std::rc::Rc::new(VecModel::<SftpEntry>::default())),
                 sftp_status: if has_sftp {
                     t("SFTP 连接中...", "SFTP connecting...").into()
+                } else if session.kind == SessionKind::Ssh {
+                    t("此会话未启用 SFTP", "SFTP is disabled for this session").into()
                 } else {
                     t(
                         "此会话类型不支持 SFTP",
@@ -3162,6 +3169,7 @@ fn wire_session_callbacks(
                 sftp_panel_height: sftp_h_default,
                 sftp_panel_width: sftp_w_default,
                 sftp_saved_height: sftp_h_default,
+                command_panel_available: has_command_panel,
             });
             // Create vt100 parser for this tab (default 24×80; resized on first
             // terminal-resize callback). 5000-line scrollback is stored for
@@ -3297,6 +3305,8 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
     win.set_dialog_shell("".into());
     win.set_dialog_working_directory("".into());
     win.set_dialog_disable_shell_integration(false);
+    win.set_dialog_enable_sftp(false);
+    win.set_dialog_enable_command_panel(false);
     win.set_dialog_editing(false);
     win.set_dialog_open(true);
 }
@@ -3503,6 +3513,20 @@ fn refresh_panes(
     if let Some(fp) = panes.iter().find(|p| p.focused) {
         if window.get_active_tab_id().as_str() != fp.active.as_str() {
             window.set_active_tab_id(fp.active.clone().into());
+        }
+        let active = fp.active.as_str();
+        let panel_avail = if active.is_empty() || active == "welcome" {
+            true
+        } else {
+            let terms = window.get_terminals();
+            (0..terms.row_count())
+                .filter_map(|i| terms.row_data(i))
+                .find(|t| t.id.as_str() == active)
+                .map(|t| t.command_panel_available)
+                .unwrap_or(false)
+        };
+        if window.get_active_command_panel_available() != panel_avail {
+            window.set_active_command_panel_available(panel_avail);
         }
     }
 }

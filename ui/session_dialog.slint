@@ -29,6 +29,10 @@ export struct SessionDraft {
     // Skip the POSIX shell-integration setup (cwd-follow hook) for
     // Windows / pwsh servers where it breaks the shell (#140).
     disable-shell-integration: bool,
+    // SSH only: show the SFTP panel when connected (default off for new sessions).
+    enable-sftp: bool,
+    // All connection kinds: show the bottom command panel (default off for new sessions).
+    enable-command-panel: bool,
 }
 
 // A single segment in a segmented selector (auth toggle, baud presets, …).
@@ -191,6 +195,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-shell;
     in-out property <string> draft-working-directory;
     in-out property <bool> draft-disable-shell-integration: false;
+    in-out property <bool> draft-enable-sftp: false;
+    in-out property <bool> draft-enable-command-panel: false;
 
     property <bool> show-advanced: false;   // collapse encoding / shell options
 
@@ -746,6 +752,101 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
+                    // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
+                    if root.draft-kind == "ssh": VerticalLayout {
+                        spacing: 6px;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                y: 1px;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: root.draft-enable-sftp ? Theme.accent : Theme.border-strong;
+                                background: root.draft-enable-sftp ? Theme.accent : transparent;
+                                Text {
+                                    text: root.draft-enable-sftp ? "\u{E5CA}" : "";
+                                    font-family: "Material Icons";
+                                    color: white;
+                                    font-size: 14px;
+                                    width: 100%;
+                                    height: 100%;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.draft-enable-sftp = !root.draft-enable-sftp; }
+                                }
+                            }
+
+                            Text {
+                                text: @tr("Enable SFTP panel");
+                                color: Theme.text-primary;
+                                font-size: Theme.fs-sm;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                        }
+
+                        Text {
+                            text: @tr("When off, the SFTP side panel is hidden for this session.");
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-xs;
+                            wrap: word-wrap;
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 6px;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                y: 1px;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: root.draft-enable-command-panel ? Theme.accent : Theme.border-strong;
+                                background: root.draft-enable-command-panel ? Theme.accent : transparent;
+                                Text {
+                                    text: root.draft-enable-command-panel ? "\u{E5CA}" : "";
+                                    font-family: "Material Icons";
+                                    color: white;
+                                    font-size: 14px;
+                                    width: 100%;
+                                    height: 100%;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
+                                }
+                            }
+
+                            Text {
+                                text: @tr("Enable command panel");
+                                color: Theme.text-primary;
+                                font-size: Theme.fs-sm;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                        }
+
+                        Text {
+                            text: @tr("When off, the command panel (quick commands, input box, and history) is hidden for this session.");
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-xs;
+                            wrap: word-wrap;
+                        }
+                    }
+
                     // ── Advanced (collapsed by default): encoding / shell opts ─
                     if root.draft-kind == "ssh": Rectangle {
                         height: 26px;
@@ -897,6 +998,8 @@ export component SessionDialog inherits Rectangle {
                                     shell: root.draft-shell,
                                     working-directory: root.draft-working-directory,
                                     disable-shell-integration: root.draft-disable-shell-integration,
+                                    enable-sftp: root.draft-enable-sftp,
+                                    enable-command-panel: root.draft-enable-command-panel,
                                 });
                             }
                         }

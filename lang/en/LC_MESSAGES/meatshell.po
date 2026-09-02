@@ -474,6 +474,18 @@ msgstr "Disable shell integration (Windows / pwsh server)"
 msgid "Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell."
 msgstr "Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell."
 
+msgid "Enable SFTP panel"
+msgstr "Enable SFTP panel"
+
+msgid "When off, the SFTP side panel is hidden for this session."
+msgstr "When off, the SFTP side panel is hidden for this session."
+
+msgid "Enable command panel"
+msgstr "Enable command panel"
+
+msgid "When off, the command panel (quick commands, input box, and history) is hidden for this session."
+msgstr "When off, the command panel (quick commands, input box, and history) is hidden for this session."
+
 msgid "Split right"
 msgstr "Split right"
 

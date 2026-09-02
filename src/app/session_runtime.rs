@@ -4,10 +4,41 @@ use super::*;
 /// already-registered tab. Used by the initial connect and by in-place
 /// reconnect (#79); the tab/terminal/parser must already exist.
 pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &ConnectCtx) {
+    let has_sftp = session.kind == SessionKind::Ssh && session.enable_sftp;
     if let Some(w) = ctx.weak.upgrade() {
         update_tab_connection(&w, tab_id, 0, false);
+        // Reconnect may follow an edit of enable_sftp / enable_command_panel —
+        // keep the per-tab UI flags in sync with the saved session.
+        let terms = w.get_terminals();
+        for i in 0..terms.row_count() {
+            let Some(mut row) = terms.row_data(i) else {
+                continue;
+            };
+            if row.id.as_str() != tab_id {
+                continue;
+            }
+            row.sftp_available = has_sftp;
+            row.command_panel_available = session.enable_command_panel;
+            row.sftp_loading = has_sftp;
+            row.sftp_ready = false;
+            if !has_sftp {
+                row.sftp_collapsed = true;
+                row.sftp_status = if session.kind == SessionKind::Ssh {
+                    t("此会话未启用 SFTP", "SFTP is disabled for this session").into()
+                } else {
+                    t(
+                        "此会话类型不支持 SFTP",
+                        "SFTP not available for this session",
+                    )
+                    .into()
+                };
+            } else {
+                row.sftp_status = t("SFTP 连接中...", "SFTP connecting...").into();
+            }
+            terms.set_row_data(i, row);
+            break;
+        }
     }
-    let has_sftp = session.kind == SessionKind::Ssh;
     let (initial_cols, initial_rows) = *ctx.last_term_size.lock().unwrap();
     let keepalive_secs = ctx
         .ssh_keepalive_secs
