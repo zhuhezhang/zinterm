@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 
 use crate::sftp::{SftpHandles, SftpLastCwd};
-use crate::ssh::{CredentialResponder, HostKeyResponder, MfaResponder, SessionHandle};
+use crate::ssh::{CredentialResponder, HostKeyResponder, SessionHandle};
 use crate::terminal::{RenderGates, TermBuffers};
 use crate::ui::AppWindow;
 
@@ -55,12 +55,4 @@ pub(crate) struct PendingCred {
     pub(crate) need_user: bool,
     pub(crate) need_password: bool,
     pub(crate) responders: Vec<CredentialResponder>,
-}
-
-pub(crate) struct PendingMfa {
-    pub(crate) session_id: String,
-    pub(crate) host: String,
-    pub(crate) prompt: String,
-    pub(crate) echo: bool,
-    pub(crate) responders: Vec<MfaResponder>,
 }

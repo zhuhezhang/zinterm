@@ -63,9 +63,8 @@ fn default_encoding() -> String {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum AuthMethod {
+    #[serde(alias = "keyboard-interactive", alias = "keyboard", alias = "interactive")]
     Password,
-    #[serde(rename = "keyboard-interactive")]
-    KeyboardInteractive,
     Key,
 }
 
@@ -73,15 +72,14 @@ impl AuthMethod {
     pub fn as_str(&self) -> &'static str {
         match self {
             AuthMethod::Password => "password",
-            AuthMethod::KeyboardInteractive => "keyboard-interactive",
             AuthMethod::Key => "key",
         }
     }
 
     pub fn from_str(s: &str) -> Self {
         match s {
-            "keyboard-interactive" | "keyboard" | "interactive" => AuthMethod::KeyboardInteractive,
             "key" => AuthMethod::Key,
+            // Legacy configs may still say keyboard-interactive; treat as password.
             _ => AuthMethod::Password,
         }
     }
@@ -149,11 +147,6 @@ pub struct Session {
     /// the injected hook breaks the shell. Turn this on for such servers (#140).
     #[serde(default)]
     pub disable_shell_integration: bool,
-    /// Free-form note for this session — somewhere to stash extra info
-    /// (credentials hints, owner, etc.). Shown only in the edit dialog.
-    /// (B站 suggestion)
-    #[serde(default)]
-    pub note: String,
 }
 
 impl Session {
@@ -181,7 +174,6 @@ impl Session {
             shell: String::new(),
             working_directory: String::new(),
             disable_shell_integration: false,
-            note: String::new(),
         }
     }
 }

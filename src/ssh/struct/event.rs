@@ -2,8 +2,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
 use super::{
-    CredentialResponder, HostKeyResponder, MfaResponder, RemoteEntry, RemoteTreeNode,
-    SessionCommand,
+    CredentialResponder, HostKeyResponder, RemoteEntry, RemoteTreeNode, SessionCommand,
 };
 
 /// Events emitted back to the UI thread.
@@ -38,19 +37,6 @@ pub enum SessionEvent {
         need_user: bool,
         need_password: bool,
         responder: CredentialResponder,
-    },
-    /// A keyboard-interactive challenge that isn't the account password —
-    /// typically an MFA / OTP / verification-code prompt from a bastion such as
-    /// JumpServer. The UI shows `prompt` and answers via `responder`; the auth
-    /// flow is blocked meanwhile (#86-MFA).
-    MfaPrompt {
-        session_id: String,
-        host: String,
-        /// The server's prompt text, e.g. "MFA code: " / "Verification code:".
-        prompt: String,
-        /// Whether typed input should be visible (false = hide, like a password).
-        echo: bool,
-        responder: MfaResponder,
     },
 
     /// A command the user ran in the terminal, captured via the shell hook

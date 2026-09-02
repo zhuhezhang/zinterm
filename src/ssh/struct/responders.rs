@@ -59,32 +59,3 @@ impl std::fmt::Debug for CredentialResponder {
         f.write_str("CredentialResponder")
     }
 }
-
-/// Carries the answer to a keyboard-interactive (MFA / verification-code) prompt
-/// back to the blocked auth flow (#86-MFA). `None` = the user cancelled.
-/// `Arc<Mutex<Option<…>>>` so the enclosing [`SessionEvent`] stays `Clone`.
-#[derive(Clone)]
-pub struct MfaResponder(
-    Arc<std::sync::Mutex<Option<tokio::sync::oneshot::Sender<Option<String>>>>>,
-);
-
-impl MfaResponder {
-    pub fn new(tx: tokio::sync::oneshot::Sender<Option<String>>) -> Self {
-        Self(Arc::new(std::sync::Mutex::new(Some(tx))))
-    }
-
-    /// Deliver the user's answer (`None` = cancelled). Idempotent.
-    pub fn respond(&self, reply: Option<String>) {
-        if let Ok(mut guard) = self.0.lock() {
-            if let Some(tx) = guard.take() {
-                let _ = tx.send(reply);
-            }
-        }
-    }
-}
-
-impl std::fmt::Debug for MfaResponder {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("MfaResponder")
-    }
-}

@@ -119,7 +119,6 @@ fn event_requires_immediate_ui(event: &SessionEvent) -> bool {
             | SessionEvent::Closed(_)
             | SessionEvent::HostKeyPrompt { .. }
             | SessionEvent::CredentialPrompt { .. }
-            | SessionEvent::MfaPrompt { .. }
     )
 }
 
@@ -139,7 +138,7 @@ use crate::config::{
 };
 use crate::i18n::t;
 use crate::layout::{LogicalRect, TerminalWheelHit};
-use crate::session::{ConnectCtx, PendingCred, PendingHostKey, PendingMfa, TabStatus, TabStatuses};
+use crate::session::{ConnectCtx, PendingCred, PendingHostKey, TabStatus, TabStatuses};
 use crate::sftp::{download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd};
 use crate::ssh::{
     format_mtime, format_size, spawn_session, SessionCommand, SessionEvent, SessionHandle,
@@ -1384,25 +1383,6 @@ pub fn run() -> Result<()> {
         });
     }
 
-    // MFA / keyboard-interactive prompt (#86-MFA): the user enters the
-    // verification code (or cancels); the answer unblocks the SSH/SFTP auth.
-    {
-        let weak = window.as_weak();
-        window.on_mfa_submit(move || {
-            if let Some(w) = weak.upgrade() {
-                resolve_front_mfa(&w, true);
-            }
-        });
-    }
-    {
-        let weak = window.as_weak();
-        window.on_mfa_cancel(move || {
-            if let Some(w) = weak.upgrade() {
-                resolve_front_mfa(&w, false);
-            }
-        });
-    }
-
     // Settings: preset download directory (load + pick + open).
     // Default to the user's Downloads folder so files land somewhere sensible
     // without a prompt; only fall back to "ask every time" if we can't locate it
@@ -2590,7 +2570,6 @@ fn wire_session_callbacks(
                 w.set_dialog_shell(session.shell.clone().into());
                 w.set_dialog_working_directory(session.working_directory.clone().into());
                 w.set_dialog_disable_shell_integration(session.disable_shell_integration);
-                w.set_dialog_note(session.note.clone().into());
                 w.set_dialog_editing(true);
                 w.set_dialog_open(true);
             }
@@ -3030,7 +3009,6 @@ fn wire_session_callbacks(
                 shell: draft.shell.to_string(),
                 working_directory: draft.working_directory.to_string(),
                 disable_shell_integration: draft.disable_shell_integration,
-                note: draft.note.to_string(),
             };
             {
                 let mut s = store.borrow_mut();
@@ -3319,7 +3297,6 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
     win.set_dialog_shell("".into());
     win.set_dialog_working_directory("".into());
     win.set_dialog_disable_shell_integration(false);
-    win.set_dialog_note("".into());
     win.set_dialog_editing(false);
     win.set_dialog_open(true);
 }

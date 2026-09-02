@@ -120,15 +120,6 @@ msgstr "密码"
 msgid "Private key"
 msgstr "私钥"
 
-msgid "Keyboard-interactive"
-msgstr "键盘交互"
-
-msgid "Password / first answer"
-msgstr "密码 / 首次应答"
-
-msgid "Server prompts are shown during login; MFA / OTP prompts will ask again."
-msgstr "登录时会显示服务器提示；MFA / OTP 会再次询问。"
-
 msgid "Leave blank to keep the current password"
 msgstr "留空则不修改密码"
 
@@ -458,12 +449,6 @@ msgstr "流控"
 
 msgid "None"
 msgstr "无"
-
-msgid "Note (optional)"
-msgstr "备注（可选）"
-
-msgid "Anything to remember about this host"
-msgstr "记录这个主机的备注信息"
 
 msgid "Hardware"
 msgstr "硬件"

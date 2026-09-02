@@ -272,7 +272,7 @@ async fn run_sftp(
         session.port,
         Uuid::new_v4()
     ));
-    let (mut handle, config) = crate::ssh::connect_transport(&addr, keepalive_secs, || {
+    let (mut handle, _) = crate::ssh::connect_transport(&addr, keepalive_secs, || {
         sftp_handler(&session, &events)
     })
     .await
@@ -287,47 +287,11 @@ async fn run_sftp(
 
     // --- Authenticate (same method as the shell session) -------------------
     let authed = match session.auth {
-        AuthMethod::Password => {
-            let mut ok = handle
-                .authenticate_password(&user, password.as_str())
-                .await
-                .context("sftp password auth failed")?
-                .success();
-            if !ok {
-                // Match the shell session's fallback: russh can hang if a second
-                // auth method is attempted on the same failed handle, so reconnect
-                // before trying keyboard-interactive (#86, #186).
-                let _ = handle.disconnect(Disconnect::ByApplication, "", "").await;
-                handle = client::connect(
-                    config.clone(),
-                    addr.as_str(),
-                    sftp_handler(&session, &events),
-                )
-                .await
-                .with_context(|| format!("sftp reconnect {} failed", addr))?;
-                ok = crate::ssh::keyboard_interactive_auth(
-                    &mut handle,
-                    &user,
-                    password.as_str(),
-                    &session.id,
-                    &session.host,
-                    &events,
-                )
-                .await
-                .context("sftp keyboard-interactive auth failed")?;
-            }
-            ok
-        }
-        AuthMethod::KeyboardInteractive => crate::ssh::keyboard_interactive_auth(
-            &mut handle,
-            &user,
-            password.as_str(),
-            &session.id,
-            &session.host,
-            &events,
-        )
-        .await
-        .context("sftp keyboard-interactive auth failed")?,
+        AuthMethod::Password => handle
+            .authenticate_password(&user, password.as_str())
+            .await
+            .context("sftp password auth failed")?
+            .success(),
         AuthMethod::Key => {
             // An encrypted private key needs its passphrase; reuse the session's
             // password field for it (empty = unencrypted), exactly like the shell

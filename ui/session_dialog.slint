@@ -29,8 +29,6 @@ export struct SessionDraft {
     // Skip the POSIX shell-integration setup (cwd-follow hook) for
     // Windows / pwsh servers where it breaks the shell (#140).
     disable-shell-integration: bool,
-    // Free-form note (B站 suggestion).
-    note: string,
 }
 
 // A single segment in a segmented selector (auth toggle, baud presets, …).
@@ -193,7 +191,6 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-shell;
     in-out property <string> draft-working-directory;
     in-out property <bool> draft-disable-shell-integration: false;
-    in-out property <string> draft-note;
 
     property <bool> show-advanced: false;   // collapse encoding / shell options
 
@@ -244,7 +241,8 @@ export component SessionDialog inherits Rectangle {
                 width: 100%;
                 height: 52px;
                 background: Theme.bg-panel-alt;
-                border-radius: Theme.radius-lg;
+                border-top-left-radius: Theme.radius-lg;
+                border-top-right-radius: Theme.radius-lg;
 
                 HorizontalLayout {
                     padding-left: 20px;
@@ -364,15 +362,6 @@ export component SessionDialog inherits Rectangle {
                         groups: root.session-groups;
                     }
 
-                    // Free-form note — extra info to keep with the session (B站 suggestion).
-                    if root.draft-kind != "local": LabeledInput {
-                        input-background: Theme.bg-elevated;
-                        idle-border: Theme.border-strong;
-                        label: @tr("Note (optional)");
-                        placeholder: @tr("Anything to remember about this host");
-                        value <=> root.draft-note;
-                    }
-
                     // ── Local: shell / cwd / encoding ───────────────────────────────
                     if root.draft-kind == "local": LabeledInput {
                         input-background: Theme.bg-elevated;
@@ -460,12 +449,6 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             SegOption {
-                                label: @tr("Keyboard-interactive");
-                                active: root.draft-auth == "keyboard-interactive";
-                                clicked => { root.draft-auth = "keyboard-interactive"; }
-                            }
-
-                            SegOption {
                                 label: @tr("Private key");
                                 active: root.draft-auth == "key";
                                 clicked => { root.draft-auth = "key"; }
@@ -473,20 +456,13 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
-                    if root.draft-kind == "ssh" && (root.draft-auth == "password" || root.draft-auth == "keyboard-interactive"): LabeledInput {
+                    if root.draft-kind == "ssh" && root.draft-auth == "password": LabeledInput {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
-                        label: root.draft-auth == "keyboard-interactive" ? @tr("Password / first answer") : @tr("Password");
+                        label: @tr("Password");
                         placeholder: root.is-editing ? @tr("Leave blank to keep the current password") : "••••••••";
                         password: true;
                         value <=> root.draft-password;
-                    }
-
-                    if root.draft-kind == "ssh" && root.draft-auth == "keyboard-interactive": Text {
-                        text: @tr("Server prompts are shown during login; MFA / OTP prompts will ask again.");
-                        color: Theme.text-muted;
-                        font-size: Theme.fs-xs;
-                        wrap: word-wrap;
                     }
 
                     if root.draft-kind == "ssh" && root.draft-auth == "key": VerticalLayout {
@@ -890,7 +866,6 @@ export component SessionDialog inherits Rectangle {
                                     shell: root.draft-shell,
                                     working-directory: root.draft-working-directory,
                                     disable-shell-integration: root.draft-disable-shell-integration,
-                                    note: root.draft-note,
                                 });
                             }
                         }

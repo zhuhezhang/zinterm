@@ -3,6 +3,4 @@ mod prompts;
 #[path = "impls/session.rs"]
 mod session;
 
-pub(crate) use prompts::{
-    ConnectCtx, PendingCred, PendingHostKey, PendingMfa, TabStatus, TabStatuses,
-};
+pub(crate) use prompts::{ConnectCtx, PendingCred, PendingHostKey, TabStatus, TabStatuses};

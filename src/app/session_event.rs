@@ -364,15 +364,6 @@ pub(super) fn apply_session_event_to_window(
                 responder,
             );
         }
-        SessionEvent::MfaPrompt {
-            session_id,
-            host,
-            prompt,
-            echo,
-            responder,
-        } => {
-            enqueue_mfa_prompt(win, session_id, host, prompt, echo, responder);
-        }
         SessionEvent::CommandRan(cmd) => {
             // A command typed directly in the terminal, captured via the shell
             // hook (#113). Record it in the same command-box history, reusing the
