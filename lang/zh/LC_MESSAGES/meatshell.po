@@ -390,6 +390,9 @@ msgstr "搜索历史"
 msgid "Search commands"
 msgstr "搜索命令"
 
+msgid "Search sessions"
+msgstr "搜索会话"
+
 msgid "History command"
 msgstr "历史命令"
 

@@ -1,5 +1,5 @@
 import { Theme } from "theme.slint";
-import { PrimaryButton, GhostButton, TooltipArea } from "widgets.slint";
+import { PrimaryButton, GhostButton, TooltipArea, BorderedLineInput } from "widgets.slint";
 import { ScrollView } from "std-widgets.slint";
 
 export struct SessionInfo {
@@ -571,6 +571,8 @@ component CollapseButton inherits Rectangle {
 export component Welcome inherits Rectangle {
     in property <[SessionInfo]> sessions;
     in property <string> import-hint;        // result text after an import
+    in-out property <string> session-search: "";
+    callback search-sessions(string /* query */);
     callback new-session();
     callback new-session-in-group(string /* group */);
     callback connect-session(string);
@@ -718,6 +720,19 @@ export component Welcome inherits Rectangle {
                                 vertical-alignment: center;
                             }
 
+                            if !root.compact: BorderedLineInput {
+                                min-width: 140px;
+                                max-width: 260px;
+                                horizontal-stretch: 1;
+                                height: 30px;
+                                pad-x: 8px;
+                                font-size: Theme.fs-sm;
+                                leading-icon: "\u{E8B6}";
+                                text <=> root.session-search;
+                                placeholder: @tr("Search sessions");
+                                edited => { root.search-sessions(self.text); }
+                            }
+
                             if !root.compact: PrimaryButton {
                                 text: @tr("+ New session");
                                 clicked => { root.new-session(); }
@@ -725,9 +740,23 @@ export component Welcome inherits Rectangle {
                         }
                     }
 
-                    if root.compact: PrimaryButton {
-                        text: @tr("+ New session");
-                        clicked => { root.new-session(); }
+                    if root.compact: HorizontalLayout {
+                        spacing: 8px;
+                        BorderedLineInput {
+                            horizontal-stretch: 1;
+                            height: 30px;
+                            pad-x: 8px;
+                            font-size: Theme.fs-sm;
+                            leading-icon: "\u{E8B6}";
+                            text <=> root.session-search;
+                            placeholder: @tr("Search sessions");
+                            edited => { root.search-sessions(self.text); }
+                        }
+
+                        PrimaryButton {
+                            text: @tr("+ New session");
+                            clicked => { root.new-session(); }
+                        }
                     }
                 }
 
@@ -742,13 +771,13 @@ export component Welcome inherits Rectangle {
                         alignment: center;
                         spacing: 6px;
                         Text {
-                            text: @tr("No sessions yet");
+                            text: root.session-search != "" ? @tr("No match") : @tr("No sessions yet");
                             color: Theme.text-secondary;
                             font-size: Theme.fs-md;
                             horizontal-alignment: center;
                         }
 
-                        Text {
+                        if root.session-search == "": Text {
                             text: @tr("Use 'New session' (top-right) to add your first server");
                             color: Theme.text-muted;
                             font-size: Theme.fs-sm;

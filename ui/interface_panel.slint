@@ -8,7 +8,7 @@
 
 import { Theme } from "theme.slint";
 import { ComboBox, Slider, ScrollView } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, GhostButton } from "widgets.slint";
+import { LabeledInput, PrimaryButton, DangerButton } from "widgets.slint";
 
 export struct OutputRuleItem {
     pattern: string,
@@ -1910,7 +1910,7 @@ export component InterfacePanel inherits Rectangle {
                             desc: root.lang-en
                                 ? "Forget remembered server host keys. The next connection to each host will ask you to trust the key again."
                                 : "清除已记住的服务器主机公钥。下次连接各主机时会再次要求确认信任。";
-                            GhostButton {
+                            DangerButton {
                                 text: root.lang-en ? "Clear" : "清除";
                                 clicked => { root.request-clear-known-hosts(); }
                             }
@@ -1922,7 +1922,7 @@ export component InterfacePanel inherits Rectangle {
                                 ? "Permanently delete every saved Quick Connect group and session. Open tabs are not closed."
                                 : "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。";
                             show-divider: false;
-                            GhostButton {
+                            DangerButton {
                                 text: root.lang-en ? "Clear" : "清除";
                                 clicked => { root.request-clear-sessions(); }
                             }

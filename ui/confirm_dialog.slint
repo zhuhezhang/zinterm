@@ -1,34 +1,6 @@
 import { Theme } from "theme.slint";
-import { GhostButton } from "widgets.slint";
+import { GhostButton, DangerButton } from "widgets.slint";
 import { ScrollView } from "std-widgets.slint";
-
-// A destructive (red) action button, matching PrimaryButton's shape.
-component DangerButton inherits Rectangle {
-    in property <string> text;
-    callback clicked();
-    height: 30px;
-    min-width: 80px;
-    border-radius: Theme.radius-sm;
-    background: touch.pressed ? #c44a4a : (touch.has-hover ? #ec6a6a : Theme.danger);
-    animate background { duration: 120ms; }
-    HorizontalLayout {
-        padding-left: 14px;
-        padding-right: 14px;
-        alignment: center;
-        Text {
-            text: root.text;
-            color: white;
-            font-size: Theme.fs-md;
-            font-weight: 600;
-            vertical-alignment: center;
-        }
-    }
-
-    touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
-}
 
 // In-app modal confirmation dialog, styled to match the rest of meatshell
 // (a dark card over a dimmed backdrop, like SessionDialog).  Purely

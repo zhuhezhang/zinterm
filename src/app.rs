@@ -1076,12 +1076,14 @@ pub fn run() -> Result<()> {
     }
 
     let sessions_model: Rc<VecModel<SessionInfo>> = Rc::new(VecModel::default());
+    let welcome_session_query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
     window.set_sessions(ModelRc::from(sessions_model.clone()));
-    sync_sessions_to_model(&store.borrow(), &sessions_model);
+    sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_clear_all_sessions(move || {
             {
                 let mut s = store.borrow_mut();
@@ -1090,10 +1092,27 @@ pub fn run() -> Result<()> {
                     tracing::warn!("failed to save config after clearing sessions: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
+        });
+    }
+    {
+        let store = store.clone();
+        let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
+        window.on_search_welcome_sessions(move |query: SharedString| {
+            *welcome_session_query.borrow_mut() = query.to_string();
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
         });
     }
 
@@ -1259,6 +1278,7 @@ pub fn run() -> Result<()> {
         &window,
         store.clone(),
         sessions_model.clone(),
+        welcome_session_query.clone(),
         tabs_model.clone(),
         terminals_model.clone(),
         layout.clone(),
@@ -2398,6 +2418,7 @@ fn wire_session_callbacks(
     window: &AppWindow,
     store: Rc<RefCell<ConfigStore>>,
     sessions_model: Rc<VecModel<SessionInfo>>,
+    welcome_session_query: Rc<RefCell<String>>,
     tabs_model: Rc<VecModel<TabInfo>>,
     terminals_model: Rc<VecModel<TerminalState>>,
     layout: Rc<RefCell<crate::layout::Layout>>,
@@ -2464,6 +2485,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_batch_import_confirm(move |text: SharedString| {
             let parsed = parse_batch_import(text.as_str());
             let total = parsed.len();
@@ -2486,7 +2508,7 @@ fn wire_session_callbacks(
                     let _ = s.save();
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 let hint = if total == 0 {
                     t("没有可导入的连接", "nothing to import").to_string()
@@ -2505,6 +2527,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_import_sessions(move || {
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("JSON", &["json"])
@@ -2514,7 +2537,7 @@ fn wire_session_callbacks(
                 if let Some(w) = weak.upgrade() {
                     let hint = match res {
                         Ok((added, skipped)) => {
-                            sync_sessions_to_model(&store.borrow(), &sessions_model);
+                            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
                             format!(
                                 "{} {} / {} {}",
                                 t("已导入", "imported"),
@@ -2579,6 +2602,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_remove_session(move |id: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -2587,7 +2611,7 @@ fn wire_session_callbacks(
                     tracing::warn!("failed to save config: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 // Touch a property so the list re-renders reliably.
                 let _ = w.get_sessions();
@@ -2600,6 +2624,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_duplicate_session(move |id: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -2614,7 +2639,7 @@ fn wire_session_callbacks(
                     }
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -2628,6 +2653,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_toggle_group(move |group: SharedString| {
             let target = group.to_string();
             let new_state = {
@@ -2644,7 +2670,7 @@ fn wire_session_callbacks(
                 if let Err(err) = store.save() {
                     tracing::warn!("failed to save Quick Connect folder state: {err:#}");
                 }
-                sync_sessions_to_model(&store, &sessions_model);
+                sync_welcome_sessions(&store, &sessions_model, &welcome_session_query.borrow());
             }
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -2657,42 +2683,70 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_expand_all_groups(move || {
-            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
-                s.set_all_session_groups_collapsed(false);
-            });
+            apply_session_group_collapse(
+                &weak,
+                &store,
+                &sessions_model,
+                &welcome_session_query.borrow(),
+                |s| {
+                    s.set_all_session_groups_collapsed(false);
+                },
+            );
         });
     }
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_collapse_all_groups(move || {
-            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
-                s.set_all_session_groups_collapsed(true);
-            });
+            apply_session_group_collapse(
+                &weak,
+                &store,
+                &sessions_model,
+                &welcome_session_query.borrow(),
+                |s| {
+                    s.set_all_session_groups_collapsed(true);
+                },
+            );
         });
     }
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_expand_group_children(move |group: SharedString| {
             let path = group.to_string();
-            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
-                s.set_session_group_children_collapsed(&path, false);
-            });
+            apply_session_group_collapse(
+                &weak,
+                &store,
+                &sessions_model,
+                &welcome_session_query.borrow(),
+                |s| {
+                    s.set_session_group_children_collapsed(&path, false);
+                },
+            );
         });
     }
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_collapse_group_children(move |group: SharedString| {
             let path = group.to_string();
-            apply_session_group_collapse(&weak, &store, &sessions_model, |s| {
-                s.set_session_group_children_collapsed(&path, true);
-            });
+            apply_session_group_collapse(
+                &weak,
+                &store,
+                &sessions_model,
+                &welcome_session_query.borrow(),
+                |s| {
+                    s.set_session_group_children_collapsed(&path, true);
+                },
+            );
         });
     }
 
@@ -2740,6 +2794,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_submit_group(move |orig: SharedString, segment: SharedString, parent: SharedString| {
             let segment = segment.trim();
             let parent = parent.trim();
@@ -2783,7 +2838,7 @@ fn wire_session_callbacks(
                     tracing::warn!("failed to save config: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -2795,6 +2850,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_delete_group(move |name: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -2803,7 +2859,7 @@ fn wire_session_callbacks(
                     tracing::warn!("failed to save config: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -2815,6 +2871,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_drop_welcome_session(move |id: SharedString, target_group: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -2825,7 +2882,7 @@ fn wire_session_callbacks(
                     tracing::warn!("failed to save config: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -2836,6 +2893,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_drop_welcome_group(move |path: SharedString, target_parent: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -2846,7 +2904,7 @@ fn wire_session_callbacks(
                     tracing::warn!("failed to save config: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -2871,6 +2929,7 @@ fn wire_session_callbacks(
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
+        let welcome_session_query = welcome_session_query.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft| {
             let id = draft.id.to_string();
             // The edit dialog never echoes the real password (issue #10): a blank
@@ -2980,7 +3039,7 @@ fn wire_session_callbacks(
                     tracing::warn!("failed to save config: {err:#}");
                 }
             }
-            sync_sessions_to_model(&store.borrow(), &sessions_model);
+            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
                 w.set_dialog_open(false);
             }
@@ -3269,6 +3328,7 @@ fn apply_session_group_collapse(
     weak: &slint::Weak<AppWindow>,
     store: &Rc<RefCell<ConfigStore>>,
     sessions_model: &Rc<VecModel<SessionInfo>>,
+    search_query: &str,
     mutate: impl FnOnce(&mut ConfigStore),
 ) {
     {
@@ -3277,7 +3337,7 @@ fn apply_session_group_collapse(
         if let Err(err) = store.save() {
             tracing::warn!("failed to save Quick Connect folder state: {err:#}");
         }
-        sync_sessions_to_model(&store, sessions_model);
+        sync_welcome_sessions(&store, sessions_model, search_query);
     }
     if let Some(w) = weak.upgrade() {
         let _ = w.get_sessions();

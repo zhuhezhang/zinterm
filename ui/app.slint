@@ -317,6 +317,8 @@ export component AppWindow inherits Window {
     callback search-quick-commands(string /* query */); // filter the quick-command popup
     callback search-qcm-commands(string /* query */);   // filter the manage-dialog list
     in-out property <string> qcm-search: "";
+    in-out property <string> welcome-session-search: "";
+    callback search-welcome-sessions(string /* query */); // filter the welcome session list
     in property <[QuickCmd]> qcm-manage-commands;
     property <[QuickCmd]> qcm-display-commands: root.qcm-use-mock
         ? MockData.qcm-mock-commands : root.qcm-manage-commands;
@@ -1073,6 +1075,8 @@ export component AppWindow inherits Window {
                     compact: true;
                     dock-edge: root.welcome-sidebar-dock;
                     sessions: root.welcome-display-sessions;
+                    session-search <=> root.welcome-session-search;
+                    search-sessions(q) => { root.search-welcome-sessions(q); }
                     single-click-connect: root.welcome-single-click-connect;
                     import-hint: root.ssh-import-hint;
                     welcome-drag-kind <=> root.welcome-drag-kind;
@@ -1332,6 +1336,8 @@ export component AppWindow inherits Window {
                                             width: parent.width;
                                             height: parent.height;
                                             sessions: root.welcome-display-sessions;
+                                            session-search <=> root.welcome-session-search;
+                                            search-sessions(q) => { root.search-welcome-sessions(q); }
                                             single-click-connect: root.welcome-single-click-connect;
                                             import-hint: root.ssh-import-hint;
                                             welcome-drag-kind <=> root.welcome-drag-kind;

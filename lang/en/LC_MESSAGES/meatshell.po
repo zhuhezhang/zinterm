@@ -390,6 +390,9 @@ msgstr "Search history"
 msgid "Search commands"
 msgstr "Search commands"
 
+msgid "Search sessions"
+msgstr "Search sessions"
+
 msgid "History command"
 msgstr "History command"
 

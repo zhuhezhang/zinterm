@@ -273,6 +273,119 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
     model.set_vec(rows);
 }
 
+/// Case-insensitive substring match on session name, host, serial port, or shell.
+fn session_matches_query(session: &Session, query: &str) -> bool {
+    session.name.to_lowercase().contains(query)
+        || session.host.to_lowercase().contains(query)
+        || session.serial_port.to_lowercase().contains(query)
+        || session.shell.to_lowercase().contains(query)
+}
+
+fn groups_for_matching_sessions(sessions: &[Session], query: &str) -> BTreeSet<String> {
+    let mut groups = BTreeSet::new();
+    for session in sessions {
+        if !session_matches_query(session, query) {
+            continue;
+        }
+        let group = session.group.trim();
+        if group.is_empty() || is_reserved_session_group(group) {
+            continue;
+        }
+        groups.insert(group.to_string());
+        for ancestor in ancestor_paths(group) {
+            groups.insert(ancestor);
+        }
+    }
+    groups
+}
+
+fn emit_group_branch_search(
+    sessions: &[Session],
+    node: &GroupTreeNode,
+    rows: &mut Vec<SessionInfo>,
+    query: &str,
+    visible_groups: &BTreeSet<String>,
+) {
+    let group = node.full_path.as_str();
+    if !visible_groups.contains(group) {
+        return;
+    }
+
+    let depth = group_depth(group);
+    let label = group_path_segment(group);
+
+    let mut direct: Vec<&Session> = sessions
+        .iter()
+        .filter(|s| s.group == group && session_matches_query(s, query))
+        .collect();
+    direct.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+    });
+
+    let has_child_groups = node
+        .children
+        .values()
+        .any(|child| visible_groups.contains(child.full_path.as_str()));
+
+    if direct.is_empty() && !has_child_groups {
+        return;
+    }
+
+    rows.push(group_header_row(group, depth, label, false));
+
+    for child in node.children.values() {
+        emit_group_branch_search(sessions, child, rows, query, visible_groups);
+    }
+
+    for s in direct {
+        rows.push(session_row(s, group, false, depth, label, false));
+    }
+}
+
+/// Rebuild the welcome session list, optionally filtered by a search query.
+pub(super) fn sync_welcome_sessions(
+    store: &ConfigStore,
+    model: &VecModel<SessionInfo>,
+    search_query: &str,
+) {
+    let query = search_query.trim().to_lowercase();
+    if query.is_empty() {
+        sync_sessions_to_model(store, model);
+        return;
+    }
+
+    let sessions = store.sessions();
+    let visible_groups = groups_for_matching_sessions(sessions, &query);
+    let user_tree = build_user_group_tree(&collect_user_group_paths(store));
+    let mut rows: Vec<SessionInfo> = Vec::new();
+
+    for root in user_tree.values() {
+        emit_group_branch_search(sessions, root, &mut rows, &query, &visible_groups);
+    }
+
+    let mut root_sessions: Vec<&Session> = sessions
+        .iter()
+        .filter(|s| {
+            (s.group.trim().is_empty() || is_reserved_session_group(s.group.trim()))
+                && session_matches_query(s, &query)
+        })
+        .collect();
+    root_sessions.sort_by(|a, b| {
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    for s in root_sessions {
+        rows.push(session_row(s, "", false, 0, "", false));
+    }
+
+    model.set_vec(rows);
+}
+
 fn ancestor_collapsed(path: &str, group_is_collapsed: &impl Fn(&str) -> bool) -> bool {
     let mut rest = path;
     while let Some(idx) = rest.rfind('/') {
@@ -383,3 +496,32 @@ pub(super) fn session_infos_from_model(model: &ModelRc<SessionInfo>) -> Vec<Sess
 // ---------------------------------------------------------------------------
 // Session callbacks (welcome page + dialog)
 // ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{Session, SessionKind};
+
+    #[test]
+    fn session_search_matches_name_host_serial_and_shell() {
+        let mut ssh = Session::new_empty();
+        ssh.name = "Prod Web".into();
+        ssh.host = "192.168.1.10".into();
+        ssh.port = 22;
+
+        let mut serial = Session::new_empty();
+        serial.kind = SessionKind::Serial;
+        serial.serial_port = "COM3".into();
+
+        let mut local = Session::new_empty();
+        local.kind = SessionKind::Local;
+        local.shell = "/bin/zsh".into();
+
+        assert!(session_matches_query(&ssh, "prod"));
+        assert!(session_matches_query(&ssh, "192.168"));
+        assert!(!session_matches_query(&ssh, "22"));
+        assert!(session_matches_query(&serial, "com3"));
+        assert!(session_matches_query(&local, "zsh"));
+        assert!(!session_matches_query(&ssh, "missing"));
+    }
+}
