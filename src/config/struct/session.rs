@@ -39,7 +39,7 @@ impl SessionKind {
 }
 
 fn default_baud() -> u32 {
-    115_200
+    9_600
 }
 fn default_data_bits() -> u8 {
     8
@@ -132,10 +132,10 @@ pub struct Session {
     pub data_bits: u8,
     #[serde(default = "default_stop_bits")]
     pub stop_bits: u8,
-    /// "none" | "odd" | "even".
+    /// "none" | "odd" | "even" | "mark" | "space".
     #[serde(default = "default_parity")]
     pub parity: String,
-    /// "none" | "hardware" | "software".
+    /// "none" | "xonxoff" | "rtscts" | "dsrdtr" (legacy: "software" | "hardware").
     #[serde(default = "default_flow")]
     pub flow_control: String,
 

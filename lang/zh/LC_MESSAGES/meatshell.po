@@ -456,20 +456,20 @@ msgstr "串口号"
 msgid "Baud rate"
 msgstr "波特率"
 
-msgid "Data bits / Stop bits / Parity"
-msgstr "数据位 / 停止位 / 校验位"
+msgid "Data bits"
+msgstr "数据位"
+
+msgid "Stop bits"
+msgstr "停止位"
+
+msgid "Parity"
+msgstr "校验位"
 
 msgid "Flow control"
-msgstr "流控"
+msgstr "流量控制"
 
 msgid "None"
 msgstr "无"
-
-msgid "Hardware"
-msgstr "硬件"
-
-msgid "Software"
-msgstr "软件"
 
 msgid "Confirm delete"
 msgstr "确认删除"

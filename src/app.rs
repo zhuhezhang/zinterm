@@ -176,6 +176,27 @@ fn tab_endpoint(session: &Session) -> String {
     }
 }
 
+/// Canonical serial flow-control keys for new saves.
+/// Accepts legacy `"software"` / `"hardware"` and display aliases.
+fn normalize_flow_control(raw: &str) -> String {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "xonxoff" | "software" | "xon/xoff" => "xonxoff".to_string(),
+        "rtscts" | "hardware" | "rts/cts" => "rtscts".to_string(),
+        "dsrdtr" | "dsr/dtr" => "dsrdtr".to_string(),
+        _ => "none".to_string(),
+    }
+}
+
+fn normalize_parity(raw: &str) -> String {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "odd" => "odd".to_string(),
+        "even" => "even".to_string(),
+        "mark" => "mark".to_string(),
+        "space" => "space".to_string(),
+        _ => "none".to_string(),
+    }
+}
+
 fn tab_title_by_id(tabs_model: &VecModel<TabInfo>, tab_id: &str) -> String {
     use slint::Model as _;
     (0..tabs_model.row_count())
@@ -2569,8 +2590,8 @@ fn wire_session_callbacks(
                 w.set_dialog_baud(session.baud_rate.to_string().into());
                 w.set_dialog_data_bits(session.data_bits.to_string().into());
                 w.set_dialog_stop_bits(session.stop_bits.to_string().into());
-                w.set_dialog_parity(session.parity.clone().into());
-                w.set_dialog_flow(session.flow_control.clone().into());
+                w.set_dialog_parity(normalize_parity(&session.parity).into());
+                w.set_dialog_flow(normalize_flow_control(&session.flow_control).into());
                 w.set_dialog_encoding(session.encoding.clone().into());
                 w.set_dialog_backspace_mode(
                     normalize_backspace_mode(&session.backspace_mode).into(),
@@ -3004,14 +3025,14 @@ fn wire_session_callbacks(
                 kind,
                 serial_port: draft.serial_port.to_string(),
                 baud_rate: if draft.baud_rate <= 0 {
-                    115_200
+                    9_600
                 } else {
                     draft.baud_rate as u32
                 },
                 data_bits: draft.data_bits as u8,
                 stop_bits: draft.stop_bits as u8,
-                parity: draft.parity.to_string(),
-                flow_control: draft.flow_control.to_string(),
+                parity: normalize_parity(&draft.parity),
+                flow_control: normalize_flow_control(&draft.flow_control),
                 encoding: if draft.encoding.trim().is_empty() {
                     "UTF-8".to_string()
                 } else {
@@ -3375,7 +3396,7 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
     win.set_dialog_group(group.into());
     win.set_dialog_kind("ssh".into());
     win.set_dialog_serial_port("".into());
-    win.set_dialog_baud("115200".into());
+    win.set_dialog_baud("9600".into());
     win.set_dialog_data_bits("8".into());
     win.set_dialog_stop_bits("1".into());
     win.set_dialog_parity("none".into());

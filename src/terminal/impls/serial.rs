@@ -85,17 +85,24 @@ fn parse_stop_bits(n: u8) -> StopBits {
 }
 
 fn parse_parity(s: &str) -> Parity {
-    match s {
+    match s.to_ascii_lowercase().as_str() {
         "odd" => Parity::Odd,
         "even" => Parity::Even,
+        // serialport does not expose Mark/Space cross-platform; keep config values
+        // for UI round-trip and fall back to None when opening the port.
+        "mark" | "space" => Parity::None,
         _ => Parity::None,
     }
 }
 
 fn parse_flow(s: &str) -> FlowControl {
-    match s {
-        "hardware" => FlowControl::Hardware,
-        "software" => FlowControl::Software,
+    match s.to_ascii_lowercase().as_str() {
+        // New keys (PuTTY / MobaXterm-style) plus legacy session values.
+        "xonxoff" | "software" => FlowControl::Software,
+        "rtscts" | "hardware" => FlowControl::Hardware,
+        // DSR/DTR is not offered by serialport; keep the setting in config but
+        // open without flow control rather than silently switching to RTS/CTS.
+        "dsrdtr" => FlowControl::None,
         _ => FlowControl::None,
     }
 }

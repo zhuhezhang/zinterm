@@ -456,20 +456,20 @@ msgstr "Serial port"
 msgid "Baud rate"
 msgstr "Baud rate"
 
-msgid "Data bits / Stop bits / Parity"
-msgstr "Data bits / Stop bits / Parity"
+msgid "Data bits"
+msgstr "Data bits"
+
+msgid "Stop bits"
+msgstr "Stop bits"
+
+msgid "Parity"
+msgstr "Parity"
 
 msgid "Flow control"
 msgstr "Flow control"
 
 msgid "None"
 msgstr "None"
-
-msgid "Hardware"
-msgstr "Hardware"
-
-msgid "Software"
-msgstr "Software"
 
 msgid "Confirm delete"
 msgstr "Confirm delete"
