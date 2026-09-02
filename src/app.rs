@@ -2598,7 +2598,6 @@ fn wire_session_callbacks(
                 );
                 w.set_dialog_shell(session.shell.clone().into());
                 w.set_dialog_working_directory(session.working_directory.clone().into());
-                w.set_dialog_disable_shell_integration(session.disable_shell_integration);
                 w.set_dialog_enable_sftp(session.enable_sftp);
                 w.set_dialog_enable_command_panel(session.enable_command_panel);
                 w.set_dialog_editing(true);
@@ -3041,7 +3040,6 @@ fn wire_session_callbacks(
                 backspace_mode: normalize_backspace_mode(&draft.backspace_mode).to_string(),
                 shell: draft.shell.to_string(),
                 working_directory: draft.working_directory.to_string(),
-                disable_shell_integration: draft.disable_shell_integration,
                 enable_sftp: draft.enable_sftp,
                 enable_command_panel: draft.enable_command_panel,
             };
@@ -3405,7 +3403,6 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
     win.set_dialog_backspace_mode("auto".into());
     win.set_dialog_shell("".into());
     win.set_dialog_working_directory("".into());
-    win.set_dialog_disable_shell_integration(false);
     win.set_dialog_enable_sftp(false);
     win.set_dialog_enable_command_panel(false);
     win.set_dialog_editing(false);

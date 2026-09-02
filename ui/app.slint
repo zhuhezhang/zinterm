@@ -665,7 +665,6 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-backspace-mode: "auto";
     in-out property <string> dialog-shell;
     in-out property <string> dialog-working-directory;
-    in-out property <bool> dialog-disable-shell-integration: false;
     in-out property <bool> dialog-enable-sftp: false;
     in-out property <bool> dialog-enable-command-panel: false;
 
@@ -4316,7 +4315,6 @@ export component AppWindow inherits Window {
         draft-backspace-mode <=> root.dialog-backspace-mode;
         draft-shell <=> root.dialog-shell;
         draft-working-directory <=> root.dialog-working-directory;
-        draft-disable-shell-integration <=> root.dialog-disable-shell-integration;
         draft-enable-sftp <=> root.dialog-enable-sftp;
         draft-enable-command-panel <=> root.dialog-enable-command-panel;
         submit(draft) => { root.session-dialog-submit(draft); }

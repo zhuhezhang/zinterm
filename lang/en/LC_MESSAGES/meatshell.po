@@ -402,9 +402,6 @@ msgstr "Run"
 msgid "View and edit"
 msgstr "View and edit"
 
-msgid "Advanced (encoding)"
-msgstr "Advanced (encoding)"
-
 msgid "Terminal character encoding"
 msgstr "Terminal character encoding"
 
@@ -482,12 +479,6 @@ msgstr "Please confirm"
 
 msgid "Confirm"
 msgstr "Confirm"
-
-msgid "Disable shell integration (Windows / pwsh server)"
-msgstr "Disable shell integration (Windows / pwsh server)"
-
-msgid "Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell."
-msgstr "Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell."
 
 msgid "Enable SFTP panel"
 msgstr "Enable SFTP panel"

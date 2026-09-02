@@ -158,12 +158,6 @@ pub struct Session {
     #[serde(default)]
     pub working_directory: String,
 
-    /// Skip the shell-integration setup (the cwd-follow PROMPT_COMMAND hook).
-    /// That assumes a POSIX shell; on a Windows server whose shell is pwsh/cmd
-    /// the injected hook breaks the shell. Turn this on for such servers (#140).
-    #[serde(default)]
-    pub disable_shell_integration: bool,
-
     /// Enable the SFTP side panel (SSH only). New sessions default off; missing
     /// field in older configs deserializes as on so existing SSH sessions keep SFTP.
     #[serde(default = "default_feature_enabled_compat")]
@@ -205,7 +199,6 @@ impl Session {
             backspace_mode: default_backspace_mode(),
             shell: String::new(),
             working_directory: String::new(),
-            disable_shell_integration: false,
             enable_sftp: false,
             enable_command_panel: false,
         }

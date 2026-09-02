@@ -811,7 +811,7 @@ async fn run_session(
     // only speaks a single CLI session and disconnects the whole TCP socket
     // when it sees CHANNEL_OPEN + exec (then the real shell open fails with
     // `Disconnected`).
-    let skip_exec_probe = session.disable_shell_integration || is_compact_legacy_config(&config);
+    let skip_exec_probe = is_compact_legacy_config(&config);
     let mut prompt_setup_supported =
         !skip_exec_probe && remote_supports_prompt_setup(&handle).await;
 
@@ -1008,9 +1008,8 @@ async fn run_session(
                             );
                         }
 
-                        // Inject PROMPT_COMMAND after the first real shell output,
-                        // unless shell integration is disabled for this session
-                        // (e.g. a Windows pwsh/cmd server) (#140).
+                        // Inject PROMPT_COMMAND after the first real shell output
+                        // when the out-of-band probe confirmed bash/zsh.
                         if !prompt_injected
                             && !chunk.trim().is_empty()
                             && prompt_setup_supported

@@ -28,9 +28,6 @@ export struct SessionDraft {
     // Local-only (ignored unless kind == "local")
     shell: string,              // "" = platform default
     working-directory: string,  // "" = user home
-    // Skip the POSIX shell-integration setup (cwd-follow hook) for
-    // Windows / pwsh servers where it breaks the shell (#140).
-    disable-shell-integration: bool,
     // SSH only: show the SFTP panel when connected (default off for new sessions).
     enable-sftp: bool,
     // All connection kinds: show the bottom command panel (default off for new sessions).
@@ -95,11 +92,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-backspace-mode: "auto";
     in-out property <string> draft-shell;
     in-out property <string> draft-working-directory;
-    in-out property <bool> draft-disable-shell-integration: false;
     in-out property <bool> draft-enable-sftp: false;
     in-out property <bool> draft-enable-command-panel: false;
-
-    property <bool> show-advanced: false;   // collapse encoding / shell options
 
     callback submit(SessionDraft);
     callback cancel();
@@ -125,7 +119,7 @@ export component SessionDialog inherits Rectangle {
     Rectangle {
         width: 440px;
         // Height follows the content, but never exceeds the window — past that
-        // the body scrolls (the dialog grows with the advanced section).
+        // the body scrolls.
         height: min(body.preferred-height + 53px, parent.height - 40px);
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -795,39 +789,8 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
-                    // ── Advanced (collapsed by default): encoding / shell opts ─
-                    if root.draft-kind == "ssh": Rectangle {
-                        height: 26px;
-                        adv-ta := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { root.show-advanced = !root.show-advanced; }
-                        }
-
-                        HorizontalLayout {
-                            spacing: 4px;
-                            Text {
-                                text: @tr("Advanced (encoding)");
-                                color: adv-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                            }
-
-                            Text {
-                                text: root.show-advanced ? "\u{E5CE}" : "\u{E5CF}";
-                                font-family: "Material Icons";
-                                color: Theme.text-muted;
-                                font-size: Theme.fs-md;
-                                vertical-alignment: center;
-                            }
-
-                            Rectangle {
-                                horizontal-stretch: 1;
-                            }
-                        }
-                    }
-
                     // ── Terminal character encoding (SSH only) (#338) ───────────────
-                    if (root.show-advanced && root.draft-kind == "ssh"): VerticalLayout {
+                    if root.draft-kind == "ssh": VerticalLayout {
                         spacing: 4px;
                         Text {
                             text: @tr("Terminal character encoding");
@@ -849,57 +812,6 @@ export component SessionDialog inherits Rectangle {
 
                         Rectangle {
                             height: 6px;
-                        }
-                    }
-
-                    // ── Shell integration (SSH only) (#140) ─────────────────────────
-                    if root.show-advanced && root.draft-kind == "ssh": VerticalLayout {
-                        spacing: 6px;
-
-                        // Shell-integration toggle (#140): the cwd-follow hook assumes a
-                        // POSIX shell; on a Windows pwsh/cmd server the injected hook
-                        // breaks the shell, so let the user turn it off.
-                        HorizontalLayout {
-                            spacing: 8px;
-                            Rectangle {
-                                width: 18px;
-                                height: 18px;
-                                y: 1px;
-                                border-radius: 4px;
-                                border-width: 1px;
-                                border-color: root.draft-disable-shell-integration ? Theme.accent : Theme.border-strong;
-                                background: root.draft-disable-shell-integration ? Theme.accent : transparent;
-                                Text {
-                                    text: root.draft-disable-shell-integration ? "\u{E5CA}" : "";
-                                    font-family: "Material Icons";
-                                    color: white;
-                                    font-size: 14px;
-                                    width: 100%;
-                                    height: 100%;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-
-                                TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.draft-disable-shell-integration = !root.draft-disable-shell-integration; }
-                                }
-                            }
-
-                            Text {
-                                text: @tr("Disable shell integration (Windows / pwsh server)");
-                                color: Theme.text-primary;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
-                        }
-
-                        Text {
-                            text: @tr("Turn on for Windows servers: skips the cwd-follow hook and monitor that assume a POSIX shell and otherwise break the shell.");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                            wrap: word-wrap;
                         }
                     }
 
@@ -946,7 +858,6 @@ export component SessionDialog inherits Rectangle {
                                     backspace-mode: root.draft-backspace-mode,
                                     shell: root.draft-shell,
                                     working-directory: root.draft-working-directory,
-                                    disable-shell-integration: root.draft-disable-shell-integration,
                                     enable-sftp: root.draft-enable-sftp,
                                     enable-command-panel: root.draft-enable-command-panel,
                                 });
