@@ -2561,6 +2561,9 @@ fn wire_session_callbacks(
                 w.set_dialog_group(session.group.clone().into());
                 w.set_dialog_kind(session.kind.as_str().into());
                 w.set_dialog_serial_port(session.serial_port.clone().into());
+                if session.kind == SessionKind::Serial {
+                    w.set_serial_ports(serial_ports_model());
+                }
                 w.set_dialog_baud(session.baud_rate.to_string().into());
                 w.set_dialog_data_bits(session.data_bits.to_string().into());
                 w.set_dialog_stop_bits(session.stop_bits.to_string().into());
@@ -3065,6 +3068,16 @@ fn wire_session_callbacks(
                 if let Some(w) = weak.upgrade() {
                     w.set_dialog_key_path(path.into());
                 }
+            }
+        });
+    }
+
+    // Re-enumerate OS serial ports for the session dialog combo.
+    {
+        let weak = window.as_weak();
+        window.on_session_dialog_refresh_serial_ports(move || {
+            if let Some(w) = weak.upgrade() {
+                w.set_serial_ports(serial_ports_model());
             }
         });
     }

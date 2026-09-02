@@ -322,6 +322,132 @@ export component LabeledInput inherits VerticalLayout {
     }
 }
 
+// --- EditableCombo ---------------------------------------------------------
+// Labeled editable text field + dropdown of suggestions. Type a free value, or
+// click ▼ to pick from `items`. Long text scrolls horizontally like BorderedLineInput.
+export component EditableCombo inherits VerticalLayout {
+    in property <string> label;
+    in property <string> placeholder;
+    in-out property <string> value;
+    in property <[string]> items;
+    spacing: 4px;
+
+    if root.label != "": Text {
+        text: root.label;
+        color: Theme.text-secondary;
+        font-size: Theme.fs-sm;
+    }
+
+    Rectangle {
+        height: 32px;
+        horizontal-stretch: 1;
+        border-radius: Theme.radius-sm;
+        border-width: 1px;
+        border-color: combo-input.has-focus ? Theme.accent : Theme.border-strong;
+        background: Theme.bg-elevated;
+        clip: true;
+
+        // Input viewport — leaves room for the ▼ button on the right.
+        Rectangle {
+            x: 10px;
+            width: parent.width - 46px;
+            height: parent.height;
+            clip: true;
+
+            combo-input := TextInput {
+                property <length> computed-x;
+
+                x: min(0px, max(parent.width - self.width - self.text-cursor-width, self.computed-x));
+                width: max(parent.width - self.text-cursor-width, self.preferred-width);
+                height: parent.height;
+                text <=> root.value;
+                color: Theme.text-primary;
+                font-family: Theme.ui-font-family;
+                font-size: Theme.fs-md;
+                vertical-alignment: center;
+                single-line: true;
+
+                cursor-position-changed(cursor-position) => {
+                    if (cursor-position.x + self.computed_x < 0px) {
+                        self.computed_x = -cursor-position.x;
+                    } else if (cursor-position.x + self.computed_x > parent.width - self.text-cursor-width) {
+                        self.computed_x = parent.width - cursor-position.x - self.text-cursor-width;
+                    }
+                }
+            }
+        }
+
+        if root.value == "": Text {
+            x: 10px;
+            width: parent.width - 46px;
+            height: parent.height;
+            text: root.placeholder;
+            color: Theme.text-muted;
+            font-size: Theme.fs-md;
+            vertical-alignment: center;
+        }
+
+        // ▼ — opens the suggestion list (no-op when empty).
+        drop-ta := TouchArea {
+            x: parent.width - 36px;
+            width: 36px;
+            height: parent.height;
+            mouse-cursor: root.items.length > 0 ? pointer : default;
+            clicked => { if (root.items.length > 0) { items-popup.show(); } }
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: Theme.radius-sm;
+                background: (drop-ta.has-hover && root.items.length > 0) ? Theme.bg-hover : transparent;
+                Text {
+                    // Plain Unicode caret — CJK UI fonts have this but not
+                    // the Material icon range, which would tofu (#179).
+                    text: "▼";
+                    color: root.items.length > 0 ? Theme.text-secondary : Theme.border-strong;
+                    font-size: Theme.fs-xs;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        items-popup := PopupWindow {
+            x: 0;
+            y: parent.height + 3px;
+            width: parent.width;
+            Rectangle {
+                background: Theme.popup-bg-alt;
+                border-radius: Theme.radius-sm;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 1px;
+                    for item in root.items: Rectangle {
+                        height: 28px;
+                        border-radius: Theme.radius-sm;
+                        background: item-ta.has-hover ? Theme.bg-hover : transparent;
+                        item-ta := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.value = item; items-popup.close(); }
+                        }
+
+                        Text {
+                            x: 10px;
+                            width: parent.width - 20px;
+                            text: item;
+                            color: Theme.text-primary;
+                            font-size: Theme.fs-md;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // --- BorderedLineInput -----------------------------------------------------
 // Single-line input with themed border focus and horizontal scroll for long text.
 export component BorderedLineInput inherits Rectangle {

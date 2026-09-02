@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
 import { ComboBox } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, GhostButton } from "widgets.slint";
+import { LabeledInput, PrimaryButton, GhostButton, EditableCombo } from "widgets.slint";
 
 export struct SessionDraft {
     id: string,
@@ -60,110 +60,6 @@ component SegOption inherits Rectangle {
     }
 }
 
-// Group field with an editable text box + a dropdown of existing groups (#179).
-// Type to create a new group, or click the ▾ to pick one already in use.
-component GroupCombo inherits VerticalLayout {
-    in property <string> label;
-    in property <string> placeholder;
-    in-out property <string> value;
-    in property <[string]> groups;       // existing group names
-    spacing: 4px;
-
-    Text {
-        text: root.label;
-        color: Theme.text-secondary;
-        font-size: Theme.fs-sm;
-    }
-
-    Rectangle {
-        height: 32px;
-        border-radius: Theme.radius-sm;
-        border-width: 1px;
-        border-color: ginput.has-focus ? Theme.accent : Theme.border-strong;
-        background: Theme.bg-elevated;
-
-        ginput := TextInput {
-            x: 10px;
-            width: parent.width - 44px;     // room for the ▾ button
-            height: parent.height;
-            text <=> root.value;
-            color: Theme.text-primary;
-            font-family: Theme.ui-font-family;
-            font-size: Theme.fs-md;
-            vertical-alignment: center;
-            single-line: true;
-        }
-
-        if root.value == "": Text {
-            x: 10px;
-            height: parent.height;
-            text: root.placeholder;
-            color: Theme.text-muted;
-            font-size: Theme.fs-md;
-            vertical-alignment: center;
-        }
-
-        // ▾ — opens the existing-groups list (no-op when there are none).
-        drop-ta := TouchArea {
-            x: parent.width - 36px;
-            width: 36px;
-            height: parent.height;
-            mouse-cursor: root.groups.length > 0 ? pointer : default;
-            clicked => { if (root.groups.length > 0) { groups-popup.show(); } }
-            Rectangle {
-                width: 28px;
-                height: 28px;
-                border-radius: Theme.radius-sm;
-                background: (drop-ta.has-hover && root.groups.length > 0) ? Theme.bg-hover : transparent;
-                Text {
-                    // Plain Unicode caret — the dialog's CJK UI font has this but
-                    // not the Material icon range, which would tofu (#179).
-                    text: "▼";
-                    color: root.groups.length > 0 ? Theme.text-secondary : Theme.border-strong;
-                    font-size: Theme.fs-xs;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-            }
-        }
-
-        groups-popup := PopupWindow {
-            x: 0;
-            y: parent.height + 3px;
-            width: parent.width;
-            Rectangle {
-                background: Theme.popup-bg-alt;
-                border-radius: Theme.radius-sm;
-                border-width: 1px;
-                border-color: Theme.border-subtle;
-                VerticalLayout {
-                    padding: 4px;
-                    spacing: 1px;
-                    for g in root.groups: Rectangle {
-                        height: 28px;
-                        border-radius: Theme.radius-sm;
-                        background: g-ta.has-hover ? Theme.bg-hover : transparent;
-                        g-ta := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { root.value = g; groups-popup.close(); }
-                        }
-
-                        Text {
-                            x: 10px;
-                            width: parent.width - 20px;
-                            text: g;
-                            color: Theme.text-primary;
-                            font-size: Theme.fs-md;
-                            vertical-alignment: center;
-                            overflow: elide;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // Modal dialog for creating / editing a session (SSH / Serial / Telnet / Local).
 // The dialog is purely presentational — it stores values in mutable
 // properties and emits `submit` / `cancel` callbacks up to the main window.
@@ -186,6 +82,7 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-group;
     in property <[string]> session-groups;   // existing groups for the dropdown (#179)
     in-out property <string> draft-serial-port;
+    in property <[string]> serial-ports;     // OS-enumerated ports for the editable combo
     in-out property <string> draft-baud: "115200";
     in-out property <string> draft-data-bits: "8";
     in-out property <string> draft-stop-bits: "1";
@@ -203,6 +100,7 @@ export component SessionDialog inherits Rectangle {
     callback submit(SessionDraft);
     callback cancel();
     callback pick-key-file();   // open a native file picker for the private key
+    callback refresh-serial-ports();  // re-enumerate OS serial ports
 
     visible: is-open;
     background: #00000080;
@@ -329,7 +227,10 @@ export component SessionDialog inherits Rectangle {
                             SegOption {
                                 label: @tr("Serial");
                                 active: root.draft-kind == "serial";
-                                clicked => { root.draft-kind = "serial"; }
+                                clicked => {
+                                    root.draft-kind = "serial";
+                                    root.refresh-serial-ports();
+                                }
                             }
 
                             SegOption {
@@ -361,11 +262,11 @@ export component SessionDialog inherits Rectangle {
 
                     // Optional group/folder to organize sessions by business (#41).
                     // Editable + dropdown of existing groups (#179). Blank = root.
-                    GroupCombo {
+                    EditableCombo {
                         label: @tr("Group");
                         placeholder: @tr("leave empty → root");
                         value <=> root.draft-group;
-                        groups: root.session-groups;
+                        items: root.session-groups;
                     }
 
                     // ── Local: shell / cwd / encoding ───────────────────────────────
@@ -613,12 +514,45 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // ── Serial-only fields ──────────────────────────────────────────
-                    if root.draft-kind == "serial": LabeledInput {
-                        input-background: Theme.bg-elevated;
-                        idle-border: Theme.border-strong;
-                        label: @tr("Serial port");
-                        placeholder: "COM3  /  /dev/ttyUSB0";
-                        value <=> root.draft-serial-port;
+                    if root.draft-kind == "serial": VerticalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: @tr("Serial port");
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            EditableCombo {
+                                horizontal-stretch: 1;
+                                placeholder: "COM3  /  /dev/ttyUSB0";
+                                value <=> root.draft-serial-port;
+                                items: root.serial-ports;
+                            }
+
+                            Rectangle {
+                                width: 32px;
+                                height: 32px;
+                                border-radius: Theme.radius-sm;
+                                border-width: 1px;
+                                border-color: Theme.border-subtle;
+                                background: refresh-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                                refresh-ta := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.refresh-serial-ports(); }
+                                }
+
+                                Text {
+                                    text: "\u{E5D5}";
+                                    font-family: "Material Icons";
+                                    color: Theme.text-secondary;
+                                    font-size: 18px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
                     }
 
                     if root.draft-kind == "serial": LabeledInput {

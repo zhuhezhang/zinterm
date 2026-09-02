@@ -654,6 +654,8 @@ export component AppWindow inherits Window {
     in property <[string]> session-groups;
     in-out property <string> dialog-kind: "ssh";
     in-out property <string> dialog-serial-port;
+    // OS-enumerated serial ports for the session dialog combo.
+    in property <[string]> serial-ports;
     in-out property <string> dialog-baud: "115200";
     in-out property <string> dialog-data-bits: "8";
     in-out property <string> dialog-stop-bits: "1";
@@ -696,6 +698,7 @@ export component AppWindow inherits Window {
     callback session-dialog-submit(SessionDraft);
     callback session-dialog-cancel();
     callback session-dialog-pick-key();
+    callback session-dialog-refresh-serial-ports();
 
     callback tab-selected(string);
     callback tab-closed(string);
@@ -4297,6 +4300,7 @@ export component AppWindow inherits Window {
         session-groups: root.session-groups;
         draft-kind <=> root.dialog-kind;
         draft-serial-port <=> root.dialog-serial-port;
+        serial-ports: root.serial-ports;
         draft-baud <=> root.dialog-baud;
         draft-data-bits <=> root.dialog-data-bits;
         draft-stop-bits <=> root.dialog-stop-bits;
@@ -4311,6 +4315,7 @@ export component AppWindow inherits Window {
         submit(draft) => { root.session-dialog-submit(draft); }
         cancel => { root.session-dialog-cancel(); }
         pick-key-file => { root.session-dialog-pick-key(); }
+        refresh-serial-ports => { root.session-dialog-refresh-serial-ports(); }
     }
 
     // --- Delete confirmation (#28) ----------------------------------------

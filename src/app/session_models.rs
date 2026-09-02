@@ -160,6 +160,16 @@ pub(super) fn session_groups_model(store: &ConfigStore) -> ModelRc<SharedString>
     )))
 }
 
+/// OS-enumerated serial port names for the session dialog combo.
+pub(super) fn serial_ports_model() -> ModelRc<SharedString> {
+    ModelRc::from(Rc::new(VecModel::from(
+        crate::terminal::list_available_ports()
+            .into_iter()
+            .map(SharedString::from)
+            .collect::<Vec<_>>(),
+    )))
+}
+
 pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<SessionInfo>) {
     let sessions = store.sessions();
     let collapsed_groups = store.collapsed_session_groups();

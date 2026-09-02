@@ -50,6 +50,7 @@ pub(crate) use render::{
     build_row, cell_prefix, char_after_cell_end, char_at_cell_start, detect_scroll, MAX_HISTORY,
     RAW_CAP,
 };
+pub(crate) use serial::list_available_ports;
 #[cfg(any(target_os = "windows", test))]
 pub(crate) use state::CtrlKeySide;
 pub(crate) use state::{

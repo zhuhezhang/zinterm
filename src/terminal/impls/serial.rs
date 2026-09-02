@@ -24,6 +24,23 @@ use crate::i18n::t;
 use crate::ssh::{SessionCommand, SessionEvent, SessionHandle};
 use crate::terminal::TerminalEncoding;
 
+/// Enumerate serial ports currently visible to the OS (`/dev/tty*`, `COM*`, …).
+/// Used by the session dialog's editable port dropdown + refresh button.
+pub fn list_available_ports() -> Vec<String> {
+    match serialport::available_ports() {
+        Ok(ports) => {
+            let mut names: Vec<String> = ports.into_iter().map(|p| p.port_name).collect();
+            names.sort();
+            names.dedup();
+            names
+        }
+        Err(err) => {
+            tracing::warn!("failed to enumerate serial ports: {err}");
+            Vec::new()
+        }
+    }
+}
+
 /// Spawn a serial-port session. See module docs for why the signature mirrors
 /// `spawn_session` (minus the PTY size, which a serial line has no notion of).
 pub fn spawn_serial_session(
