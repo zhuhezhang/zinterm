@@ -187,6 +187,34 @@ fn normalize_flow_control(raw: &str) -> String {
     }
 }
 
+/// True when `raw` looks like pasted key material (PEM / OpenSSH / PuTTY)
+/// rather than a filesystem path.
+fn looks_like_private_key_content(raw: &str) -> bool {
+    let t = raw.trim();
+    if t.is_empty() {
+        return false;
+    }
+    if crate::ssh::ppk::is_ppk(t.as_bytes()) {
+        return true;
+    }
+    let upper = t.to_ascii_uppercase();
+    if upper.contains("BEGIN") && upper.contains("PRIVATE KEY") {
+        return true;
+    }
+    // Paths are almost never several non-empty lines; treat multi-line blobs as keys.
+    t.lines().filter(|l| !l.trim().is_empty()).count() >= 3
+}
+
+/// Dialog combo labels for flow control (must match `session_dialog.slint` items).
+fn flow_control_display(raw: &str) -> String {
+    match normalize_flow_control(raw).as_str() {
+        "xonxoff" => "Xon/Xoff".to_string(),
+        "rtscts" => "Rts/Cts".to_string(),
+        "dsrdtr" => "Dsr/Dtr".to_string(),
+        _ => "None".to_string(),
+    }
+}
+
 fn normalize_parity(raw: &str) -> String {
     match raw.trim().to_ascii_lowercase().as_str() {
         "odd" => "odd".to_string(),
@@ -194,6 +222,17 @@ fn normalize_parity(raw: &str) -> String {
         "mark" => "mark".to_string(),
         "space" => "space".to_string(),
         _ => "none".to_string(),
+    }
+}
+
+/// Dialog combo labels for parity (must match `session_dialog.slint` items).
+fn parity_display(raw: &str) -> String {
+    match normalize_parity(raw).as_str() {
+        "odd" => "Odd".to_string(),
+        "even" => "Even".to_string(),
+        "mark" => "Mark".to_string(),
+        "space" => "Space".to_string(),
+        _ => "None".to_string(),
     }
 }
 
@@ -2578,9 +2617,17 @@ fn wire_session_callbacks(
                 // Never echo the stored password back into the UI (issue #10) —
                 // leave it blank; a blank field on save keeps the existing one.
                 w.set_dialog_password("".into());
-                w.set_dialog_key_path(session.private_key_path.clone().into());
-                w.set_dialog_key_inline("".into());
-                w.set_dialog_key_inline_mode(!session.private_key_inline.is_empty());
+                // Unified key field: show path when stored as a file; leave blank
+                // when a pasted key is saved (same "keep existing" pattern as password).
+                let key_field = if session.private_key_inline.is_empty() {
+                    session.private_key_path.clone()
+                } else {
+                    String::new()
+                };
+                w.set_dialog_key_path("".into());
+                w.set_dialog_key_inline(key_field.into());
+                w.set_dialog_key_inline_mode(false);
+                w.set_dialog_key_saved_inline(!session.private_key_inline.is_empty());
                 w.set_dialog_group(session.group.clone().into());
                 w.set_dialog_kind(session.kind.as_str().into());
                 w.set_dialog_serial_port(session.serial_port.clone().into());
@@ -2590,8 +2637,8 @@ fn wire_session_callbacks(
                 w.set_dialog_baud(session.baud_rate.to_string().into());
                 w.set_dialog_data_bits(session.data_bits.to_string().into());
                 w.set_dialog_stop_bits(session.stop_bits.to_string().into());
-                w.set_dialog_parity(normalize_parity(&session.parity).into());
-                w.set_dialog_flow(normalize_flow_control(&session.flow_control).into());
+                w.set_dialog_parity(parity_display(&session.parity).into());
+                w.set_dialog_flow(flow_control_display(&session.flow_control).into());
                 w.set_dialog_encoding(session.encoding.clone().into());
                 w.set_dialog_backspace_mode(
                     normalize_backspace_mode(&session.backspace_mode).into(),
@@ -2954,23 +3001,32 @@ fn wire_session_callbacks(
             } else {
                 Secret::new(draft.password.to_string())
             };
-            let private_key_inline = if draft.private_key_inline_mode {
-                if draft.private_key_inline.is_empty() {
-                    store
-                        .borrow()
-                        .get(&id)
-                        .map(|s| s.private_key_inline.clone())
-                        .unwrap_or_default()
+            // Unified private-key field: auto-detect path vs pasted PEM/PPK.
+            // Blank while editing keeps the existing path and/or inline secret.
+            let key_raw = {
+                let inline = draft.private_key_inline.trim();
+                let path = draft.private_key_path.trim();
+                if !inline.is_empty() {
+                    inline.to_string()
+                } else if !path.is_empty() {
+                    path.to_string()
                 } else {
-                    Secret::new(draft.private_key_inline.to_string())
+                    String::new()
                 }
-            } else {
-                Secret::default()
             };
-            let private_key_path = if draft.private_key_inline_mode {
-                String::new()
+            let (private_key_path, private_key_inline) = if key_raw.is_empty() {
+                match store.borrow().get(&id) {
+                    // Pasted keys are never echoed; blank keeps the saved secret.
+                    Some(s) if !s.private_key_inline.is_empty() => {
+                        (String::new(), s.private_key_inline.clone())
+                    }
+                    // Path was shown in the field — blank means the user cleared it.
+                    _ => (String::new(), Secret::default()),
+                }
+            } else if looks_like_private_key_content(&key_raw) {
+                (String::new(), Secret::new(key_raw))
             } else {
-                draft.private_key_path.to_string().replace('\\', "/")
+                (key_raw.replace('\\', "/"), Secret::default())
             };
             let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
             // Auto-name: serial → port label; local → shell/Local; otherwise
@@ -3104,7 +3160,11 @@ fn wire_session_callbacks(
             if let Some(file) = dialog.pick_file() {
                 let path = file.to_string_lossy().replace('\\', "/");
                 if let Some(w) = weak.upgrade() {
-                    w.set_dialog_key_path(path.into());
+                    // Unified key field lives in dialog-key-inline.
+                    w.set_dialog_key_inline(path.into());
+                    w.set_dialog_key_path("".into());
+                    w.set_dialog_key_inline_mode(false);
+                    w.set_dialog_key_saved_inline(false);
                 }
             }
         });
@@ -3391,14 +3451,15 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
     win.set_dialog_key_path("".into());
     win.set_dialog_key_inline("".into());
     win.set_dialog_key_inline_mode(false);
+    win.set_dialog_key_saved_inline(false);
     win.set_dialog_group(group.into());
     win.set_dialog_kind("ssh".into());
     win.set_dialog_serial_port("".into());
     win.set_dialog_baud("9600".into());
     win.set_dialog_data_bits("8".into());
     win.set_dialog_stop_bits("1".into());
-    win.set_dialog_parity("none".into());
-    win.set_dialog_flow("none".into());
+    win.set_dialog_parity("None".into());
+    win.set_dialog_flow("None".into());
     win.set_dialog_encoding("UTF-8".into());
     win.set_dialog_backspace_mode("auto".into());
     win.set_dialog_shell("".into());

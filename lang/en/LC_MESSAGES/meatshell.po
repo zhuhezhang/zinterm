@@ -126,6 +126,9 @@ msgstr "Leave blank if the key isn't encrypted"
 msgid "Leave blank to keep the current passphrase"
 msgstr "Leave blank to keep the current passphrase"
 
+msgid "Leave blank to keep the current key"
+msgstr "Leave blank to keep the current key"
+
 msgid "Private key file"
 msgstr "Private key file"
 
@@ -134,6 +137,9 @@ msgstr "Paste private key"
 
 msgid "Private key content is encrypted before saving."
 msgstr "Private key content is encrypted before saving."
+
+msgid "Enter a key file path or paste the private key. Pasted keys are encrypted before saving."
+msgstr "Enter a key file path or paste the private key. Pasted keys are encrypted before saving."
 
 msgid "Browse…"
 msgstr "Browse…"

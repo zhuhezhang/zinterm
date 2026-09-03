@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
 import { ComboBox } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, GhostButton, EditableCombo } from "widgets.slint";
+import { LabeledInput, PrimaryButton, GhostButton, EditableCombo, LabeledCombo } from "widgets.slint";
 
 export struct SessionDraft {
     id: string,
@@ -78,6 +78,9 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-key-path;
     in-out property <string> draft-key-inline;
     in-out property <bool> draft-key-inline-mode: false;
+    // True when editing a session that already has a pasted (encrypted) key —
+    // blank input keeps that secret instead of clearing it.
+    in-out property <bool> draft-key-saved-inline: false;
     in-out property <string> draft-group;
     in property <[string]> session-groups;   // existing groups for the dropdown (#179)
     in-out property <string> draft-serial-port;
@@ -85,8 +88,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-baud: "9600";
     in-out property <string> draft-data-bits: "8";
     in-out property <string> draft-stop-bits: "1";
-    in-out property <string> draft-parity: "none";
-    in-out property <string> draft-flow: "none";
+    in-out property <string> draft-parity: "None";
+    in-out property <string> draft-flow: "None";
     in-out property <string> draft-encoding: "UTF-8";
     // "auto" | "del" | "bs"
     in-out property <string> draft-backspace-mode: "auto";
@@ -117,7 +120,7 @@ export component SessionDialog inherits Rectangle {
     }
 
     Rectangle {
-        width: 440px;
+        width: 500px;
         // Height follows the content, but never exceeds the window — past that
         // the body scrolls.
         height: min(body.preferred-height + 53px, parent.height - 40px);
@@ -147,7 +150,7 @@ export component SessionDialog inherits Rectangle {
                 border-top-right-radius: Theme.radius-lg;
 
                 HorizontalLayout {
-                    padding-left: 20px;
+                    padding-left: 16px;
                     padding-right: 10px;
                     spacing: 10px;
 
@@ -196,7 +199,7 @@ export component SessionDialog inherits Rectangle {
                 viewport-width: self.width;
                 viewport-height: body.preferred-height;
                 body := VerticalLayout {
-                    padding: 20px;
+                    padding: 16px;
                     spacing: 12px;
 
                     // Connection type selector (always shown).
@@ -283,19 +286,10 @@ export component SessionDialog inherits Rectangle {
                         value <=> root.draft-working-directory;
                     }
 
-                    if root.draft-kind == "local": VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Terminal character encoding");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                        }
-
-                        ComboBox {
-                            model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
-                            current-value: root.draft-encoding;
-                            selected(value) => { root.draft-encoding = value; }
-                        }
+                    if root.draft-kind == "local": LabeledCombo {
+                        label: @tr("Terminal character encoding");
+                        current-value <=> root.draft-encoding;
+                        model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
                     }
 
                     // ── SSH / Telnet share host + port ──────────────────────────────
@@ -369,6 +363,7 @@ export component SessionDialog inherits Rectangle {
                         value <=> root.draft-password;
                     }
 
+                    // Path vs pasted PEM/PPK is detected automatically from the text (#auto-key).
                     if root.draft-kind == "ssh" && root.draft-auth == "key": VerticalLayout {
                         spacing: 4px;
                         Text {
@@ -378,87 +373,9 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         HorizontalLayout {
-                            spacing: 6px;
-                            SegOption {
-                                label: @tr("Private key file");
-                                active: !root.draft-key-inline-mode;
-                                clicked => { root.draft-key-inline-mode = false; }
-                            }
-
-                            SegOption {
-                                label: @tr("Paste private key");
-                                active: root.draft-key-inline-mode;
-                                clicked => { root.draft-key-inline-mode = true; }
-                            }
-                        }
-
-                        if !root.draft-key-inline-mode: VerticalLayout {
-                            spacing: 4px;
-                            HorizontalLayout {
-                                spacing: 8px;
-                                Rectangle {
-                                    height: 32px;
-                                    horizontal-stretch: 1;
-                                    border-radius: Theme.radius-sm;
-                                    border-width: 1px;
-                                    border-color: keyin.has-focus ? Theme.accent : Theme.border-strong;
-                                    background: Theme.bg-elevated;
-                                    keyin := TextInput {
-                                        x: 10px;
-                                        y: 0px;
-                                        width: parent.width - 20px;
-                                        height: parent.height;
-                                        text <=> root.draft-key-path;
-                                        color: Theme.text-primary;
-                                        font-family: Theme.ui-font-family; // CJK-capable (#54)
-                                        font-size: Theme.fs-md;
-                                        vertical-alignment: center;
-                                        single-line: true;
-                                    }
-
-                                    if root.draft-key-path == "": Text {
-                                        x: 10px;
-                                        y: 0px;
-                                        height: parent.height;
-                                        text: "/home/you/.ssh/id_ed25519";
-                                        color: Theme.text-muted;
-                                        font-size: Theme.fs-md;
-                                        vertical-alignment: center;
-                                    }
-                                }
-
-                                Rectangle {
-                                    width: 64px;
-                                    height: 32px;
-                                    border-radius: Theme.radius-sm;
-                                    border-width: 1px;
-                                    border-color: Theme.border-subtle;
-                                    background: browse-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
-                                    Text {
-                                        text: @tr("Browse…");
-                                        color: Theme.text-primary;
-                                        font-size: Theme.fs-sm;
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                    }
-
-                                    browse-ta := TouchArea {
-                                        mouse-cursor: pointer;
-                                        clicked => { root.pick-key-file(); }
-                                    }
-                                }
-                            }
-
-                            Text {
-                                text: @tr("Pick the private key itself (not the .pub public key)");
-                                color: Theme.text-muted;
-                                font-size: Theme.fs-xs;
-                            }
-                        }
-                        if root.draft-key-inline-mode: VerticalLayout {
-                            spacing: 4px;
+                            spacing: 8px;
                             Rectangle {
-                                height: 118px;
+                                height: 96px;
                                 horizontal-stretch: 1;
                                 border-radius: Theme.radius-sm;
                                 border-width: 1px;
@@ -469,6 +386,7 @@ export component SessionDialog inherits Rectangle {
                                     y: 8px;
                                     width: parent.width - 20px;
                                     height: parent.height - 16px;
+                                    // Unified field: file path or key body (classified on submit).
                                     text <=> root.draft-key-inline;
                                     color: Theme.text-primary;
                                     font-family: Theme.font-mono;
@@ -481,18 +399,44 @@ export component SessionDialog inherits Rectangle {
                                     x: 10px;
                                     y: 8px;
                                     width: parent.width - 20px;
-                                    text: "-----BEGIN OPENSSH PRIVATE KEY-----";
+                                    text: root.draft-key-saved-inline
+                                        ? @tr("Leave blank to keep the current key")
+                                        : "~/.ssh/id_ed25519\nor -----BEGIN OPENSSH PRIVATE KEY-----";
                                     color: Theme.text-muted;
                                     font-family: Theme.font-mono;
                                     font-size: Theme.fs-sm;
+                                    wrap: word-wrap;
                                 }
                             }
 
-                            Text {
-                                text: @tr("Private key content is encrypted before saving.");
-                                color: Theme.text-muted;
-                                font-size: Theme.fs-xs;
+                            Rectangle {
+                                width: 64px;
+                                height: 32px;
+                                y: 0px;
+                                border-radius: Theme.radius-sm;
+                                border-width: 1px;
+                                border-color: Theme.border-subtle;
+                                background: browse-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                                Text {
+                                    text: @tr("Browse…");
+                                    color: Theme.text-primary;
+                                    font-size: Theme.fs-sm;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                browse-ta := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.pick-key-file(); }
+                                }
                             }
+                        }
+
+                        Text {
+                            text: @tr("Enter a key file path or paste the private key. Pasted keys are encrypted before saving.");
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-xs;
+                            wrap: word-wrap;
                         }
                     }
 
@@ -579,83 +523,36 @@ export component SessionDialog inherits Rectangle {
                             items: ["1", "2"];
                         }
 
-                        VerticalLayout {
+                        LabeledCombo {
                             horizontal-stretch: 1;
-                            spacing: 4px;
-                            Text {
-                                text: @tr("Parity");
-                                color: Theme.text-secondary;
-                                font-size: Theme.fs-sm;
-                            }
-
-                            ComboBox {
-                                model: ["none", "odd", "even", "mark", "space"];
-                                current-value: root.draft-parity;
-                                selected(value) => { root.draft-parity = value; }
-                            }
+                            label: @tr("Parity");
+                            current-value <=> root.draft-parity;
+                            model: ["None", "Odd", "Even", "Mark", "Space"];
                         }
                     }
 
-                    if root.draft-kind == "serial": VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Flow control");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
+                    if root.draft-kind == "serial": HorizontalLayout {
+                        spacing: 8px;
+                        LabeledCombo {
+                            horizontal-stretch: 1;
+                            label: @tr("Flow control");
+                            current-value <=> root.draft-flow;
+                            model: ["None", "Xon/Xoff", "Rts/Cts", "Dsr/Dtr"];
                         }
 
-                        ComboBox {
-                            model: [@tr("None"), "Xon/Xoff", "Rts/Cts", "Dsr/Dtr"];
-                            current-value: root.draft-flow == "xonxoff" || root.draft-flow == "software"
-                                ? "Xon/Xoff"
-                                : (root.draft-flow == "rtscts" || root.draft-flow == "hardware"
-                                    ? "Rts/Cts"
-                                    : (root.draft-flow == "dsrdtr"
-                                        ? "Dsr/Dtr"
-                                        : @tr("None")));
-                            selected(value) => {
-                                if (value == "Xon/Xoff") {
-                                    root.draft-flow = "xonxoff";
-                                } else if (value == "Rts/Cts") {
-                                    root.draft-flow = "rtscts";
-                                } else if (value == "Dsr/Dtr") {
-                                    root.draft-flow = "dsrdtr";
-                                } else {
-                                    root.draft-flow = "none";
-                                }
-                            }
-                        }
-                    }
-
-                    if root.draft-kind == "serial": VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Terminal character encoding");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                        }
-
-                        ComboBox {
+                        LabeledCombo {
+                            horizontal-stretch: 1;
+                            label: @tr("Terminal character encoding");
+                            current-value <=> root.draft-encoding;
                             model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
-                            current-value: root.draft-encoding;
-                            selected(value) => { root.draft-encoding = value; }
                         }
                     }
 
                     // ── Telnet: encoding ────────────────────────────────────────────
-                    if root.draft-kind == "telnet": VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Terminal character encoding");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                        }
-
-                        ComboBox {
-                            model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
-                            current-value: root.draft-encoding;
-                            selected(value) => { root.draft-encoding = value; }
-                        }
+                    if root.draft-kind == "telnet": LabeledCombo {
+                        label: @tr("Terminal character encoding");
+                        current-value <=> root.draft-encoding;
+                        model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
                     }
 
                     // ── Backspace mode (all connection kinds) ───────────────────────
@@ -789,29 +686,10 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // ── Terminal character encoding (SSH only) (#338) ───────────────
-                    if root.draft-kind == "ssh": VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Terminal character encoding");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                        }
-
-                        ComboBox {
-                            model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
-                            current-value: root.draft-encoding;
-                            selected(value) => { root.draft-encoding = value; }
-                        }
-
-                        Text {
-                            text: @tr("Use GBK for servers configured for GB2312 or GBK output.");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                        }
-
-                        Rectangle {
-                            height: 6px;
-                        }
+                    if root.draft-kind == "ssh": LabeledCombo {
+                        label: @tr("Terminal character encoding");
+                        current-value <=> root.draft-encoding;
+                        model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
                     }
 
                     HorizontalLayout {
@@ -843,9 +721,10 @@ export component SessionDialog inherits Rectangle {
                                     user: root.draft-user,
                                     auth: root.draft-auth,
                                     password: root.draft-password,
-                                    private-key-path: root.draft-key-path,
+                                    // Path vs inline is auto-detected in Rust from this text.
+                                    private-key-path: "",
                                     private-key-inline: root.draft-key-inline,
-                                    private-key-inline-mode: root.draft-key-inline-mode,
+                                    private-key-inline-mode: false,
                                     group: root.draft-group,
                                     serial-port: root.draft-serial-port,
                                     baud-rate: root.draft-baud.to-float(),

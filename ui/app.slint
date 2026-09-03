@@ -649,6 +649,7 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-key-path;
     in-out property <string> dialog-key-inline;
     in-out property <bool> dialog-key-inline-mode: false;
+    in-out property <bool> dialog-key-saved-inline: false;
     in-out property <string> dialog-group;
     // Existing group names (from Rust) for the dialog's group dropdown (#179).
     in property <[string]> session-groups;
@@ -659,8 +660,8 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-baud: "9600";
     in-out property <string> dialog-data-bits: "8";
     in-out property <string> dialog-stop-bits: "1";
-    in-out property <string> dialog-parity: "none";
-    in-out property <string> dialog-flow: "none";
+    in-out property <string> dialog-parity: "None";
+    in-out property <string> dialog-flow: "None";
     in-out property <string> dialog-encoding: "UTF-8";
     in-out property <string> dialog-backspace-mode: "auto";
     in-out property <string> dialog-shell;
@@ -4301,6 +4302,7 @@ export component AppWindow inherits Window {
         draft-key-path <=> root.dialog-key-path;
         draft-key-inline <=> root.dialog-key-inline;
         draft-key-inline-mode <=> root.dialog-key-inline-mode;
+        draft-key-saved-inline <=> root.dialog-key-saved-inline;
         draft-group <=> root.dialog-group;
         session-groups: root.session-groups;
         draft-kind <=> root.dialog-kind;
