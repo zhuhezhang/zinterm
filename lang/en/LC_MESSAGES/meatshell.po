@@ -174,8 +174,8 @@ msgstr "Connect without saving"
 msgid "Save and connect"
 msgstr "Save and connect"
 
-msgid "Save and create"
-msgstr "Save and create"
+msgid "Create and connect"
+msgstr "Create and connect"
 
 msgid "Collapse SFTP panel"
 msgstr "Collapse SFTP panel"

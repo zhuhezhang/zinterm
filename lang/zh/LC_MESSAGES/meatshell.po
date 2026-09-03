@@ -174,8 +174,8 @@ msgstr "直接连接"
 msgid "Save and connect"
 msgstr "保存并连接"
 
-msgid "Save and create"
-msgstr "保存并创建"
+msgid "Create and connect"
+msgstr "创建并连接"
 
 msgid "Collapse SFTP panel"
 msgstr "收起 SFTP 面板"

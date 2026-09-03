@@ -99,7 +99,7 @@ export component SessionDialog inherits Rectangle {
     in-out property <bool> draft-enable-sftp: false;
     in-out property <bool> draft-enable-command-panel: false;
 
-    // persist / connect flags: Save/Create, Connect-without-saving, Save-and-connect.
+    // persist / connect flags: Save/Create, Connect-without-saving, Save/Create-and-connect.
     callback submit(SessionDraft, bool /* persist */, bool /* connect */);
     callback cancel();
     callback pick-key-file();   // open a native file picker for the private key
@@ -780,7 +780,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         PrimaryButton {
-                            text: is-editing ? @tr("Save and connect") : @tr("Save and create");
+                            text: is-editing ? @tr("Save and connect") : @tr("Create and connect");
                             clicked => { root.emit-submit(true, true); }
                         }
                     }
