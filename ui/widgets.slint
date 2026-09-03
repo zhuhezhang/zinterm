@@ -246,7 +246,7 @@ export component DangerButton inherits Rectangle {
 }
 
 // --- LabeledInput ----------------------------------------------------------
-export component LabeledInput inherits VerticalLayout {
+export component LabeledInput inherits HorizontalLayout {
     in property <string> label;
     in property <string> placeholder;
     in-out property <string> value;
@@ -256,7 +256,7 @@ export component LabeledInput inherits VerticalLayout {
     in property <brush> idle-border: Theme.border-subtle;
     callback accepted();   // Enter pressed in the field
     callback canceled();   // Esc pressed in the field (#140-3)
-    spacing: 4px;
+    spacing: 10px;
     property <bool> focus-pending: false;
     public function focus-input() { input.focus(); }
 
@@ -274,14 +274,16 @@ export component LabeledInput inherits VerticalLayout {
         }
     }
 
-    Text {
-        text: label;
+    if root.label != "": Text {
+        text: root.label;
         color: Theme.text-secondary;
         font-size: Theme.fs-sm;
+        vertical-alignment: center;
     }
 
     Rectangle {
         height: 32px;
+        horizontal-stretch: 1;
         border-radius: Theme.radius-sm;
         border-width: 1px;
         border-color: input.has-focus ? Theme.accent : root.idle-border;
@@ -325,17 +327,18 @@ export component LabeledInput inherits VerticalLayout {
 // --- EditableCombo ---------------------------------------------------------
 // Labeled editable text field + dropdown of suggestions. Type a free value, or
 // click ▼ to pick from `items`. Long text scrolls horizontally like BorderedLineInput.
-export component EditableCombo inherits VerticalLayout {
+export component EditableCombo inherits HorizontalLayout {
     in property <string> label;
     in property <string> placeholder;
     in-out property <string> value;
     in property <[string]> items;
-    spacing: 4px;
+    spacing: 10px;
 
     if root.label != "": Text {
         text: root.label;
         color: Theme.text-secondary;
         font-size: Theme.fs-sm;
+        vertical-alignment: center;
     }
 
     Rectangle {
@@ -449,17 +452,18 @@ export component EditableCombo inherits VerticalLayout {
 }
 
 // --- LabeledCombo ----------------------------------------------------------
-// Label + non-editable dropdown. Height matched to EditableCombo / LabeledInput.
-export component LabeledCombo inherits VerticalLayout {
+// Label + non-editable dropdown on one row. Height matched to EditableCombo / LabeledInput.
+export component LabeledCombo inherits HorizontalLayout {
     in property <string> label;
     in property <[string]> model;
     in-out property <string> current-value;
-    spacing: 4px;
+    spacing: 10px;
 
     if root.label != "": Text {
         text: root.label;
         color: Theme.text-secondary;
         font-size: Theme.fs-sm;
+        vertical-alignment: center;
     }
 
     ComboBox {

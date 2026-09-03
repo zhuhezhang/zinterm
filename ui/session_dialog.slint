@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
 import { ComboBox } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, GhostButton, EditableCombo, LabeledCombo } from "widgets.slint";
+import { LabeledInput, PrimaryButton, GhostButton, EditableCombo, LabeledCombo, TooltipArea } from "widgets.slint";
 
 export struct SessionDraft {
     id: string,
@@ -241,16 +241,18 @@ export component SessionDialog inherits Rectangle {
                     spacing: 12px;
 
                     // Connection type selector (always shown).
-                    VerticalLayout {
-                        spacing: 4px;
+                    HorizontalLayout {
+                        spacing: 10px;
                         Text {
                             text: @tr("Connection type");
                             color: Theme.text-secondary;
                             font-size: Theme.fs-sm;
+                            vertical-alignment: center;
                         }
 
                         HorizontalLayout {
                             spacing: 6px;
+                            horizontal-stretch: 1;
                             SegOption {
                                 label: "SSH";
                                 active: root.draft-kind == "ssh";
@@ -368,16 +370,18 @@ export component SessionDialog inherits Rectangle {
                         value <=> root.draft-user;
                     }
 
-                    if root.draft-kind == "ssh": VerticalLayout {
-                        spacing: 4px;
+                    if root.draft-kind == "ssh": HorizontalLayout {
+                        spacing: 10px;
                         Text {
                             text: @tr("Authentication");
                             color: Theme.text-secondary;
                             font-size: Theme.fs-sm;
+                            vertical-alignment: center;
                         }
 
                         HorizontalLayout {
                             spacing: 6px;
+                            horizontal-stretch: 1;
                             SegOption {
                                 label: @tr("Password");
                                 active: root.draft-auth == "password";
@@ -402,16 +406,29 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // Path vs pasted PEM/PPK is detected automatically from the text (#auto-key).
-                    if root.draft-kind == "ssh" && root.draft-auth == "key": VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Private key");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
+                    if root.draft-kind == "ssh" && root.draft-auth == "key": HorizontalLayout {
+                        spacing: 10px;
+                        Rectangle {
+                            width: key-label.preferred-width;
+                            height: key-label.preferred-height;
+                            y: 8px;
+                            key-label := Text {
+                                text: @tr("Private key");
+                                color: Theme.text-secondary;
+                                font-size: Theme.fs-sm;
+                            }
+                            TooltipArea {
+                                width: parent.width;
+                                height: parent.height;
+                                tooltip-text: @tr("Enter a key file path or paste the private key. Pasted keys are encrypted before saving.");
+                                anchor-width: parent.width;
+                                anchor-height: parent.height;
+                            }
                         }
 
                         HorizontalLayout {
                             spacing: 8px;
+                            horizontal-stretch: 1;
                             Rectangle {
                                 height: 96px;
                                 horizontal-stretch: 1;
@@ -469,13 +486,6 @@ export component SessionDialog inherits Rectangle {
                                 }
                             }
                         }
-
-                        Text {
-                            text: @tr("Enter a key file path or paste the private key. Pasted keys are encrypted before saving.");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                            wrap: word-wrap;
-                        }
                     }
 
                     // Passphrase for an *encrypted* private key (#90). Reuses the
@@ -493,16 +503,18 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // ── Serial-only fields ──────────────────────────────────────────
-                    if root.draft-kind == "serial": VerticalLayout {
-                        spacing: 4px;
+                    if root.draft-kind == "serial": HorizontalLayout {
+                        spacing: 10px;
                         Text {
                             text: @tr("Serial port");
                             color: Theme.text-secondary;
                             font-size: Theme.fs-sm;
+                            vertical-alignment: center;
                         }
 
                         HorizontalLayout {
                             spacing: 8px;
+                            horizontal-stretch: 1;
                             EditableCombo {
                                 horizontal-stretch: 1;
                                 placeholder: "COM3  /  /dev/ttyUSB0";
@@ -594,15 +606,30 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // ── Backspace mode (all connection kinds) ───────────────────────
-                    VerticalLayout {
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Backspace mode");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Rectangle {
+                            height: 32px;
+                            width: bs-label.preferred-width;
+                            bs-label := Text {
+                                text: @tr("Backspace mode");
+                                color: Theme.text-secondary;
+                                font-size: Theme.fs-sm;
+                                vertical-alignment: center;
+                                height: 100%;
+                            }
+                            TooltipArea {
+                                width: parent.width;
+                                height: parent.height;
+                                tooltip-text: @tr("Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local.");
+                                anchor-width: parent.width;
+                                anchor-height: parent.height;
+                            }
                         }
 
                         ComboBox {
+                            height: 32px;
+                            horizontal-stretch: 1;
                             model: [@tr("Auto"), @tr("DEL (0x7F)"), @tr("BS (0x08)")];
                             current-value: root.draft-backspace-mode == "del"
                                 ? @tr("DEL (0x7F)")
@@ -619,107 +646,108 @@ export component SessionDialog inherits Rectangle {
                                 }
                             }
                         }
-
-                        Text {
-                            text: @tr("Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local.");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                            wrap: word-wrap;
-                        }
                     }
 
                     // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
-                    if root.draft-kind == "ssh": VerticalLayout {
-                        spacing: 6px;
-
-                        HorizontalLayout {
-                            spacing: 8px;
-                            Rectangle {
-                                width: 18px;
-                                height: 18px;
-                                y: 1px;
-                                border-radius: 4px;
-                                border-width: 1px;
-                                border-color: root.draft-enable-sftp ? Theme.accent : Theme.border-strong;
-                                background: root.draft-enable-sftp ? Theme.accent : transparent;
-                                Text {
-                                    text: root.draft-enable-sftp ? "\u{E5CA}" : "";
-                                    font-family: "Material Icons";
-                                    color: white;
-                                    font-size: 14px;
-                                    width: 100%;
-                                    height: 100%;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-
-                                TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.draft-enable-sftp = !root.draft-enable-sftp; }
-                                }
+                    if root.draft-kind == "ssh": HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle {
+                            width: 18px;
+                            height: 18px;
+                            y: 1px;
+                            border-radius: 4px;
+                            border-width: 1px;
+                            border-color: root.draft-enable-sftp ? Theme.accent : Theme.border-strong;
+                            background: root.draft-enable-sftp ? Theme.accent : transparent;
+                            Text {
+                                text: root.draft-enable-sftp ? "\u{E5CA}" : "";
+                                font-family: "Material Icons";
+                                color: white;
+                                font-size: 14px;
+                                width: 100%;
+                                height: 100%;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
                             }
 
-                            Text {
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.draft-enable-sftp = !root.draft-enable-sftp; }
+                            }
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: sftp-label.preferred-height;
+                            y: 1px;
+                            sftp-label := Text {
                                 text: @tr("Enable SFTP panel");
                                 color: Theme.text-primary;
                                 font-size: Theme.fs-sm;
                                 vertical-alignment: center;
-                                horizontal-stretch: 1;
+                                width: 100%;
+                                height: 100%;
                             }
-                        }
-
-                        Text {
-                            text: @tr("When off, the SFTP side panel is hidden for this session.");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                            wrap: word-wrap;
+                            TooltipArea {
+                                width: parent.width;
+                                height: parent.height;
+                                mouse-cursor: pointer;
+                                tooltip-text: @tr("When off, the SFTP side panel is hidden for this session.");
+                                anchor-width: parent.width;
+                                anchor-height: parent.height;
+                                activate => { root.draft-enable-sftp = !root.draft-enable-sftp; }
+                            }
                         }
                     }
 
-                    VerticalLayout {
-                        spacing: 6px;
-
-                        HorizontalLayout {
-                            spacing: 8px;
-                            Rectangle {
-                                width: 18px;
-                                height: 18px;
-                                y: 1px;
-                                border-radius: 4px;
-                                border-width: 1px;
-                                border-color: root.draft-enable-command-panel ? Theme.accent : Theme.border-strong;
-                                background: root.draft-enable-command-panel ? Theme.accent : transparent;
-                                Text {
-                                    text: root.draft-enable-command-panel ? "\u{E5CA}" : "";
-                                    font-family: "Material Icons";
-                                    color: white;
-                                    font-size: 14px;
-                                    width: 100%;
-                                    height: 100%;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-
-                                TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
-                                }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle {
+                            width: 18px;
+                            height: 18px;
+                            y: 1px;
+                            border-radius: 4px;
+                            border-width: 1px;
+                            border-color: root.draft-enable-command-panel ? Theme.accent : Theme.border-strong;
+                            background: root.draft-enable-command-panel ? Theme.accent : transparent;
+                            Text {
+                                text: root.draft-enable-command-panel ? "\u{E5CA}" : "";
+                                font-family: "Material Icons";
+                                color: white;
+                                font-size: 14px;
+                                width: 100%;
+                                height: 100%;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
                             }
 
-                            Text {
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
+                            }
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: cmd-panel-label.preferred-height;
+                            y: 1px;
+                            cmd-panel-label := Text {
                                 text: @tr("Enable command panel");
                                 color: Theme.text-primary;
                                 font-size: Theme.fs-sm;
                                 vertical-alignment: center;
-                                horizontal-stretch: 1;
+                                width: 100%;
+                                height: 100%;
                             }
-                        }
-
-                        Text {
-                            text: @tr("When off, the command panel (quick commands, input box, and history) is hidden for this session.");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-xs;
-                            wrap: word-wrap;
+                            TooltipArea {
+                                width: parent.width;
+                                height: parent.height;
+                                mouse-cursor: pointer;
+                                tooltip-text: @tr("When off, the command panel (quick commands, input box, and history) is hidden for this session.");
+                                anchor-width: parent.width;
+                                anchor-height: parent.height;
+                                activate => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
+                            }
                         }
                     }
 
