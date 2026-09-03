@@ -69,11 +69,17 @@ msgstr "Open source"
 msgid "New session"
 msgstr "New session"
 
+msgid "Edit session"
+msgstr "Edit session"
+
 msgid "Name"
 msgstr "Name"
 
 msgid "e.g. Production / Database"
 msgstr "e.g. Production / Database"
+
+msgid "optional, add number when repeated"
+msgstr "optional, add number when repeated"
 
 msgid "leave empty → root"
 msgstr "leave empty → root"
@@ -95,6 +101,9 @@ msgstr "Root"
 
 msgid "Host / IP / Serial Port"
 msgstr "Host / IP / Serial Port"
+
+msgid "Host / IP"
+msgstr "Host / IP"
 
 msgid "Port"
 msgstr "Port"
@@ -155,6 +164,9 @@ msgstr "Remember for this session"
 
 msgid "Please enter a host / IP address."
 msgstr "Please enter a host / IP address."
+
+msgid "Please enter a serial port."
+msgstr "Please enter a serial port."
 
 msgid "Cancel"
 msgstr "Cancel"
@@ -411,8 +423,8 @@ msgstr "Run"
 msgid "View and edit"
 msgstr "View and edit"
 
-msgid "Terminal character encoding"
-msgstr "Terminal character encoding"
+msgid "Terminal encoding"
+msgstr "Terminal encoding"
 
 msgid "Backspace mode"
 msgstr "Backspace mode"

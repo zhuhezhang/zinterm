@@ -4495,8 +4495,8 @@ export component AppWindow inherits Window {
             clicked => { root.cred-reject(); }
         }
 
-        Rectangle {
-            width: 360px;
+        cred-wrap := Rectangle {
+            width: 300px;
             height: cred-card.preferred-height;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
@@ -4506,10 +4506,23 @@ export component AppWindow inherits Window {
             border-color: Theme.border-strong;
             drop-shadow-blur: 24px;
             drop-shadow-color: #00000080;
+
+            // Match Username / Password label column width (locale-aware via @tr).
+            property <length> cred-label-width: max(cred-lu.preferred-width, cred-lp.preferred-width);
+            Rectangle {
+                x: -10000px;
+                y: -10000px;
+                width: 0px;
+                height: 0px;
+                clip: true;
+                cred-lu := Text { text: @tr("Username"); font-size: Theme.fs-sm; }
+                cred-lp := Text { text: @tr("Password"); font-size: Theme.fs-sm; }
+            }
+
             TouchArea { }   // swallow clicks inside the card
             cred-card := VerticalLayout {
-                padding: 20px;
-                spacing: 12px;
+                padding: 8px;
+                spacing: 8px;
                 Text {
                     text: @tr("Login");
                     color: Theme.text-primary;
@@ -4526,14 +4539,14 @@ export component AppWindow inherits Window {
 
                 if root.cred-need-user: LabeledInput {
                     label: @tr("Username");
-                    placeholder: "root";
+                    label-width: cred-wrap.cred-label-width;
                     value <=> root.cred-user;
                     accepted => { root.cred-accept(); }
                     canceled => { root.cred-reject(); }   // Esc cancels (#140-3)
                 }
                 if root.cred-need-password: LabeledInput {
                     label: @tr("Password");
-                    placeholder: "••••••••";
+                    label-width: cred-wrap.cred-label-width;
                     password: true;
                     value <=> root.cred-password;
                     accepted => { root.cred-accept(); }

@@ -2614,9 +2614,15 @@ fn wire_session_callbacks(
                 w.set_dialog_port(session.port.to_string().into());
                 w.set_dialog_user(session.user.clone().into());
                 w.set_dialog_auth(session.auth.as_str().into());
-                // Never echo the stored password back into the UI (issue #10) —
-                // leave it blank; a blank field on save keeps the existing one.
-                w.set_dialog_password("".into());
+                // Echo stored password/passphrase when editing so the field shows
+                // what is saved; blank when none was stored.
+                w.set_dialog_password(
+                    if session.password.is_empty() {
+                        "".into()
+                    } else {
+                        session.password.as_str().into()
+                    },
+                );
                 // Unified key field: show path when stored as a file; leave blank
                 // when a pasted key is saved (same "keep existing" pattern as password).
                 let key_field = if session.private_key_inline.is_empty() {
@@ -3262,9 +3268,8 @@ fn wire_session_callbacks(
 
 fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
     let id = draft.id.to_string();
-    // The edit dialog never echoes the real password (issue #10): a blank
-    // field while editing means "keep the existing password" rather than
-    // "clear it".  Only overwrite when the user actually typed something.
+    // While editing, a blank password field keeps the existing secret; a
+    // non-empty value replaces it (including when prefilled from the stored one).
     let password = if draft.password.is_empty() {
         store
             .get(&id)

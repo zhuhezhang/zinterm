@@ -1,6 +1,6 @@
 import { Theme } from "theme.slint";
-import { ComboBox } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, GhostButton, EditableCombo, LabeledCombo, TooltipArea } from "widgets.slint";
+import { ComboBox, HorizontalBox } from "std-widgets.slint";
+import { LabeledInput, PrimaryButton, GhostButton, EditableCombo, LabeledCombo, TooltipArea, BorderedTextArea } from "widgets.slint";
 
 export struct SessionDraft {
     id: string,
@@ -74,6 +74,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-user;
     // Set when Create/Save is pressed with an empty host (SSH/Telnet) (#110).
     in-out property <bool> host-missing: false;
+    // Set when Create/Save is pressed with an empty serial port.
+    in-out property <bool> serial-port-missing: false;
     in-out property <string> draft-auth: "password";
     in-out property <string> draft-password;
     in-out property <string> draft-key-path;
@@ -99,6 +101,23 @@ export component SessionDialog inherits Rectangle {
     in-out property <bool> draft-enable-sftp: false;
     in-out property <bool> draft-enable-command-panel: false;
 
+    // Shared left-column width = longest form label (locale-aware via @tr).
+    property <length> form-label-width: max(m-conn.preferred-width,
+        max(m-name.preferred-width,
+        max(m-group.preferred-width,
+        max(m-shell.preferred-width,
+        max(m-cwd.preferred-width,
+        max(m-enc.preferred-width,
+        max(m-host.preferred-width,
+        max(m-user.preferred-width,
+        max(m-auth.preferred-width,
+        max(m-pass.preferred-width,
+        max(m-pkey.preferred-width,
+        max(m-passphrase.preferred-width,
+        max(m-sport.preferred-width,
+        max(m-baud.preferred-width,
+            m-bs.preferred-width))))))))))))));
+
     // persist / connect flags: Save/Create, Connect-without-saving, Save/Create-and-connect.
     callback submit(SessionDraft, bool /* persist */, bool /* connect */);
     callback cancel();
@@ -108,10 +127,11 @@ export component SessionDialog inherits Rectangle {
     visible: is-open;
     background: #00000080;
 
-    // Clear the host-required flag each time the dialog opens (#110).
+    // Clear required-field flags each time the dialog opens (#110).
     changed is-open => {
         if (self.is-open) {
             self.host-missing = false;
+            self.serial-port-missing = false;
         }
     }
 
@@ -119,9 +139,16 @@ export component SessionDialog inherits Rectangle {
     function emit-submit(persist: bool, connect: bool) {
         if (root.draft-kind != "serial" && root.draft-kind != "local" && root.draft-host == "") {
             root.host-missing = true;
+            root.serial-port-missing = false;
+            return;
+        }
+        if (root.draft-kind == "serial" && root.draft-serial-port == "") {
+            root.serial-port-missing = true;
+            root.host-missing = false;
             return;
         }
         root.host-missing = false;
+        root.serial-port-missing = false;
         root.submit({
             id: root.draft-id,
             name: root.draft-name,
@@ -155,6 +182,32 @@ export component SessionDialog inherits Rectangle {
     TouchArea {
         width: 100%;
         height: 100%;
+    }
+
+    // Off-screen label probes used only to compute `form-label-width`.
+    Rectangle {
+        x: -10000px;
+        y: -10000px;
+        width: 0px;
+        height: 0px;
+        clip: true;
+        VerticalLayout {
+            m-conn := Text { text: @tr("Connection type"); font-size: Theme.fs-sm; }
+            m-name := Text { text: @tr("Name"); font-size: Theme.fs-sm; }
+            m-group := Text { text: @tr("Group"); font-size: Theme.fs-sm; }
+            m-shell := Text { text: @tr("Shell"); font-size: Theme.fs-sm; }
+            m-cwd := Text { text: @tr("Working directory"); font-size: Theme.fs-sm; }
+            m-enc := Text { text: @tr("Terminal encoding"); font-size: Theme.fs-sm; }
+            m-host := Text { text: @tr("Host / IP"); font-size: Theme.fs-sm; }
+            m-user := Text { text: @tr("Username"); font-size: Theme.fs-sm; }
+            m-auth := Text { text: @tr("Authentication"); font-size: Theme.fs-sm; }
+            m-pass := Text { text: @tr("Password"); font-size: Theme.fs-sm; }
+            m-pkey := Text { text: @tr("Private key"); font-size: Theme.fs-sm; }
+            m-passphrase := Text { text: @tr("Key passphrase"); font-size: Theme.fs-sm; }
+            m-sport := Text { text: @tr("Serial port"); font-size: Theme.fs-sm; }
+            m-baud := Text { text: @tr("Baud rate"); font-size: Theme.fs-sm; }
+            m-bs := Text { text: @tr("Backspace mode"); font-size: Theme.fs-sm; }
+        }
     }
 
     Rectangle {
@@ -243,11 +296,17 @@ export component SessionDialog inherits Rectangle {
                     // Connection type selector (always shown).
                     HorizontalLayout {
                         spacing: 10px;
-                        Text {
-                            text: @tr("Connection type");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                            vertical-alignment: center;
+                        Rectangle {
+                            width: root.form-label-width;
+                            Text {
+                                width: 100%;
+                                height: 100%;
+                                text: @tr("Connection type");
+                                color: Theme.text-secondary;
+                                font-size: Theme.fs-sm;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+                            }
                         }
 
                         HorizontalLayout {
@@ -297,6 +356,8 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Name");
+                        placeholder: @tr("optional, add number when repeated");
+                        label-width: root.form-label-width;
                         value <=> root.draft-name;
                     }
 
@@ -304,6 +365,7 @@ export component SessionDialog inherits Rectangle {
                     // Editable + dropdown of existing groups (#179). Blank = root.
                     EditableCombo {
                         label: @tr("Group");
+                        label-width: root.form-label-width;
                         placeholder: @tr("leave empty → root");
                         value <=> root.draft-group;
                         items: root.session-groups;
@@ -314,6 +376,7 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Shell");
+                        label-width: root.form-label-width;
                         placeholder: @tr("leave empty → system default");
                         value <=> root.draft-shell;
                     }
@@ -322,14 +385,9 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Working directory");
+                        label-width: root.form-label-width;
                         placeholder: @tr("leave empty → home directory");
                         value <=> root.draft-working-directory;
-                    }
-
-                    if root.draft-kind == "local": LabeledCombo {
-                        label: @tr("Terminal character encoding");
-                        current-value <=> root.draft-encoding;
-                        model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
                     }
 
                     // ── SSH / Telnet share host + port ──────────────────────────────
@@ -339,6 +397,7 @@ export component SessionDialog inherits Rectangle {
                             input-background: Theme.bg-elevated;
                             idle-border: Theme.border-strong;
                             label: @tr("Host / IP");
+                            label-width: root.form-label-width;
                             placeholder: "192.168.1.10";
                             value <=> root.draft-host;
                             horizontal-stretch: 2;
@@ -355,10 +414,14 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     // Inline error when a host-less SSH/Telnet session is submitted (#110).
-                    if root.host-missing && root.draft-host == "" && root.draft-kind != "serial" && root.draft-kind != "local": Text {
-                        text: @tr("Please enter a host / IP address.");
-                        color: Theme.danger;
-                        font-size: Theme.fs-sm;
+                    if root.host-missing && root.draft-host == "" && root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
+                        spacing: 10px;
+                        Text { width: root.form-label-width; }
+                        Text {
+                            text: @tr("Please enter a host / IP address.");
+                            color: Theme.danger;
+                            font-size: Theme.fs-sm;
+                        }
                     }
 
                     // ── SSH-only: user + auth ───────────────────────────────────────
@@ -366,17 +429,24 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Username");
+                        label-width: root.form-label-width;
                         placeholder: @tr("Prompted on connect if blank");
                         value <=> root.draft-user;
                     }
 
                     if root.draft-kind == "ssh": HorizontalLayout {
                         spacing: 10px;
-                        Text {
-                            text: @tr("Authentication");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                            vertical-alignment: center;
+                        Rectangle {
+                            width: root.form-label-width;
+                            Text {
+                                width: 100%;
+                                height: 100%;
+                                text: @tr("Authentication");
+                                color: Theme.text-secondary;
+                                font-size: Theme.fs-sm;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+                            }
                         }
 
                         HorizontalLayout {
@@ -400,7 +470,8 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Password");
-                        placeholder: root.is-editing ? @tr("Leave blank to keep the current password") : "••••••••";
+                        label-width: root.form-label-width;
+                        placeholder: @tr("Prompted on connect if blank");
                         password: true;
                         value <=> root.draft-password;
                     }
@@ -409,13 +480,15 @@ export component SessionDialog inherits Rectangle {
                     if root.draft-kind == "ssh" && root.draft-auth == "key": HorizontalLayout {
                         spacing: 10px;
                         Rectangle {
-                            width: key-label.preferred-width;
+                            width: root.form-label-width;
                             height: key-label.preferred-height;
                             y: 8px;
                             key-label := Text {
+                                width: 100%;
                                 text: @tr("Private key");
                                 color: Theme.text-secondary;
                                 font-size: Theme.fs-sm;
+                                horizontal-alignment: right;
                             }
                             TooltipArea {
                                 width: parent.width;
@@ -429,39 +502,18 @@ export component SessionDialog inherits Rectangle {
                         HorizontalLayout {
                             spacing: 8px;
                             horizontal-stretch: 1;
-                            Rectangle {
-                                height: 96px;
+                            BorderedTextArea {
                                 horizontal-stretch: 1;
-                                border-radius: Theme.radius-sm;
-                                border-width: 1px;
-                                border-color: keytext.has-focus ? Theme.accent : Theme.border-strong;
-                                background: Theme.bg-elevated;
-                                keytext := TextInput {
-                                    x: 10px;
-                                    y: 8px;
-                                    width: parent.width - 20px;
-                                    height: parent.height - 16px;
-                                    // Unified field: file path or key body (classified on submit).
-                                    text <=> root.draft-key-inline;
-                                    color: Theme.text-primary;
-                                    font-family: Theme.font-mono;
-                                    font-size: Theme.fs-sm;
-                                    single-line: false;
-                                    wrap: word-wrap;
-                                }
-
-                                if root.draft-key-inline == "": Text {
-                                    x: 10px;
-                                    y: 8px;
-                                    width: parent.width - 20px;
-                                    text: root.draft-key-saved-inline
-                                        ? @tr("Leave blank to keep the current key")
-                                        : "~/.ssh/id_ed25519\nor -----BEGIN OPENSSH PRIVATE KEY-----";
-                                    color: Theme.text-muted;
-                                    font-family: Theme.font-mono;
-                                    font-size: Theme.fs-sm;
-                                    wrap: word-wrap;
-                                }
+                                area-height: 96px;
+                                idle-border: Theme.border-strong;
+                                area-background: Theme.bg-elevated;
+                                // Unified field: file path or key body (classified on submit).
+                                text <=> root.draft-key-inline;
+                                font-family: Theme.font-mono;
+                                font-size: Theme.fs-sm;
+                                placeholder: root.draft-key-saved-inline
+                                    ? @tr("Leave blank to keep the current key")
+                                    : "~/.ssh/id_ed25519\nor -----BEGIN OPENSSH PRIVATE KEY-----";
                             }
 
                             Rectangle {
@@ -495,6 +547,7 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Key passphrase");
+                        label-width: root.form-label-width;
                         placeholder: root.is-editing
                             ? @tr("Leave blank to keep the current passphrase")
                             : @tr("Leave blank if the key isn't encrypted");
@@ -505,11 +558,17 @@ export component SessionDialog inherits Rectangle {
                     // ── Serial-only fields ──────────────────────────────────────────
                     if root.draft-kind == "serial": HorizontalLayout {
                         spacing: 10px;
-                        Text {
-                            text: @tr("Serial port");
-                            color: Theme.text-secondary;
-                            font-size: Theme.fs-sm;
-                            vertical-alignment: center;
+                        Rectangle {
+                            width: root.form-label-width;
+                            Text {
+                                width: 100%;
+                                height: 100%;
+                                text: @tr("Serial port");
+                                color: Theme.text-secondary;
+                                font-size: Theme.fs-sm;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+                            }
                         }
 
                         HorizontalLayout {
@@ -546,8 +605,20 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
+                    // Inline error when a serial session is submitted without a port.
+                    if root.serial-port-missing && root.draft-serial-port == "" && root.draft-kind == "serial": HorizontalLayout {
+                        spacing: 10px;
+                        Text { width: root.form-label-width; }
+                        Text {
+                            text: @tr("Please enter a serial port.");
+                            color: Theme.danger;
+                            font-size: Theme.fs-sm;
+                        }
+                    }
+
                     if root.draft-kind == "serial": EditableCombo {
                         label: @tr("Baud rate");
+                        label-width: root.form-label-width;
                         placeholder: "9600";
                         value <=> root.draft-baud;
                         items: [
@@ -558,10 +629,11 @@ export component SessionDialog inherits Rectangle {
                     }
 
                     if root.draft-kind == "serial": HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 10px;
                         EditableCombo {
                             horizontal-stretch: 1;
                             label: @tr("Data bits");
+                            label-width: root.form-label-width;
                             value <=> root.draft-data-bits;
                             items: ["5", "6", "7", "8"];
                         }
@@ -572,190 +644,194 @@ export component SessionDialog inherits Rectangle {
                             value <=> root.draft-stop-bits;
                             items: ["1", "2"];
                         }
-
-                        LabeledCombo {
-                            horizontal-stretch: 1;
-                            label: @tr("Parity");
-                            current-value <=> root.draft-parity;
-                            model: ["None", "Odd", "Even", "Mark", "Space"];
-                        }
                     }
 
                     if root.draft-kind == "serial": HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 10px;
+                        LabeledCombo {
+                            horizontal-stretch: 1;
+                            label: @tr("Parity");
+                            label-width: root.form-label-width;
+                            current-value <=> root.draft-parity;
+                            model: ["None", "Odd", "Even", "Mark", "Space"];
+                        }
+
                         LabeledCombo {
                             horizontal-stretch: 1;
                             label: @tr("Flow control");
                             current-value <=> root.draft-flow;
                             model: ["None", "Xon/Xoff", "Rts/Cts", "Dsr/Dtr"];
                         }
+                    }
+
+                    // ── Backspace mode + terminal encoding (all connection kinds) ──
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        HorizontalLayout {
+                            spacing: 10px;
+                            horizontal-stretch: 1;
+                            Rectangle {
+                                height: 32px;
+                                width: root.form-label-width;
+                                bs-label := Text {
+                                    text: @tr("Backspace mode");
+                                    color: Theme.text-secondary;
+                                    font-size: Theme.fs-sm;
+                                    horizontal-alignment: right;
+                                    vertical-alignment: center;
+                                    width: 100%;
+                                    height: 100%;
+                                }
+                                TooltipArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    tip-from-cursor: true;
+                                    tooltip-text: @tr("Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local.");
+                                    anchor-width: parent.width;
+                                    anchor-height: parent.height;
+                                }
+                            }
+
+                            ComboBox {
+                                height: 32px;
+                                horizontal-stretch: 1;
+                                model: [@tr("Auto"), @tr("DEL (0x7F)"), @tr("BS (0x08)")];
+                                current-value: root.draft-backspace-mode == "del"
+                                    ? @tr("DEL (0x7F)")
+                                    : (root.draft-backspace-mode == "bs"
+                                        ? @tr("BS (0x08)")
+                                        : @tr("Auto"));
+                                selected(value) => {
+                                    if (value == @tr("DEL (0x7F)")) {
+                                        root.draft-backspace-mode = "del";
+                                    } else if (value == @tr("BS (0x08)")) {
+                                        root.draft-backspace-mode = "bs";
+                                    } else {
+                                        root.draft-backspace-mode = "auto";
+                                    }
+                                }
+                            }
+                        }
 
                         LabeledCombo {
                             horizontal-stretch: 1;
-                            label: @tr("Terminal character encoding");
+                            label: @tr("Terminal encoding");
                             current-value <=> root.draft-encoding;
                             model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
                         }
                     }
 
-                    // ── Telnet: encoding ────────────────────────────────────────────
-                    if root.draft-kind == "telnet": LabeledCombo {
-                        label: @tr("Terminal character encoding");
-                        current-value <=> root.draft-encoding;
-                        model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
-                    }
-
-                    // ── Backspace mode (all connection kinds) ───────────────────────
+                    // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
                     HorizontalLayout {
                         spacing: 10px;
+                        alignment: start;
+                        cross-axis-alignment: center;
                         Rectangle {
-                            height: 32px;
-                            width: bs-label.preferred-width;
-                            bs-label := Text {
-                                text: @tr("Backspace mode");
-                                color: Theme.text-secondary;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                                height: 100%;
-                            }
-                            TooltipArea {
-                                width: parent.width;
-                                height: parent.height;
-                                tooltip-text: @tr("Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local.");
-                                anchor-width: parent.width;
-                                anchor-height: parent.height;
-                            }
+                            width: root.form-label-width;
                         }
 
-                        ComboBox {
-                            height: 32px;
-                            horizontal-stretch: 1;
-                            model: [@tr("Auto"), @tr("DEL (0x7F)"), @tr("BS (0x08)")];
-                            current-value: root.draft-backspace-mode == "del"
-                                ? @tr("DEL (0x7F)")
-                                : (root.draft-backspace-mode == "bs"
-                                    ? @tr("BS (0x08)")
-                                    : @tr("Auto"));
-                            selected(value) => {
-                                if (value == @tr("DEL (0x7F)")) {
-                                    root.draft-backspace-mode = "del";
-                                } else if (value == @tr("BS (0x08)")) {
-                                    root.draft-backspace-mode = "bs";
-                                } else {
-                                    root.draft-backspace-mode = "auto";
+                        if root.draft-kind == "ssh": HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            cross-axis-alignment: center;
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: root.draft-enable-sftp ? Theme.accent : Theme.border-strong;
+                                background: root.draft-enable-sftp ? Theme.accent : transparent;
+                                Text {
+                                    text: root.draft-enable-sftp ? "\u{E5CA}" : "";
+                                    font-family: "Material Icons";
+                                    color: white;
+                                    font-size: 14px;
+                                    width: 100%;
+                                    height: 100%;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.draft-enable-sftp = !root.draft-enable-sftp; }
+                                }
+                            }
+
+                            Rectangle {
+                                width: sftp-label.preferred-width;
+                                height: 18px;
+                                sftp-label := Text {
+                                    text: @tr("Enable SFTP panel");
+                                    color: Theme.text-primary;
+                                    font-size: Theme.fs-sm;
+                                    vertical-alignment: center;
+                                    height: 100%;
+                                }
+                                TooltipArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    mouse-cursor: pointer;
+                                    tip-from-cursor: true;
+                                    tooltip-text: @tr("When off, the SFTP side panel is hidden for this session.");
+                                    anchor-width: parent.width;
+                                    anchor-height: parent.height;
+                                    activate => { root.draft-enable-sftp = !root.draft-enable-sftp; }
                                 }
                             }
                         }
-                    }
 
-                    // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
-                    if root.draft-kind == "ssh": HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle {
-                            width: 18px;
-                            height: 18px;
-                            y: 1px;
-                            border-radius: 4px;
-                            border-width: 1px;
-                            border-color: root.draft-enable-sftp ? Theme.accent : Theme.border-strong;
-                            background: root.draft-enable-sftp ? Theme.accent : transparent;
-                            Text {
-                                text: root.draft-enable-sftp ? "\u{E5CA}" : "";
-                                font-family: "Material Icons";
-                                color: white;
-                                font-size: 14px;
-                                width: 100%;
-                                height: 100%;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            cross-axis-alignment: center;
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                border-radius: 4px;
+                                border-width: 1px;
+                                border-color: root.draft-enable-command-panel ? Theme.accent : Theme.border-strong;
+                                background: root.draft-enable-command-panel ? Theme.accent : transparent;
+                                Text {
+                                    text: root.draft-enable-command-panel ? "\u{E5CA}" : "";
+                                    font-family: "Material Icons";
+                                    color: white;
+                                    font-size: 14px;
+                                    width: 100%;
+                                    height: 100%;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
+                                }
                             }
 
-                            TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { root.draft-enable-sftp = !root.draft-enable-sftp; }
+                            Rectangle {
+                                width: cmd-panel-label.preferred-width;
+                                height: 18px;
+                                cmd-panel-label := Text {
+                                    text: @tr("Enable command panel");
+                                    color: Theme.text-primary;
+                                    font-size: Theme.fs-sm;
+                                    vertical-alignment: center;
+                                    height: 100%;
+                                }
+                                TooltipArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    mouse-cursor: pointer;
+                                    tip-from-cursor: true;
+                                    tooltip-text: @tr("When off, the command panel (quick commands, input box, and history) is hidden for this session.");
+                                    anchor-width: parent.width;
+                                    anchor-height: parent.height;
+                                    activate => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
+                                }
                             }
                         }
-
-                        Rectangle {
-                            horizontal-stretch: 1;
-                            height: sftp-label.preferred-height;
-                            y: 1px;
-                            sftp-label := Text {
-                                text: @tr("Enable SFTP panel");
-                                color: Theme.text-primary;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                                width: 100%;
-                                height: 100%;
-                            }
-                            TooltipArea {
-                                width: parent.width;
-                                height: parent.height;
-                                mouse-cursor: pointer;
-                                tooltip-text: @tr("When off, the SFTP side panel is hidden for this session.");
-                                anchor-width: parent.width;
-                                anchor-height: parent.height;
-                                activate => { root.draft-enable-sftp = !root.draft-enable-sftp; }
-                            }
-                        }
-                    }
-
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle {
-                            width: 18px;
-                            height: 18px;
-                            y: 1px;
-                            border-radius: 4px;
-                            border-width: 1px;
-                            border-color: root.draft-enable-command-panel ? Theme.accent : Theme.border-strong;
-                            background: root.draft-enable-command-panel ? Theme.accent : transparent;
-                            Text {
-                                text: root.draft-enable-command-panel ? "\u{E5CA}" : "";
-                                font-family: "Material Icons";
-                                color: white;
-                                font-size: 14px;
-                                width: 100%;
-                                height: 100%;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-
-                            TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
-                            }
-                        }
-
-                        Rectangle {
-                            horizontal-stretch: 1;
-                            height: cmd-panel-label.preferred-height;
-                            y: 1px;
-                            cmd-panel-label := Text {
-                                text: @tr("Enable command panel");
-                                color: Theme.text-primary;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                                width: 100%;
-                                height: 100%;
-                            }
-                            TooltipArea {
-                                width: parent.width;
-                                height: parent.height;
-                                mouse-cursor: pointer;
-                                tooltip-text: @tr("When off, the command panel (quick commands, input box, and history) is hidden for this session.");
-                                anchor-width: parent.width;
-                                anchor-height: parent.height;
-                                activate => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
-                            }
-                        }
-                    }
-
-                    // ── Terminal character encoding (SSH only) (#338) ───────────────
-                    if root.draft-kind == "ssh": LabeledCombo {
-                        label: @tr("Terminal character encoding");
-                        current-value <=> root.draft-encoding;
-                        model: ["UTF-8", "GBK", "Big5", "Shift_JIS", "EUC-KR", "Windows-1252"];
                     }
 
                     HorizontalLayout {

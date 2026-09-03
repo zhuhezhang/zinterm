@@ -69,11 +69,17 @@ msgstr "开源"
 msgid "New session"
 msgstr "新建会话"
 
+msgid "Edit session"
+msgstr "编辑会话"
+
 msgid "Name"
 msgstr "名称"
 
 msgid "e.g. Production / Database"
 msgstr "例如：生产 / 数据库"
+
+msgid "optional, add number when repeated"
+msgstr "可选，重复时加序号"
 
 msgid "leave empty → root"
 msgstr "留空 → 根目录"
@@ -95,6 +101,9 @@ msgstr "根目录"
 
 msgid "Host / IP / Serial Port"
 msgstr "主机 / IP / 串口"
+
+msgid "Host / IP"
+msgstr "主机 / IP"
 
 msgid "Port"
 msgstr "端口"
@@ -155,6 +164,9 @@ msgstr "仅本次会话记住"
 
 msgid "Please enter a host / IP address."
 msgstr "请输入主机 / IP 地址。"
+
+msgid "Please enter a serial port."
+msgstr "请输入串口号。"
 
 msgid "Cancel"
 msgstr "取消"
@@ -411,8 +423,8 @@ msgstr "运行"
 msgid "View and edit"
 msgstr "查看编辑"
 
-msgid "Terminal character encoding"
-msgstr "终端字符集"
+msgid "Terminal encoding"
+msgstr "终端编码"
 
 msgid "Backspace mode"
 msgstr "退格键模式"
