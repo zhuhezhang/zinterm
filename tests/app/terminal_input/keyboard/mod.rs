@@ -129,16 +129,16 @@ fn backspace_key_defaults_to_del() {
 }
 
 #[test]
-fn apply_backspace_mode_auto_maps_telnet_and_serial_to_bs() {
+fn apply_backspace_mode_auto_maps_remote_kinds_to_bs() {
     use crate::config::SessionKind;
     let del = vec![0x7f];
     assert_eq!(
-        apply_backspace_mode(del.clone(), "auto", SessionKind::Ssh),
+        apply_backspace_mode(del.clone(), "auto", SessionKind::Local),
         vec![0x7f]
     );
     assert_eq!(
-        apply_backspace_mode(del.clone(), "auto", SessionKind::Local),
-        vec![0x7f]
+        apply_backspace_mode(del.clone(), "auto", SessionKind::Ssh),
+        vec![0x08]
     );
     assert_eq!(
         apply_backspace_mode(del.clone(), "auto", SessionKind::Telnet),

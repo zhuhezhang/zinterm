@@ -17,8 +17,8 @@ pub(crate) fn normalize_backspace_mode(mode: &str) -> &'static str {
 }
 
 /// Remap DEL (0x7F) / BS (0x08) in outbound PTY bytes according to the
-/// session's backspace mode. Auto: SSH/Local keep DEL; Telnet/Serial map
-/// DEL→BS for devices that only erase with BS.
+/// session's backspace mode. Auto: Local keeps DEL; SSH/Telnet/Serial map
+/// DEL→BS for gear that only erase with BS.
 pub(crate) fn apply_backspace_mode(
     bytes: Vec<u8>,
     mode: &str,
@@ -33,10 +33,16 @@ pub(crate) fn apply_backspace_mode(
             .into_iter()
             .map(|b| if b == 0x7f { 0x08 } else { b })
             .collect(),
-        _ if matches!(kind, SessionKind::Telnet | SessionKind::Serial) => bytes
-            .into_iter()
-            .map(|b| if b == 0x7f { 0x08 } else { b })
-            .collect(),
+        _ if matches!(
+            kind,
+            SessionKind::Ssh | SessionKind::Telnet | SessionKind::Serial
+        ) =>
+        {
+            bytes
+                .into_iter()
+                .map(|b| if b == 0x7f { 0x08 } else { b })
+                .collect()
+        }
         _ => bytes,
     }
 }

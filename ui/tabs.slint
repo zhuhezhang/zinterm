@@ -752,7 +752,7 @@ export component TabBar inherits Rectangle {
                 spacing: 1px;
                 TabMenuItem {
                     label: @tr("Auto");
-                    hint: root.menu-backspace-mode == "auto" ? "✓" : "";
+                    hint: root.menu-backspace-mode == "auto" ? "\u{E5CA}" : "";
                     hovered(h) => {
                         root.bs-panel-hover = h;
                         if (h) {
@@ -770,7 +770,7 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("DEL (0x7F)");
-                    hint: root.menu-backspace-mode == "del" ? "✓" : "";
+                    hint: root.menu-backspace-mode == "del" ? "\u{E5CA}" : "";
                     hovered(h) => {
                         root.bs-panel-hover = h;
                         if (h) {
@@ -788,7 +788,7 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("BS (0x08)");
-                    hint: root.menu-backspace-mode == "bs" ? "✓" : "";
+                    hint: root.menu-backspace-mode == "bs" ? "\u{E5CA}" : "";
                     hovered(h) => {
                         root.bs-panel-hover = h;
                         if (h) {

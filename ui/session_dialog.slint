@@ -254,7 +254,6 @@ export component SessionDialog inherits Rectangle {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
                         label: @tr("Name");
-                        placeholder: @tr("e.g. production web-01");
                         value <=> root.draft-name;
                     }
 
@@ -687,7 +686,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         Text {
-                            text: @tr("Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial.");
+                            text: @tr("Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local.");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                             wrap: word-wrap;

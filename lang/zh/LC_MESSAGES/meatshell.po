@@ -66,17 +66,11 @@ msgstr "使用的开源库"
 msgid "Open source"
 msgstr "开源"
 
-msgid "Edit session"
-msgstr "编辑会话"
-
 msgid "New session"
 msgstr "新建会话"
 
 msgid "Name"
 msgstr "名称"
-
-msgid "e.g. production web-01"
-msgstr "例如：生产环境 web-01"
 
 msgid "e.g. Production / Database"
 msgstr "例如：生产 / 数据库"
@@ -408,8 +402,8 @@ msgstr "终端字符集"
 msgid "Backspace mode"
 msgstr "退格键模式"
 
-msgid "Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial."
-msgstr "设置发送给设备的退格编码。Auto：SSH/Local 用 DEL，Telnet/Serial 用 BS。"
+msgid "Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local."
+msgstr "设置发送给设备的退格编码。Auto：SSH/Telnet/Serial 用 BS，Local 用 DEL。"
 
 msgid "Auto"
 msgstr "Auto"

@@ -145,7 +145,7 @@ pub struct Session {
     pub encoding: String,
 
     /// Byte sent for the Backspace key: `"auto"` | `"del"` | `"bs"`.
-    /// Auto keeps DEL for SSH/Local and maps DEL→BS for Telnet/Serial so more
+    /// Auto keeps DEL for Local and maps DEL→BS for SSH/Telnet/Serial so more
     /// gear accepts erase; Del/Bs force 0x7F / 0x08 respectively.
     #[serde(default = "default_backspace_mode")]
     pub backspace_mode: String,

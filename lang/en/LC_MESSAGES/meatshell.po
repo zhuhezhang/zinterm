@@ -66,17 +66,11 @@ msgstr "Open-source libraries used"
 msgid "Open source"
 msgstr "Open source"
 
-msgid "Edit session"
-msgstr "Edit session"
-
 msgid "New session"
 msgstr "New session"
 
 msgid "Name"
 msgstr "Name"
-
-msgid "e.g. production web-01"
-msgstr "e.g. production web-01"
 
 msgid "e.g. Production / Database"
 msgstr "e.g. Production / Database"
@@ -408,8 +402,8 @@ msgstr "Terminal character encoding"
 msgid "Backspace mode"
 msgstr "Backspace mode"
 
-msgid "Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial."
-msgstr "Byte sent for Backspace. Auto: DEL for SSH/Local, BS for Telnet/Serial."
+msgid "Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local."
+msgstr "Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local."
 
 msgid "Auto"
 msgstr "Auto"
