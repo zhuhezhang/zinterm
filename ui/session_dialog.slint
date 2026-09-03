@@ -61,7 +61,8 @@ component SegOption inherits Rectangle {
 
 // Modal dialog for creating / editing a session (SSH / Serial / Telnet / Local).
 // The dialog is purely presentational — it stores values in mutable
-// properties and emits `submit` / `cancel` callbacks up to the main window.
+// properties and emits `submit(draft, persist, connect)` / `cancel` up to
+// the main window.
 export component SessionDialog inherits Rectangle {
     in-out property <bool> is-open: false;
     in-out property <bool> is-editing: false;
@@ -98,7 +99,8 @@ export component SessionDialog inherits Rectangle {
     in-out property <bool> draft-enable-sftp: false;
     in-out property <bool> draft-enable-command-panel: false;
 
-    callback submit(SessionDraft);
+    // persist / connect flags: Save/Create, Connect-without-saving, Save-and-connect.
+    callback submit(SessionDraft, bool /* persist */, bool /* connect */);
     callback cancel();
     callback pick-key-file();   // open a native file picker for the private key
     callback refresh-serial-ports();  // re-enumerate OS serial ports
@@ -113,6 +115,42 @@ export component SessionDialog inherits Rectangle {
         }
     }
 
+    // Shared validation + draft packing for the footer actions.
+    function emit-submit(persist: bool, connect: bool) {
+        if (root.draft-kind != "serial" && root.draft-kind != "local" && root.draft-host == "") {
+            root.host-missing = true;
+            return;
+        }
+        root.host-missing = false;
+        root.submit({
+            id: root.draft-id,
+            name: root.draft-name,
+            kind: root.draft-kind,
+            host: root.draft-host,
+            port: root.draft-port.to-float(),
+            user: root.draft-user,
+            auth: root.draft-auth,
+            password: root.draft-password,
+            // Path vs inline is auto-detected in Rust from this text.
+            private-key-path: "",
+            private-key-inline: root.draft-key-inline,
+            private-key-inline-mode: false,
+            group: root.draft-group,
+            serial-port: root.draft-serial-port,
+            baud-rate: root.draft-baud.to-float(),
+            data-bits: root.draft-data-bits.to-float(),
+            stop-bits: root.draft-stop-bits.to-float(),
+            parity: root.draft-parity,
+            flow-control: root.draft-flow,
+            encoding: root.draft-encoding,
+            backspace-mode: root.draft-backspace-mode,
+            shell: root.draft-shell,
+            working-directory: root.draft-working-directory,
+            enable-sftp: root.draft-enable-sftp,
+            enable-command-panel: root.draft-enable-command-panel,
+        }, persist, connect);
+    }
+
     // Swallow clicks on the backdrop
     TouchArea {
         width: 100%;
@@ -120,7 +158,7 @@ export component SessionDialog inherits Rectangle {
     }
 
     Rectangle {
-        width: 500px;
+        width: 580px;
         // Height follows the content, but never exceeds the window — past that
         // the body scrolls.
         height: min(body.preferred-height + 53px, parent.height - 40px);
@@ -703,43 +741,19 @@ export component SessionDialog inherits Rectangle {
                             clicked => { root.cancel(); }
                         }
 
-                        PrimaryButton {
+                        GhostButton {
                             text: is-editing ? @tr("Save") : @tr("Create");
-                            clicked => {
-                                // SSH/Telnet need a host; block submit and flag it (#110).
-                                if (root.draft-kind != "serial" && root.draft-kind != "local" && root.draft-host == "") {
-                                    root.host-missing = true;
-                                    return;
-                                }
-                                root.host-missing = false;
-                                root.submit({
-                                    id: root.draft-id,
-                                    name: root.draft-name,
-                                    kind: root.draft-kind,
-                                    host: root.draft-host,
-                                    port: root.draft-port.to-float(),
-                                    user: root.draft-user,
-                                    auth: root.draft-auth,
-                                    password: root.draft-password,
-                                    // Path vs inline is auto-detected in Rust from this text.
-                                    private-key-path: "",
-                                    private-key-inline: root.draft-key-inline,
-                                    private-key-inline-mode: false,
-                                    group: root.draft-group,
-                                    serial-port: root.draft-serial-port,
-                                    baud-rate: root.draft-baud.to-float(),
-                                    data-bits: root.draft-data-bits.to-float(),
-                                    stop-bits: root.draft-stop-bits.to-float(),
-                                    parity: root.draft-parity,
-                                    flow-control: root.draft-flow,
-                                    encoding: root.draft-encoding,
-                                    backspace-mode: root.draft-backspace-mode,
-                                    shell: root.draft-shell,
-                                    working-directory: root.draft-working-directory,
-                                    enable-sftp: root.draft-enable-sftp,
-                                    enable-command-panel: root.draft-enable-command-panel,
-                                });
-                            }
+                            clicked => { root.emit-submit(true, false); }
+                        }
+
+                        GhostButton {
+                            text: @tr("Connect without saving");
+                            clicked => { root.emit-submit(false, true); }
+                        }
+
+                        PrimaryButton {
+                            text: is-editing ? @tr("Save and connect") : @tr("Save and create");
+                            clicked => { root.emit-submit(true, true); }
                         }
                     }
                 }

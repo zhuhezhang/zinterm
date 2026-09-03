@@ -696,7 +696,7 @@ export component AppWindow inherits Window {
     callback duplicate-session(string /* session-id */);
     callback toggle-group(string /* group */);
     callback remove-session(string /* session-id */);
-    callback session-dialog-submit(SessionDraft);
+    callback session-dialog-submit(SessionDraft, bool /* persist */, bool /* connect */);
     callback session-dialog-cancel();
     callback session-dialog-pick-key();
     callback session-dialog-refresh-serial-ports();
@@ -4319,7 +4319,7 @@ export component AppWindow inherits Window {
         draft-working-directory <=> root.dialog-working-directory;
         draft-enable-sftp <=> root.dialog-enable-sftp;
         draft-enable-command-panel <=> root.dialog-enable-command-panel;
-        submit(draft) => { root.session-dialog-submit(draft); }
+        submit(draft, persist, connect) => { root.session-dialog-submit(draft, persist, connect); }
         cancel => { root.session-dialog-cancel(); }
         pick-key-file => { root.session-dialog-pick-key(); }
         refresh-serial-ports => { root.session-dialog-refresh-serial-ports(); }

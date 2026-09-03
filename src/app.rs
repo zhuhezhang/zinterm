@@ -2980,147 +2980,97 @@ fn wire_session_callbacks(
         );
     }
 
-    // Dialog submit -> persist + (optionally) connect.
+    // Dialog submit -> persist and/or connect (Save / Connect / Save-and-connect).
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
         let tab_statuses = tab_statuses.clone();
-        window.on_session_dialog_submit(move |draft: SessionDraft| {
-            let id = draft.id.to_string();
-            // The edit dialog never echoes the real password (issue #10): a blank
-            // field while editing means "keep the existing password" rather than
-            // "clear it".  Only overwrite when the user actually typed something.
-            let password = if draft.password.is_empty() {
-                store
-                    .borrow()
-                    .get(&id)
-                    .map(|s| s.password.clone())
-                    .unwrap_or_default()
-            } else {
-                Secret::new(draft.password.to_string())
-            };
-            // Unified private-key field: auto-detect path vs pasted PEM/PPK.
-            // Blank while editing keeps the existing path and/or inline secret.
-            let key_raw = {
-                let inline = draft.private_key_inline.trim();
-                let path = draft.private_key_path.trim();
-                if !inline.is_empty() {
-                    inline.to_string()
-                } else if !path.is_empty() {
-                    path.to_string()
-                } else {
-                    String::new()
-                }
-            };
-            let (private_key_path, private_key_inline) = if key_raw.is_empty() {
-                match store.borrow().get(&id) {
-                    // Pasted keys are never echoed; blank keeps the saved secret.
-                    Some(s) if !s.private_key_inline.is_empty() => {
-                        (String::new(), s.private_key_inline.clone())
-                    }
-                    // Path was shown in the field — blank means the user cleared it.
-                    _ => (String::new(), Secret::default()),
-                }
-            } else if looks_like_private_key_content(&key_raw) {
-                (String::new(), Secret::new(key_raw))
-            } else {
-                (key_raw.replace('\\', "/"), Secret::default())
-            };
-            let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
-            // Auto-name: serial → port label; local → shell/Local; otherwise
-            // user@host, or just the host when no username was given (#110).
-            let auto_name = match kind {
-                crate::config::SessionKind::Serial => {
-                    format!("{} @{}", draft.serial_port, draft.baud_rate)
-                }
-                crate::config::SessionKind::Local => {
-                    let shell = draft.shell.trim();
-                    if shell.is_empty() {
-                        t("本地终端", "Local").to_string()
-                    } else {
-                        std::path::Path::new(shell)
-                            .file_name()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or(shell)
-                            .to_string()
-                    }
-                }
-                _ if draft.user.trim().is_empty() => draft.host.to_string(),
-                _ => format!("{}@{}", draft.user, draft.host),
-            };
-            // Telnet defaults to port 23, SSH to 22; serial/local ignore port.
-            let default_port = if kind == crate::config::SessionKind::Telnet {
-                23
-            } else {
-                22
-            };
-            let new_session = Session {
-                id,
-                name: if draft.name.is_empty() {
-                    auto_name
-                } else {
-                    draft.name.to_string()
-                },
-                host: draft.host.to_string(),
-                port: if draft.port <= 0 {
-                    default_port
-                } else {
-                    draft.port as u16
-                },
-                user: draft.user.to_string(),
-                auth: AuthMethod::from_str(&draft.auth.to_string()),
-                password,
-                // Store the key path with forward slashes uniformly.
-                private_key_path,
-                private_key_inline,
-                last_used: None,
-                group: draft.group.to_string(),
-                kind,
-                serial_port: draft.serial_port.to_string(),
-                baud_rate: if draft.baud_rate <= 0 {
-                    9_600
-                } else {
-                    draft.baud_rate as u32
-                },
-                data_bits: draft.data_bits as u8,
-                stop_bits: draft.stop_bits as u8,
-                parity: normalize_parity(&draft.parity),
-                flow_control: normalize_flow_control(&draft.flow_control),
-                encoding: if draft.encoding.trim().is_empty() {
-                    "UTF-8".to_string()
-                } else {
-                    draft.encoding.to_string()
-                },
-                backspace_mode: normalize_backspace_mode(&draft.backspace_mode).to_string(),
-                shell: draft.shell.to_string(),
-                working_directory: draft.working_directory.to_string(),
-                enable_sftp: draft.enable_sftp,
-                enable_command_panel: draft.enable_command_panel,
-            };
+        let tabs_model = tabs_model.clone();
+        let terminals_model = terminals_model.clone();
+        let layout = layout.clone();
+        let content_size = content_size.clone();
+        let panes_model = panes_model.clone();
+        let splitters_model = splitters_model.clone();
+        let handles = handles.clone();
+        let bufs = bufs.clone();
+        let render_gates = render_gates.clone();
+        let runtime = runtime.clone();
+        let last_term_size = last_term_size.clone();
+        let sftp_handles = sftp_handles.clone();
+        let sftp_last_cwd = sftp_last_cwd.clone();
+        let sftp_follow_cd = sftp_follow_cd.clone();
+        let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        window.on_session_dialog_submit(move |draft: SessionDraft, persist: bool, connect: bool| {
+            let new_session = session_from_draft(&draft, &store.borrow());
             let saved_id = new_session.id.clone();
             let saved_backspace = new_session.backspace_mode.clone();
-            {
-                let mut s = store.borrow_mut();
-                s.upsert(new_session);
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config: {err:#}");
+
+            if persist {
+                {
+                    let mut s = store.borrow_mut();
+                    s.upsert(new_session.clone());
+                    if let Err(err) = s.save() {
+                        tracing::warn!("failed to save config: {err:#}");
+                    }
+                }
+                sync_welcome_sessions(
+                    &store.borrow(),
+                    &sessions_model,
+                    &welcome_session_query.borrow(),
+                );
+                if let Some(w) = weak.upgrade() {
+                    let affected: Vec<String> = tab_statuses
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .filter(|(_, st)| st.session_id == saved_id)
+                        .map(|(id, _)| id.clone())
+                        .collect();
+                    for tid in affected {
+                        update_tab_backspace_mode(&w, &tid, &saved_backspace);
+                    }
                 }
             }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+
             if let Some(w) = weak.upgrade() {
-                let affected: Vec<String> = tab_statuses
-                    .lock()
-                    .unwrap()
-                    .iter()
-                    .filter(|(_, st)| st.session_id == saved_id)
-                    .map(|(id, _)| id.clone())
-                    .collect();
-                for tid in affected {
-                    update_tab_backspace_mode(&w, &tid, &saved_backspace);
-                }
                 w.set_dialog_open(false);
+            }
+
+            if connect {
+                // Persisted connects reuse the store-backed path; ephemeral
+                // connects open from the in-memory draft session.
+                if persist {
+                    if let Some(w) = weak.upgrade() {
+                        w.invoke_connect_session(saved_id.into());
+                    }
+                } else {
+                    let ctx = ConnectCtx {
+                        weak: weak.clone(),
+                        runtime: runtime.clone(),
+                        handles: handles.clone(),
+                        sftp_handles: sftp_handles.clone(),
+                        sftp_last_cwd: sftp_last_cwd.clone(),
+                        bufs: bufs.clone(),
+                        render_gates: render_gates.clone(),
+                        tab_statuses: tab_statuses.clone(),
+                        last_term_size: last_term_size.clone(),
+                        sftp_follow_cd: sftp_follow_cd.clone(),
+                        ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+                    };
+                    open_session_in_new_tab(
+                        new_session,
+                        &ctx,
+                        &store,
+                        &tabs_model,
+                        &terminals_model,
+                        &layout,
+                        &content_size,
+                        &panes_model,
+                        &splitters_model,
+                    );
+                }
             }
         });
     }
@@ -3198,150 +3148,14 @@ fn wire_session_callbacks(
         let tab_statuses = tab_statuses.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let panes_model = panes_model.clone();
+        let splitters_model = splitters_model.clone();
         window.on_connect_session(move |id: SharedString| {
             let id = id.to_string();
             let session = match store.borrow().get(&id).cloned() {
                 Some(s) => s,
                 None => return,
             };
-            let tab_id = format!("term-{}", uuid::Uuid::new_v4());
-            let tab_title = session.name.clone();
-
-            // Serial / Telnet / Local have no SFTP; SSH only when the session opts in.
-            let has_sftp = session.kind == SessionKind::Ssh && session.enable_sftp;
-            let has_command_panel = session.enable_command_panel;
-
-            tab_statuses.lock().unwrap().insert(
-                tab_id.clone(),
-                TabStatus {
-                    session_id: id.clone(),
-                    state: 0,
-                },
-            );
-
-            // Register tab + terminal state (SFTP fields start empty/loading).
-            tabs_model.push(TabInfo {
-                id: tab_id.clone().into(),
-                title: tab_title.into(),
-                kind: "terminal".into(),
-                conn_kind: session.kind.as_str().into(),
-                endpoint: tab_endpoint(&session).into(),
-                connected: false,
-                conn_state: 0,
-                backspace_mode: normalize_backspace_mode(&session.backspace_mode).into(),
-            });
-            // Each session keeps its own SFTP collapse state + sizes, seeded from
-            // the global defaults (the "collapse SFTP by default" pref and the
-            // persisted panel sizes) so they no longer bleed across panes (#v0.5).
-            let (sftp_collapsed_default, sftp_h_default, sftp_w_default) = weak
-                .upgrade()
-                .map(|w| {
-                    (
-                        w.get_collapse_sftp_default(),
-                        w.get_sftp_panel_height(),
-                        w.get_sftp_panel_width(),
-                    )
-                })
-                .unwrap_or((false, 220.0, 380.0));
-            terminals_model.push(TerminalState {
-                id: tab_id.clone().into(),
-                status: t("连接中...", "Connecting...").into(),
-                spans: ModelRc::from(std::rc::Rc::new(VecModel::<TermSpan>::default())),
-                cursor_row: 0,
-                cursor_col: 0,
-                rows_used: 0,
-                scroll_max: 0,
-                scroll_offset: 0,
-                is_alt_screen: false,
-                find_matches: ModelRc::from(std::rc::Rc::new(VecModel::<TermMatch>::default())),
-                selection: ModelRc::from(std::rc::Rc::new(VecModel::<TermMatch>::default())),
-                sftp_path: "/".into(),
-                sftp_entries: ModelRc::from(std::rc::Rc::new(VecModel::<SftpEntry>::default())),
-                sftp_status: if has_sftp {
-                    t("SFTP 连接中...", "SFTP connecting...").into()
-                } else if session.kind == SessionKind::Ssh {
-                    t("此会话未启用 SFTP", "SFTP is disabled for this session").into()
-                } else {
-                    t(
-                        "此会话类型不支持 SFTP",
-                        "SFTP not available for this session",
-                    )
-                    .into()
-                },
-                sftp_loading: has_sftp,
-                sftp_tree_nodes: ModelRc::from(std::rc::Rc::new(
-                    VecModel::<SftpTreeNode>::default(),
-                )),
-                sftp_selected_count: 0,
-                sftp_sort_key: "".into(),
-                sftp_sort_dir: 0,
-                sftp_available: has_sftp,
-                sftp_ready: false,
-                sftp_collapsed: !has_sftp || sftp_collapsed_default,
-                sftp_panel_height: sftp_h_default,
-                sftp_panel_width: sftp_w_default,
-                sftp_saved_height: sftp_h_default,
-                command_panel_available: has_command_panel,
-            });
-            // Create vt100 parser for this tab (default 24×80; resized on first
-            // terminal-resize callback). 5000-line scrollback is stored for
-            // future scroll-navigation support.
-            let is_dark_now = weak.upgrade().map(|w| w.get_dark_mode()).unwrap_or(true);
-            let (output_highlight, custom_highlight_rules) = {
-                let settings = store.borrow();
-                (
-                    OutputHighlightPreset::from_settings(
-                        settings.output_highlight_enabled(),
-                        settings.output_highlight_preset(),
-                    ),
-                    compile_output_rules(settings.output_highlight_rules()),
-                )
-            };
-            bufs.lock().unwrap().insert(
-                tab_id.clone(),
-                Arc::new(Mutex::new(TermBuffer {
-                    parser: vt100::Parser::new(24, 80, 5000),
-                    find_query: String::new(),
-                    find_options: FindOptions::default(),
-                    is_dark: is_dark_now,
-                    output_highlight,
-                    custom_highlight_rules,
-                    json_format_output: store.borrow().json_format_output(),
-                    interactive_echo_until: std::time::Instant::now(),
-                    sel_anchor: None,
-                    sel_focus: None,
-                    sel_ranges: Vec::new(),
-                    history: VecDeque::new(),
-                    prev: Vec::new(),
-                    view_offset: 0,
-                    displayed_text: Vec::new(),
-                    csi_state: CsiState::Normal,
-                    csi_pending: Vec::new(),
-                    raw: std::collections::VecDeque::new(),
-                })),
-            );
-            render_gates.lock().unwrap().insert(
-                tab_id.clone(),
-                Arc::new(TabRenderGate::new(RENDER_MIN_INTERVAL)),
-            );
-            // No followed-cwd yet: the first OSC 7 always triggers a follow.
-            sftp_last_cwd.lock().unwrap().remove(&tab_id);
-            // Add the new tab to the focused pane and re-flatten (this also sets
-            // active-tab-id to the new tab via refresh_panes).
-            layout.borrow_mut().add_tab(tab_id.clone());
-            if let Some(w) = weak.upgrade() {
-                refresh_panes(
-                    &w,
-                    &layout.borrow(),
-                    content_size.get(),
-                    &tabs_model,
-                    &panes_model,
-                    &splitters_model,
-                );
-            }
-
-            // Spawn the shell (+ SFTP) workers and their event-pump threads.
-            // Shared with in-place reconnect (#79) via start_session_in_tab.
             let ctx = ConnectCtx {
                 weak: weak.clone(),
                 runtime: runtime.clone(),
@@ -3355,7 +3169,17 @@ fn wire_session_callbacks(
                 sftp_follow_cd: sftp_follow_cd.clone(),
                 ssh_keepalive_secs: ssh_keepalive_secs.clone(),
             };
-            start_session_in_tab(&tab_id, session, &ctx);
+            open_session_in_new_tab(
+                session,
+                &ctx,
+                &store,
+                &tabs_model,
+                &terminals_model,
+                &layout,
+                &content_size,
+                &panes_model,
+                &splitters_model,
+            );
         });
     }
 
@@ -3434,6 +3258,272 @@ fn wire_session_callbacks(
             }
         });
     }
+}
+
+fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
+    let id = draft.id.to_string();
+    // The edit dialog never echoes the real password (issue #10): a blank
+    // field while editing means "keep the existing password" rather than
+    // "clear it".  Only overwrite when the user actually typed something.
+    let password = if draft.password.is_empty() {
+        store
+            .get(&id)
+            .map(|s| s.password.clone())
+            .unwrap_or_default()
+    } else {
+        Secret::new(draft.password.to_string())
+    };
+    // Unified private-key field: auto-detect path vs pasted PEM/PPK.
+    // Blank while editing keeps the existing path and/or inline secret.
+    let key_raw = {
+        let inline = draft.private_key_inline.trim();
+        let path = draft.private_key_path.trim();
+        if !inline.is_empty() {
+            inline.to_string()
+        } else if !path.is_empty() {
+            path.to_string()
+        } else {
+            String::new()
+        }
+    };
+    let (private_key_path, private_key_inline) = if key_raw.is_empty() {
+        match store.get(&id) {
+            // Pasted keys are never echoed; blank keeps the saved secret.
+            Some(s) if !s.private_key_inline.is_empty() => {
+                (String::new(), s.private_key_inline.clone())
+            }
+            // Path was shown in the field — blank means the user cleared it.
+            _ => (String::new(), Secret::default()),
+        }
+    } else if looks_like_private_key_content(&key_raw) {
+        (String::new(), Secret::new(key_raw))
+    } else {
+        (key_raw.replace('\\', "/"), Secret::default())
+    };
+    let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
+    // Auto-name: serial → port label; local → shell/Local; otherwise
+    // user@host, or just the host when no username was given (#110).
+    let auto_name = match kind {
+        crate::config::SessionKind::Serial => {
+            format!("{} @{}", draft.serial_port, draft.baud_rate)
+        }
+        crate::config::SessionKind::Local => {
+            let shell = draft.shell.trim();
+            if shell.is_empty() {
+                t("本地终端", "Local").to_string()
+            } else {
+                std::path::Path::new(shell)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(shell)
+                    .to_string()
+            }
+        }
+        _ if draft.user.trim().is_empty() => draft.host.to_string(),
+        _ => format!("{}@{}", draft.user, draft.host),
+    };
+    // Telnet defaults to port 23, SSH to 22; serial/local ignore port.
+    let default_port = if kind == crate::config::SessionKind::Telnet {
+        23
+    } else {
+        22
+    };
+    Session {
+        id,
+        name: if draft.name.is_empty() {
+            auto_name
+        } else {
+            draft.name.to_string()
+        },
+        host: draft.host.to_string(),
+        port: if draft.port <= 0 {
+            default_port
+        } else {
+            draft.port as u16
+        },
+        user: draft.user.to_string(),
+        auth: AuthMethod::from_str(&draft.auth.to_string()),
+        password,
+        // Store the key path with forward slashes uniformly.
+        private_key_path,
+        private_key_inline,
+        last_used: None,
+        group: draft.group.to_string(),
+        kind,
+        serial_port: draft.serial_port.to_string(),
+        baud_rate: if draft.baud_rate <= 0 {
+            9_600
+        } else {
+            draft.baud_rate as u32
+        },
+        data_bits: draft.data_bits as u8,
+        stop_bits: draft.stop_bits as u8,
+        parity: normalize_parity(&draft.parity),
+        flow_control: normalize_flow_control(&draft.flow_control),
+        encoding: if draft.encoding.trim().is_empty() {
+            "UTF-8".to_string()
+        } else {
+            draft.encoding.to_string()
+        },
+        backspace_mode: normalize_backspace_mode(&draft.backspace_mode).to_string(),
+        shell: draft.shell.to_string(),
+        working_directory: draft.working_directory.to_string(),
+        enable_sftp: draft.enable_sftp,
+        enable_command_panel: draft.enable_command_panel,
+    }
+}
+
+/// Open a terminal tab for `session` (saved or ephemeral) and start connecting.
+fn open_session_in_new_tab(
+    session: Session,
+    ctx: &ConnectCtx,
+    store: &Rc<RefCell<ConfigStore>>,
+    tabs_model: &Rc<VecModel<TabInfo>>,
+    terminals_model: &Rc<VecModel<TerminalState>>,
+    layout: &Rc<RefCell<crate::layout::Layout>>,
+    content_size: &Rc<std::cell::Cell<(f32, f32)>>,
+    panes_model: &Rc<VecModel<PaneInfo>>,
+    splitters_model: &Rc<VecModel<SplitterInfo>>,
+) {
+    let tab_id = format!("term-{}", uuid::Uuid::new_v4());
+    let tab_title = session.name.clone();
+    let session_id = session.id.clone();
+
+    // Serial / Telnet / Local have no SFTP; SSH only when the session opts in.
+    let has_sftp = session.kind == SessionKind::Ssh && session.enable_sftp;
+    let has_command_panel = session.enable_command_panel;
+
+    ctx.tab_statuses.lock().unwrap().insert(
+        tab_id.clone(),
+        TabStatus {
+            session_id,
+            state: 0,
+        },
+    );
+
+    // Register tab + terminal state (SFTP fields start empty/loading).
+    tabs_model.push(TabInfo {
+        id: tab_id.clone().into(),
+        title: tab_title.into(),
+        kind: "terminal".into(),
+        conn_kind: session.kind.as_str().into(),
+        endpoint: tab_endpoint(&session).into(),
+        connected: false,
+        conn_state: 0,
+        backspace_mode: normalize_backspace_mode(&session.backspace_mode).into(),
+    });
+    // Each session keeps its own SFTP collapse state + sizes, seeded from
+    // the global defaults (the "collapse SFTP by default" pref and the
+    // persisted panel sizes) so they no longer bleed across panes (#v0.5).
+    let (sftp_collapsed_default, sftp_h_default, sftp_w_default) = ctx
+        .weak
+        .upgrade()
+        .map(|w| {
+            (
+                w.get_collapse_sftp_default(),
+                w.get_sftp_panel_height(),
+                w.get_sftp_panel_width(),
+            )
+        })
+        .unwrap_or((false, 220.0, 380.0));
+    terminals_model.push(TerminalState {
+        id: tab_id.clone().into(),
+        status: t("连接中...", "Connecting...").into(),
+        spans: ModelRc::from(std::rc::Rc::new(VecModel::<TermSpan>::default())),
+        cursor_row: 0,
+        cursor_col: 0,
+        rows_used: 0,
+        scroll_max: 0,
+        scroll_offset: 0,
+        is_alt_screen: false,
+        find_matches: ModelRc::from(std::rc::Rc::new(VecModel::<TermMatch>::default())),
+        selection: ModelRc::from(std::rc::Rc::new(VecModel::<TermMatch>::default())),
+        sftp_path: "/".into(),
+        sftp_entries: ModelRc::from(std::rc::Rc::new(VecModel::<SftpEntry>::default())),
+        sftp_status: if has_sftp {
+            t("SFTP 连接中...", "SFTP connecting...").into()
+        } else if session.kind == SessionKind::Ssh {
+            t("此会话未启用 SFTP", "SFTP is disabled for this session").into()
+        } else {
+            t(
+                "此会话类型不支持 SFTP",
+                "SFTP not available for this session",
+            )
+            .into()
+        },
+        sftp_loading: has_sftp,
+        sftp_tree_nodes: ModelRc::from(std::rc::Rc::new(VecModel::<SftpTreeNode>::default())),
+        sftp_selected_count: 0,
+        sftp_sort_key: "".into(),
+        sftp_sort_dir: 0,
+        sftp_available: has_sftp,
+        sftp_ready: false,
+        sftp_collapsed: !has_sftp || sftp_collapsed_default,
+        sftp_panel_height: sftp_h_default,
+        sftp_panel_width: sftp_w_default,
+        sftp_saved_height: sftp_h_default,
+        command_panel_available: has_command_panel,
+    });
+    // Create vt100 parser for this tab (default 24×80; resized on first
+    // terminal-resize callback). 5000-line scrollback is stored for
+    // future scroll-navigation support.
+    let is_dark_now = ctx.weak.upgrade().map(|w| w.get_dark_mode()).unwrap_or(true);
+    let (output_highlight, custom_highlight_rules) = {
+        let settings = store.borrow();
+        (
+            OutputHighlightPreset::from_settings(
+                settings.output_highlight_enabled(),
+                settings.output_highlight_preset(),
+            ),
+            compile_output_rules(settings.output_highlight_rules()),
+        )
+    };
+    ctx.bufs.lock().unwrap().insert(
+        tab_id.clone(),
+        Arc::new(Mutex::new(TermBuffer {
+            parser: vt100::Parser::new(24, 80, 5000),
+            find_query: String::new(),
+            find_options: FindOptions::default(),
+            is_dark: is_dark_now,
+            output_highlight,
+            custom_highlight_rules,
+            json_format_output: store.borrow().json_format_output(),
+            interactive_echo_until: std::time::Instant::now(),
+            sel_anchor: None,
+            sel_focus: None,
+            sel_ranges: Vec::new(),
+            history: VecDeque::new(),
+            prev: Vec::new(),
+            view_offset: 0,
+            displayed_text: Vec::new(),
+            csi_state: CsiState::Normal,
+            csi_pending: Vec::new(),
+            raw: std::collections::VecDeque::new(),
+        })),
+    );
+    ctx.render_gates.lock().unwrap().insert(
+        tab_id.clone(),
+        Arc::new(TabRenderGate::new(RENDER_MIN_INTERVAL)),
+    );
+    // No followed-cwd yet: the first OSC 7 always triggers a follow.
+    ctx.sftp_last_cwd.lock().unwrap().remove(&tab_id);
+    // Add the new tab to the focused pane and re-flatten (this also sets
+    // active-tab-id to the new tab via refresh_panes).
+    layout.borrow_mut().add_tab(tab_id.clone());
+    if let Some(w) = ctx.weak.upgrade() {
+        refresh_panes(
+            &w,
+            &layout.borrow(),
+            content_size.get(),
+            tabs_model,
+            panes_model,
+            splitters_model,
+        );
+    }
+
+    // Spawn the shell (+ SFTP) workers and their event-pump threads.
+    // Shared with in-place reconnect (#79) via start_session_in_tab.
+    start_session_in_tab(&tab_id, session, ctx);
 }
 
 fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {

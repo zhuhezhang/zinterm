@@ -168,6 +168,15 @@ msgstr "创建"
 msgid "Connect"
 msgstr "连接"
 
+msgid "Connect without saving"
+msgstr "直接连接"
+
+msgid "Save and connect"
+msgstr "保存并连接"
+
+msgid "Save and create"
+msgstr "保存并创建"
+
 msgid "Collapse SFTP panel"
 msgstr "收起 SFTP 面板"
 
