@@ -374,6 +374,7 @@ export component EditableCombo inherits HorizontalLayout {
     in property <string> placeholder;
     in-out property <string> value;
     in property <[string]> items;
+    callback accepted();   // Enter pressed in the field
     spacing: 10px;
 
     if root.label != "": Rectangle {
@@ -417,6 +418,7 @@ export component EditableCombo inherits HorizontalLayout {
                 font-size: Theme.fs-md;
                 vertical-alignment: center;
                 single-line: true;
+                accepted => { root.accepted(); }
 
                 cursor-position-changed(cursor-position) => {
                     if (cursor-position.x + self.computed_x < 0px) {

@@ -390,6 +390,7 @@ export component SessionDialog inherits Rectangle {
                         label-width: root.form-label-width;
                         placeholder: @tr("leave empty → system default");
                         value <=> root.draft-shell;
+                        accepted => { root.emit-submit(true, true); }
                     }
 
                     if root.draft-kind == "local": LabeledInput {
@@ -414,6 +415,7 @@ export component SessionDialog inherits Rectangle {
                             horizontal-stretch: 2;
                             // Bumped when the dialog opens from search Enter.
                             focus-request: root.host-focus-seq;
+                            accepted => { root.emit-submit(true, true); }
                         }
 
                         LabeledInput {
@@ -592,6 +594,7 @@ export component SessionDialog inherits Rectangle {
                                 placeholder: "COM3  /  /dev/ttyUSB0";
                                 value <=> root.draft-serial-port;
                                 items: root.serial-ports;
+                                accepted => { root.emit-submit(true, true); }
                             }
 
                             Rectangle {
