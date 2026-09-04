@@ -282,6 +282,9 @@ export component LabeledInput inherits HorizontalLayout {
         triggered => {
             root.focus-pending = false;
             input.focus();
+            // Prefilled values (e.g. search → new session Host) should land
+            // the caret at the end so typing continues, not overwrites from 0.
+            input.set-selection-offsets(1000000, 1000000);
         }
     }
 
@@ -541,6 +544,7 @@ export component BorderedLineInput inherits Rectangle {
     in property <bool> read-only: false;
     callback edited(string);
     callback accepted(string);
+    callback key-pressed(KeyEvent) -> EventResult;
 
     public function select-all() { input.select-all(); }
     public function copy() { input.copy(); }
@@ -616,6 +620,7 @@ export component BorderedLineInput inherits Rectangle {
             read-only: root.read-only;
             edited => { root.edited(self.text); }
             accepted => { root.accepted(self.text); }
+            key-pressed(e) => { root.key-pressed(e) }
 
             cursor-position-changed(cursor-position) => {
                 if (cursor-position.x + self.computed_x < 0px) {

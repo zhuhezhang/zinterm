@@ -1245,9 +1245,9 @@ export component TerminalView inherits Rectangle {
                                 // So `control` already gives ⌘ shortcuts on macOS for free, and
                                 // the physical Ctrl (meta on macOS) is what must reach the shell
                                 // so ^C/^X work in nano/vim (#158).
-                                // ── Cycle tabs: ⌘Tab / Ctrl+Tab (#294) ──
-                                // `control` is Cmd on macOS (Slint swap) and Ctrl elsewhere.
-                                if (event.modifiers.control
+                                // ── Cycle tabs: Ctrl+Tab / Ctrl+Shift+Tab (#294) ──
+                                // On macOS Slint reports the physical Ctrl key as `meta`.
+                                if ((Theme.is-mac ? event.modifiers.meta : event.modifiers.control)
                                     && (event.text == Key.Tab || event.text == Key.Backtab)) {
                                     root.cycle-tab(event.modifiers.shift || event.text == Key.Backtab);
                                     accept
@@ -1619,7 +1619,7 @@ export component TerminalView inherits Rectangle {
                                         // (#140). Esc closes it / returns to terminal.
                                         // Line-editing (S/E/K/U) uses Cmd on macOS / Ctrl elsewhere,
                                         // matching other app shortcuts (`control` == ⌘ on macOS).
-                                        if (e.modifiers.control
+                                        if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control)
                                             && (e.text == Key.Tab || e.text == Key.Backtab)) {
                                             root.cycle-tab(e.modifiers.shift || e.text == Key.Backtab);
                                             accept
@@ -2074,6 +2074,16 @@ export component TerminalView inherits Rectangle {
                                             placeholder: @tr("Search commands");
                                             auto-focus: true;
                                             edited => { root.search-quick-commands(self.text); }
+                                            // Esc closes and returns focus to the terminal (#140).
+                                            key-pressed(e) => {
+                                                if (e.text == Key.Escape) {
+                                                    root.quick-open = false;
+                                                    ime-input.focus();
+                                                    accept
+                                                } else {
+                                                    reject
+                                                }
+                                            }
                                         }
 
                                         Rectangle {
@@ -2276,79 +2286,47 @@ export component TerminalView inherits Rectangle {
                                 // Search box (#101) pinned at the bottom, right above the
                                 // command input, so it stays in a fixed, easy-to-find spot no
                                 // matter how tall the list is — like FinalShell (#131).
-                                if !root.history-autocomplete: Rectangle {
+                                if !root.history-autocomplete: hist-search := BorderedLineInput {
                                     height: 29px;
-                                    border-radius: Theme.radius-sm;
-                                    background: Theme.bg-root;
-                                    border-width: 1px;
-                                    border-color: hist-search.has-focus ? Theme.accent : Theme.border-subtle;
-                                    HorizontalLayout {
-                                        padding-left: 8px;
-                                        padding-right: 8px;
-                                        spacing: 4px;
-                                        Text {
-                                            text: "\u{E8B6}";
-                                            font-family: "Material Icons";
-                                            color: Theme.text-muted;
-                                            font-size: Theme.fs-sm;
-                                            vertical-alignment: center;
-                                        }
-
-                                        Rectangle {
-                                            horizontal-stretch: 1;
-                                            hist-search := TextInput {
-                                                width: 100%;
-                                                height: 100%;
-                                                vertical-alignment: center;
-                                                color: Theme.text-primary;
-                                                font-family: Theme.ui-font-family;
-                                                font-size: Theme.fs-sm;
-                                                single-line: true;
-                                                // Auto-focus so ⌘/Ctrl+R lands you typing (#140).
-                                                init => { self.focus(); }
-                                                edited => { root.search-history(self.text); root.history-selected = -1; }
-                                                // ↑/↓ move the selection, Enter runs it, Esc
-                                                // closes and returns focus to the terminal (#140).
-                                                key-pressed(e) => {
-                                                    if (e.text == Key.Escape) {
-                                                        root.history-open = false;
-                                                        ime-input.focus();
-                                                        accept
-                                                    } else if (e.text == Key.UpArrow) {
-                                                        if (root.history-view.length > 0) {
-                                                            root.history-selected = root.history-selected <= 0
-                                                                ? root.history-view.length - 1
-                                                                : root.history-selected - 1;
-                                                        }
-                                                        accept
-                                                    } else if (e.text == Key.DownArrow) {
-                                                        if (root.history-view.length > 0) {
-                                                            root.history-selected = root.history-selected >= root.history-view.length - 1
-                                                                ? 0
-                                                                : root.history-selected + 1;
-                                                        }
-                                                        accept
-                                                    } else if (e.text == Key.Return) {
-                                                        if (root.history-view.length > 0
-                                                            && root.history-selected >= 0
-                                                            && root.history-selected < root.history-view.length) {
-                                                            root.run-command(root.history-view[root.history-selected].command, root.send-to-all);
-                                                            root.history-open = false;
-                                                            root.focus-pending = true;
-                                                        }
-                                                        accept
-                                                    } else {
-                                                        reject   // let typing filter the list
-                                                    }
-                                                }
+                                    pad-x: 8px;
+                                    font-size: Theme.fs-sm;
+                                    leading-icon: "\u{E8B6}";
+                                    placeholder: @tr("Search history");
+                                    // Auto-focus so ⌘/Ctrl+R lands you typing (#140).
+                                    auto-focus: true;
+                                    edited => { root.search-history(self.text); root.history-selected = -1; }
+                                    // ↑/↓ move the selection, Enter runs it, Esc
+                                    // closes and returns focus to the terminal (#140).
+                                    key-pressed(e) => {
+                                        if (e.text == Key.Escape) {
+                                            root.history-open = false;
+                                            ime-input.focus();
+                                            accept
+                                        } else if (e.text == Key.UpArrow) {
+                                            if (root.history-view.length > 0) {
+                                                root.history-selected = root.history-selected <= 0
+                                                    ? root.history-view.length - 1
+                                                    : root.history-selected - 1;
                                             }
-
-                                            if hist-search.text == "": Text {
-                                                text: @tr("Search history");
-                                                color: Theme.text-muted;
-                                                font-size: Theme.fs-sm;
-                                                vertical-alignment: center;
+                                            accept
+                                        } else if (e.text == Key.DownArrow) {
+                                            if (root.history-view.length > 0) {
+                                                root.history-selected = root.history-selected >= root.history-view.length - 1
+                                                    ? 0
+                                                    : root.history-selected + 1;
                                             }
+                                            accept
+                                        } else if (e.text == Key.Return) {
+                                            if (root.history-view.length > 0
+                                                && root.history-selected >= 0
+                                                && root.history-selected < root.history-view.length) {
+                                                root.run-command(root.history-view[root.history-selected].command, root.send-to-all);
+                                                root.history-open = false;
+                                                root.focus-pending = true;
+                                            }
+                                            accept
+                                        } else {
+                                            reject   // let typing filter the list
                                         }
                                     }
                                 }
