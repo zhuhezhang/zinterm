@@ -1245,9 +1245,9 @@ export component TerminalView inherits Rectangle {
                                 // So `control` already gives ⌘ shortcuts on macOS for free, and
                                 // the physical Ctrl (meta on macOS) is what must reach the shell
                                 // so ^C/^X work in nano/vim (#158).
-                                // ── Cycle tabs: Ctrl+Tab / Ctrl+Shift+Tab (#294) ──
-                                // On macOS Slint reports the physical Ctrl key as `meta`.
-                                if ((Theme.is-mac ? event.modifiers.meta : event.modifiers.control)
+                                // ── Cycle tabs: ⌘Tab / Ctrl+Tab (#294) ──
+                                // `control` is Cmd on macOS (Slint swap) and Ctrl elsewhere.
+                                if (event.modifiers.control
                                     && (event.text == Key.Tab || event.text == Key.Backtab)) {
                                     root.cycle-tab(event.modifiers.shift || event.text == Key.Backtab);
                                     accept
@@ -1616,10 +1616,10 @@ export component TerminalView inherits Rectangle {
                                     key-pressed(e) => {
                                         // ⌘R / Ctrl+R opens the searchable history dropdown and
                                         // focuses its search box — full keyboard history recall
-                                        // (#140). Esc closes it / returns to terminal. (The
-                                        // Ctrl+S/E/K/U line-editing below stays on Ctrl — those
-                                        // are the standard readline bindings on macOS too.)
-                                        if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control)
+                                        // (#140). Esc closes it / returns to terminal.
+                                        // Line-editing (S/E/K/U) uses Cmd on macOS / Ctrl elsewhere,
+                                        // matching other app shortcuts (`control` == ⌘ on macOS).
+                                        if (e.modifiers.control
                                             && (e.text == Key.Tab || e.text == Key.Backtab)) {
                                             root.cycle-tab(e.modifiers.shift || e.text == Key.Backtab);
                                             accept
@@ -1627,7 +1627,7 @@ export component TerminalView inherits Rectangle {
                                             && (e.text == "f" || e.text == "F" || e.text == "\u{0006}")) {
                                             root.focus-session-search();
                                             accept
-                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control)
+                                        } else if (e.modifiers.control
                                             && (e.text == "r" || e.text == "R" || e.text == "\u{0012}")) {
                                             root.history-autocomplete = false;
                                             root.history-open = true;
@@ -1645,22 +1645,22 @@ export component TerminalView inherits Rectangle {
                                             }
                                             root.history-open = false;
                                             accept
-                                            // --- readline line-editing keys (#103) ---
-                                            // Ctrl+S → start of line.
-                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control) && (e.text == "s" || e.text == "S" || e.text == "\u{0013}")) {
+                                            // --- line-editing keys (#103): ⌘/Ctrl+S/E/K/U ---
+                                            // ⌘S / Ctrl+S → start of line.
+                                        } else if (e.modifiers.control && (e.text == "s" || e.text == "S" || e.text == "\u{0013}")) {
                                             cmd-input.set-selection-offsets(0, 0);
                                             accept
-                                            // Ctrl+E → end of line.
-                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control) && (e.text == "e" || e.text == "E" || e.text == "\u{0005}")) {
+                                            // ⌘E / Ctrl+E → end of line.
+                                        } else if (e.modifiers.control && (e.text == "e" || e.text == "E" || e.text == "\u{0005}")) {
                                             cmd-input.set-selection-offsets(1000000, 1000000);
                                             accept
-                                            // Ctrl+K → kill from cursor to end (deletes + clipboard).
-                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control) && (e.text == "k" || e.text == "K" || e.text == "\u{000B}")) {
+                                            // ⌘K / Ctrl+K → kill from cursor to end (deletes + clipboard).
+                                        } else if (e.modifiers.control && (e.text == "k" || e.text == "K" || e.text == "\u{000B}")) {
                                             cmd-input.set-selection-offsets(cmd-input.cursor-position-byte-offset(), 1000000);
                                             cmd-input.cut();
                                             accept
-                                            // Ctrl+U → kill from start to cursor.
-                                        } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control) && (e.text == "u" || e.text == "U" || e.text == "\u{0015}")) {
+                                            // ⌘U / Ctrl+U → kill from start to cursor.
+                                        } else if (e.modifiers.control && (e.text == "u" || e.text == "U" || e.text == "\u{0015}")) {
                                             cmd-input.set-selection-offsets(0, cmd-input.cursor-position-byte-offset());
                                             cmd-input.cut();
                                             accept
@@ -2304,7 +2304,7 @@ export component TerminalView inherits Rectangle {
                                                 font-family: Theme.ui-font-family;
                                                 font-size: Theme.fs-sm;
                                                 single-line: true;
-                                                // Auto-focus so Ctrl+R lands you typing (#140).
+                                                // Auto-focus so ⌘/Ctrl+R lands you typing (#140).
                                                 init => { self.focus(); }
                                                 edited => { root.search-history(self.text); root.history-selected = -1; }
                                                 // ↑/↓ move the selection, Enter runs it, Esc

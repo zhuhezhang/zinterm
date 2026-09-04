@@ -4073,12 +4073,12 @@ export component AppWindow inherits Window {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌃Tab" : "Ctrl+Tab";
+                            keys: root.is-mac ? "⌘Tab" : "Ctrl+Tab";
                             desc: root.lang-en ? "Next tab" : "下一个标签页";
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌃⇧Tab" : "Ctrl+Shift+Tab";
+                            keys: root.is-mac ? "⌘⇧Tab" : "Ctrl+Shift+Tab";
                             desc: root.lang-en ? "Previous tab" : "上一个标签页";
                         }
 
@@ -4124,6 +4124,11 @@ export component AppWindow inherits Window {
                         }
 
                         ShortcutRow {
+                            keys: root.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
+                            desc: root.lang-en ? "Open find bar" : "打开查找框";
+                        }
+
+                        ShortcutRow {
                             keys: root.lang-en ? "Drag" : "鼠标拖动";
                             desc: root.lang-en ? "Select text" : "选择文本";
                         }
@@ -4131,11 +4136,6 @@ export component AppWindow inherits Window {
                         ShortcutRow {
                             keys: root.lang-en ? "Wheel / Scrollbar" : "滚轮 / 滚动条";
                             desc: root.lang-en ? "Scroll history" : "滚动历史";
-                        }
-
-                        ShortcutRow {
-                            keys: root.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
-                            desc: root.lang-en ? "Open find bar" : "打开查找框";
                         }
 
                         Rectangle {
@@ -4174,33 +4174,33 @@ export component AppWindow inherits Window {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌃R" : "Ctrl+R";
+                            keys: root.is-mac ? "⌘R" : "Ctrl+R";
                             desc: root.lang-en ? "Search history" : "搜索命令历史";
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘S" : "Ctrl+S";
+                            desc: root.lang-en ? "Move to start of line" : "移到行首";
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘E" : "Ctrl+E";
+                            desc: root.lang-en ? "Move to end of line" : "移到行尾";
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘K" : "Ctrl+K";
+                            desc: root.lang-en ? "Delete to end of line" : "删除到行尾";
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘U" : "Ctrl+U";
+                            desc: root.lang-en ? "Delete to start of line" : "删除到行首";
                         }
 
                         ShortcutRow {
                             keys: "Esc";
                             desc: root.lang-en ? "Close history / focus terminal" : "关闭历史 / 聚焦终端";
-                        }
-
-                        ShortcutRow {
-                            keys: root.is-mac ? "⌃S" : "Ctrl+S";
-                            desc: root.lang-en ? "Move to start of line" : "移到行首";
-                        }
-
-                        ShortcutRow {
-                            keys: root.is-mac ? "⌃E" : "Ctrl+E";
-                            desc: root.lang-en ? "Move to end of line" : "移到行尾";
-                        }
-
-                        ShortcutRow {
-                            keys: root.is-mac ? "⌃K" : "Ctrl+K";
-                            desc: root.lang-en ? "Delete to end of line" : "删除到行尾";
-                        }
-
-                        ShortcutRow {
-                            keys: root.is-mac ? "⌃U" : "Ctrl+U";
-                            desc: root.lang-en ? "Delete to start of line" : "删除到行首";
                         }
 
                         Rectangle {

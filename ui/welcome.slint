@@ -618,14 +618,14 @@ export component Welcome inherits Rectangle {
 
     background: Theme.bg-root;
 
-    // The regular welcome page is itself a tab. When Ctrl+Tab wraps from the
+    // The regular welcome page is itself a tab. When ⌘/Ctrl+Tab wraps from the
     // last terminal to this page, keep the shortcut chain alive so the next
     // press can continue to the first terminal (#294). The compact welcome
     // sidebar must never take focus away from an active terminal.
     if !root.compact: FocusScope {
         init => { self.focus(); }
         key-pressed(event) => {
-            if ((Theme.is-mac ? event.modifiers.meta : event.modifiers.control)
+            if (event.modifiers.control
                 && (event.text == Key.Tab || event.text == Key.Backtab)) {
                 root.cycle-tab(event.modifiers.shift || event.text == Key.Backtab);
                 accept

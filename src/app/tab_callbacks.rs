@@ -149,7 +149,7 @@ pub(super) fn wire_tab_callbacks(
     sftp_handles: SftpHandles,
     sftp_last_cwd: SftpLastCwd,
 ) {
-    // Ctrl+Tab / Ctrl+Shift+Tab cycle within the currently focused pane (#294).
+    // ⌘/Ctrl+Tab / ⌘⇧/Ctrl+Shift+Tab cycle within the currently focused pane (#294).
     {
         let weak = window.as_weak();
         let layout = layout.clone();
