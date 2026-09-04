@@ -1170,8 +1170,8 @@ pub(crate) async fn resolve_credentials(
     session: &Session,
     events: &UnboundedSender<SessionEvent>,
 ) -> Option<(String, String)> {
-    let mut user = session.user.trim().to_string();
-    let mut password = session.password.as_str().to_string();
+    let user = session.user.trim().to_string();
+    let password = session.password.as_str().to_string();
     let need_user = user.is_empty();
     let need_password = matches!(session.auth, AuthMethod::Password) && password.is_empty();
     if !(need_user || need_password) {
@@ -1182,6 +1182,7 @@ pub(crate) async fn resolve_credentials(
         session_id: session.id.clone(),
         host: session.host.clone(),
         user: user.clone(),
+        password: password.clone(),
         need_user,
         need_password,
         responder: CredentialResponder::new(tx),
@@ -1190,15 +1191,8 @@ pub(crate) async fn resolve_credentials(
         return Some((user, password));
     }
     match rx.await {
-        Ok(Some((u, p))) => {
-            if need_user {
-                user = u.trim().to_string();
-            }
-            if need_password {
-                password = p;
-            }
-            Some((user, password))
-        }
+        // Dialog always shows both fields (prefilled when known); take both.
+        Ok(Some((u, p))) => Some((u.trim().to_string(), p)),
         _ => None,
     }
 }

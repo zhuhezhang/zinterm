@@ -441,6 +441,10 @@ export component TerminalView inherits Rectangle {
     in property <int> quick-external-fill-sequence;
     in property <string> find-request-tab: "";
     in property <int> find-request-seq: 0;
+    // Bumped by the app shell (e.g. after credential Enter→Connect) so the
+    // active terminal grabs keyboard focus.
+    in property <int> focus-request-seq: 0;
+    property <int> focus-request-seq-seen: 0;
     in property <string> tab-id;
     in property <[TermSpan]> spans;     // coloured runs of the visible screen
     in property <int> cursor-row;       // cursor cell (grid coords)
@@ -682,6 +686,15 @@ export component TerminalView inherits Rectangle {
     }
 
     changed find-request-seq => { root.open-find-from-request(); }
+
+    changed focus-request-seq => {
+        if (root.focus-request-seq != root.focus-request-seq-seen) {
+            root.focus-request-seq-seen = root.focus-request-seq;
+            if (root.active) {
+                root.focus-pending = true;
+            }
+        }
+    }
 
     changed active => {
         if (root.active) {

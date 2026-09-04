@@ -683,7 +683,7 @@ export component Welcome inherits Rectangle {
 
             VerticalLayout {
                 padding: root.compact ? 8px : 12px;
-                spacing: 12px;
+                spacing: root.compact ? 6px : 11px;
 
                 // Compact: title→button gap is slightly tighter than the 12px below the
                 // button so it matches optically (title row is taller than the glyphs).

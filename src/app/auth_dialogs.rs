@@ -203,6 +203,7 @@ pub(super) fn enqueue_cred_prompt(
     session_id: String,
     host: String,
     user: String,
+    password: String,
     need_user: bool,
     need_password: bool,
     responder: crate::ssh::CredentialResponder,
@@ -223,6 +224,7 @@ pub(super) fn enqueue_cred_prompt(
             session_id,
             host,
             user,
+            password,
             need_user,
             need_password,
             responders: vec![responder],
@@ -242,16 +244,17 @@ pub(super) fn show_front_cred(win: &AppWindow) {
             win.set_cred_need_user(p.need_user);
             win.set_cred_need_password(p.need_password);
             win.set_cred_user(p.user.clone().into());
-            win.set_cred_password("".into());
+            // Prefill existing password so the field stays visible and usable.
+            win.set_cred_password(p.password.clone().into());
             win.set_cred_prompt_open(true);
         }
     });
 }
 
-/// Apply the user's answer to the front credential prompt (or cancel). When
-/// Settings › Data › save passwords is on — and this is not an ephemeral
-/// "connect without saving" session — persist into the saved session, then
-/// show the next prompt or close.
+/// Apply the user's answer to the front credential prompt (or cancel).
+/// Non-ephemeral sessions always persist the username; the password is written
+/// only when Settings › Data › save passwords is on. "Connect without saving"
+/// (ephemeral) never writes back.
 pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
     let reply: Option<crate::ssh::CredentialReply> = if accept {
         Some((
@@ -271,13 +274,20 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
                     d.borrow_mut()
                         .insert(p.tab_id.clone(), accepted.clone());
                 });
-                if should_persist_credentials(&p.session_id) {
+                // Skip write-back for "Connect without saving".
+                if !is_ephemeral_session(&p.session_id) {
+                    let save_password = HISTORY_STORE.with(|s| {
+                        s.borrow()
+                            .as_ref()
+                            .map(|store| store.borrow().save_passwords())
+                            .unwrap_or(false)
+                    });
                     persist_credentials(
                         &p.session_id,
                         &accepted.0,
                         &accepted.1,
-                        p.need_user,
-                        p.need_password,
+                        true,
+                        save_password,
                     );
                 }
             }
@@ -294,21 +304,6 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
     } else {
         win.set_cred_prompt_open(false);
     }
-}
-
-fn should_persist_credentials(session_id: &str) -> bool {
-    if is_ephemeral_session(session_id) {
-        return false;
-    }
-    HISTORY_STORE.with(|s| {
-        s.borrow()
-            .as_ref()
-            .map(|store| {
-                let st = store.borrow();
-                st.save_passwords() && st.get(session_id).is_some()
-            })
-            .unwrap_or(false)
-    })
 }
 
 /// Persist newly-entered credentials onto the saved session (#110).

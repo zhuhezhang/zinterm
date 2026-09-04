@@ -258,7 +258,9 @@ export component LabeledInput inherits HorizontalLayout {
     in property <brush> idle-border: Theme.border-subtle;
     callback accepted();   // Enter pressed in the field
     callback canceled();   // Esc pressed in the field (#140-3)
-    spacing: 10px;
+    // HorizontalLayout already owns `spacing`; expose an overridable alias.
+    in property <length> gap: 10px;
+    spacing: root.gap;
     property <bool> focus-pending: false;
     // Bump from outside to grab focus after layout (dialogs, shortcuts).
     in property <int> focus-request: 0;

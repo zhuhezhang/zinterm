@@ -30,10 +30,13 @@ pub enum SessionEvent {
     },
     /// The session is missing a username and/or password; the UI must prompt for
     /// them and answer via `responder`. The auth flow is blocked meanwhile (#110).
+    /// Existing `user` / `password` are still shown (prefilled); the dialog does
+    /// not hide fields that already have values.
     CredentialPrompt {
         session_id: String,
         host: String,
         user: String,
+        password: String,
         need_user: bool,
         need_password: bool,
         responder: CredentialResponder,

@@ -514,6 +514,8 @@ export component AppWindow inherits Window {
     // Bumped by ⌘/Ctrl+F so the visible Welcome search field focuses.
     in-out property <int> session-search-focus-seq: 0;
     property <bool> session-search-focus-pending: false;
+    // Bumped after credential Enter→Connect so the active terminal grabs focus.
+    property <int> terminal-focus-seq: 0;
 
     // Expand the welcome sidebar if needed, then focus the session search box.
     public function focus-session-search() {
@@ -1506,6 +1508,7 @@ export component AppWindow inherits Window {
                                             quick-external-fill-sequence: root.quick-external-fill-sequence;
                                             find-request-tab: root.find-request-tab;
                                             find-request-seq: root.find-request-seq;
+                                            focus-request-seq: root.terminal-focus-seq;
                                             command-history: root.command-history;
                                             history-view: root.history-view;
                                             send-to-all <=> root.send-to-all;
@@ -4200,7 +4203,7 @@ export component AppWindow inherits Window {
 
                         ShortcutRow {
                             keys: "Esc";
-                            desc: root.lang-en ? "Close history / focus terminal" : "关闭历史 / 聚焦终端";
+                            desc: root.lang-en ? "Close history / focus terminal" : "关闭历史（快捷）命令 / 聚焦终端";
                         }
 
                         Rectangle {
@@ -4559,6 +4562,7 @@ export component AppWindow inherits Window {
     }
 
     // Connect-time credential prompt (#110). Backdrop / Cancel abort the connect.
+    // Both username and password fields stay visible (prefilled when known).
     if root.cred-prompt-open: Rectangle {
         width: parent.width;
         height: parent.height;
@@ -4581,6 +4585,11 @@ export component AppWindow inherits Window {
 
             // Match Username / Password label column width (locale-aware via @tr).
             property <length> cred-label-width: max(cred-lu.preferred-width, cred-lp.preferred-width);
+            // Enter→Connect then hand focus back to the active terminal.
+            public function cred-connect-and-focus-term() {
+                root.cred-accept();
+                root.terminal-focus-seq += 1;
+            }
             Rectangle {
                 x: -10000px;
                 y: -10000px;
@@ -4609,19 +4618,41 @@ export component AppWindow inherits Window {
                     font-size: Theme.fs-sm;
                 }
 
-                if root.cred-need-user: LabeledInput {
+                // Always show both fields. Focus: empty user (or both empty) →
+                // username; else empty password → password; else username.
+                cred-user-input := LabeledInput {
                     label: @tr("Username");
                     label-width: cred-wrap.cred-label-width;
+                    gap: 8px;
                     value <=> root.cred-user;
-                    accepted => { root.cred-accept(); }
+                    auto-focus: root.cred-user == "" || root.cred-password != "";
+                    accepted => {
+                        if (root.cred-user == "") {
+                            // Current field empty → ignore Enter.
+                        } else if (root.cred-password == "") {
+                            cred-pass-input.focus-input();
+                        } else {
+                            cred-wrap.cred-connect-and-focus-term();
+                        }
+                    }
                     canceled => { root.cred-reject(); }   // Esc cancels (#140-3)
                 }
-                if root.cred-need-password: LabeledInput {
+                cred-pass-input := LabeledInput {
                     label: @tr("Password");
                     label-width: cred-wrap.cred-label-width;
+                    gap: 8px;
                     password: true;
                     value <=> root.cred-password;
-                    accepted => { root.cred-accept(); }
+                    auto-focus: root.cred-user != "" && root.cred-password == "";
+                    accepted => {
+                        if (root.cred-password == "") {
+                            // Current field empty → ignore Enter.
+                        } else if (root.cred-user == "") {
+                            cred-user-input.focus-input();
+                        } else {
+                            cred-wrap.cred-connect-and-focus-term();
+                        }
+                    }
                     canceled => { root.cred-reject(); }   // Esc cancels (#140-3)
                 }
 
@@ -4635,7 +4666,7 @@ export component AppWindow inherits Window {
 
                     PrimaryButton {
                         text: @tr("Connect");
-                        clicked => { root.cred-accept(); }
+                        clicked => { cred-wrap.cred-connect-and-focus-term(); }
                     }
                 }
             }

@@ -54,6 +54,8 @@ pub(crate) struct PendingCred {
     pub(crate) session_id: String,
     pub(crate) host: String,
     pub(crate) user: String,
+    /// Existing password/passphrase to prefill (may be empty).
+    pub(crate) password: String,
     pub(crate) need_user: bool,
     pub(crate) need_password: bool,
     pub(crate) responders: Vec<CredentialResponder>,
