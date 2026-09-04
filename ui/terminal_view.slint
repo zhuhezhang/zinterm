@@ -449,7 +449,7 @@ export component TerminalView inherits Rectangle {
     in property <[TermSpan]> spans;     // coloured runs of the visible screen
     in property <int> cursor-row;       // cursor cell (grid coords)
     in property <int> cursor-col;
-    in property <string> cursor-style: "block";
+    in property <string> cursor-style: "bar";
     in property <color> cursor-color: Theme.term-fg;
     in property <int> rows-used;        // content rows, for content sizing
     in property <int> scroll-max;       // scrollback depth (max offset) (#103)

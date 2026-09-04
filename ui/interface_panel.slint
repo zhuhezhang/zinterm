@@ -578,7 +578,7 @@ export component InterfacePanel inherits Rectangle {
     in property <length> term-font-size;
     in-out property <float> terminal-line-spacing: 1.0;
     in-out property <bool> term-font-bold;
-    in-out property <string> term-cursor-style: "block";
+    in-out property <string> term-cursor-style: "bar";
     in-out property <string> term-cursor-color-hex: "#D4D4D4";
     in property <color> term-cursor-color: #D4D4D4;
     in-out property <bool> output-highlight-enabled;
@@ -597,9 +597,9 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> welcome-as-sidebar;
     in-out property <bool> confirm-delete-group-enabled: true;
     in-out property <bool> confirm-delete-session-enabled: false;
-    in-out property <bool> welcome-single-click-connect: false;
+    in-out property <bool> welcome-single-click-connect: true;
     in-out property <bool> quick-commands-as-sidebar;
-    in-out property <bool> update-check-enabled;
+    in-out property <bool> update-check-enabled: false;
     in-out property <int> ssh-keepalive-secs: 0;
     in-out property <bool> save-passwords: false;
     in-out property <float> wallpaper-overlay;   // frosted-panel opacity 0.30-1.00
@@ -654,6 +654,7 @@ export component InterfacePanel inherits Rectangle {
     callback request-clear-known-hosts();
     callback request-clear-sessions();
     callback request-clear-passwords();
+    callback request-restore-settings();
 
     HorizontalLayout {
         // --- Left nav ------------------------------------------------------
@@ -1942,10 +1943,21 @@ export component InterfacePanel inherits Rectangle {
                             desc: root.lang-en
                                 ? "Permanently delete every saved Quick Connect group and session. Open tabs are not closed."
                                 : "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。";
-                            show-divider: false;
                             DangerButton {
                                 text: root.lang-en ? "Clear" : "清除";
                                 clicked => { root.request-clear-sessions(); }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Restore default settings" : "恢复默认设置";
+                            desc: root.lang-en
+                                ? "Reset Interface preferences to defaults. Saved groups, sessions, quick commands, passwords, and SSH known hosts are kept."
+                                : "将界面相关偏好恢复为默认值。已保存的分组、会话、快捷命令、密码和 SSH 已知主机公钥不会被清除。";
+                            show-divider: false;
+                            PrimaryButton {
+                                text: root.lang-en ? "Restore" : "恢复";
+                                clicked => { root.request-restore-settings(); }
                             }
                         }
                     }

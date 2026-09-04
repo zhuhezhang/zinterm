@@ -294,7 +294,7 @@ export component AppWindow inherits Window {
     // Command bar (#55): quick commands + history, fed from Rust.
     in property <[QuickCmd]> quick-commands;
     in property <[QuickCmd]> quick-view;           // filtered popup list
-    in-out property <bool> quick-commands-as-sidebar: false;
+    in-out property <bool> quick-commands-as-sidebar: true;
     callback set-quick-commands-as-sidebar(bool);
     in-out property <bool> quick-panel-open: false;
     in-out property <bool> quick-panel-collapsed: false;
@@ -376,7 +376,7 @@ export component AppWindow inherits Window {
     in-out property <length> term-font-size <=> Theme.term-font-size;
     in-out property <float> terminal-line-spacing: 1.0;
     in-out property <bool> term-font-bold <=> Theme.term-font-bold;
-    in-out property <string> term-cursor-style: "block";
+    in-out property <string> term-cursor-style: "bar";
     in-out property <string> term-cursor-color-hex: root.dark-mode ? "#D4D4D4" : "#2D2D2F";
     in-out property <color> term-cursor-color: Theme.term-fg;
     in-out property <bool> output-highlight-enabled: true;
@@ -478,23 +478,25 @@ export component AppWindow inherits Window {
     in-out property <bool> confirm-delete-session-enabled: false;
     callback set-confirm-delete-session-enabled(bool);
     // Welcome list: single-click connects (default off → double-click).
-    in-out property <bool> welcome-single-click-connect: false;
+    in-out property <bool> welcome-single-click-connect: true;
     callback set-welcome-single-click-connect(bool);
     in-out property <bool> welcome-delete-open: false;
     in-out property <string> welcome-delete-kind;   // "group" | "session"
     in-out property <string> welcome-delete-target; // group path or session id
     in-out property <string> welcome-delete-detail; // display label in the dialog
     // Settings › Data: confirm before wiping known_hosts / all sessions /
-    // saved passwords & keys. Turning "save passwords" off does not wipe
-    // credentials already stored — only the explicit clear does.
+    // saved passwords & keys, or restoring Interface defaults. Turning
+    // "save passwords" off does not wipe credentials already stored — only
+    // the explicit clear does.
     in-out property <bool> data-clear-open: false;
-    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords"
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings"
     in-out property <bool> save-passwords: false;
     callback set-save-passwords(bool);
     callback clear-known-hosts();
     callback clear-all-sessions();
     callback clear-saved-passwords();
-    in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
+    callback restore-settings-defaults();
+    in-out property <bool> update-check-enabled: false;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).
     in-out property <int> ssh-keepalive-secs: 0;
@@ -534,7 +536,7 @@ export component AppWindow inherits Window {
     in-out property <length> welcome-session-col-name: 180px;
     in-out property <length> welcome-session-col-host: 180px;
     callback persist-welcome-session-cols(length, length);
-    in-out property <bool> collapse-sftp-default: false;
+    in-out property <bool> collapse-sftp-default: true;
     callback set-collapse-sftp-default(bool);      // apply + persist
     in-out property <bool> sftp-collapsed: false;       // (legacy global; per-tab now)
     in-out property <length> sftp-saved-height: 220px;  // restore height on un-collapse
@@ -4890,6 +4892,10 @@ export component AppWindow inherits Window {
                         root.data-clear-kind = "passwords";
                         root.data-clear-open = true;
                     }
+                    request-restore-settings => {
+                        root.data-clear-kind = "restore-settings";
+                        root.data-clear-open = true;
+                    }
                 }
             }
 
@@ -4936,13 +4942,15 @@ export component AppWindow inherits Window {
         }
     }
 
-    // Settings › Data destructive clears — stacked above the settings overlay.
+    // Settings › Data destructive clears / restore — stacked above the settings overlay.
     ConfirmDialog {
         width: parent.width;
         height: parent.height;
         is-open <=> root.data-clear-open;
         covered: root.confirm-close-open;
-        title: @tr("Confirm delete");
+        title: root.data-clear-kind == "restore-settings"
+            ? (root.lang-en ? "Restore defaults" : "恢复默认设置")
+            : @tr("Confirm delete");
         message: root.data-clear-kind == "known-hosts"
             ? (root.lang-en
                 ? "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
@@ -4951,15 +4959,23 @@ export component AppWindow inherits Window {
             ? (root.lang-en
                 ? "Clear every saved password, key passphrase, private-key file path, and pasted private key? This cannot be undone."
                 : "确定清除所有已保存的密码、密钥口令、私钥文件路径与粘贴的私钥？此操作不可撤销。")
+            : root.data-clear-kind == "restore-settings"
+            ? (root.lang-en
+                ? "Restore settings preferences to defaults? Saved sessions, quick commands, passwords, and SSH known hosts which are not in the settings interface will be kept."
+                : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、快捷命令、密码和 SSH 已知主机公钥会保留。")
             : (root.lang-en
                 ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
                 : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");
-        confirm-label: root.lang-en ? "Clear" : "清除";
+        confirm-label: root.data-clear-kind == "restore-settings"
+            ? (root.lang-en ? "Restore" : "恢复")
+            : (root.lang-en ? "Clear" : "清除");
         confirm => {
             if (root.data-clear-kind == "known-hosts") {
                 root.clear-known-hosts();
             } else if (root.data-clear-kind == "passwords") {
                 root.clear-saved-passwords();
+            } else if (root.data-clear-kind == "restore-settings") {
+                root.restore-settings-defaults();
             } else {
                 root.clear-all-sessions();
             }

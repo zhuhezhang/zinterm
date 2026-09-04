@@ -222,14 +222,20 @@ fn normalize_hex_color(value: &str) -> Option<String> {
 }
 
 /// A brand-new config (no file yet, or the old one was corrupt). Seeds the
-/// new-user default layout (#new-user-defaults): ms wallpaper, welcome page as
-/// a left sidebar, 15% wallpaper transparency, and marks the migration done so
-/// it isn't re-applied.
+/// new-user default layout (#new-user-defaults): no wallpaper, welcome page as
+/// a left sidebar, 15% wallpaper transparency, bar cursor, collapsed SFTP,
+/// quick-command sidebar enabled, single-click connect, update check off —
+/// and marks the migration done so it isn't re-applied.
 fn fresh_config() -> ConfigFile {
     ConfigFile {
-        wallpaper: "builtin:ms".to_string(),
+        wallpaper: String::new(),
         welcome_as_sidebar: true,
         wallpaper_overlay: DEFAULT_WALLPAPER_OVERLAY,
+        terminal_cursor_style: "bar".to_string(),
+        collapse_sftp_default: true,
+        quick_commands_as_sidebar: true,
+        welcome_single_click_connect: true,
+        update_check_disabled: true,
         defaults_rev: DEFAULTS_REV,
         ..ConfigFile::default()
     }
@@ -272,6 +278,28 @@ fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
         && (cfg.wallpaper_overlay - PREVIOUS_DEFAULT_WALLPAPER_OVERLAY).abs() < 0.005
     {
         cfg.wallpaper_overlay = DEFAULT_WALLPAPER_OVERLAY;
+    }
+    // rev 4: none wallpaper, bar cursor, collapse SFTP, quick-command sidebar,
+    // single-click connect, update check off — only for still-at-old-default.
+    if cfg.defaults_rev < 4 {
+        if cfg.wallpaper == "builtin:ms" {
+            cfg.wallpaper = String::new();
+        }
+        if cfg.terminal_cursor_style.is_empty() {
+            cfg.terminal_cursor_style = "bar".to_string();
+        }
+        if !cfg.collapse_sftp_default {
+            cfg.collapse_sftp_default = true;
+        }
+        if !cfg.quick_commands_as_sidebar {
+            cfg.quick_commands_as_sidebar = true;
+        }
+        if !cfg.welcome_single_click_connect {
+            cfg.welcome_single_click_connect = true;
+        }
+        if !cfg.update_check_disabled {
+            cfg.update_check_disabled = true;
+        }
     }
     cfg.defaults_rev = DEFAULTS_REV;
     true
@@ -644,6 +672,26 @@ impl ConfigStore {
         self.cache.collapsed_session_groups = None;
     }
 
+    /// Reset Interface / appearance preferences to the current new-user defaults
+    /// while keeping sessions, groups, quick commands, command history, and
+    /// saved credentials intact. Does not touch known_hosts (separate file).
+    pub fn restore_settings_defaults(&mut self) {
+        let sessions = std::mem::take(&mut self.cache.sessions);
+        let groups = std::mem::take(&mut self.cache.groups);
+        let collapsed_session_groups = self.cache.collapsed_session_groups.take();
+        let quick_commands = std::mem::take(&mut self.cache.quick_commands);
+        let quick_groups = std::mem::take(&mut self.cache.quick_groups);
+        let command_history = std::mem::take(&mut self.cache.command_history);
+
+        self.cache = fresh_config();
+        self.cache.sessions = sessions;
+        self.cache.groups = groups;
+        self.cache.collapsed_session_groups = collapsed_session_groups;
+        self.cache.quick_commands = quick_commands;
+        self.cache.quick_groups = quick_groups;
+        self.cache.command_history = command_history;
+    }
+
     pub fn get(&self, id: &str) -> Option<&Session> {
         self.cache.sessions.iter().find(|s| s.id == id)
     }
@@ -963,21 +1011,21 @@ impl ConfigStore {
         self.cache.terminal_bold = bold;
     }
 
-    /// Selected terminal insertion cursor shape. Legacy and invalid values use
-    /// the existing block cursor so upgrades preserve the current appearance.
+    /// Selected terminal insertion cursor shape. Legacy empty and invalid values
+    /// use the bar cursor (current default).
     pub fn terminal_cursor_style(&self) -> &str {
         match self.cache.terminal_cursor_style.as_str() {
-            "bar" => "bar",
+            "block" => "block",
             "underline" => "underline",
-            _ => "block",
+            _ => "bar",
         }
     }
 
     pub fn set_terminal_cursor_style(&mut self, style: String) {
         self.cache.terminal_cursor_style = match style.as_str() {
-            "bar" => "bar".into(),
+            "block" => "block".into(),
             "underline" => "underline".into(),
-            _ => "block".into(),
+            _ => "bar".into(),
         };
     }
 
@@ -1464,7 +1512,7 @@ impl ConfigStore {
         self.cache.window_height = h;
     }
 
-    /// Collapse the SFTP panel on startup (default false) (#78).
+    /// Collapse the SFTP panel on startup (default true for new installs) (#78).
     pub fn collapse_sftp_default(&self) -> bool {
         self.cache.collapse_sftp_default
     }
@@ -1991,17 +2039,17 @@ mod tests {
     #[test]
     fn terminal_cursor_style_defaults_and_validates() {
         let mut store = temp_store();
-        assert_eq!(store.terminal_cursor_style(), "block");
-
-        store.set_terminal_cursor_style("bar".into());
         assert_eq!(store.terminal_cursor_style(), "bar");
+
+        store.set_terminal_cursor_style("block".into());
+        assert_eq!(store.terminal_cursor_style(), "block");
         store.set_terminal_cursor_style("underline".into());
         assert_eq!(store.terminal_cursor_style(), "underline");
         store.set_terminal_cursor_style("unexpected".into());
-        assert_eq!(store.terminal_cursor_style(), "block");
+        assert_eq!(store.terminal_cursor_style(), "bar");
 
         store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
-        assert_eq!(store.terminal_cursor_style(), "block");
+        assert_eq!(store.terminal_cursor_style(), "bar");
     }
 
     #[test]
@@ -2310,10 +2358,15 @@ mod tests {
     }
 
     #[test]
-    fn wallpaper_defaults_to_ms_but_keeps_explicit_choice() {
+    fn wallpaper_defaults_to_none_but_keeps_explicit_choice() {
         // Fresh install (no file).
         let fresh = fresh_config();
-        assert_eq!(fresh.wallpaper, "builtin:ms");
+        assert_eq!(fresh.wallpaper, "");
+        assert_eq!(fresh.terminal_cursor_style, "bar");
+        assert!(fresh.collapse_sftp_default);
+        assert!(fresh.quick_commands_as_sidebar);
+        assert!(fresh.welcome_single_click_connect);
+        assert!(fresh.update_check_disabled);
         assert!((fresh.wallpaper_overlay - 0.85).abs() < f32::EPSILON);
         // User upgrading from before the feature: JSON without the key.
         let cfg: ConfigFile = serde_json::from_str("{}").unwrap();
@@ -2332,6 +2385,85 @@ mod tests {
         };
         assert!(!migrate_defaults(&mut cfg));
         assert_eq!(cfg.wallpaper, "builtin:miku");
+    }
+
+    #[test]
+    fn defaults_rev4_migrates_previous_new_user_layout() {
+        let mut cfg = ConfigFile {
+            wallpaper: "builtin:ms".to_string(),
+            defaults_rev: 3,
+            ..ConfigFile::default()
+        };
+        assert!(migrate_defaults(&mut cfg));
+        assert_eq!(cfg.wallpaper, "");
+        assert_eq!(cfg.terminal_cursor_style, "bar");
+        assert!(cfg.collapse_sftp_default);
+        assert!(cfg.quick_commands_as_sidebar);
+        assert!(cfg.welcome_single_click_connect);
+        assert!(cfg.update_check_disabled);
+        assert_eq!(cfg.defaults_rev, DEFAULTS_REV);
+
+        let mut custom = ConfigFile {
+            wallpaper: "builtin:dark".to_string(),
+            terminal_cursor_style: "block".to_string(),
+            collapse_sftp_default: false,
+            quick_commands_as_sidebar: false,
+            welcome_single_click_connect: false,
+            update_check_disabled: false,
+            defaults_rev: 3,
+            ..ConfigFile::default()
+        };
+        // Bool old-defaults are advanced; an explicit non-default wallpaper /
+        // cursor style is preserved.
+        assert!(migrate_defaults(&mut custom));
+        assert_eq!(custom.wallpaper, "builtin:dark");
+        assert_eq!(custom.terminal_cursor_style, "block");
+        assert!(custom.collapse_sftp_default);
+        assert!(custom.quick_commands_as_sidebar);
+        assert!(custom.welcome_single_click_connect);
+        assert!(custom.update_check_disabled);
+    }
+
+    #[test]
+    fn restore_settings_defaults_keeps_sessions_commands_and_secrets() {
+        let mut store = temp_store();
+        store.set_save_passwords(true);
+        let mut session = sample_session("keep-me");
+        session.password = Secret::new("secret");
+        store.upsert(session);
+        store.cache.groups = vec!["lab".into()];
+        store.set_quick_commands(vec![crate::config::QuickCommand {
+            name: "ll".into(),
+            command: "ls -la".into(),
+            group: String::new(),
+            send_enter: true,
+        }]);
+        store.add_quick_group("ops".into());
+        store.cache.command_history = vec!["echo hi".into()];
+        store.set_font_size(20);
+        store.set_wallpaper("builtin:dark");
+        store.set_zen_mode(true);
+        store.set_update_check_enabled(true);
+
+        store.restore_settings_defaults();
+
+        assert_eq!(store.sessions().len(), 1);
+        assert_eq!(store.sessions()[0].name, "keep-me");
+        assert_eq!(store.sessions()[0].password.as_str(), "secret");
+        assert_eq!(store.groups(), &["lab".to_string()]);
+        assert_eq!(store.quick_commands().len(), 1);
+        assert_eq!(store.quick_commands()[0].name, "ll");
+        assert!(store.quick_groups().iter().any(|g| g == "ops"));
+        assert_eq!(store.cache.command_history, vec!["echo hi".to_string()]);
+        assert_eq!(store.font_size(), 13);
+        assert_eq!(store.wallpaper(), "");
+        assert!(!store.zen_mode());
+        assert!(!store.update_check_enabled());
+        assert_eq!(store.terminal_cursor_style(), "bar");
+        assert!(store.collapse_sftp_default());
+        assert!(store.quick_commands_as_sidebar());
+        assert!(store.welcome_single_click_connect());
+        assert!(!store.save_passwords());
     }
 
     #[test]

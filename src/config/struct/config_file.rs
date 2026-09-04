@@ -2,20 +2,16 @@ use serde::{Deserialize, Serialize};
 
 use super::{OutputHighlightRule, QuickCommand, Session};
 
-/// Ships with the "幻想 3048" sci-fi wallpaper on by default (a dark theme). New
-/// installs and users upgrading from before the wallpaper feature get it; once
-/// the user picks anything (including "无"/none, stored as ""), their choice is
-/// saved and sticks.
+/// Serde default for the `wallpaper` field: kept at the old "幻想 3048" so an
+/// *existing* config that predates the field stays on tech — `migrate_defaults`
+/// then advances default-following users through the migration chain. Brand-new
+/// installs get the current default (none) straight from `fresh_config`.
 fn default_wallpaper() -> String {
-    // Serde default for the `wallpaper` field: kept at the old "幻想 3048" so an
-    // *existing* config that predates the field stays on tech — `migrate_defaults`
-    // then advances default-following users through the migration chain. Brand-new
-    // installs get the current default straight from `fresh_config`.
     "builtin:tech".to_string()
 }
 
 /// Bump when `migrate_defaults` gains a new one-time default-layout change.
-pub const DEFAULTS_REV: u32 = 3;
+pub const DEFAULTS_REV: u32 = 4;
 
 pub(crate) const PREVIOUS_DEFAULT_WALLPAPER_TRANSPARENCY: f32 = 0.38;
 pub(crate) const PREVIOUS_DEFAULT_WALLPAPER_OVERLAY: f32 =
@@ -82,7 +78,7 @@ pub struct ConfigFile {
     /// Force regular terminal text to render with a bold face (#262).
     #[serde(default)]
     pub terminal_bold: bool,
-    /// Terminal insertion cursor shape: block (default), bar, or underline (#275).
+    /// Terminal insertion cursor shape: bar (default), block, or underline (#275).
     #[serde(default)]
     pub terminal_cursor_style: String,
     /// Custom terminal cursor colour as #RRGGBB. Empty follows the theme (#275).
@@ -105,9 +101,9 @@ pub struct ConfigFile {
     /// Global UI scale in percent (#100). 0 = default (100%).
     #[serde(default)]
     pub ui_scale: u32,
-    /// Immersive wallpaper id: "" = none, "builtin:light" / "builtin:dark" /
-    /// "builtin:tech", or a filesystem path to a custom image. Drives the
-    /// wallpaper + tinted theme. Defaults to the "幻想 3048" built-in.
+    /// Immersive wallpaper id: "" = none (current default), "builtin:light" /
+    /// "builtin:dark" / "builtin:tech" / "builtin:ms" / "builtin:miku", or a
+    /// filesystem path to a custom image. Drives the wallpaper + tinted theme.
     #[serde(default = "default_wallpaper")]
     pub wallpaper: String,
     /// Explicit session groups/folders (#41), including empty ones so a folder
@@ -151,8 +147,8 @@ pub struct ConfigFile {
     /// empty quick-command groups survive and can be renamed/deleted (#55).
     #[serde(default)]
     pub quick_groups: Vec<String>,
-    /// Opt-in docked quick-command sidebar (#215). The command-bar popup remains
-    /// available until the user actually drags it into the main dock layer.
+    /// Docked quick-command sidebar (#215). Default on for new installs; the
+    /// command-bar popup remains available until the user docks it.
     #[serde(default)]
     pub quick_commands_as_sidebar: bool,
     #[serde(default)]
@@ -183,7 +179,7 @@ pub struct ConfigFile {
     pub window_width: f32,
     #[serde(default)]
     pub window_height: f32,
-    /// Collapse the bottom SFTP panel on startup (#78).
+    /// Collapse the bottom SFTP panel on startup (#78). Default on for new installs.
     #[serde(default)]
     pub collapse_sftp_default: bool,
     /// Render the welcome page (session list) as a docked left sidebar instead of
@@ -198,8 +194,8 @@ pub struct ConfigFile {
     /// Prompt before deleting a saved session from the welcome list. Default off.
     #[serde(default)]
     pub confirm_delete_session: bool,
-    /// Connect from the welcome session list with a single click. Default off
-    /// (double-click to connect).
+    /// Connect from the welcome session list with a single click. Default on
+    /// for new installs (double-click when off).
     #[serde(default)]
     pub welcome_single_click_connect: bool,
     /// Width (logical px) of the welcome/session sidebar when docked (v0.5).
@@ -224,9 +220,9 @@ pub struct ConfigFile {
     /// Settings-panel font scale, percent (80–160). 0 = 100% default (v0.5).
     #[serde(default)]
     pub panel_font: u32,
-    /// Disable the startup "new version available" check (#184). Default false =
-    /// keep checking (preserves existing behaviour for upgrading users); turning
-    /// it on stops the GitHub releases query and the banner.
+    /// Disable the startup "new version available" check (#184). New installs
+    /// leave this true (no GitHub releases query / banner); enabling the
+    /// Interface › Update check toggle clears it.
     #[serde(default)]
     pub update_check_disabled: bool,
     /// SSH keepalive interval in seconds. 0 = off (default). A positive value
