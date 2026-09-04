@@ -8,7 +8,7 @@
 
 import { Theme } from "theme.slint";
 import { ComboBox, Slider, ScrollView } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, DangerButton } from "widgets.slint";
+import { LabeledInput, PrimaryButton, DangerButton, BorderedLineInput } from "widgets.slint";
 
 export struct OutputRuleItem {
     pattern: string,
@@ -296,36 +296,32 @@ component CursorColorInput inherits Rectangle {
     callback apply-color(string) -> bool;
     width: 160px;
     height: 30px;
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: root.valid ? Theme.border-subtle : #e05252;
-    background: Theme.bg-elevated;
-    Rectangle {
-        x: 7px;
-        y: 6px;
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-        border-width: 1px;
-        border-color: Theme.border-strong;
-        background: root.preview-color;
-        color-button := TouchArea {
-            mouse-cursor: pointer;
-            clicked => { color-picker.show(); }
-        }
-    }
 
-    color-input := TextInput {
-        x: 34px;
-        width: parent.width - 41px;
-        height: parent.height;
-        text <=> root.value;
-        color: Theme.text-primary;
-        font-family: Theme.term-font-family;
-        font-size: 12px * Theme.panel-font;
-        vertical-alignment: center;
-        single-line: true;
-        changed text => { root.valid = root.apply-color(self.text); }
+    HorizontalLayout {
+        spacing: 6px;
+        Rectangle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Theme.border-strong;
+            background: root.preview-color;
+            color-button := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { color-picker.show(); }
+            }
+        }
+
+        color-input := BorderedLineInput {
+            horizontal-stretch: 1;
+            height: 30px;
+            pad-x: 8px;
+            text <=> root.value;
+            font-family: Theme.term-font-family;
+            font-size: 12px * Theme.panel-font;
+            idle-border: root.valid ? Theme.border-subtle : #e05252;
+            edited => { root.valid = root.apply-color(self.text); }
+        }
     }
 
     color-picker := PopupWindow {

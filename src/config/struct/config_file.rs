@@ -257,7 +257,13 @@ pub struct ConfigFile {
 /// over-the-shoulder read of the file, same level as FinalShell's export.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ExportFile {
-    /// Format marker / version so the schema can evolve later.
-    pub(crate) meatshell_export: u32,
+    /// Must be `"sessions"` for a connection export.
+    pub(crate) zinterm_export: String,
+    /// Schema version; currently only `1` is accepted.
+    pub(crate) version: u32,
+    /// Human-readable export timestamp (local time).
+    pub(crate) exported_at: String,
+    /// Explicit folders that currently hold no sessions (including nested).
+    pub(crate) empty_groups: Vec<String>,
     pub(crate) sessions: Vec<Session>,
 }

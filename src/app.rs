@@ -2525,14 +2525,24 @@ fn wire_session_callbacks(
         let store = store.clone();
         window.on_export_sessions(move || {
             if let Some(path) = rfd::FileDialog::new()
-                .set_file_name("meatshell-connections.json")
+                .set_file_name(
+                    chrono::Local::now()
+                        .format("zinterm-sessions-%Y%m%d-%H%M%S.json")
+                        .to_string(),
+                )
                 .add_filter("JSON", &["json"])
                 .save_file()
             {
                 let res = store.borrow().export_to(&path);
                 if let Some(w) = weak.upgrade() {
                     let hint = match res {
-                        Ok(n) => format!("{} {}", t("已导出连接", "exported"), n),
+                        Ok(n) => {
+                            if crate::i18n::is_en() {
+                                format!("Successfully exported {n} connections")
+                            } else {
+                                format!("已成功导出{n}个连接")
+                            }
+                        }
                         Err(e) => format!("{}: {}", t("导出失败", "export failed"), e),
                     };
                     w.set_ssh_import_hint(hint.into());
@@ -2712,7 +2722,7 @@ fn wire_session_callbacks(
                 let mut s = store.borrow_mut();
                 if let Some(orig) = s.get(&id.to_string()).cloned() {
                     let mut copy = orig;
-                    copy.id = uuid::Uuid::new_v4().to_string();
+                    copy.id = crate::config::Session::new_saved_id();
                     copy.name = format!("{} (copy)", copy.name);
                     copy.last_used = None;
                     s.upsert(copy);
@@ -3030,8 +3040,6 @@ fn wire_session_callbacks(
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft, persist: bool, connect: bool| {
             let mut new_session = session_from_draft(&draft, &store.borrow());
-            let saved_id = new_session.id.clone();
-            let saved_backspace = new_session.backspace_mode.clone();
 
             if persist {
                 // Disk copy may strip secrets when save-passwords is off; keep
@@ -3046,16 +3054,16 @@ fn wire_session_callbacks(
                         s.save_passwords(),
                     );
                 }
-                clear_session_ephemeral(&saved_id);
-                {
+                let saved_id = {
                     let mut s = store.borrow_mut();
-                    s.upsert(to_save);
+                    let id = s.upsert(to_save);
+                    clear_session_ephemeral(&id);
                     if let Err(err) = s.save() {
                         tracing::warn!("failed to save config: {err:#}");
                     }
-                    // Pick up disambiguated name / etc. from the store, but keep
-                    // the in-memory secrets / key path for this connect attempt.
-                    if let Some(saved) = s.get(&saved_id) {
+                    // Pick up disambiguated name / id / saved_at from the store,
+                    // but keep the in-memory secrets / key path for connect.
+                    if let Some(saved) = s.get(&id) {
                         let password = new_session.password.clone();
                         let key_inline = new_session.private_key_inline.clone();
                         let key_path = new_session.private_key_path.clone();
@@ -3064,13 +3072,15 @@ fn wire_session_callbacks(
                         new_session.private_key_inline = key_inline;
                         new_session.private_key_path = key_path;
                     }
-                }
+                    id
+                };
                 sync_welcome_sessions(
                     &store.borrow(),
                     &sessions_model,
                     &welcome_session_query.borrow(),
                 );
                 if let Some(w) = weak.upgrade() {
+                    let saved_backspace = new_session.backspace_mode.clone();
                     let affected: Vec<String> = tab_statuses
                         .lock()
                         .unwrap()
@@ -3082,7 +3092,12 @@ fn wire_session_callbacks(
                         update_tab_backspace_mode(&w, &tid, &saved_backspace);
                     }
                 }
+            } else if new_session.id.trim().is_empty() {
+                // Connect-without-save still needs a stable in-memory id.
+                new_session.id = crate::config::Session::new_temp_id();
             }
+
+            let saved_id = new_session.id.clone();
 
             if let Some(w) = weak.upgrade() {
                 w.set_dialog_open(false);
@@ -3417,7 +3432,7 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
     } else {
         22
     };
-    Session {
+    let mut session = Session {
         id,
         name: if draft.name.is_empty() {
             auto_name
@@ -3439,6 +3454,7 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
         last_used: None,
         group: draft.group.to_string(),
         kind,
+        saved_at: 0,
         serial_port: draft.serial_port.to_string(),
         baud_rate: if draft.baud_rate <= 0 {
             9_600
@@ -3459,7 +3475,9 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
         working_directory: draft.working_directory.to_string(),
         enable_sftp: draft.enable_sftp,
         enable_command_panel: draft.enable_command_panel,
-    }
+    };
+    session.sanitize_for_kind();
+    session
 }
 
 /// When Settings › Data › save passwords is off, keep already-stored secrets
@@ -3671,8 +3689,7 @@ fn open_session_in_new_tab(
 
 fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str, host: &str) {
     win.set_session_groups(session_groups_model(store));
-    let empty = Session::new_empty();
-    win.set_dialog_id(empty.id.into());
+    win.set_dialog_id("".into());
     win.set_dialog_name("".into());
     win.set_dialog_host(host.trim().into());
     win.set_dialog_port("22".into());

@@ -589,6 +589,9 @@ export component BorderedLineInput inherits Rectangle {
         triggered => {
             root.focus-pending = false;
             input.focus();
+            // Prefilled values (e.g. rename) should land the caret at the end
+            // so typing continues, not overwrites from 0.
+            input.set-selection-offsets(1000000, 1000000);
         }
     }
 

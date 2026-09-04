@@ -26,7 +26,7 @@ import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel, HistoryVie
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { InterfacePanel, OutputRuleItem } from "interface_panel.slint";
 import { MockData } from "mock_data.slint";
-import { ComboBox, SpinBox, LineEdit, Button, ScrollView, CheckBox, Palette, TextEdit
+import { ComboBox, SpinBox, Button, ScrollView, CheckBox, Palette
 } from "std-widgets.slint";
 
 export { SessionInfo, SessionDraft, TabInfo, SftpEntry, SftpTreeNode, QuickCmd }
@@ -368,7 +368,7 @@ export component AppWindow inherits Window {
     // Two-way binding to Theme.dark — Rust reads/writes this property and
     // Slint propagates it to every widget that references Theme colours.
     in-out property <bool> dark-mode <=> Theme.dark;
-    // Keep Slint's std-widgets (LineEdit / Button / ComboBox in the dialogs) in
+    // Keep Slint's std-widgets (Button / ComboBox in the dialogs) in
     // step with our theme — otherwise in light mode they keep the platform/dark
     // palette and their text/borders blend into the light dialog background.
     changed dark-mode => { Palette.color-scheme = root.dark-mode ? ColorScheme.dark : ColorScheme.light; }
@@ -2944,9 +2944,10 @@ export component AppWindow inherits Window {
                     font-size: Theme.fs-sm;
                 }
 
-                ge-input := LineEdit {
+                ge-input := BorderedLineInput {
                     text <=> root.group-dialog-name;
                     font-family: Theme.ui-font-family; // CJK-capable (#54)
+                    auto-focus: true;
                     edited => { root.group-dialog-error = ""; }
                     // Enter confirms when non-empty.
                     accepted => {
@@ -3708,9 +3709,10 @@ export component AppWindow inherits Window {
                     font-size: Theme.fs-sm;
                 }
 
-                qcg-input := LineEdit {
+                qcg-input := BorderedLineInput {
                     text <=> root.qcg-name;
                     font-family: Theme.ui-font-family;
+                    auto-focus: true;
                     accepted => {
                         if (root.qcg-name != "") {
                             root.submit-quick-group(root.qcg-orig, root.qcg-name);
@@ -3787,10 +3789,11 @@ export component AppWindow inherits Window {
                     font-size: Theme.fs-sm;
                 }
 
-                sp-input := LineEdit {
+                sp-input := BorderedLineInput {
                     text <=> root.sftp-prompt-value;
                     font-family: Theme.ui-font-family; // CJK-capable (#54)
-                    placeholder-text: root.sftp-prompt-kind == "chmod" ? "755" : "";
+                    placeholder: root.sftp-prompt-kind == "chmod" ? "755" : "";
+                    auto-focus: true;
                     accepted => {
                         if (root.sftp-prompt-value != "") {
                             root.sftp-prompt-submit(

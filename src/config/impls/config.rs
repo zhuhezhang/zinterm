@@ -35,7 +35,6 @@ use chacha20poly1305::{
 };
 use directories::ProjectDirs;
 use rand::rngs::OsRng;
-use uuid::Uuid;
 
 use super::structs::*;
 
@@ -545,6 +544,9 @@ impl ConfigStore {
                         {
                             session.private_key_inline = Secret::new(plain);
                         }
+                        if session.sanitize_for_kind() {
+                            migrated = true;
+                        }
                     }
                     // Clean up any duplicate history accumulated before #113,
                     // keeping the last (most recent) occurrence of each command.
@@ -605,7 +607,14 @@ impl ConfigStore {
         &mut self.cache.sessions
     }
 
-    pub fn upsert(&mut self, mut session: Session) {
+    /// Insert or replace a session. Assigns a `saved-…` id when empty, and
+    /// always refreshes [`Session::saved_at`]. Returns the final session id.
+    pub fn upsert(&mut self, mut session: Session) -> String {
+        session.sanitize_for_kind();
+        if session.id.trim().is_empty() {
+            session.id = Session::new_saved_id();
+        }
+        session.saved_at = Session::now_saved_at();
         if is_reserved_session_group(session.group.trim()) {
             session.group.clear();
         }
@@ -615,11 +624,13 @@ impl ConfigStore {
             session.name.trim(),
             exclude,
         );
+        let id = session.id.clone();
         if let Some(existing) = self.cache.sessions.iter_mut().find(|s| s.id == session.id) {
             *existing = session;
         } else {
             self.cache.sessions.push(session);
         }
+        id
     }
 
     pub fn remove(&mut self, id: &str) {
@@ -1668,8 +1679,11 @@ impl ConfigStore {
 
     pub fn save(&self) -> Result<()> {
         // Build a disk copy where every non-empty password is encrypted.
+        // Also strip kind-irrelevant fields so legacy dirty sessions get cleaned
+        // on the next write (SSH without serial baud, serial without SSH auth, …).
         let mut disk = self.cache.clone();
         for session in &mut disk.sessions {
+            session.sanitize_for_kind();
             if !session.password.is_empty()
                 && !session.password.as_str().starts_with(Self::ENC_PREFIX)
             {
@@ -1757,6 +1771,29 @@ impl ConfigStore {
 
     // ── Portable export / import (issue #46) ──────────────────────────────
 
+    /// `Date.toString()`-style local timestamp for the export file header.
+    fn format_export_timestamp() -> String {
+        let now = chrono::Local::now();
+        let offset_secs = now.offset().local_minus_utc();
+        let sign = if offset_secs >= 0 { '+' } else { '-' };
+        let abs = offset_secs.unsigned_abs();
+        let oh = abs / 3600;
+        let om = (abs % 3600) / 60;
+        let zone = if offset_secs == 8 * 3600 {
+            "中国标准时间"
+        } else {
+            "Local"
+        };
+        format!(
+            "{} GMT{}{:02}{:02} ({})",
+            now.format("%a %b %d %Y %H:%M:%S"),
+            sign,
+            oh,
+            om,
+            zone
+        )
+    }
+
     /// Encrypt a password with the portable export key → `"enc:exp:v1:<b64>"`.
     fn encrypt_export(plaintext: &str) -> Result<String> {
         let cipher = ChaCha20Poly1305::new((&Self::EXPORT_KEY).into());
@@ -1791,11 +1828,10 @@ impl ConfigStore {
     /// with the built-in export key; everything else stays plaintext so the
     /// file is human-readable and editable. Returns the number of sessions.
     pub fn export_json(&self) -> Result<(String, usize)> {
-        let mut out = ExportFile {
-            meatshell_export: 1,
-            sessions: self.cache.sessions.clone(),
-        };
-        for s in &mut out.sessions {
+        let empty_groups = self.collect_empty_groups();
+        let mut sessions = self.cache.sessions.clone();
+        for s in &mut sessions {
+            s.sanitize_for_kind();
             // `cache` holds plaintext passwords; obfuscate with the export key.
             if !s.password.is_empty() {
                 let enc = Self::encrypt_export(s.password.as_str())?;
@@ -1808,7 +1844,36 @@ impl ConfigStore {
             // `last_used` is machine-local noise — don't carry it across.
             s.last_used = None;
         }
-        Ok((serde_json::to_string_pretty(&out)?, out.sessions.len()))
+        let count = sessions.len();
+        let out = ExportFile {
+            zinterm_export: "sessions".into(),
+            version: 1,
+            exported_at: Self::format_export_timestamp(),
+            empty_groups,
+            sessions,
+        };
+        Ok((serde_json::to_string_pretty(&out)?, count))
+    }
+
+    /// Explicit `cache.groups` entries that currently have no session in that
+    /// folder or any descendant path.
+    fn collect_empty_groups(&self) -> Vec<String> {
+        self.cache
+            .groups
+            .iter()
+            .filter(|g| {
+                let g = g.trim();
+                if g.is_empty() || is_reserved_session_group(g) {
+                    return false;
+                }
+                let prefix = format!("{g}/");
+                !self.cache.sessions.iter().any(|s| {
+                    let sg = s.group.trim();
+                    sg == g || sg.starts_with(&prefix)
+                })
+            })
+            .cloned()
+            .collect()
     }
 
     /// Export all sessions to a portable JSON file. Passwords are re-encrypted
@@ -1820,12 +1885,37 @@ impl ConfigStore {
         Ok(count)
     }
 
-    /// Import sessions from a string produced by [`Self::export_json`]. New sessions
-    /// get fresh ids; duplicates (same host+user+port+kind) are skipped.
-    /// Returns `(added, skipped)`. The store is saved if anything was added.
+    /// Import sessions from a string produced by [`Self::export_json`].
+    /// Preserves each session's `id` and `saved_at`. A session is skipped only
+    /// when the same group already has that `id` or the same `name`.
+    /// Empty groups are restored first. Returns `(added, skipped)`.
+    /// The store is saved if anything was added (sessions or empty groups).
     pub fn import_json(&mut self, raw: &str) -> Result<(usize, usize)> {
         let file: ExportFile =
-            serde_json::from_str(&raw).context("not a valid meatshell export file")?;
+            serde_json::from_str(&raw).context("not a valid zinterm export file")?;
+        if file.zinterm_export != "sessions" {
+            anyhow::bail!(
+                "invalid export: zinterm_export must be \"sessions\" (got {:?})",
+                file.zinterm_export
+            );
+        }
+        if file.version != 1 {
+            anyhow::bail!(
+                "unsupported export version {} (expected 1)",
+                file.version
+            );
+        }
+
+        // Restore empty folders before sessions so the Quick Connect tree
+        // already has those paths when connections land in sibling groups.
+        let mut groups_added = false;
+        for group in &file.empty_groups {
+            let before = self.cache.groups.len();
+            self.add_group(group.clone());
+            if self.cache.groups.len() > before {
+                groups_added = true;
+            }
+        }
 
         let mut added = 0usize;
         let mut skipped = 0usize;
@@ -1843,18 +1933,33 @@ impl ConfigStore {
             {
                 s.private_key_inline = Secret::new(plain);
             }
+            s.sanitize_for_kind();
+            if is_reserved_session_group(s.group.trim()) {
+                s.group.clear();
+            }
+
+            let group = normalize_session_group(&s.group);
+            let name = s.name.trim();
             let dup = self.cache.sessions.iter().any(|x| {
-                x.host == s.host && x.user == s.user && x.port == s.port && x.kind == s.kind
+                normalize_session_group(&x.group) == group
+                    && ((!s.id.is_empty() && x.id == s.id) || x.name.trim() == name)
             });
             if dup {
                 skipped += 1;
                 continue;
             }
-            s.id = Uuid::new_v4().to_string();
-            self.upsert(s);
+
+            // Keep export id / saved_at; only fill blanks from broken files.
+            if s.id.trim().is_empty() {
+                s.id = Session::new_saved_id();
+            }
+            if s.saved_at == 0 {
+                s.saved_at = Session::now_saved_at();
+            }
+            self.cache.sessions.push(s);
             added += 1;
         }
-        if added > 0 {
+        if added > 0 || groups_added {
             self.save()?;
         }
         Ok((added, skipped))
@@ -1871,6 +1976,7 @@ impl ConfigStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uuid::Uuid;
 
     fn temp_store() -> ConfigStore {
         let path = std::env::temp_dir().join(format!("ms-test-{}.json", Uuid::new_v4()));
@@ -2321,7 +2427,11 @@ mod tests {
     #[test]
     fn export_import_roundtrip_preserves_password() {
         let mut a = temp_store();
+        let id = "saved-1700000000000-ab12".to_string();
+        let saved_at = 1_700_000_000_000u64;
         a.cache.sessions.push(Session {
+            id: id.clone(),
+            saved_at,
             name: "pve".into(),
             host: "192.168.100.2".into(),
             port: 22,
@@ -2335,19 +2445,104 @@ mod tests {
 
         // The file keeps host/user plaintext but the password is obfuscated.
         let raw = std::fs::read_to_string(&export_path).unwrap();
+        assert!(raw.contains("\"zinterm_export\": \"sessions\""));
+        assert!(raw.contains("\"version\": 1"));
+        assert!(raw.contains("\"empty_groups\""));
+        assert!(raw.contains("\"sessions\""));
+        assert!(!raw.contains("\"data\""));
         assert!(raw.contains("192.168.100.2"));
         assert!(raw.contains(ConfigStore::EXPORT_PREFIX));
         assert!(!raw.contains("s3cr3t"));
 
-        // Importing into a fresh store recovers the plaintext password.
+        // Importing into a fresh store recovers the plaintext password and
+        // keeps the original id / saved_at.
         let mut b = temp_store();
         assert_eq!(b.import_from(&export_path).unwrap(), (1, 0));
         assert_eq!(b.cache.sessions.len(), 1);
         assert_eq!(b.cache.sessions[0].password.as_str(), "s3cr3t");
         assert_eq!(b.cache.sessions[0].host, "192.168.100.2");
+        assert_eq!(b.cache.sessions[0].id, id);
+        assert_eq!(b.cache.sessions[0].saved_at, saved_at);
 
-        // Re-importing the same file skips the duplicate.
+        // Re-importing the same file skips the same-group id/name duplicate.
         assert_eq!(b.import_from(&export_path).unwrap(), (0, 1));
+
+        let _ = std::fs::remove_file(&export_path);
+        let _ = std::fs::remove_file(&a.path);
+        let _ = std::fs::remove_file(&b.path);
+    }
+
+    #[test]
+    fn import_skips_same_group_name_but_allows_other_group() {
+        let mut store = temp_store();
+        store.cache.sessions.push(Session {
+            id: "saved-1700000000001-aaaa".into(),
+            saved_at: 1,
+            name: "box".into(),
+            host: "1.1.1.1".into(),
+            group: "prod".into(),
+            ..Session::new_empty()
+        });
+
+        let raw = serde_json::to_string_pretty(&ExportFile {
+            zinterm_export: "sessions".into(),
+            version: 1,
+            exported_at: "test".into(),
+            empty_groups: vec![],
+            sessions: vec![
+                Session {
+                    id: "saved-1700000000002-bbbb".into(),
+                    saved_at: 2,
+                    name: "box".into(),
+                    host: "2.2.2.2".into(),
+                    group: "prod".into(),
+                    ..Session::new_empty()
+                },
+                Session {
+                    id: "saved-1700000000003-cccc".into(),
+                    saved_at: 3,
+                    name: "box".into(),
+                    host: "3.3.3.3".into(),
+                    group: "lab".into(),
+                    ..Session::new_empty()
+                },
+            ],
+        })
+        .unwrap();
+
+        assert_eq!(store.import_json(&raw).unwrap(), (1, 1));
+        assert_eq!(store.sessions().len(), 2);
+        assert!(store.sessions().iter().any(|s| s.group == "lab" && s.id == "saved-1700000000003-cccc"));
+        assert!(!store.sessions().iter().any(|s| s.id == "saved-1700000000002-bbbb"));
+    }
+
+    #[test]
+    fn export_import_restores_empty_groups_before_sessions() {
+        let mut a = temp_store();
+        a.add_group("empty-lab".into());
+        a.add_group("has-session".into());
+        a.cache.sessions.push(Session {
+            name: "box".into(),
+            host: "10.0.0.1".into(),
+            group: "has-session".into(),
+            ..Session::new_empty()
+        });
+
+        let export_path = std::env::temp_dir().join(format!("ms-exp-groups-{}.json", Uuid::new_v4()));
+        assert_eq!(a.export_to(&export_path).unwrap(), 1);
+        let raw = std::fs::read_to_string(&export_path).unwrap();
+        assert!(raw.contains("\"empty_groups\": [\n    \"empty-lab\"\n  ]") || raw.contains("\"empty-lab\""));
+        assert!(!raw.contains("\"has-session\"") || {
+            // has-session may appear on the session's group field, but not in empty_groups.
+            let file: ExportFile = serde_json::from_str(&raw).unwrap();
+            !file.empty_groups.iter().any(|g| g == "has-session")
+                && file.empty_groups.iter().any(|g| g == "empty-lab")
+        });
+
+        let mut b = temp_store();
+        assert_eq!(b.import_from(&export_path).unwrap(), (1, 0));
+        assert!(b.session_group_exists("empty-lab"));
+        assert!(b.sessions().iter().any(|s| s.group == "has-session"));
 
         let _ = std::fs::remove_file(&export_path);
         let _ = std::fs::remove_file(&a.path);

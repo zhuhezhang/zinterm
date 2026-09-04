@@ -601,7 +601,7 @@ export component TerminalView inherits Rectangle {
     property <bool> find-active: false;
     property <int> find-request-seq-seen: 0;
     // A context-menu click creates the conditional find bar while Slint is
-    // still dispatching the popup event. Focusing its TextInput synchronously
+    // still dispatching the popup event. Focusing its input synchronously
     // can re-enter the Windows IME/accessibility plumbing and panic (#343).
     property <bool> find-focus-pending: false;
     property <bool> find-case-sensitive: false;
@@ -1387,7 +1387,7 @@ export component TerminalView inherits Rectangle {
                                 running: root.find-focus-pending;
                                 triggered => {
                                     root.find-focus-pending = false;
-                                    if (root.find-active) { find-input.focus(); }
+                                    if (root.find-active) { find-input.focus-input(); }
                                 }
                             }
 
@@ -1398,51 +1398,35 @@ export component TerminalView inherits Rectangle {
                                 padding-bottom: 4px;
                                 spacing: 4px;
 
-                                Text {
-                                    text: "\u{E8B6}";
-                                    font-family: "Material Icons";
-                                    color: Theme.text-secondary;
-                                    font-size: Theme.fs-sm;
-                                    vertical-alignment: center;
-                                }
-
-                                Rectangle {
-                                    background: Theme.bg-root;
-                                    border-radius: 3px;
+                                find-input := BorderedLineInput {
                                     horizontal-stretch: 1;
                                     min-width: 96px;
-                                    find-input := TextInput {
-                                        x: 6px;
-                                        width: parent.width - 12px;
-                                        height: parent.height;
-                                        color: Theme.text-primary;
-                                        font-family: Theme.ui-font-family; // CJK-capable (#54)
-                                        font-size: Theme.fs-md;
-                                        vertical-alignment: center;
-                                        single-line: true;
-                                        // Defer focus until popup event dispatch and layout
-                                        // have completed; synchronous focus crashes on
-                                        // Windows when opened from right-click (#343).
-                                        init => { root.find-focus-pending = true; }
-                                        edited => {
-                                            root.find-match-index = 0;
-                                            root.emit-find-query(self.text);
-                                        }
-                                        key-pressed(e) => {
-                                            if (e.text == Key.Escape) {       // Esc closes find
-                                                find-input.text = "";
-                                                root.close-find();
-                                                accept
-                                            } else if (e.text == Key.Return) {
-                                                if (e.modifiers.shift) {
-                                                    root.find-prev();
-                                                } else {
-                                                    root.find-next();
-                                                }
-                                                accept
+                                    height: parent.height;
+                                    pad-x: 6px;
+                                    font-size: Theme.fs-md;
+                                    leading-icon: "\u{E8B6}";
+                                    // Defer focus until popup event dispatch and layout
+                                    // have completed; synchronous focus crashes on
+                                    // Windows when opened from right-click (#343).
+                                    init => { root.find-focus-pending = true; }
+                                    edited => {
+                                        root.find-match-index = 0;
+                                        root.emit-find-query(self.text);
+                                    }
+                                    key-pressed(e) => {
+                                        if (e.text == Key.Escape) {       // Esc closes find
+                                            find-input.text = "";
+                                            root.close-find();
+                                            accept
+                                        } else if (e.text == Key.Return) {
+                                            if (e.modifiers.shift) {
+                                                root.find-prev();
                                             } else {
-                                                reject
+                                                root.find-next();
                                             }
+                                            accept
+                                        } else {
+                                            reject
                                         }
                                     }
                                 }
