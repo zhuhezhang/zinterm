@@ -49,6 +49,8 @@ pub(crate) struct PendingHostKey {
 }
 
 pub(crate) struct PendingCred {
+    /// Tab that owns this prompt — shell + SFTP on the same tab share one entry.
+    pub(crate) tab_id: String,
     pub(crate) session_id: String,
     pub(crate) host: String,
     pub(crate) user: String,

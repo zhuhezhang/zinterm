@@ -28,9 +28,9 @@ impl std::fmt::Debug for HostKeyResponder {
     }
 }
 
-/// The user's answer to a connect-time credential prompt: `(username, password,
-/// remember)`, or `None` if they cancelled.
-pub type CredentialReply = (String, String, bool);
+/// The user's answer to a connect-time credential prompt: `(username, password)`,
+/// or `None` if they cancelled.
+pub type CredentialReply = (String, String);
 
 /// Carries the credential prompt's answer back to the blocked auth flow (#110).
 /// `Arc<Mutex<Option<…>>>` so the enclosing [`SessionEvent`] stays `Clone`.

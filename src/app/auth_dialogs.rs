@@ -128,17 +128,78 @@ pub(super) fn resolve_front_hostkey(win: &AppWindow, accept: bool) {
 
 thread_local! {
     static CRED_QUEUE: RefCell<VecDeque<PendingCred>> = RefCell::new(VecDeque::new());
-    /// session id → the answer given this run (`None` = cancelled), so a second
-    /// connection for the same session is answered without re-prompting.
-    static CRED_DECIDED: RefCell<HashMap<String, Option<crate::ssh::CredentialReply>>> =
+    /// tab id → accepted credentials for that tab. Shared by shell + SFTP on the
+    /// same tab; survives disconnect so R-reconnect can reuse it; copied (not
+    /// shared) when duplicating a tab. Cleared only when the tab is closed.
+    /// Cancels are intentionally *not* cached — same rationale as host-key
+    /// reject (#152).
+    static CRED_DECIDED: RefCell<HashMap<String, crate::ssh::CredentialReply>> =
         RefCell::new(HashMap::new());
+    /// Session ids opened via "Connect without saving". Credential prompts for
+    /// these must not write back to the saved session even when save-passwords
+    /// is on (and even if the draft reused an existing session id while editing).
+    static EPHEMERAL_SESSIONS: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
 }
 
-/// Queue a credential prompt: answer immediately if already decided this run,
-/// merge into an existing pending entry for the same session, otherwise enqueue
-/// (and show it now if nothing else is up).
+/// Mark a session as ephemeral for this run (connect without saving).
+pub(super) fn mark_session_ephemeral(session_id: &str) {
+    EPHEMERAL_SESSIONS.with(|s| {
+        s.borrow_mut().insert(session_id.to_string());
+    });
+}
+
+/// Drop the ephemeral mark (e.g. after the same id is saved/persisted).
+pub(super) fn clear_session_ephemeral(session_id: &str) {
+    EPHEMERAL_SESSIONS.with(|s| {
+        s.borrow_mut().remove(session_id);
+    });
+}
+
+fn is_ephemeral_session(session_id: &str) -> bool {
+    EPHEMERAL_SESSIONS.with(|s| s.borrow().contains(session_id))
+}
+
+/// Drop any accepted credentials cached for this tab (tab close only).
+pub(super) fn clear_tab_credentials(tab_id: &str) {
+    CRED_DECIDED.with(|d| {
+        d.borrow_mut().remove(tab_id);
+    });
+}
+
+/// Copy one tab's accepted credentials onto another (e.g. Duplicate connection).
+/// The destination keeps an independent entry — later clears do not affect the source.
+pub(super) fn copy_tab_credentials(from_tab: &str, to_tab: &str) {
+    let cred = CRED_DECIDED.with(|d| d.borrow().get(from_tab).cloned());
+    if let Some(cred) = cred {
+        CRED_DECIDED.with(|d| {
+            d.borrow_mut().insert(to_tab.to_string(), cred);
+        });
+    }
+}
+
+/// For reconnect (R) / duplicate: prefer this tab's in-memory credential cache.
+/// If none is cached, clear the session password so we do **not** fall back to
+/// whatever may be stored on disk — the UI will prompt again.
+pub(super) fn apply_cached_credentials_for_reconnect(
+    session: &mut crate::config::Session,
+    tab_id: &str,
+) {
+    if let Some((user, password)) = CRED_DECIDED.with(|d| d.borrow().get(tab_id).cloned()) {
+        if !user.trim().is_empty() {
+            session.user = user;
+        }
+        session.password = crate::config::Secret::new(password);
+    } else {
+        session.password = crate::config::Secret::default();
+    }
+}
+
+/// Queue a credential prompt: answer immediately if this tab already accepted
+/// credentials, merge into an existing pending entry for the same tab
+/// (shell + SFTP), otherwise enqueue (and show it now if nothing else is up).
 pub(super) fn enqueue_cred_prompt(
     win: &AppWindow,
+    tab_id: String,
     session_id: String,
     host: String,
     user: String,
@@ -146,18 +207,19 @@ pub(super) fn enqueue_cred_prompt(
     need_password: bool,
     responder: crate::ssh::CredentialResponder,
 ) {
-    if let Some(reply) = CRED_DECIDED.with(|d| d.borrow().get(&session_id).cloned()) {
-        responder.respond(reply);
+    if let Some(reply) = CRED_DECIDED.with(|d| d.borrow().get(&tab_id).cloned()) {
+        responder.respond(Some(reply));
         return;
     }
     let show_now = CRED_QUEUE.with(|q| {
         let mut q = q.borrow_mut();
-        if let Some(p) = q.iter_mut().find(|p| p.session_id == session_id) {
+        if let Some(p) = q.iter_mut().find(|p| p.tab_id == tab_id) {
             p.responders.push(responder);
             return false;
         }
         let was_empty = q.is_empty();
         q.push_back(PendingCred {
+            tab_id,
             session_id,
             host,
             user,
@@ -181,20 +243,20 @@ pub(super) fn show_front_cred(win: &AppWindow) {
             win.set_cred_need_password(p.need_password);
             win.set_cred_user(p.user.clone().into());
             win.set_cred_password("".into());
-            win.set_cred_remember(false);
             win.set_cred_prompt_open(true);
         }
     });
 }
 
-/// Apply the user's answer to the front credential prompt (or cancel), persist
-/// it when "remember" is checked, then show the next prompt or close.
+/// Apply the user's answer to the front credential prompt (or cancel). When
+/// Settings › Data › save passwords is on — and this is not an ephemeral
+/// "connect without saving" session — persist into the saved session, then
+/// show the next prompt or close.
 pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
     let reply: Option<crate::ssh::CredentialReply> = if accept {
         Some((
             win.get_cred_user().to_string(),
             win.get_cred_password().to_string(),
-            win.get_cred_remember(),
         ))
     } else {
         None
@@ -202,11 +264,22 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
     let has_next = CRED_QUEUE.with(|q| {
         let mut q = q.borrow_mut();
         if let Some(p) = q.pop_front() {
-            CRED_DECIDED.with(|d| {
-                d.borrow_mut().insert(p.session_id.clone(), reply.clone());
-            });
-            if let Some((ref u, ref pw, true)) = reply {
-                persist_credentials(&p.session_id, u, pw, p.need_user, p.need_password);
+            // Only cache an *accept* for this tab (shell + SFTP share one dialog).
+            // A cancel must not poison later reconnects with "login cancelled".
+            if let Some(ref accepted) = reply {
+                CRED_DECIDED.with(|d| {
+                    d.borrow_mut()
+                        .insert(p.tab_id.clone(), accepted.clone());
+                });
+                if should_persist_credentials(&p.session_id) {
+                    persist_credentials(
+                        &p.session_id,
+                        &accepted.0,
+                        &accepted.1,
+                        p.need_user,
+                        p.need_password,
+                    );
+                }
             }
             for r in &p.responders {
                 r.respond(reply.clone());
@@ -223,7 +296,22 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
     }
 }
 
-/// Persist newly-entered credentials onto the saved session (#110, "remember").
+fn should_persist_credentials(session_id: &str) -> bool {
+    if is_ephemeral_session(session_id) {
+        return false;
+    }
+    HISTORY_STORE.with(|s| {
+        s.borrow()
+            .as_ref()
+            .map(|store| {
+                let st = store.borrow();
+                st.save_passwords() && st.get(session_id).is_some()
+            })
+            .unwrap_or(false)
+    })
+}
+
+/// Persist newly-entered credentials onto the saved session (#110).
 pub(super) fn persist_credentials(
     session_id: &str,
     user: &str,

@@ -111,6 +111,12 @@ msgstr "Port"
 msgid "Username"
 msgstr "Username"
 
+msgid "Notice"
+msgstr "Notice"
+
+msgid "OK"
+msgstr "OK"
+
 msgid "Prompted on connect if blank"
 msgstr "Prompted on connect if blank"
 
@@ -374,6 +380,9 @@ msgstr "When selected, commands are sent to all sessions"
 
 msgid "Send"
 msgstr "Send"
+
+msgid "No match"
+msgstr "No match"
 
 msgid "No quick commands yet"
 msgstr "No quick commands yet"

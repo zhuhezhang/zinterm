@@ -19,6 +19,7 @@ fn close_tab_id(ctx: &TabCloseCtx, id: &str) {
     if id == "welcome" {
         return;
     }
+    clear_tab_credentials(id);
     if let Some(handle) = ctx.handles.borrow_mut().remove(id) {
         handle.close();
     }

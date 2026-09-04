@@ -234,6 +234,12 @@ pub struct ConfigFile {
     /// Some older H3C/VRP stacks drop the TCP session when this is enabled.
     #[serde(default)]
     pub ssh_keepalive_secs: u32,
+    /// Persist passwords / key passphrases / private-key paths / pasted private
+    /// keys into sessions.json (secrets encrypted). Default off. Turning this
+    /// off does **not** wipe credentials already stored — use the Data › clear
+    /// action for that.
+    #[serde(default)]
+    pub save_passwords: bool,
     /// One-time default-layout migration marker (#new-user-defaults). 0 = config
     /// predates the migration. `migrate_defaults` bumps it to `DEFAULTS_REV` after
     /// pushing the new look (default wallpaper / welcome-as-sidebar /

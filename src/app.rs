@@ -651,6 +651,7 @@ pub fn run() -> Result<()> {
     window.set_confirm_delete_group_enabled(store.borrow().confirm_delete_group());
     window.set_confirm_delete_session_enabled(store.borrow().confirm_delete_session());
     window.set_welcome_single_click_connect(store.borrow().welcome_single_click_connect());
+    window.set_save_passwords(store.borrow().save_passwords());
     {
         let store = store.clone();
         window.on_set_download_always_ask(move |ask| {
@@ -722,6 +723,24 @@ pub fn run() -> Result<()> {
             let _ = s.save();
         });
     }
+    {
+        let store = store.clone();
+        window.on_set_save_passwords(move |enabled| {
+            let mut s = store.borrow_mut();
+            s.set_save_passwords(enabled);
+            let _ = s.save();
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_clear_saved_passwords(move || {
+            let mut s = store.borrow_mut();
+            s.clear_saved_passwords_and_keys();
+            if let Err(err) = s.save() {
+                tracing::warn!("failed to save config after clearing passwords: {err:#}");
+            }
+        });
+    }
 
     // Interface setting: collapse panels by default (#78). Seed the
     // checkboxes, apply the collapsed state once at startup, and persist toggles.
@@ -761,6 +780,7 @@ pub fn run() -> Result<()> {
         window.set_wallpaper_overlay(s.wallpaper_overlay());
         window.set_update_check_enabled(s.update_check_enabled()); // #184
         window.set_ssh_keepalive_secs(s.ssh_keepalive_secs() as i32);
+        window.set_save_passwords(s.save_passwords());
         if collapse_sftp {
             window.set_sftp_collapsed(true);
             window.set_sftp_saved_height(s.sftp_panel_height());
@@ -2478,12 +2498,12 @@ fn wire_session_callbacks(
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: Arc<std::sync::atomic::AtomicU32>,
 ) {
-    // New session -> open dialog with blank draft.
+    // New session -> open dialog with blank draft (host prefilled from search Enter).
     let weak = window.as_weak();
     let store_ng = store.clone();
-    window.on_new_session_clicked(move || {
+    window.on_new_session_clicked(move |host: SharedString| {
         if let Some(w) = weak.upgrade() {
-            open_new_session_dialog(&w, &store_ng.borrow(), "");
+            open_new_session_dialog(&w, &store_ng.borrow(), "", host.as_str());
         }
     });
 
@@ -2493,7 +2513,7 @@ fn wire_session_callbacks(
         let store = store.clone();
         window.on_new_session_in_group(move |group: SharedString| {
             if let Some(w) = weak.upgrade() {
-                open_new_session_dialog(&w, &store.borrow(), group.as_str());
+                open_new_session_dialog(&w, &store.borrow(), group.as_str(), "");
             }
         });
     }
@@ -3009,16 +3029,40 @@ fn wire_session_callbacks(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft, persist: bool, connect: bool| {
-            let new_session = session_from_draft(&draft, &store.borrow());
+            let mut new_session = session_from_draft(&draft, &store.borrow());
             let saved_id = new_session.id.clone();
             let saved_backspace = new_session.backspace_mode.clone();
 
             if persist {
+                // Disk copy may strip secrets when save-passwords is off; keep
+                // `new_session` intact so Save-and-connect still authenticates.
+                let mut to_save = new_session.clone();
+                {
+                    let s = store.borrow();
+                    apply_password_save_policy(
+                        &mut to_save,
+                        &draft,
+                        &s,
+                        s.save_passwords(),
+                    );
+                }
+                clear_session_ephemeral(&saved_id);
                 {
                     let mut s = store.borrow_mut();
-                    s.upsert(new_session.clone());
+                    s.upsert(to_save);
                     if let Err(err) = s.save() {
                         tracing::warn!("failed to save config: {err:#}");
+                    }
+                    // Pick up disambiguated name / etc. from the store, but keep
+                    // the in-memory secrets / key path for this connect attempt.
+                    if let Some(saved) = s.get(&saved_id) {
+                        let password = new_session.password.clone();
+                        let key_inline = new_session.private_key_inline.clone();
+                        let key_path = new_session.private_key_path.clone();
+                        new_session = saved.clone();
+                        new_session.password = password;
+                        new_session.private_key_inline = key_inline;
+                        new_session.private_key_path = key_path;
                     }
                 }
                 sync_welcome_sessions(
@@ -3045,38 +3089,35 @@ fn wire_session_callbacks(
             }
 
             if connect {
-                // Persisted connects reuse the store-backed path; ephemeral
-                // connects open from the in-memory draft session.
-                if persist {
-                    if let Some(w) = weak.upgrade() {
-                        w.invoke_connect_session(saved_id.into());
-                    }
-                } else {
-                    let ctx = ConnectCtx {
-                        weak: weak.clone(),
-                        runtime: runtime.clone(),
-                        handles: handles.clone(),
-                        sftp_handles: sftp_handles.clone(),
-                        sftp_last_cwd: sftp_last_cwd.clone(),
-                        bufs: bufs.clone(),
-                        render_gates: render_gates.clone(),
-                        tab_statuses: tab_statuses.clone(),
-                        last_term_size: last_term_size.clone(),
-                        sftp_follow_cd: sftp_follow_cd.clone(),
-                        ssh_keepalive_secs: ssh_keepalive_secs.clone(),
-                    };
-                    open_session_in_new_tab(
-                        new_session,
-                        &ctx,
-                        &store,
-                        &tabs_model,
-                        &terminals_model,
-                        &layout,
-                        &content_size,
-                        &panes_model,
-                        &splitters_model,
-                    );
+                if !persist {
+                    // "Connect without saving": never write prompt answers back.
+                    mark_session_ephemeral(&saved_id);
                 }
+                let ctx = ConnectCtx {
+                    weak: weak.clone(),
+                    runtime: runtime.clone(),
+                    handles: handles.clone(),
+                    sftp_handles: sftp_handles.clone(),
+                    sftp_last_cwd: sftp_last_cwd.clone(),
+                    bufs: bufs.clone(),
+                    render_gates: render_gates.clone(),
+                    tab_statuses: tab_statuses.clone(),
+                    last_term_size: last_term_size.clone(),
+                    sftp_follow_cd: sftp_follow_cd.clone(),
+                    ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+                };
+                open_session_in_new_tab(
+                    new_session,
+                    &ctx,
+                    &store,
+                    &tabs_model,
+                    &terminals_model,
+                    &layout,
+                    &content_size,
+                    &panes_model,
+                    &splitters_model,
+                    None,
+                );
             }
         });
     }
@@ -3185,37 +3226,80 @@ fn wire_session_callbacks(
                 &content_size,
                 &panes_model,
                 &splitters_model,
+                None,
             );
         });
     }
 
     // Duplicate a tab's connection (#v0.5): open a fresh tab to the same saved
-    // session, landing in the same pane as the source tab.
+    // session, landing in the same pane as the source tab. Copies the source
+    // tab's in-memory credential cache (independent entry) and does not use
+    // the disk-saved password.
     {
         let weak = window.as_weak();
+        let store = store.clone();
         let tab_statuses = tab_statuses.clone();
         let layout = layout.clone();
+        let content_size = content_size.clone();
+        let tabs_model = tabs_model.clone();
+        let terminals_model = terminals_model.clone();
+        let handles = handles.clone();
+        let bufs = bufs.clone();
+        let render_gates = render_gates.clone();
+        let runtime = runtime.clone();
+        let last_term_size = last_term_size.clone();
+        let sftp_handles = sftp_handles.clone();
+        let sftp_last_cwd = sftp_last_cwd.clone();
+        let sftp_follow_cd = sftp_follow_cd.clone();
+        let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let panes_model = panes_model.clone();
+        let splitters_model = splitters_model.clone();
         window.on_tab_duplicate(move |tab_id: SharedString| {
-            let tab_id = tab_id.to_string();
+            let source_tab = tab_id.to_string();
             let session_id = tab_statuses
                 .lock()
                 .unwrap()
-                .get(&tab_id)
+                .get(&source_tab)
                 .map(|s| s.session_id.clone())
                 .unwrap_or_default();
             if session_id.is_empty() {
                 return;
             }
+            let Some(session) = store.borrow().get(&session_id).cloned() else {
+                return;
+            };
             // Land the new tab in the same pane as the source. Read the pane id
             // into a local first so the immutable borrow is dropped before the
             // borrow_mut (else RefCell panics on the overlapping borrow).
-            let pane = layout.borrow().leaf_of_tab(&tab_id);
+            let pane = layout.borrow().leaf_of_tab(&source_tab);
             if let Some(pane) = pane {
                 layout.borrow_mut().focused = pane;
             }
-            if let Some(w) = weak.upgrade() {
-                w.invoke_connect_session(session_id.into());
-            }
+            let ctx = ConnectCtx {
+                weak: weak.clone(),
+                runtime: runtime.clone(),
+                handles: handles.clone(),
+                sftp_handles: sftp_handles.clone(),
+                sftp_last_cwd: sftp_last_cwd.clone(),
+                bufs: bufs.clone(),
+                render_gates: render_gates.clone(),
+                tab_statuses: tab_statuses.clone(),
+                last_term_size: last_term_size.clone(),
+                sftp_follow_cd: sftp_follow_cd.clone(),
+                ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+            };
+            open_session_in_new_tab(
+                session,
+                &ctx,
+                &store,
+                &tabs_model,
+                &terminals_model,
+                &layout,
+                &content_size,
+                &panes_model,
+                &splitters_model,
+                Some(&source_tab),
+            );
         });
     }
 
@@ -3378,9 +3462,58 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
     }
 }
 
+/// When Settings › Data › save passwords is off, keep already-stored secrets
+/// / key paths but do not write newly typed passwords, pasted keys, or key
+/// file paths to disk.
+fn apply_password_save_policy(
+    session: &mut Session,
+    draft: &SessionDraft,
+    store: &ConfigStore,
+    save_passwords: bool,
+) {
+    if save_passwords {
+        return;
+    }
+    let existing = store.get(&session.id);
+    if !draft.password.is_empty() {
+        session.password = existing
+            .map(|s| s.password.clone())
+            .unwrap_or_default();
+    }
+    let key_raw = {
+        let inline = draft.private_key_inline.trim();
+        let path = draft.private_key_path.trim();
+        if !inline.is_empty() {
+            inline.to_string()
+        } else if !path.is_empty() {
+            path.to_string()
+        } else {
+            String::new()
+        }
+    };
+    // Any newly entered key material (path or pasted body) stays out of the
+    // on-disk session; keep whatever was already stored.
+    if !key_raw.is_empty() {
+        match existing {
+            Some(s) => {
+                session.private_key_path = s.private_key_path.clone();
+                session.private_key_inline = s.private_key_inline.clone();
+            }
+            None => {
+                session.private_key_path.clear();
+                session.private_key_inline = Secret::default();
+            }
+        }
+    }
+}
+
 /// Open a terminal tab for `session` (saved or ephemeral) and start connecting.
+///
+/// When `cred_source_tab` is set (Duplicate connection), copy that tab's
+/// in-memory credential cache onto the new tab and prefer it over any
+/// disk-saved password.
 fn open_session_in_new_tab(
-    session: Session,
+    mut session: Session,
     ctx: &ConnectCtx,
     store: &Rc<RefCell<ConfigStore>>,
     tabs_model: &Rc<VecModel<TabInfo>>,
@@ -3389,8 +3522,13 @@ fn open_session_in_new_tab(
     content_size: &Rc<std::cell::Cell<(f32, f32)>>,
     panes_model: &Rc<VecModel<PaneInfo>>,
     splitters_model: &Rc<VecModel<SplitterInfo>>,
+    cred_source_tab: Option<&str>,
 ) {
     let tab_id = format!("term-{}", uuid::Uuid::new_v4());
+    if let Some(src) = cred_source_tab {
+        copy_tab_credentials(src, &tab_id);
+        apply_cached_credentials_for_reconnect(&mut session, &tab_id);
+    }
     let tab_title = session.name.clone();
     let session_id = session.id.clone();
 
@@ -3531,12 +3669,12 @@ fn open_session_in_new_tab(
     start_session_in_tab(&tab_id, session, ctx);
 }
 
-fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str) {
+fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str, host: &str) {
     win.set_session_groups(session_groups_model(store));
     let empty = Session::new_empty();
     win.set_dialog_id(empty.id.into());
     win.set_dialog_name("".into());
-    win.set_dialog_host("".into());
+    win.set_dialog_host(host.trim().into());
     win.set_dialog_port("22".into());
     // No default username (#110): leaving it blank makes the connect-time
     // prompt ask for it, Xshell-style.
@@ -4384,9 +4522,12 @@ fn wire_key_input(
                         .map(|st| st.session_id.clone())
                 };
                 if let Some(session_id) = dead_session {
-                    let Some(session) = store_send.borrow().get(&session_id).cloned() else {
+                    let Some(mut session) = store_send.borrow().get(&session_id).cloned() else {
                         return;
                     };
+                    // Prefer this tab's in-memory password cache; do not use the
+                    // disk-saved password for R-reconnect.
+                    apply_cached_credentials_for_reconnect(&mut session, tab_id.as_str());
                     // Drop the dead shell/SFTP handles for this tab.
                     ctx.handles.borrow_mut().remove(tab_id.as_str());
                     if let Some(h) =

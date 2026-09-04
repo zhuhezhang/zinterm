@@ -111,6 +111,12 @@ msgstr "端口"
 msgid "Username"
 msgstr "用户名"
 
+msgid "Notice"
+msgstr "提示"
+
+msgid "OK"
+msgstr "确认"
+
 msgid "Prompted on connect if blank"
 msgstr "留空则连接时询问"
 
@@ -374,6 +380,9 @@ msgstr "选中时命令发送至所有会话"
 
 msgid "Send"
 msgstr "发送"
+
+msgid "No match"
+msgstr "无匹配"
 
 msgid "No quick commands yet"
 msgstr "暂无快捷命令"

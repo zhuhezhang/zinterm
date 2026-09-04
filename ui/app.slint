@@ -19,7 +19,7 @@ import { TabBar, TabInfo } from "tabs.slint";
 import { Welcome, SessionInfo } from "welcome.slint";
 import { SessionDialog, SessionDraft } from "session_dialog.slint";
 import { ConfirmDialog } from "confirm_dialog.slint";
-import { LabeledInput, PrimaryButton, GhostButton, IconButton, TooltipArea, ToolStrip, BorderedLineInput, BorderedTextArea
+import { LabeledInput, PrimaryButton, GhostButton, IconButton, TooltipArea, ToolStrip, BorderedLineInput, BorderedTextArea, MessageDialog
 } from "widgets.slint";
 import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel, HistoryViewItem
 } from "terminal_view.slint";
@@ -484,11 +484,16 @@ export component AppWindow inherits Window {
     in-out property <string> welcome-delete-kind;   // "group" | "session"
     in-out property <string> welcome-delete-target; // group path or session id
     in-out property <string> welcome-delete-detail; // display label in the dialog
-    // Settings › Data: confirm before wiping known_hosts / all sessions.
+    // Settings › Data: confirm before wiping known_hosts / all sessions /
+    // saved passwords & keys. Turning "save passwords" off does not wipe
+    // credentials already stored — only the explicit clear does.
     in-out property <bool> data-clear-open: false;
-    in-out property <string> data-clear-kind; // "known-hosts" | "sessions"
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords"
+    in-out property <bool> save-passwords: false;
+    callback set-save-passwords(bool);
     callback clear-known-hosts();
     callback clear-all-sessions();
+    callback clear-saved-passwords();
     in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).
@@ -506,6 +511,24 @@ export component AppWindow inherits Window {
     // Welcome sidebar collapsed to the edge icon strip (IDEA-style), persisted.
     in-out property <bool> welcome-collapsed: false;
     callback set-welcome-collapsed(bool);          // apply + persist
+    // Bumped by ⌘/Ctrl+F so the visible Welcome search field focuses.
+    in-out property <int> session-search-focus-seq: 0;
+    property <bool> session-search-focus-pending: false;
+
+    // Expand the welcome sidebar if needed, then focus the session search box.
+    public function focus-session-search() {
+        if (root.zen-mode || root.dialog-open) {
+            return;
+        }
+        if (root.welcome-as-sidebar && root.welcome-collapsed) {
+            root.welcome-collapsed = false;
+            root.set-welcome-collapsed(false);
+            // Welcome mounts on the next tick — defer the focus bump.
+            root.session-search-focus-pending = true;
+        } else {
+            root.session-search-focus-seq += 1;
+        }
+    }
     in-out property <length> welcome-session-col-name: 180px;
     in-out property <length> welcome-session-col-host: 180px;
     callback persist-welcome-session-cols(length, length);
@@ -545,7 +568,6 @@ export component AppWindow inherits Window {
     in-out property <bool> cred-need-password: false;
     in-out property <string> cred-user;            // username field value
     in-out property <string> cred-password;        // password field value
-    in-out property <bool> cred-remember: false;   // persist to the saved session
     callback cred-accept();                        // use the entered credentials
     callback cred-reject();                        // cancel the connection
     // Group create / rename dialog (#41).
@@ -639,6 +661,9 @@ export component AppWindow inherits Window {
     // --- Dialog state ------------------------------------------------------
     in-out property <bool> dialog-open: false;
     in-out property <bool> dialog-editing: false;
+    // Set true just before opening a new-session dialog from search Enter so
+    // Host / IP receives keyboard focus.
+    in-out property <bool> dialog-focus-host: false;
     in-out property <string> dialog-id;
     in-out property <string> dialog-name;
     in-out property <string> dialog-host;
@@ -676,8 +701,8 @@ export component AppWindow inherits Window {
     in-out property <string> confirm-delete-path;
 
     // --- Callbacks up to Rust ---------------------------------------------
-    callback new-session-clicked();
-    in-out property <string> ssh-import-hint;  // result text shown after import/export
+    callback new-session-clicked(string /* host */);
+    in-out property <string> ssh-import-hint;  // import/export result; shown via MessageDialog
     callback export-sessions();               // export all sessions to a file (#46)
     callback import-sessions();               // import sessions from a file (#46)
     in-out property <bool> batch-import-open: false;  // text batch-import dialog (#150)
@@ -831,6 +856,17 @@ export component AppWindow inherits Window {
         image-fit: cover;
     }
 
+    // After expanding a collapsed welcome sidebar, wait one tick for Welcome
+    // to mount before bumping search-focus-seq.
+    Timer {
+        interval: 0ms;
+        running: root.session-search-focus-pending;
+        triggered => {
+            root.session-search-focus-pending = false;
+            root.session-search-focus-seq += 1;
+        }
+    }
+
     VerticalLayout {
         spacing: 0;
 
@@ -868,7 +904,7 @@ export component AppWindow inherits Window {
                             icon: "\u{E8B8}";
                             tooltip: root.lang-en ? "Settings" : "设置";
                             active: root.settings-open;
-                            clicked => { root.settings-open = !root.settings-open; root.download-open = false; root.ssh-import-hint = ""; }
+                            clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
                         }
                     }
                 }
@@ -943,7 +979,7 @@ export component AppWindow inherits Window {
                             icon: "\u{E8B8}";
                             tooltip: root.lang-en ? "Settings" : "设置";
                             active: root.settings-open;
-                            clicked => { root.settings-open = !root.settings-open; root.download-open = false; root.ssh-import-hint = ""; }
+                            clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
                         }
                     }
                 }
@@ -1079,8 +1115,8 @@ export component AppWindow inherits Window {
                     sessions: root.welcome-display-sessions;
                     session-search <=> root.welcome-session-search;
                     search-sessions(q) => { root.search-welcome-sessions(q); }
+                    search-focus-seq: root.session-search-focus-seq;
                     single-click-connect: root.welcome-single-click-connect;
-                    import-hint: root.ssh-import-hint;
                     welcome-drag-kind <=> root.welcome-drag-kind;
                     welcome-drag-from <=> root.welcome-drag-from;
                     welcome-drop-target <=> root.welcome-drop-target;
@@ -1118,7 +1154,10 @@ export component AppWindow inherits Window {
                         }
                         root.panel-dragging = false;
                     }
-                    new-session => { root.new-session-clicked(); }
+                    new-session(host, focus-host) => {
+                        root.dialog-focus-host = focus-host;
+                        root.new-session-clicked(host);
+                    }
                     new-session-in-group(group) => { root.new-session-in-group(group); }
                     connect-session(id) => { root.connect-session(id); }
                     edit-session(id) => { root.edit-session(id); }
@@ -1151,6 +1190,7 @@ export component AppWindow inherits Window {
                             root.remove-session(id);
                         }
                     }
+                    focus-session-search => { root.focus-session-search(); }
                 }
 
                 Rectangle {
@@ -1343,8 +1383,8 @@ export component AppWindow inherits Window {
                                             sessions: root.welcome-display-sessions;
                                             session-search <=> root.welcome-session-search;
                                             search-sessions(q) => { root.search-welcome-sessions(q); }
+                                            search-focus-seq: root.session-search-focus-seq;
                                             single-click-connect: root.welcome-single-click-connect;
-                                            import-hint: root.ssh-import-hint;
                                             welcome-drag-kind <=> root.welcome-drag-kind;
                                             welcome-drag-from <=> root.welcome-drag-from;
                                             welcome-drop-target <=> root.welcome-drop-target;
@@ -1368,7 +1408,10 @@ export component AppWindow inherits Window {
                                             persist-session-cols(name, host) => {
                                                 root.persist-welcome-session-cols(name, host);
                                             }
-                                            new-session => { root.new-session-clicked(); }
+                                            new-session(host, focus-host) => {
+                                                root.dialog-focus-host = focus-host;
+                                                root.new-session-clicked(host);
+                                            }
                                             new-session-in-group(group) => { root.new-session-in-group(group); }
                                             connect-session(id) => { root.connect-session(id); }
                                             edit-session(id) => { root.edit-session(id); }
@@ -1402,6 +1445,7 @@ export component AppWindow inherits Window {
                                                 }
                                             }
                                             cycle-tab(reverse) => { root.cycle-tab(reverse); }
+                                            focus-session-search => { root.focus-session-search(); }
                                         }
 
                                         // Terminal tabs — one TerminalView per terminal state. Only
@@ -1511,6 +1555,7 @@ export component AppWindow inherits Window {
                                                 root.diagnose-key-event(term.id, key, control, meta, alt, shift);
                                             }
                                             cycle-tab(reverse) => { root.cycle-tab(reverse); }
+                                            focus-session-search => { root.focus-session-search(); }
                                             terminal-resize(w, h) => { root.terminal-resize(term.id, w, h) }
                                             sftp-navigate(path) => { root.sftp-navigate(term.id, path); }
                                             sftp-download(path) => { root.sftp-download(term.id, path); }
@@ -2866,8 +2911,8 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 300px;
-            height: 160px;
+            width: 320px;
+            height: 170px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -4037,6 +4082,22 @@ export component AppWindow inherits Window {
                             desc: root.lang-en ? "Previous tab" : "上一个标签页";
                         }
 
+                        Text {
+                            text: root.lang-en ? "Session search box" : "会话搜索框";
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-xs;
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘F" : "Ctrl+F";
+                            desc: root.lang-en ? "Focus session search box" : "聚焦会话搜索框";
+                        }
+
+                        ShortcutRow {
+                            keys: "Enter";
+                            desc: root.lang-en ? "New session" : "新建会话";
+                        }
+
                         Rectangle {
                             height: 6px;
                         }
@@ -4292,6 +4353,7 @@ export component AppWindow inherits Window {
         height: parent.height;
         is-open <=> root.dialog-open;
         is-editing <=> root.dialog-editing;
+        focus-host-on-open <=> root.dialog-focus-host;
         draft-id <=> root.dialog-id;
         draft-name <=> root.dialog-name;
         draft-host <=> root.dialog-host;
@@ -4347,6 +4409,16 @@ export component AppWindow inherits Window {
             root.confirm-delete-open = false;
         }
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
+    }
+
+    // Import / export result notice (#46, #150).
+    MessageDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open: root.ssh-import-hint != "";
+        title: @tr("Notice");
+        message: root.ssh-import-hint;
+        dismissed => { root.ssh-import-hint = ""; }
     }
 
     // Welcome list: optional confirm before deleting a group or session.
@@ -4552,10 +4624,6 @@ export component AppWindow inherits Window {
                     accepted => { root.cred-accept(); }
                     canceled => { root.cred-reject(); }   // Esc cancels (#140-3)
                 }
-                CheckBox {
-                    text: @tr("Remember for this session");
-                    checked <=> root.cred-remember;
-                }
 
                 HorizontalLayout {
                     alignment: end;
@@ -4724,6 +4792,7 @@ export component AppWindow inherits Window {
                     quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
                     update-check-enabled <=> root.update-check-enabled;
                     ssh-keepalive-secs <=> root.ssh-keepalive-secs;
+                    save-passwords <=> root.save-passwords;
                     wallpaper-overlay <=> root.wallpaper-overlay;
                     current-wallpaper: root.current-wallpaper;
                     custom-wallpaper-name: root.custom-wallpaper-name;
@@ -4773,6 +4842,7 @@ export component AppWindow inherits Window {
                     }
                     set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
                     set-ssh-keepalive-secs(v) => { root.set-ssh-keepalive-secs(v); }
+                    set-save-passwords(v) => { root.set-save-passwords(v); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
                     request-clear-known-hosts => {
                         root.data-clear-kind = "known-hosts";
@@ -4780,6 +4850,10 @@ export component AppWindow inherits Window {
                     }
                     request-clear-sessions => {
                         root.data-clear-kind = "sessions";
+                        root.data-clear-open = true;
+                    }
+                    request-clear-passwords => {
+                        root.data-clear-kind = "passwords";
                         root.data-clear-open = true;
                     }
                 }
@@ -4839,6 +4913,10 @@ export component AppWindow inherits Window {
             ? (root.lang-en
                 ? "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
                 : "确定清除所有已记住的 SSH 主机公钥？下次连接各主机时会再次要求确认信任。")
+            : root.data-clear-kind == "passwords"
+            ? (root.lang-en
+                ? "Clear every saved password, key passphrase, private-key file path, and pasted private key? This cannot be undone."
+                : "确定清除所有已保存的密码、密钥口令、私钥文件路径与粘贴的私钥？此操作不可撤销。")
             : (root.lang-en
                 ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
                 : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");
@@ -4846,6 +4924,8 @@ export component AppWindow inherits Window {
         confirm => {
             if (root.data-clear-kind == "known-hosts") {
                 root.clear-known-hosts();
+            } else if (root.data-clear-kind == "passwords") {
+                root.clear-saved-passwords();
             } else {
                 root.clear-all-sessions();
             }

@@ -548,6 +548,7 @@ export component TerminalView inherits Rectangle {
     // Temporary on-device diagnostics for #312. Rust redacts printable text.
     callback diagnose-key-event(string, bool, bool, bool, bool);
     callback cycle-tab(bool /* reverse */);
+    callback focus-session-search();
     callback terminal-resize(float, float);
     callback sftp-navigate(string);
     callback sftp-download(string);
@@ -1250,6 +1251,12 @@ export component TerminalView inherits Rectangle {
                                     && (event.text == Key.Tab || event.text == Key.Backtab)) {
                                     root.cycle-tab(event.modifiers.shift || event.text == Key.Backtab);
                                     accept
+                                // ── Session search: ⌘F / Ctrl+F (not Shift — that is terminal Find) ──
+                                } else if (event.modifiers.control && !event.modifiers.shift
+                                    && (event.text == "f" || event.text == "F"
+                                    || event.text == "\u{0006}")) {
+                                    root.focus-session-search();
+                                    accept
                                 // ── Find: ⌘⇧F / Ctrl+Shift+F (mirrors right-click → Find) ──
                                 } else if (event.modifiers.control && event.modifiers.shift
                                     && (event.text == "f" || event.text == "F"
@@ -1615,6 +1622,10 @@ export component TerminalView inherits Rectangle {
                                         if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control)
                                             && (e.text == Key.Tab || e.text == Key.Backtab)) {
                                             root.cycle-tab(e.modifiers.shift || e.text == Key.Backtab);
+                                            accept
+                                        } else if (e.modifiers.control && !e.modifiers.shift
+                                            && (e.text == "f" || e.text == "F" || e.text == "\u{0006}")) {
+                                            root.focus-session-search();
                                             accept
                                         } else if ((Theme.is-mac ? e.modifiers.meta : e.modifiers.control)
                                             && (e.text == "r" || e.text == "R" || e.text == "\u{0012}")) {

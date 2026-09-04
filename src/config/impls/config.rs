@@ -1362,6 +1362,22 @@ impl ConfigStore {
     pub fn set_ssh_keepalive_secs(&mut self, secs: u32) {
         self.cache.ssh_keepalive_secs = secs.min(SSH_KEEPALIVE_SECS_MAX);
     }
+    /// Whether newly entered passwords / key paths / key material may be written to disk.
+    pub fn save_passwords(&self) -> bool {
+        self.cache.save_passwords
+    }
+    pub fn set_save_passwords(&mut self, enabled: bool) {
+        self.cache.save_passwords = enabled;
+    }
+    /// Wipe every session's stored password/passphrase, pasted private key, and
+    /// private-key file path.
+    pub fn clear_saved_passwords_and_keys(&mut self) {
+        for session in &mut self.cache.sessions {
+            session.password = Secret::default();
+            session.private_key_inline = Secret::default();
+            session.private_key_path.clear();
+        }
+    }
     pub fn wallpaper_overlay(&self) -> f32 {
         let a = self.cache.wallpaper_overlay;
         // Floor lowered 0.40 -> 0.30 so more see-through panels are reachable.
@@ -1896,6 +1912,32 @@ mod tests {
 
         store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
         assert_eq!(store.ssh_keepalive_secs(), 0);
+    }
+
+    #[test]
+    fn save_passwords_defaults_off_and_clear_wipes_key_paths() {
+        let mut store = temp_store();
+        assert!(!store.save_passwords());
+
+        store.set_save_passwords(true);
+        assert!(store.save_passwords());
+        store.set_save_passwords(false);
+        assert!(!store.save_passwords());
+
+        let mut session = Session::new_empty();
+        session.password = Secret::new("secret");
+        session.private_key_path = "/home/u/.ssh/id_ed25519".into();
+        session.private_key_inline = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
+        store.upsert(session);
+
+        store.clear_saved_passwords_and_keys();
+        let cleared = store.sessions().first().expect("session kept");
+        assert!(cleared.password.is_empty());
+        assert!(cleared.private_key_inline.is_empty());
+        assert!(cleared.private_key_path.is_empty());
+
+        store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
+        assert!(!store.save_passwords());
     }
 
     #[test]

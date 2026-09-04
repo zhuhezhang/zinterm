@@ -126,6 +126,8 @@ pub(super) fn apply_session_event_to_window(
             }
         }
         SessionEvent::Closed(reason) => {
+            // Keep per-tab credential cache across disconnect so R can reconnect
+            // without re-prompting; cache is cleared only when the tab closes.
             // Print disconnect info + reconnect hint into the terminal
             // (FinalShell-style), via synthetic Output (#79).
             let hint = crate::i18n::t(
@@ -365,6 +367,7 @@ pub(super) fn apply_session_event_to_window(
         } => {
             enqueue_cred_prompt(
                 win,
+                tab_id.to_string(),
                 session_id,
                 host,
                 user,

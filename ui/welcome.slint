@@ -42,6 +42,7 @@ component SessionListHeader inherits Rectangle {
     property <bool> resizing-host: false;
 
     height: 22px;
+    border-radius: Theme.radius-sm;
     background: Theme.bg-root;
     clip: true;
 
@@ -60,7 +61,7 @@ component SessionListHeader inherits Rectangle {
             Text {
                 text: @tr("Name");
                 color: Theme.text-muted;
-                font-size: Theme.fs-xs;
+                font-size: Theme.fs-md;
                 font-weight: 600;
                 vertical-alignment: center;
                 horizontal-alignment: left;
@@ -106,7 +107,7 @@ component SessionListHeader inherits Rectangle {
             Text {
                 text: " " + @tr("Host / IP / Serial Port");
                 color: Theme.text-muted;
-                font-size: Theme.fs-xs;
+                font-size: Theme.fs-md;
                 font-weight: 600;
                 vertical-alignment: center;
                 horizontal-alignment: left;
@@ -153,7 +154,7 @@ component SessionListHeader inherits Rectangle {
             Text {
                 text: " " + @tr("User");
                 color: Theme.text-muted;
-                font-size: Theme.fs-xs;
+                font-size: Theme.fs-md;
                 font-weight: 600;
                 vertical-alignment: center;
                 horizontal-alignment: left;
@@ -570,10 +571,9 @@ component CollapseButton inherits Rectangle {
 // --- Welcome ---------------------------------------------------------------
 export component Welcome inherits Rectangle {
     in property <[SessionInfo]> sessions;
-    in property <string> import-hint;        // result text after an import
     in-out property <string> session-search: "";
     callback search-sessions(string /* query */);
-    callback new-session();
+    callback new-session(string /* host */, bool /* focus-host */);
     callback new-session-in-group(string /* group */);
     callback connect-session(string);
     callback edit-session(string);
@@ -589,6 +589,8 @@ export component Welcome inherits Rectangle {
     callback delete-group(string /* name */);
     callback remove-session(string /* id */, string /* name */);
     callback cycle-tab(bool /* reverse */);
+    // Global ⌘/Ctrl+F — AppWindow expands sidebar if needed then bumps search-focus-seq.
+    callback focus-session-search();
     // Compact mode (welcome-as-sidebar): drop the big title/tagline header and
     // tighten padding so the session list fits a narrow docked panel (#v0.5).
     in property <bool> compact;
@@ -611,6 +613,8 @@ export component Welcome inherits Rectangle {
     callback welcome-drag-at(length /* list-top-y */, length /* pointer-y */, string /* kind */, string /* from */);
     callback drop-welcome-session(string /* id */, string /* target-group */);
     callback drop-welcome-group(string /* path */, string /* target-parent */);
+    // Global ⌘/Ctrl+F bumps this so the visible search field grabs focus.
+    in property <int> search-focus-seq: 0;
 
     background: Theme.bg-root;
 
@@ -624,6 +628,11 @@ export component Welcome inherits Rectangle {
             if ((Theme.is-mac ? event.modifiers.meta : event.modifiers.control)
                 && (event.text == Key.Tab || event.text == Key.Backtab)) {
                 root.cycle-tab(event.modifiers.shift || event.text == Key.Backtab);
+                accept
+            // ⌘F / Ctrl+F — focus the session search box (not Shift; that's terminal Find).
+            } else if (event.modifiers.control && !event.modifiers.shift
+                && (event.text == "f" || event.text == "F" || event.text == "\u{0006}")) {
+                root.focus-session-search();
                 accept
             } else {
                 reject
@@ -693,7 +702,6 @@ export component Welcome inherits Rectangle {
 
                         header-row := HorizontalLayout {
                             spacing: 11px;
-                            padding-right: root.compact ? -8px : 0px;
                             if root.compact && root.dock-edge != "left": CollapseButton {
                                 glyph: root.dock-edge == "right" ? "\u{E5CC}"
                                     : root.dock-edge == "top" ? "\u{E5CE}"
@@ -713,12 +721,6 @@ export component Welcome inherits Rectangle {
                                 glyph: "\u{E314}";
                                 clicked => { root.collapse(); }
                             }
-                            Text {
-                                text: root.import-hint;
-                                color: Theme.text-muted;
-                                font-size: Theme.fs-sm;
-                                vertical-alignment: center;
-                            }
 
                             if !root.compact: BorderedLineInput {
                                 min-width: 140px;
@@ -731,18 +733,19 @@ export component Welcome inherits Rectangle {
                                 text <=> root.session-search;
                                 placeholder: @tr("Search sessions");
                                 edited => { root.search-sessions(self.text); }
+                                accepted(text) => { root.new-session(text, true); }
+                                focus-request: root.search-focus-seq;
                             }
 
                             if !root.compact: PrimaryButton {
                                 text: @tr("+ New session");
-                                clicked => { root.new-session(); }
+                                clicked => { root.new-session("", false); }
                             }
                         }
                     }
 
                     if root.compact: HorizontalLayout {
-                        padding-left: -1px;
-                        spacing: root.compact ? 7px : 0px;
+                        spacing: root.compact ? 6px : 0px;
                         BorderedLineInput {
                             horizontal-stretch: 1;
                             height: 30px;
@@ -752,11 +755,13 @@ export component Welcome inherits Rectangle {
                             text <=> root.session-search;
                             placeholder: @tr("Search sessions");
                             edited => { root.search-sessions(self.text); }
+                            accepted(text) => { root.new-session(text, true); }
+                            focus-request: root.search-focus-seq;
                         }
 
                         PrimaryButton {
                             text: @tr("+ New session");
-                            clicked => { root.new-session(); }
+                            clicked => { root.new-session("", false); }
                         }
                     }
                 }
@@ -788,7 +793,7 @@ export component Welcome inherits Rectangle {
                 }
 
                 if sessions.length > 0: VerticalLayout {
-                    spacing: 0;
+                    spacing: root.compact ? 0 : 2px;
                     vertical-stretch: 1;
 
                     if !root.compact: SessionListHeader {

@@ -279,7 +279,7 @@ async fn run_sftp(
     .with_context(|| format!("sftp connect {} failed", addr))?;
 
     // Resolve missing username/password (shares the shell's prompt; the UI
-    // de-dupes by session id so SFTP doesn't prompt a second time) (#110).
+    // de-dupes by tab id so SFTP on the same tab doesn't prompt a second time) (#110).
     let (user, password) = match crate::ssh::resolve_credentials(&session, &events).await {
         Some(c) => c,
         None => return Err(anyhow!(t("已取消登录", "login cancelled"))),

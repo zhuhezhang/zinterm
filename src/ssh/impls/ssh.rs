@@ -1164,7 +1164,7 @@ pub(crate) async fn verify_host_key(
 /// Resolve a session's username/password, prompting the UI for whatever is
 /// missing (#110). Returns the effective `(user, password)`, or `None` if the
 /// user cancelled. Both the shell and SFTP connections call this; the UI
-/// de-duplicates by session id so a single dialog serves both. A dropped reply
+/// de-duplicates by tab id so a single dialog serves both. A dropped reply
 /// channel (no UI) falls through with the stored values so auth fails normally.
 pub(crate) async fn resolve_credentials(
     session: &Session,
@@ -1190,7 +1190,7 @@ pub(crate) async fn resolve_credentials(
         return Some((user, password));
     }
     match rx.await {
-        Ok(Some((u, p, _remember))) => {
+        Ok(Some((u, p))) => {
             if need_user {
                 user = u.trim().to_string();
             }

@@ -100,6 +100,10 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-working-directory;
     in-out property <bool> draft-enable-sftp: false;
     in-out property <bool> draft-enable-command-panel: false;
+    // Set before opening (e.g. search-box Enter) so Host / IP is focused.
+    in-out property <bool> focus-host-on-open: false;
+    // Bumped when focus-host-on-open fires so the Host LabeledInput grabs focus.
+    property <int> host-focus-seq: 0;
 
     // Shared left-column width = longest form label (locale-aware via @tr).
     property <length> form-label-width: max(m-conn.preferred-width,
@@ -128,10 +132,17 @@ export component SessionDialog inherits Rectangle {
     background: #00000080;
 
     // Clear required-field flags each time the dialog opens (#110).
+    // Host focus (search Enter) bumps host-focus-seq for the Host field.
     changed is-open => {
         if (self.is-open) {
             self.host-missing = false;
             self.serial-port-missing = false;
+            if (self.focus-host-on-open
+                && self.draft-kind != "serial"
+                && self.draft-kind != "local") {
+                self.host-focus-seq += 1;
+            }
+            self.focus-host-on-open = false;
         }
     }
 
@@ -401,6 +412,8 @@ export component SessionDialog inherits Rectangle {
                             placeholder: "192.168.1.10";
                             value <=> root.draft-host;
                             horizontal-stretch: 2;
+                            // Bumped when the dialog opens from search Enter.
+                            focus-request: root.host-focus-seq;
                         }
 
                         LabeledInput {
