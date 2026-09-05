@@ -4859,8 +4859,8 @@ export component AppWindow inherits Window {
                 : "确定清除所有已保存的密码、密钥口令、私钥文件路径与粘贴的私钥？此操作不可撤销。")
             : root.data-clear-kind == "restore-settings"
             ? (root.lang-en
-                ? "Restore settings preferences to defaults? Saved sessions, quick commands, passwords, and SSH known hosts which are not in the settings interface will be kept."
-                : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、快捷命令、密码和 SSH 已知主机公钥会保留。")
+                ? "Restore settings preferences to defaults? Saved sessions, commands, passwords, and SSH known hosts which are not in the settings interface will be kept."
+                : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码和 SSH 已知主机公钥会保留。")
             : (root.lang-en
                 ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
                 : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");

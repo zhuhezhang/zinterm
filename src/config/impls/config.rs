@@ -1934,13 +1934,16 @@ impl ConfigStore {
     }
 
     /// Import sessions from a string produced by [`Self::export_json`].
-    /// Preserves each session's `id` and `saved_at`. A session is skipped only
-    /// when the same group already has that `id` or the same `name`.
-    /// Empty groups are restored first. Returns `(added, skipped)`.
+    ///
+    /// Each session must include `kind`; SSH/Telnet also need a non-empty
+    /// `host`, and Serial needs a non-empty `serial_port`. Other missing or
+    /// malformed fields follow new-session dialog defaults. A session is
+    /// skipped only when the same group already has that `id` or the same
+    /// `name`. Empty groups are restored first. Returns `(added, skipped)`.
     /// The store is saved if anything was added (sessions or empty groups).
     pub fn import_json(&mut self, raw: &str) -> Result<(usize, usize)> {
-        let file: ExportFile =
-            serde_json::from_str(&raw).context("not a valid zinterm export file")?;
+        let file: ExportFileImport =
+            serde_json::from_str(raw).context("not a valid zinterm export file")?;
         if file.zinterm_export != "sessions" {
             anyhow::bail!(
                 "invalid export: zinterm_export must be \"sessions\" (got {:?})",
@@ -1967,7 +1970,9 @@ impl ConfigStore {
 
         let mut added = 0usize;
         let mut skipped = 0usize;
-        for mut s in file.sessions {
+        for (i, raw_session) in file.sessions.iter().enumerate() {
+            let mut s = Session::from_import_value(raw_session)
+                .with_context(|| format!("session[{i}]"))?;
             // Recover the plaintext password (cache stores plaintext). Accept an
             // export blob, our local enc:v1 blob, or a legacy plaintext value.
             if let Some(plain) = Self::decrypt_export(s.password.as_str()) {
@@ -2646,6 +2651,123 @@ mod tests {
         assert_eq!(store.sessions().len(), 2);
         assert!(store.sessions().iter().any(|s| s.group == "lab" && s.id == "saved-1700000000003-cccc"));
         assert!(!store.sessions().iter().any(|s| s.id == "saved-1700000000002-bbbb"));
+    }
+
+    #[test]
+    fn import_requires_kind_and_kind_specific_endpoints() {
+        let mut store = temp_store();
+        let wrap = |sessions: &str| {
+            format!(
+                r#"{{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[{sessions}]}}"#
+            )
+        };
+
+        let err = format!(
+            "{:#}",
+            store
+                .import_json(&wrap(r#"{"name":"a","host":"1.1.1.1"}"#))
+                .unwrap_err()
+        );
+        assert!(err.contains("kind is required"), "{err}");
+
+        let err = format!(
+            "{:#}",
+            store
+                .import_json(&wrap(r#"{"kind":"ssh","name":"a"}"#))
+                .unwrap_err()
+        );
+        assert!(err.contains("host is required"), "{err}");
+
+        let err = format!(
+            "{:#}",
+            store
+                .import_json(&wrap(r#"{"kind":"telnet","name":"a","host":"  "}"#))
+                .unwrap_err()
+        );
+        assert!(err.contains("host is required"), "{err}");
+
+        let err = format!(
+            "{:#}",
+            store
+                .import_json(&wrap(r#"{"kind":"serial","name":"a"}"#))
+                .unwrap_err()
+        );
+        assert!(err.contains("serial_port is required"), "{err}");
+
+        let err = format!(
+            "{:#}",
+            store
+                .import_json(&wrap(r#"{"kind":"ftp","name":"a","host":"1.1.1.1"}"#))
+                .unwrap_err()
+        );
+        assert!(err.contains("unsupported kind"), "{err}");
+    }
+
+    #[test]
+    fn import_applies_new_session_defaults_for_optional_fields() {
+        let mut store = temp_store();
+        let raw = r#"{
+            "zinterm_export": "sessions",
+            "version": 1,
+            "exported_at": "t",
+            "empty_groups": [],
+            "sessions": [
+                {
+                    "kind": "ssh",
+                    "host": "10.0.0.1",
+                    "port": "nope",
+                    "parity": "weird",
+                    "flow_control": "bogus",
+                    "backspace_mode": "??",
+                    "enable_sftp": "maybe"
+                },
+                {
+                    "kind": "telnet",
+                    "host": "10.0.0.2"
+                },
+                {
+                    "kind": "serial",
+                    "serial_port": "COM3",
+                    "baud_rate": 0,
+                    "data_bits": "x",
+                    "stop_bits": -1
+                },
+                {
+                    "kind": "local"
+                }
+            ]
+        }"#;
+        assert_eq!(store.import_json(raw).unwrap(), (4, 0));
+        let sessions = store.sessions();
+
+        let ssh = sessions.iter().find(|s| s.host == "10.0.0.1").unwrap();
+        assert_eq!(ssh.kind, SessionKind::Ssh);
+        assert_eq!(ssh.port, 22);
+        assert_eq!(ssh.user, "");
+        assert_eq!(ssh.name, "10.0.0.1");
+        assert_eq!(ssh.auth, AuthMethod::Password);
+        assert_eq!(ssh.parity, "none");
+        assert_eq!(ssh.flow_control, "none");
+        assert_eq!(ssh.backspace_mode, "auto");
+        assert_eq!(ssh.encoding, "UTF-8");
+        assert!(!ssh.enable_sftp);
+        assert!(!ssh.enable_command_panel);
+
+        let telnet = sessions.iter().find(|s| s.host == "10.0.0.2").unwrap();
+        assert_eq!(telnet.kind, SessionKind::Telnet);
+        assert_eq!(telnet.port, 23);
+        assert_eq!(telnet.name, "10.0.0.2");
+
+        let serial = sessions.iter().find(|s| s.serial_port == "COM3").unwrap();
+        assert_eq!(serial.kind, SessionKind::Serial);
+        assert_eq!(serial.baud_rate, 9_600);
+        assert_eq!(serial.data_bits, 8);
+        assert_eq!(serial.stop_bits, 1);
+        assert_eq!(serial.name, "COM3 @9600");
+
+        let local = sessions.iter().find(|s| s.kind == SessionKind::Local).unwrap();
+        assert_eq!(local.name, "Local");
+        assert!(local.host.is_empty());
     }
 
     #[test]

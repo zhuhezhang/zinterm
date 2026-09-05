@@ -2709,7 +2709,7 @@ fn wire_session_callbacks(
                                 skipped
                             )
                         }
-                        Err(e) => format!("{}: {}", t("导入失败", "import failed"), e),
+                        Err(e) => format!("{} - {}", t("导入失败", "import failed"), e),
                     };
                     w.set_ssh_import_hint(hint.into());
                 }

@@ -263,3 +263,17 @@ pub(crate) struct ExportFile {
     pub(crate) empty_groups: Vec<String>,
     pub(crate) sessions: Vec<Session>,
 }
+
+/// Loose wire format for [`ConfigStore::import_json`]: sessions stay as raw
+/// JSON objects so required-field checks and UI-aligned defaults can run
+/// before building a [`Session`].
+#[derive(Debug, Deserialize)]
+pub(crate) struct ExportFileImport {
+    pub(crate) zinterm_export: String,
+    pub(crate) version: u32,
+    #[allow(dead_code)] // required on the wire; validated only by presence
+    pub(crate) exported_at: String,
+    #[serde(default)]
+    pub(crate) empty_groups: Vec<String>,
+    pub(crate) sessions: Vec<serde_json::Value>,
+}

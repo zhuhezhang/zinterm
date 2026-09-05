@@ -1,6 +1,8 @@
+use anyhow::{bail, Context, Result};
 use rand::Rng;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize, Serializer};
+use serde_json::Value;
 
 use super::Secret;
 
@@ -286,6 +288,105 @@ impl Session {
         format!("temp-{ms}-{suffix}")
     }
 
+    /// Parse one connection from a portable export file.
+    ///
+    /// Required: `kind` for every connection; non-empty `host` for SSH/Telnet;
+    /// non-empty `serial_port` for Serial. Local has no host/port requirement.
+    /// Other missing or malformed fields use the same defaults as the
+    /// new-session dialog (empty user, port 22/23, baud 9600, SFTP/command
+    /// panel off, …).
+    pub fn from_import_value(value: &Value) -> Result<Self> {
+        let obj = value
+            .as_object()
+            .context("session must be a JSON object")?;
+
+        let kind = match obj.get("kind") {
+            None => bail!("kind is required"),
+            Some(v) => parse_import_kind(v)?,
+        };
+
+        let host = json_string(obj.get("host"));
+        let serial_port = json_string(obj.get("serial_port"));
+        match kind {
+            SessionKind::Ssh | SessionKind::Telnet => {
+                if host.trim().is_empty() {
+                    bail!("host is required for {} connections", kind.as_str());
+                }
+            }
+            SessionKind::Serial => {
+                if serial_port.trim().is_empty() {
+                    bail!("serial_port is required for serial connections");
+                }
+            }
+            SessionKind::Local => {}
+        }
+
+        let default_port = if kind == SessionKind::Telnet { 23 } else { 22 };
+        let auth = parse_import_auth(obj.get("auth"));
+        let user = json_string(obj.get("user"));
+        let shell = json_string(obj.get("shell"));
+        let baud_rate = json_u32_positive(obj.get("baud_rate"), default_baud());
+        let port = json_u16_positive(obj.get("port"), default_port);
+
+        let name_raw = json_string(obj.get("name"));
+        let name = if name_raw.trim().is_empty() {
+            import_auto_name(kind, &host, &user, &serial_port, baud_rate, &shell)
+        } else {
+            name_raw
+        };
+
+        let (private_key_path, private_key_inline) = if auth == AuthMethod::Key {
+            let path = json_string(obj.get("private_key_path"));
+            let inline = json_string(obj.get("private_key_inline"));
+            (path.replace('\\', "/"), Secret::new(inline))
+        } else {
+            (String::new(), Secret::default())
+        };
+
+        let mut session = Self {
+            id: json_string(obj.get("id")),
+            name,
+            host,
+            port,
+            user,
+            auth,
+            password: Secret::new(json_string(obj.get("password"))),
+            private_key_path,
+            private_key_inline,
+            last_used: json_optional_string(obj.get("last_used")),
+            group: json_string(obj.get("group")),
+            kind,
+            saved_at: json_u64(obj.get("saved_at"), 0),
+            serial_port,
+            baud_rate,
+            data_bits: json_u8_positive(obj.get("data_bits"), default_data_bits()),
+            stop_bits: json_u8_positive(obj.get("stop_bits"), default_stop_bits()),
+            parity: normalize_import_parity(&json_string(obj.get("parity"))),
+            flow_control: normalize_import_flow(&json_string(obj.get("flow_control"))),
+            encoding: {
+                let enc = json_string(obj.get("encoding"));
+                if enc.trim().is_empty() {
+                    default_encoding()
+                } else {
+                    enc
+                }
+            },
+            backspace_mode: normalize_import_backspace(&json_string(obj.get("backspace_mode")))
+                .to_string(),
+            shell,
+            working_directory: json_string(obj.get("working_directory")),
+            // Match new-session dialog defaults (off), not legacy config compat.
+            enable_sftp: json_bool(obj.get("enable_sftp"), false),
+            enable_command_panel: json_bool(
+                obj.get("enable_command_panel")
+                    .or_else(|| obj.get("enable_quick_commands")),
+                false,
+            ),
+        };
+        session.sanitize_for_kind();
+        Ok(session)
+    }
+
     /// Drop fields that do not apply to [`Self::kind`] so UI save / import /
     /// export never persist SSH auth on a serial session (or serial baud on SSH).
     /// Returns `true` when any field was cleared or reset.
@@ -363,6 +464,177 @@ impl Session {
             }
             AuthMethod::Key => {}
         }
+    }
+}
+
+fn parse_import_kind(v: &Value) -> Result<SessionKind> {
+    let Some(s) = v.as_str() else {
+        bail!("kind must be a string");
+    };
+    match s {
+        "ssh" => Ok(SessionKind::Ssh),
+        "serial" => Ok(SessionKind::Serial),
+        "telnet" => Ok(SessionKind::Telnet),
+        "local" => Ok(SessionKind::Local),
+        other => bail!("unsupported kind {other:?} (expected ssh|serial|telnet|local)"),
+    }
+}
+
+fn parse_import_auth(v: Option<&Value>) -> AuthMethod {
+    match v.and_then(Value::as_str) {
+        Some("key") => AuthMethod::Key,
+        // Missing / unknown / legacy keyboard-interactive → password (UI default).
+        _ => AuthMethod::Password,
+    }
+}
+
+fn import_auto_name(
+    kind: SessionKind,
+    host: &str,
+    user: &str,
+    serial_port: &str,
+    baud_rate: u32,
+    shell: &str,
+) -> String {
+    match kind {
+        SessionKind::Serial => format!("{serial_port} @{baud_rate}"),
+        SessionKind::Local => {
+            let shell = shell.trim();
+            if shell.is_empty() {
+                "Local".to_string()
+            } else {
+                std::path::Path::new(shell)
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or(shell)
+                    .to_string()
+            }
+        }
+        _ if user.trim().is_empty() => host.to_string(),
+        _ => format!("{user}@{host}"),
+    }
+}
+
+fn json_string(v: Option<&Value>) -> String {
+    match v {
+        Some(Value::String(s)) => s.clone(),
+        Some(Value::Number(n)) => n.to_string(),
+        Some(Value::Bool(b)) => b.to_string(),
+        _ => String::new(),
+    }
+}
+
+fn json_optional_string(v: Option<&Value>) -> Option<String> {
+    match v {
+        Some(Value::String(s)) if !s.is_empty() => Some(s.clone()),
+        Some(Value::Null) | None => None,
+        Some(other) => {
+            let s = json_string(Some(other));
+            if s.is_empty() {
+                None
+            } else {
+                Some(s)
+            }
+        }
+    }
+}
+
+fn json_bool(v: Option<&Value>, default: bool) -> bool {
+    match v {
+        Some(Value::Bool(b)) => *b,
+        Some(Value::String(s)) => match s.trim().to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" => true,
+            "false" | "0" | "no" => false,
+            _ => default,
+        },
+        Some(Value::Number(n)) => n.as_u64().map(|x| x != 0).unwrap_or(default),
+        _ => default,
+    }
+}
+
+fn json_u16_positive(v: Option<&Value>, default: u16) -> u16 {
+    match v {
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|x| u16::try_from(x).ok())
+            .filter(|&p| p > 0)
+            .unwrap_or(default),
+        Some(Value::String(s)) => s
+            .trim()
+            .parse::<u16>()
+            .ok()
+            .filter(|&p| p > 0)
+            .unwrap_or(default),
+        _ => default,
+    }
+}
+
+fn json_u32_positive(v: Option<&Value>, default: u32) -> u32 {
+    match v {
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|x| u32::try_from(x).ok())
+            .filter(|&p| p > 0)
+            .unwrap_or(default),
+        Some(Value::String(s)) => s
+            .trim()
+            .parse::<u32>()
+            .ok()
+            .filter(|&p| p > 0)
+            .unwrap_or(default),
+        _ => default,
+    }
+}
+
+fn json_u8_positive(v: Option<&Value>, default: u8) -> u8 {
+    match v {
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|x| u8::try_from(x).ok())
+            .filter(|&p| p > 0)
+            .unwrap_or(default),
+        Some(Value::String(s)) => s
+            .trim()
+            .parse::<u8>()
+            .ok()
+            .filter(|&p| p > 0)
+            .unwrap_or(default),
+        _ => default,
+    }
+}
+
+fn json_u64(v: Option<&Value>, default: u64) -> u64 {
+    match v {
+        Some(Value::Number(n)) => n.as_u64().unwrap_or(default),
+        Some(Value::String(s)) => s.trim().parse().unwrap_or(default),
+        _ => default,
+    }
+}
+
+fn normalize_import_parity(raw: &str) -> String {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "odd" => "odd".into(),
+        "even" => "even".into(),
+        "mark" => "mark".into(),
+        "space" => "space".into(),
+        _ => default_parity(),
+    }
+}
+
+fn normalize_import_flow(raw: &str) -> String {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "xonxoff" | "software" | "xon/xoff" => "xonxoff".into(),
+        "rtscts" | "hardware" | "rts/cts" => "rtscts".into(),
+        "dsrdtr" | "dsr/dtr" => "dsrdtr".into(),
+        _ => default_flow(),
+    }
+}
+
+fn normalize_import_backspace(raw: &str) -> &'static str {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "del" => "del",
+        "bs" => "bs",
+        _ => "auto",
     }
 }
 
