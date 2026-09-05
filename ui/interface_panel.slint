@@ -717,16 +717,9 @@ export component InterfacePanel inherits Rectangle {
 
                     NavItem {
                         icon: "\u{F013}";
-                        label: "SSH";
+                        label: "SSH / SFTP";
                         active: root.ifd-page == "ssh";
                         clicked => { root.ifd-page = "ssh"; }
-                    }
-
-                    NavItem {
-                        icon: "\u{E2C7}";
-                        label: "SFTP";
-                        active: root.ifd-page == "sftp";
-                        clicked => { root.ifd-page = "sftp"; }
                     }
 
                     NavItem {
@@ -1721,7 +1714,7 @@ export component InterfacePanel inherits Rectangle {
                         }
                     }
 
-                    // --- SSH page ----------------------------------------------
+                    // --- SSH / SFTP page ----------------------------------------
                     if root.ifd-page == "ssh": VerticalLayout {
                         padding-left: 15px;
                         padding-right: 15px;
@@ -1737,7 +1730,6 @@ export component InterfacePanel inherits Rectangle {
                             desc: root.lang-en
                                 ? "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
                                 : "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效。";
-                            show-divider: false;
                             Stepper {
                                 value: root.ssh-keepalive-secs;
                                 minimum: 0;
@@ -1750,15 +1742,7 @@ export component InterfacePanel inherits Rectangle {
                                 }
                             }
                         }
-                    }
 
-                    // --- SFTP page ---------------------------------------------
-                    if root.ifd-page == "sftp": VerticalLayout {
-                        padding-left: 15px;
-                        padding-right: 15px;
-                        padding-top: 15px;
-                        spacing: 0;
-                        alignment: start;
                         SectionHeader {
                             text: "SFTP";
                         }
