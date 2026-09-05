@@ -101,53 +101,6 @@ fn ordered_user_group_paths(store: &ConfigStore) -> Vec<String> {
     out
 }
 
-pub(super) fn parse_batch_import(text: &str) -> Vec<Session> {
-    let mut out = Vec::new();
-    for raw in text.lines() {
-        let line = raw.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        // splitn(5) so the last field (name) may itself contain '|'.
-        let parts: Vec<&str> = line.splitn(5, '|').map(str::trim).collect();
-        let host = parts.first().copied().unwrap_or("");
-        // Skip blank hosts and a header row like "host|port|username|...".
-        if host.is_empty() || host.eq_ignore_ascii_case("host") {
-            continue;
-        }
-        let port = parts
-            .get(1)
-            .and_then(|p| p.parse::<u16>().ok())
-            .filter(|&p| p > 0)
-            .unwrap_or(22);
-        let user = parts
-            .get(2)
-            .copied()
-            .filter(|s| !s.is_empty())
-            .unwrap_or("root");
-        let password = parts.get(3).copied().unwrap_or("");
-        let name = parts
-            .get(4)
-            .copied()
-            .filter(|s| !s.is_empty())
-            .map(str::to_string)
-            .unwrap_or_else(|| format!("{user}@{host}"));
-        let mut sess = Session {
-            name,
-            host: host.to_string(),
-            port,
-            user: user.to_string(),
-            auth: AuthMethod::Password,
-            ..Session::new_empty()
-        };
-        if !password.is_empty() {
-            sess.password = Secret::new(password.to_string());
-        }
-        out.push(sess);
-    }
-    out
-}
-
 /// Distinct named groups in tree order — feeds the new/edit dialog's group
 /// dropdown (#179). Ungrouped ("") is excluded; the dialog leaves the field blank
 /// for that case (root of the Quick Connect tree).
@@ -514,16 +467,16 @@ mod tests {
 
     #[test]
     fn session_search_matches_name_host_serial_and_shell() {
-        let mut ssh = Session::new_empty();
+        let mut ssh = Session::default();
         ssh.name = "Prod Web".into();
         ssh.host = "192.168.1.10".into();
         ssh.port = 22;
 
-        let mut serial = Session::new_empty();
+        let mut serial = Session::default();
         serial.kind = SessionKind::Serial;
         serial.serial_port = "COM3".into();
 
-        let mut local = Session::new_empty();
+        let mut local = Session::default();
         local.kind = SessionKind::Local;
         local.shell = "/bin/zsh".into();
 

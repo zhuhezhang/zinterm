@@ -2078,7 +2078,7 @@ mod tests {
         store.set_save_passwords(false);
         assert!(!store.save_passwords());
 
-        let mut session = Session::new_empty();
+        let mut session = Session::default();
         session.password = Secret::new("secret");
         session.private_key_path = "/home/u/.ssh/id_ed25519".into();
         session.private_key_inline = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
@@ -2304,7 +2304,7 @@ mod tests {
             host: "192.168.100.2".into(),
             port: 22,
             user: "root".into(),
-            ..Session::new_empty()
+            ..Session::default()
         }
     }
 
@@ -2539,7 +2539,7 @@ mod tests {
             port: 22,
             user: "root".into(),
             password: Secret::new(password),
-            ..Session::new_empty()
+            ..Session::default()
         });
 
         store.save().unwrap();
@@ -2569,7 +2569,7 @@ mod tests {
             port: 22,
             user: "root".into(),
             password: Secret::new("s3cr3t"),
-            ..Session::new_empty()
+            ..Session::default()
         });
 
         let export_path = std::env::temp_dir().join(format!("ms-exp-{}.json", Uuid::new_v4()));
@@ -2613,7 +2613,7 @@ mod tests {
             name: "box".into(),
             host: "1.1.1.1".into(),
             group: "prod".into(),
-            ..Session::new_empty()
+            ..Session::default()
         });
 
         let raw = serde_json::to_string_pretty(&ExportFile {
@@ -2628,7 +2628,7 @@ mod tests {
                     name: "box".into(),
                     host: "2.2.2.2".into(),
                     group: "prod".into(),
-                    ..Session::new_empty()
+                    ..Session::default()
                 },
                 Session {
                     id: "saved-1700000000003-cccc".into(),
@@ -2636,7 +2636,7 @@ mod tests {
                     name: "box".into(),
                     host: "3.3.3.3".into(),
                     group: "lab".into(),
-                    ..Session::new_empty()
+                    ..Session::default()
                 },
             ],
         })
@@ -2657,7 +2657,7 @@ mod tests {
             name: "box".into(),
             host: "10.0.0.1".into(),
             group: "has-session".into(),
-            ..Session::new_empty()
+            ..Session::default()
         });
 
         let export_path = std::env::temp_dir().join(format!("ms-exp-groups-{}.json", Uuid::new_v4()));

@@ -710,9 +710,6 @@ export component AppWindow inherits Window {
     in-out property <string> ssh-import-hint;  // import/export result; shown via MessageDialog
     callback export-sessions();               // export all sessions to a file (#46)
     callback import-sessions();               // import sessions from a file (#46)
-    in-out property <bool> batch-import-open: false;  // text batch-import dialog (#150)
-    in-out property <string> batch-import-text;       // the textarea content
-    callback batch-import-confirm(string /* pasted text */);
     // Multi-line terminal paste safety prompt (#262).
     in-out property <bool> paste-confirm-open: false;
     in-out property <string> paste-confirm-tab;
@@ -2769,40 +2766,6 @@ export component AppWindow inherits Window {
                     }
                 }
             }
-            // Batch-import connections from pasted text (#150).
-            Rectangle {
-                height: 28px;
-                border-radius: Theme.radius-sm;
-                background: batchimp-ta.has-hover ? Theme.bg-hover : transparent;
-                batchimp-ta := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.settings-open = false;
-                        root.batch-import-text = "";
-                        root.batch-import-open = true;
-                    }
-                }
-
-                HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
-                    Text {
-                        text: "\u{E1C3}";
-                        font-family: "Material Icons"; // table/rows
-                           color: Theme.text-secondary;
-                        font-size: Theme.fs-sm;
-                        vertical-alignment: center;
-                    }
-
-                    Text {
-                        text: root.lang-en ? "Batch import (text)" : "批量导入(文本)";
-                        color: Theme.text-primary;
-                        font-size: Theme.fs-md;
-                        vertical-alignment: center;
-                        horizontal-stretch: 1;
-                    }
-                }
-            }
             // Language toggle: shows the language you'll switch TO.
             Rectangle {
                 height: 28px;
@@ -4421,7 +4384,7 @@ export component AppWindow inherits Window {
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
     }
 
-    // Import / export result notice (#46, #150).
+    // Import / export result notice (#46).
     MessageDialog {
         width: parent.width;
         height: parent.height;
@@ -4499,73 +4462,6 @@ export component AppWindow inherits Window {
         confirm-label: root.hostkey-confirm-label;
         confirm => { root.hostkey-accept(); }
         cancel => { root.hostkey-reject(); }
-    }
-
-    // Batch-import connections from pasted text (#150).
-    if root.batch-import-open: Rectangle {
-        width: parent.width;
-        height: parent.height;
-        background: #000000aa;
-        TouchArea {
-            clicked => { root.batch-import-open = false; }
-        }   // backdrop closes
-        bi-card := Rectangle {
-            width: 540px;
-            height: 440px;
-            x: (parent.width - self.width) / 2;
-            y: (parent.height - self.height) / 2;
-            background: Theme.popup-bg;
-            border-radius: Theme.radius-lg;
-            border-width: 1px;
-            border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
-            drop-shadow-color: #00000080;
-            TouchArea { }   // swallow clicks inside the card
-
-            VerticalLayout {
-                padding: 8px;
-                spacing: 8px;
-                Text {
-                    text: root.lang-en ? "Batch import connections" : "批量导入连接";
-                    color: Theme.text-primary;
-                    font-size: Theme.fs-xl;
-                    font-weight: 600;
-                }
-
-                Text {
-                    text: root.lang-en
-                        ? "One per line:  host|port|user|password|name   (port/user/password/name optional)"
-                        : "每行一个:  host|port|user|password|name   (端口/用户/密码/名称可省略)";
-                    color: Theme.text-secondary;
-                    font-size: Theme.fs-sm;
-                    wrap: word-wrap;
-                }
-                // Paste area — themed multiline input.
-                bi-input := BorderedTextArea {
-                    area-height: bi-card.height - 132px;
-                    font-size: Theme.fs-md;
-                    text <=> root.batch-import-text;
-                    placeholder: "192.168.1.108|22|root|pass@123|服务器1";
-                }
-
-                HorizontalLayout {
-                    alignment: end;
-                    spacing: 8px;
-                    GhostButton {
-                        text: @tr("Cancel");
-                        clicked => { root.batch-import-open = false; }
-                    }
-
-                    PrimaryButton {
-                        text: root.lang-en ? "Import" : "导入";
-                        clicked => {
-                            root.batch-import-confirm(root.batch-import-text);
-                            root.batch-import-open = false;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // Connect-time credential prompt (#110). Backdrop / Cancel abort the connect.

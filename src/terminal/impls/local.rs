@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn windows_shells_start_in_utf8_mode() {
-        let mut session = Session::new_empty();
+        let mut session = Session::default();
         session.kind = crate::config::SessionKind::Local;
         session.shell = "powershell".to_string();
         let (_, ps_args) = local_program(&session);
@@ -328,7 +328,7 @@ mod tests {
 
     #[test]
     fn empty_shell_uses_powershell_default() {
-        let mut session = Session::new_empty();
+        let mut session = Session::default();
         session.kind = crate::config::SessionKind::Local;
         let (program, _) = local_program(&session);
         assert_eq!(program, "powershell.exe");

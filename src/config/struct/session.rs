@@ -68,7 +68,7 @@ fn default_backspace_mode() -> String {
 }
 
 /// Older configs always had SFTP (SSH) / the command panel available; keep that
-/// when the field is absent. New sessions still default off via [`Session::new_empty`].
+/// when the field is absent. New sessions still default those flags off in the UI.
 fn default_feature_enabled_compat() -> bool {
     true
 }
@@ -286,36 +286,6 @@ impl Session {
         format!("temp-{ms}-{suffix}")
     }
 
-    pub fn new_empty() -> Self {
-        Self {
-            id: String::new(),
-            name: String::new(),
-            host: String::new(),
-            port: default_port(),
-            user: "root".into(),
-            auth: AuthMethod::Password,
-            password: Secret::default(),
-            private_key_path: String::new(),
-            private_key_inline: Secret::default(),
-            last_used: None,
-            group: String::new(),
-            kind: SessionKind::Ssh,
-            saved_at: 0,
-            serial_port: String::new(),
-            baud_rate: default_baud(),
-            data_bits: default_data_bits(),
-            stop_bits: default_stop_bits(),
-            parity: default_parity(),
-            flow_control: default_flow(),
-            encoding: default_encoding(),
-            backspace_mode: default_backspace_mode(),
-            shell: String::new(),
-            working_directory: String::new(),
-            enable_sftp: false,
-            enable_command_panel: false,
-        }
-    }
-
     /// Drop fields that do not apply to [`Self::kind`] so UI save / import /
     /// export never persist SSH auth on a serial session (or serial baud on SSH).
     /// Returns `true` when any field was cleared or reset.
@@ -397,12 +367,50 @@ impl Session {
 }
 
 #[cfg(test)]
+impl Default for Session {
+    fn default() -> Self {
+        sanitize_tests::new_empty()
+    }
+}
+
+#[cfg(test)]
 mod sanitize_tests {
     use super::*;
 
+    /// Blank session for unit tests (defaults differ from serde import defaults).
+    pub(super) fn new_empty() -> Session {
+        Session {
+            id: String::new(),
+            name: String::new(),
+            host: String::new(),
+            port: default_port(),
+            user: "root".into(),
+            auth: AuthMethod::Password,
+            password: Secret::default(),
+            private_key_path: String::new(),
+            private_key_inline: Secret::default(),
+            last_used: None,
+            group: String::new(),
+            kind: SessionKind::Ssh,
+            saved_at: 0,
+            serial_port: String::new(),
+            baud_rate: default_baud(),
+            data_bits: default_data_bits(),
+            stop_bits: default_stop_bits(),
+            parity: default_parity(),
+            flow_control: default_flow(),
+            encoding: default_encoding(),
+            backspace_mode: default_backspace_mode(),
+            shell: String::new(),
+            working_directory: String::new(),
+            enable_sftp: false,
+            enable_command_panel: false,
+        }
+    }
+
     #[test]
     fn password_auth_drops_private_key_fields() {
-        let mut s = Session::new_empty();
+        let mut s = new_empty();
         s.kind = SessionKind::Ssh;
         s.auth = AuthMethod::Password;
         s.password = Secret::new("login");
@@ -419,7 +427,7 @@ mod sanitize_tests {
 
     #[test]
     fn key_auth_keeps_passphrase_and_key_fields() {
-        let mut s = Session::new_empty();
+        let mut s = new_empty();
         s.kind = SessionKind::Ssh;
         s.auth = AuthMethod::Key;
         s.password = Secret::new("key-pass");
@@ -434,7 +442,7 @@ mod sanitize_tests {
 
     #[test]
     fn ssh_drops_serial_and_local_fields() {
-        let mut s = Session::new_empty();
+        let mut s = new_empty();
         s.kind = SessionKind::Ssh;
         s.host = "1.2.3.4".into();
         s.user = "root".into();
@@ -456,7 +464,7 @@ mod sanitize_tests {
 
     #[test]
     fn serial_drops_ssh_auth_and_network_fields() {
-        let mut s = Session::new_empty();
+        let mut s = new_empty();
         s.kind = SessionKind::Serial;
         s.host = "1.2.3.4".into();
         s.port = 22;
@@ -485,7 +493,7 @@ mod sanitize_tests {
 
     #[test]
     fn json_keeps_dialog_fields_omits_other_kinds() {
-        let mut serial = Session::new_empty();
+        let mut serial = new_empty();
         serial.kind = SessionKind::Serial;
         serial.name = "console".into();
         serial.serial_port = "COM3".into();
@@ -507,7 +515,7 @@ mod sanitize_tests {
         assert!(raw.find("\"saved_at\"").unwrap() < raw.find("\"kind\"").unwrap());
         assert!(raw.find("\"backspace_mode\"").unwrap() < raw.find("\"encoding\"").unwrap());
 
-        let mut ssh = Session::new_empty();
+        let mut ssh = new_empty();
         ssh.kind = SessionKind::Ssh;
         ssh.name = "box".into();
         ssh.host = "10.0.0.1".into();

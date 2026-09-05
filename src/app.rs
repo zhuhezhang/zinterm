@@ -2610,10 +2610,6 @@ fn handle_file_drop(_win: &AppWindow, _sftp_handles: &SftpHandles, _path: std::p
 // Model helpers
 // ---------------------------------------------------------------------------
 
-/// Parse the batch-import textarea (#150). Each non-empty, non-`#` line is
-/// `host|port|user|password|name`; trailing fields are optional (port → 22,
-/// user → root, password → none, name → user@host). A leading header row such as
-/// `host|port|username|password|name` is skipped. Dedup happens at the call site.
 fn wire_session_callbacks(
     window: &AppWindow,
     store: Rc<RefCell<ConfigStore>>,
@@ -2685,49 +2681,6 @@ fn wire_session_callbacks(
                     };
                     w.set_ssh_import_hint(hint.into());
                 }
-            }
-        });
-    }
-
-    // Batch-import connections from pasted text (#150). One per line:
-    // `host|port|user|password|name` (trailing fields optional).
-    {
-        let weak = window.as_weak();
-        let store = store.clone();
-        let sessions_model = sessions_model.clone();
-        let welcome_session_query = welcome_session_query.clone();
-        window.on_batch_import_confirm(move |text: SharedString| {
-            let parsed = parse_batch_import(text.as_str());
-            let total = parsed.len();
-            let mut added = 0usize;
-            {
-                let mut s = store.borrow_mut();
-                for sess in parsed {
-                    // Skip a host/user/port we already have.
-                    let dup = s
-                        .sessions()
-                        .iter()
-                        .any(|x| x.host == sess.host && x.user == sess.user && x.port == sess.port);
-                    if dup {
-                        continue;
-                    }
-                    s.upsert(sess);
-                    added += 1;
-                }
-                if added > 0 {
-                    let _ = s.save();
-                }
-            }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
-            if let Some(w) = weak.upgrade() {
-                let hint = if total == 0 {
-                    t("没有可导入的连接", "nothing to import").to_string()
-                } else if added > 0 {
-                    format!("{} {}/{}", t("已导入", "imported"), added, total)
-                } else {
-                    t("没有新连接可导入(已存在)", "no new connections (all exist)").to_string()
-                };
-                w.set_ssh_import_hint(hint.into());
             }
         });
     }
