@@ -531,12 +531,10 @@ export component SftpPanel inherits Rectangle {
                                     width: node.depth * 12px;
                                 }
 
-                                // Expand/collapse arrow
+                                // Expand/collapse arrow (always shown for folders)
                                 Text {
                                     width: 14px;
-                                    text: node.has-children
-                                        ? (node.expanded ? "▼" : "▶")
-                                        : " ";
+                                    text: node.expanded ? "▼" : "▶";
                                     color: Theme.text-muted;
                                     font-size: 9px;
                                     horizontal-alignment: center;
