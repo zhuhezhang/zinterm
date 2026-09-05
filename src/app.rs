@@ -2791,17 +2791,18 @@ fn wire_session_callbacks(
                         session.password.as_str().into()
                     },
                 );
-                // Unified key field: show path when stored as a file; leave blank
-                // when a pasted key is saved (same "keep existing" pattern as password).
-                let key_field = if session.private_key_inline.is_empty() {
-                    session.private_key_path.clone()
+                // Unified key field: echo path or pasted key as plaintext (same
+                // "show what's saved" idea as the password field; this box is
+                // not password-masked).
+                let key_field = if !session.private_key_inline.is_empty() {
+                    session.private_key_inline.as_str().to_string()
                 } else {
-                    String::new()
+                    session.private_key_path.clone()
                 };
                 w.set_dialog_key_path("".into());
                 w.set_dialog_key_inline(key_field.into());
                 w.set_dialog_key_inline_mode(false);
-                w.set_dialog_key_saved_inline(!session.private_key_inline.is_empty());
+                w.set_dialog_key_saved_inline(false);
                 w.set_dialog_group(session.group.clone().into());
                 w.set_dialog_kind(session.kind.as_str().into());
                 w.set_dialog_serial_port(session.serial_port.clone().into());
@@ -3516,7 +3517,7 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
         Secret::new(draft.password.to_string())
     };
     // Unified private-key field: auto-detect path vs pasted PEM/PPK.
-    // Blank while editing keeps the existing path and/or inline secret.
+    // Existing path / pasted key are echoed into the dialog; blank clears.
     let key_raw = {
         let inline = draft.private_key_inline.trim();
         let path = draft.private_key_path.trim();
@@ -3528,15 +3529,9 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
             String::new()
         }
     };
+    // Key material is echoed into the dialog when editing; blank means clear.
     let (private_key_path, private_key_inline) = if key_raw.is_empty() {
-        match store.get(&id) {
-            // Pasted keys are never echoed; blank keeps the saved secret.
-            Some(s) if !s.private_key_inline.is_empty() => {
-                (String::new(), s.private_key_inline.clone())
-            }
-            // Path was shown in the field — blank means the user cleared it.
-            _ => (String::new(), Secret::default()),
-        }
+        (String::new(), Secret::default())
     } else if looks_like_private_key_content(&key_raw) {
         (String::new(), Secret::new(key_raw))
     } else {

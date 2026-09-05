@@ -135,6 +135,9 @@ msgstr "Leave blank to keep the current password"
 msgid "Key passphrase"
 msgstr "Key passphrase"
 
+msgid "/path/to/private_key_file or \nprivate_key_content"
+msgstr "/path/to/private_key_file or \nprivate_key_content"
+
 msgid "Leave blank if the key isn't encrypted"
 msgstr "Leave blank if the key isn't encrypted"
 

@@ -135,6 +135,9 @@ msgstr "留空则不修改密码"
 msgid "Key passphrase"
 msgstr "私钥密码"
 
+msgid "/path/to/private_key_file or \nprivate_key_content"
+msgstr "私钥文件路径或私钥文件内容"
+
 msgid "Leave blank if the key isn't encrypted"
 msgstr "若私钥未加密则留空"
 
