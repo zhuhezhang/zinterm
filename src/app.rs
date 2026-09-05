@@ -2782,15 +2782,20 @@ fn wire_session_callbacks(
                 w.set_dialog_port(session.port.to_string().into());
                 w.set_dialog_user(session.user.clone().into());
                 w.set_dialog_auth(session.auth.as_str().into());
-                // Echo stored password/passphrase when editing so the field shows
-                // what is saved; blank when none was stored.
-                w.set_dialog_password(
-                    if session.password.is_empty() {
-                        "".into()
-                    } else {
-                        session.password.as_str().into()
-                    },
-                );
+                // Login password and key passphrase are distinct draft fields;
+                // echo the stored secret into whichever matches this session's auth.
+                let stored = if session.password.is_empty() {
+                    String::new()
+                } else {
+                    session.password.as_str().to_string()
+                };
+                if session.auth == AuthMethod::Key {
+                    w.set_dialog_password("".into());
+                    w.set_dialog_key_passphrase(stored.into());
+                } else {
+                    w.set_dialog_password(stored.into());
+                    w.set_dialog_key_passphrase("".into());
+                }
                 // Unified key field: echo path or pasted key as plaintext (same
                 // "show what's saved" idea as the password field; this box is
                 // not password-masked).
@@ -3506,36 +3511,60 @@ fn wire_session_callbacks(
 
 fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
     let id = draft.id.to_string();
-    // While editing, a blank password field keeps the existing secret; a
-    // non-empty value replaces it (including when prefilled from the stored one).
-    let password = if draft.password.is_empty() {
-        store
-            .get(&id)
-            .map(|s| s.password.clone())
-            .unwrap_or_default()
-    } else {
-        Secret::new(draft.password.to_string())
-    };
-    // Unified private-key field: auto-detect path vs pasted PEM/PPK.
-    // Existing path / pasted key are echoed into the dialog; blank clears.
-    let key_raw = {
-        let inline = draft.private_key_inline.trim();
-        let path = draft.private_key_path.trim();
-        if !inline.is_empty() {
-            inline.to_string()
-        } else if !path.is_empty() {
-            path.to_string()
-        } else {
-            String::new()
+    let auth = AuthMethod::from_str(&draft.auth.to_string());
+    let existing = store.get(&id);
+
+    // Login password and key passphrase share session.password on disk, but
+    // only the secret that matches the chosen auth is kept. Blank keeps the
+    // previously stored value only when auth did not change.
+    let password = match auth {
+        AuthMethod::Key => {
+            let typed = draft.key_passphrase.as_str();
+            if typed.is_empty() {
+                existing
+                    .filter(|s| s.auth == AuthMethod::Key)
+                    .map(|s| s.password.clone())
+                    .unwrap_or_default()
+            } else {
+                Secret::new(typed.to_string())
+            }
+        }
+        _ => {
+            let typed = draft.password.as_str();
+            if typed.is_empty() {
+                existing
+                    .filter(|s| s.auth == AuthMethod::Password)
+                    .map(|s| s.password.clone())
+                    .unwrap_or_default()
+            } else {
+                Secret::new(typed.to_string())
+            }
         }
     };
-    // Key material is echoed into the dialog when editing; blank means clear.
-    let (private_key_path, private_key_inline) = if key_raw.is_empty() {
-        (String::new(), Secret::default())
-    } else if looks_like_private_key_content(&key_raw) {
-        (String::new(), Secret::new(key_raw))
+
+    // Private-key material is only meaningful for key auth.
+    let (private_key_path, private_key_inline) = if auth == AuthMethod::Key {
+        let key_raw = {
+            let inline = draft.private_key_inline.trim();
+            let path = draft.private_key_path.trim();
+            if !inline.is_empty() {
+                inline.to_string()
+            } else if !path.is_empty() {
+                path.to_string()
+            } else {
+                String::new()
+            }
+        };
+        // Key material is echoed into the dialog when editing; blank means clear.
+        if key_raw.is_empty() {
+            (String::new(), Secret::default())
+        } else if looks_like_private_key_content(&key_raw) {
+            (String::new(), Secret::new(key_raw))
+        } else {
+            (key_raw.replace('\\', "/"), Secret::default())
+        }
     } else {
-        (key_raw.replace('\\', "/"), Secret::default())
+        (String::new(), Secret::default())
     };
     let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
     // Auto-name: serial → port label; local → shell/Local; otherwise
@@ -3579,7 +3608,7 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
             draft.port as u16
         },
         user: draft.user.to_string(),
-        auth: AuthMethod::from_str(&draft.auth.to_string()),
+        auth,
         password,
         // Store the key path with forward slashes uniformly.
         private_key_path,
@@ -3626,10 +3655,22 @@ fn apply_password_save_policy(
         return;
     }
     let existing = store.get(&session.id);
-    if !draft.password.is_empty() {
+    let auth = AuthMethod::from_str(&draft.auth.to_string());
+    let typed_secret = match auth {
+        AuthMethod::Key => !draft.key_passphrase.is_empty(),
+        _ => !draft.password.is_empty(),
+    };
+    if typed_secret {
         session.password = existing
             .map(|s| s.password.clone())
             .unwrap_or_default();
+    }
+    // Key material only applies to key auth; password sessions must not keep
+    // leftover private-key draft text (or restore stale keys from disk).
+    if auth != AuthMethod::Key {
+        session.private_key_path.clear();
+        session.private_key_inline = Secret::default();
+        return;
     }
     let key_raw = {
         let inline = draft.private_key_inline.trim();
@@ -3831,6 +3872,7 @@ fn open_new_session_dialog(win: &AppWindow, store: &ConfigStore, group: &str, ho
     win.set_dialog_user("".into());
     win.set_dialog_auth("password".into());
     win.set_dialog_password("".into());
+    win.set_dialog_key_passphrase("".into());
     win.set_dialog_key_path("".into());
     win.set_dialog_key_inline("".into());
     win.set_dialog_key_inline_mode(false);

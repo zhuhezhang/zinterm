@@ -199,14 +199,26 @@ impl Serialize for Session {
                 map.serialize_entry("port", &self.port)?;
                 map.serialize_entry("user", &self.user)?;
                 map.serialize_entry("auth", &self.auth)?;
-                if !self.password.is_empty() {
-                    map.serialize_entry("password", &self.password)?;
-                }
-                if !self.private_key_path.is_empty() {
-                    map.serialize_entry("private_key_path", &self.private_key_path)?;
-                }
-                if !self.private_key_inline.is_empty() {
-                    map.serialize_entry("private_key_inline", &self.private_key_inline)?;
+                match self.auth {
+                    AuthMethod::Password => {
+                        // Password auth: persist login password only.
+                        if !self.password.is_empty() {
+                            map.serialize_entry("password", &self.password)?;
+                        }
+                    }
+                    AuthMethod::Key => {
+                        // Key auth: persist passphrase (reuses password field)
+                        // and private-key path / pasted body.
+                        if !self.password.is_empty() {
+                            map.serialize_entry("password", &self.password)?;
+                        }
+                        if !self.private_key_path.is_empty() {
+                            map.serialize_entry("private_key_path", &self.private_key_path)?;
+                        }
+                        if !self.private_key_inline.is_empty() {
+                            map.serialize_entry("private_key_inline", &self.private_key_inline)?;
+                        }
+                    }
                 }
             }
             SessionKind::Serial => {
@@ -313,6 +325,7 @@ impl Session {
             SessionKind::Ssh => {
                 self.clear_serial_fields();
                 self.clear_local_fields();
+                self.sanitize_for_auth();
             }
             SessionKind::Serial => {
                 self.clear_network_fields();
@@ -368,11 +381,56 @@ impl Session {
         self.private_key_path.clear();
         self.private_key_inline = Secret::default();
     }
+
+    /// Drop credentials that do not apply to [`Self::auth`]:
+    /// password auth clears private-key fields; key auth keeps `password` as
+    /// the key passphrase only (there is no separate login-password slot).
+    fn sanitize_for_auth(&mut self) {
+        match self.auth {
+            AuthMethod::Password => {
+                self.private_key_path.clear();
+                self.private_key_inline = Secret::default();
+            }
+            AuthMethod::Key => {}
+        }
+    }
 }
 
 #[cfg(test)]
 mod sanitize_tests {
     use super::*;
+
+    #[test]
+    fn password_auth_drops_private_key_fields() {
+        let mut s = Session::new_empty();
+        s.kind = SessionKind::Ssh;
+        s.auth = AuthMethod::Password;
+        s.password = Secret::new("login");
+        s.private_key_path = "/home/u/.ssh/id_ed25519".into();
+        s.private_key_inline = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
+        s.sanitize_for_kind();
+        assert_eq!(s.password.as_str(), "login");
+        assert!(s.private_key_path.is_empty());
+        assert!(s.private_key_inline.is_empty());
+        let raw = serde_json::to_string(&s).unwrap();
+        assert!(raw.contains("\"password\""));
+        assert!(!raw.contains("\"private_key"));
+    }
+
+    #[test]
+    fn key_auth_keeps_passphrase_and_key_fields() {
+        let mut s = Session::new_empty();
+        s.kind = SessionKind::Ssh;
+        s.auth = AuthMethod::Key;
+        s.password = Secret::new("key-pass");
+        s.private_key_path = "/home/u/.ssh/id_ed25519".into();
+        s.sanitize_for_kind();
+        assert_eq!(s.password.as_str(), "key-pass");
+        assert_eq!(s.private_key_path, "/home/u/.ssh/id_ed25519");
+        let raw = serde_json::to_string(&s).unwrap();
+        assert!(raw.contains("\"password\""));
+        assert!(raw.contains("\"private_key_path\""));
+    }
 
     #[test]
     fn ssh_drops_serial_and_local_fields() {

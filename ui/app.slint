@@ -675,6 +675,7 @@ export component AppWindow inherits Window {
     in-out property <string> dialog-user;
     in-out property <string> dialog-auth: "password";
     in-out property <string> dialog-password;
+    in-out property <string> dialog-key-passphrase;
     in-out property <string> dialog-key-path;
     in-out property <string> dialog-key-inline;
     in-out property <bool> dialog-key-inline-mode: false;
@@ -4369,6 +4370,7 @@ export component AppWindow inherits Window {
         draft-user <=> root.dialog-user;
         draft-auth <=> root.dialog-auth;
         draft-password <=> root.dialog-password;
+        draft-key-passphrase <=> root.dialog-key-passphrase;
         draft-key-path <=> root.dialog-key-path;
         draft-key-inline <=> root.dialog-key-inline;
         draft-key-inline-mode <=> root.dialog-key-inline-mode;

@@ -11,6 +11,8 @@ export struct SessionDraft {
     user: string,
     auth: string,      // "password" | "key"
     password: string,
+    // Passphrase for an encrypted private key (distinct from login password).
+    key-passphrase: string,
     private-key-path: string,
     private-key-inline: string,
     private-key-inline-mode: bool,
@@ -78,6 +80,7 @@ export component SessionDialog inherits Rectangle {
     in-out property <bool> serial-port-missing: false;
     in-out property <string> draft-auth: "password";
     in-out property <string> draft-password;
+    in-out property <string> draft-key-passphrase;
     in-out property <string> draft-key-path;
     in-out property <string> draft-key-inline;
     in-out property <bool> draft-key-inline-mode: false;
@@ -168,6 +171,7 @@ export component SessionDialog inherits Rectangle {
             user: root.draft-user,
             auth: root.draft-auth,
             password: root.draft-password,
+            key-passphrase: root.draft-key-passphrase,
             // Path vs inline is auto-detected in Rust from this text.
             private-key-path: "",
             private-key-inline: root.draft-key-inline,
@@ -553,8 +557,8 @@ export component SessionDialog inherits Rectangle {
                         }
                     }
 
-                    // Passphrase for an *encrypted* private key (#90). Same
-                    // masking / blank semantics as the password field above.
+                    // Passphrase for an *encrypted* private key (#90). Separate
+                    // from the login password field above.
                     if root.draft-kind == "ssh" && root.draft-auth == "key": LabeledInput {
                         input-background: Theme.bg-elevated;
                         idle-border: Theme.border-strong;
@@ -562,7 +566,7 @@ export component SessionDialog inherits Rectangle {
                         label-width: root.form-label-width;
                         placeholder: @tr("Leave blank if the key isn't encrypted");
                         password: true;
-                        value <=> root.draft-password;
+                        value <=> root.draft-key-passphrase;
                     }
 
                     // ── Serial-only fields ──────────────────────────────────────────
