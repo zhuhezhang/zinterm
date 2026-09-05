@@ -43,21 +43,20 @@ fn expand_user_path(path: &str) -> Cow<'_, Path> {
 
 pub(crate) fn load_session_private_key(session: &Session, pass: &str) -> Result<PrivateKey> {
     let pass = if pass.is_empty() { None } else { Some(pass) };
-    let inline = session.private_key_inline.as_str().trim();
-    if !inline.is_empty() {
-        if crate::ssh::ppk::is_ppk(inline.as_bytes()) {
-            return crate::ssh::ppk::decode_ppk(inline.as_bytes(), pass.unwrap_or_default())
-                .context("failed to parse pasted PuTTY private key");
-        }
-        return decode_secret_key(inline, pass).context("failed to parse pasted private key");
-    }
-
-    let raw = session.private_key_path.trim();
+    let raw = session.private_key.as_str().trim();
     if raw.is_empty() {
         return Err(anyhow!(t(
             "私钥路径或私钥内容为空",
             "private key path or private key content is empty"
         )));
+    }
+
+    if crate::config::looks_like_private_key_content(raw) {
+        if crate::ssh::ppk::is_ppk(raw.as_bytes()) {
+            return crate::ssh::ppk::decode_ppk(raw.as_bytes(), pass.unwrap_or_default())
+                .context("failed to parse pasted PuTTY private key");
+        }
+        return decode_secret_key(raw, pass).context("failed to parse pasted private key");
     }
 
     let normalised = raw.replace('\\', "/");
@@ -78,7 +77,7 @@ pub(crate) fn load_session_private_key(session: &Session, pass: &str) -> Result<
             .with_context(|| format!("failed to load PuTTY key {key_display}"));
     }
     load_secret_key(key_path.as_ref(), pass)
-        .with_context(|| format!("failed to load key {key_display}"))
+        .with_context(|| format!("failed to load private key {key_display}"))
 }
 
 /// Format a byte count as a human-readable string.
@@ -616,9 +615,8 @@ pub(crate) async fn authenticate_session(
             .context("password auth failed")?
             .success(),
         AuthMethod::Key => {
-            // An encrypted private key needs its passphrase; we reuse the
-            // session's password field for it (empty = unencrypted key) (#90).
-            let pass = password.as_str();
+            // Encrypted private keys use key_passphrase (empty = unencrypted) (#90).
+            let pass = session.key_passphrase.as_str();
             let keypair = load_session_private_key(session, pass)?;
             // RSA keys must be signed with an explicit SHA-2 hash; every other
             // key type carries its own algorithm, so no override is needed.

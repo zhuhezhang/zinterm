@@ -178,19 +178,35 @@ pub(super) fn copy_tab_credentials(from_tab: &str, to_tab: &str) {
 }
 
 /// For reconnect (R) / duplicate: prefer this tab's in-memory credential cache.
-/// If none is cached, clear the session password so we do **not** fall back to
-/// whatever may be stored on disk — the UI will prompt again.
+/// If none is cached, clear the session login password / key passphrase so we
+/// do **not** fall back to whatever may be stored on disk — the UI will prompt
+/// again (password auth) or fail auth for encrypted keys until re-entered.
 pub(super) fn apply_cached_credentials_for_reconnect(
     session: &mut crate::config::Session,
     tab_id: &str,
 ) {
+    use crate::config::AuthMethod;
     if let Some((user, password)) = CRED_DECIDED.with(|d| d.borrow().get(tab_id).cloned()) {
         if !user.trim().is_empty() {
             session.user = user;
         }
-        session.password = crate::config::Secret::new(password);
+        match session.auth {
+            AuthMethod::Key => {
+                session.key_passphrase = crate::config::Secret::new(password);
+            }
+            _ => {
+                session.password = crate::config::Secret::new(password);
+            }
+        }
     } else {
-        session.password = crate::config::Secret::default();
+        match session.auth {
+            AuthMethod::Key => {
+                session.key_passphrase = crate::config::Secret::default();
+            }
+            _ => {
+                session.password = crate::config::Secret::default();
+            }
+        }
     }
 }
 
@@ -322,7 +338,15 @@ pub(super) fn persist_credentials(
                     sess.user = user.trim().to_string();
                 }
                 if set_password {
-                    sess.password = crate::config::Secret::new(password.to_string());
+                    match sess.auth {
+                        crate::config::AuthMethod::Key => {
+                            sess.key_passphrase =
+                                crate::config::Secret::new(password.to_string());
+                        }
+                        _ => {
+                            sess.password = crate::config::Secret::new(password.to_string());
+                        }
+                    }
                 }
                 st.upsert(sess);
                 let _ = st.save();

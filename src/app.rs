@@ -187,24 +187,6 @@ fn normalize_flow_control(raw: &str) -> String {
     }
 }
 
-/// True when `raw` looks like pasted key material (PEM / OpenSSH / PuTTY)
-/// rather than a filesystem path.
-fn looks_like_private_key_content(raw: &str) -> bool {
-    let t = raw.trim();
-    if t.is_empty() {
-        return false;
-    }
-    if crate::ssh::ppk::is_ppk(t.as_bytes()) {
-        return true;
-    }
-    let upper = t.to_ascii_uppercase();
-    if upper.contains("BEGIN") && upper.contains("PRIVATE KEY") {
-        return true;
-    }
-    // Paths are almost never several non-empty lines; treat multi-line blobs as keys.
-    t.lines().filter(|l| !l.trim().is_empty()).count() >= 3
-}
-
 /// Dialog combo labels for flow control (must match `session_dialog.slint` items).
 fn flow_control_display(raw: &str) -> String {
     match normalize_flow_control(raw).as_str() {
@@ -2661,8 +2643,8 @@ fn wire_session_callbacks(
         });
     }
 
-    // Export all sessions to a portable JSON file (issue #46). Passwords are
-    // obfuscated with the built-in export key; host/user/port stay plaintext.
+    // Export all sessions to a portable JSON file (issue #46). Password /
+    // private-key fields are omitted; host/user/port stay plaintext.
     {
         let weak = window.as_weak();
         let store = store.clone();
@@ -2744,30 +2726,27 @@ fn wire_session_callbacks(
                 w.set_dialog_port(session.port.to_string().into());
                 w.set_dialog_user(session.user.clone().into());
                 w.set_dialog_auth(session.auth.as_str().into());
-                // Login password and key passphrase are distinct draft fields;
-                // echo the stored secret into whichever matches this session's auth.
-                let stored = if session.password.is_empty() {
-                    String::new()
-                } else {
-                    session.password.as_str().to_string()
-                };
+                // Login password and key passphrase are distinct stored fields.
                 if session.auth == AuthMethod::Key {
                     w.set_dialog_password("".into());
-                    w.set_dialog_key_passphrase(stored.into());
+                    let kp = if session.key_passphrase.is_empty() {
+                        String::new()
+                    } else {
+                        session.key_passphrase.as_str().to_string()
+                    };
+                    w.set_dialog_key_passphrase(kp.into());
                 } else {
-                    w.set_dialog_password(stored.into());
+                    let pw = if session.password.is_empty() {
+                        String::new()
+                    } else {
+                        session.password.as_str().to_string()
+                    };
+                    w.set_dialog_password(pw.into());
                     w.set_dialog_key_passphrase("".into());
                 }
-                // Unified key field: echo path or pasted key as plaintext (same
-                // "show what's saved" idea as the password field; this box is
-                // not password-masked).
-                let key_field = if !session.private_key_inline.is_empty() {
-                    session.private_key_inline.as_str().to_string()
-                } else {
-                    session.private_key_path.clone()
-                };
+                // Unified key field: echo path or pasted key as plaintext.
                 w.set_dialog_key_path("".into());
-                w.set_dialog_key_inline(key_field.into());
+                w.set_dialog_key_inline(session.private_key.as_str().into());
                 w.set_dialog_key_inline_mode(false);
                 w.set_dialog_key_saved_inline(false);
                 w.set_dialog_group(session.group.clone().into());
@@ -3171,12 +3150,12 @@ fn wire_session_callbacks(
                     // but keep the in-memory secrets / key path for connect.
                     if let Some(saved) = s.get(&id) {
                         let password = new_session.password.clone();
-                        let key_inline = new_session.private_key_inline.clone();
-                        let key_path = new_session.private_key_path.clone();
+                        let key_passphrase = new_session.key_passphrase.clone();
+                        let private_key = new_session.private_key.clone();
                         new_session = saved.clone();
                         new_session.password = password;
-                        new_session.private_key_inline = key_inline;
-                        new_session.private_key_path = key_path;
+                        new_session.key_passphrase = key_passphrase;
+                        new_session.private_key = private_key;
                     }
                     id
                 };
@@ -3476,36 +3455,37 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
     let auth = AuthMethod::from_str(&draft.auth.to_string());
     let existing = store.get(&id);
 
-    // Login password and key passphrase share session.password on disk, but
-    // only the secret that matches the chosen auth is kept. Blank keeps the
+    // Login password and key passphrase are separate fields. Blank keeps the
     // previously stored value only when auth did not change.
-    let password = match auth {
+    let (password, key_passphrase) = match auth {
         AuthMethod::Key => {
             let typed = draft.key_passphrase.as_str();
-            if typed.is_empty() {
+            let kp = if typed.is_empty() {
                 existing
                     .filter(|s| s.auth == AuthMethod::Key)
-                    .map(|s| s.password.clone())
+                    .map(|s| s.key_passphrase.clone())
                     .unwrap_or_default()
             } else {
                 Secret::new(typed.to_string())
-            }
+            };
+            (Secret::default(), kp)
         }
         _ => {
             let typed = draft.password.as_str();
-            if typed.is_empty() {
+            let pw = if typed.is_empty() {
                 existing
                     .filter(|s| s.auth == AuthMethod::Password)
                     .map(|s| s.password.clone())
                     .unwrap_or_default()
             } else {
                 Secret::new(typed.to_string())
-            }
+            };
+            (pw, Secret::default())
         }
     };
 
-    // Private-key material is only meaningful for key auth.
-    let (private_key_path, private_key_inline) = if auth == AuthMethod::Key {
+    // Unified private_key: path or pasted body (classified by content).
+    let private_key = if auth == AuthMethod::Key {
         let key_raw = {
             let inline = draft.private_key_inline.trim();
             let path = draft.private_key_path.trim();
@@ -3519,14 +3499,14 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
         };
         // Key material is echoed into the dialog when editing; blank means clear.
         if key_raw.is_empty() {
-            (String::new(), Secret::default())
-        } else if looks_like_private_key_content(&key_raw) {
-            (String::new(), Secret::new(key_raw))
+            Secret::default()
+        } else if crate::config::looks_like_private_key_content(&key_raw) {
+            Secret::new(key_raw)
         } else {
-            (key_raw.replace('\\', "/"), Secret::default())
+            Secret::new(key_raw.replace('\\', "/"))
         }
     } else {
-        (String::new(), Secret::default())
+        Secret::default()
     };
     let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
     // Auto-name: serial → port label; local → shell/Local; otherwise
@@ -3572,9 +3552,8 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
         user: draft.user.to_string(),
         auth,
         password,
-        // Store the key path with forward slashes uniformly.
-        private_key_path,
-        private_key_inline,
+        key_passphrase,
+        private_key,
         last_used: None,
         group: draft.group.to_string(),
         kind,
@@ -3605,8 +3584,8 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
 }
 
 /// When Settings › Data › save passwords is off, keep already-stored secrets
-/// / key paths but do not write newly typed passwords, pasted keys, or key
-/// file paths to disk.
+/// / key material but do not write newly typed passwords, passphrases, or keys
+/// to disk.
 fn apply_password_save_policy(
     session: &mut Session,
     draft: &SessionDraft,
@@ -3618,20 +3597,26 @@ fn apply_password_save_policy(
     }
     let existing = store.get(&session.id);
     let auth = AuthMethod::from_str(&draft.auth.to_string());
-    let typed_secret = match auth {
-        AuthMethod::Key => !draft.key_passphrase.is_empty(),
-        _ => !draft.password.is_empty(),
-    };
-    if typed_secret {
-        session.password = existing
-            .map(|s| s.password.clone())
-            .unwrap_or_default();
+    match auth {
+        AuthMethod::Key => {
+            if !draft.key_passphrase.is_empty() {
+                session.key_passphrase = existing
+                    .map(|s| s.key_passphrase.clone())
+                    .unwrap_or_default();
+            }
+        }
+        _ => {
+            if !draft.password.is_empty() {
+                session.password = existing
+                    .map(|s| s.password.clone())
+                    .unwrap_or_default();
+            }
+        }
     }
     // Key material only applies to key auth; password sessions must not keep
     // leftover private-key draft text (or restore stale keys from disk).
     if auth != AuthMethod::Key {
-        session.private_key_path.clear();
-        session.private_key_inline = Secret::default();
+        session.private_key = Secret::default();
         return;
     }
     let key_raw = {
@@ -3648,16 +3633,9 @@ fn apply_password_save_policy(
     // Any newly entered key material (path or pasted body) stays out of the
     // on-disk session; keep whatever was already stored.
     if !key_raw.is_empty() {
-        match existing {
-            Some(s) => {
-                session.private_key_path = s.private_key_path.clone();
-                session.private_key_inline = s.private_key_inline.clone();
-            }
-            None => {
-                session.private_key_path.clear();
-                session.private_key_inline = Secret::default();
-            }
-        }
+        session.private_key = existing
+            .map(|s| s.private_key.clone())
+            .unwrap_or_default();
     }
 }
 

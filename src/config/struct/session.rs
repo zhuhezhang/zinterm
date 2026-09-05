@@ -121,12 +121,16 @@ pub struct Session {
     pub user: String,
     #[serde(default)]
     pub auth: AuthMethod,
+    /// Login password for [`AuthMethod::Password`] only.
     #[serde(default)]
     pub password: Secret,
+    /// Passphrase for an encrypted private key ([`AuthMethod::Key`] only).
     #[serde(default)]
-    pub private_key_path: String,
+    pub key_passphrase: Secret,
+    /// Private key path **or** pasted PEM/OpenSSH/PPK body ([`AuthMethod::Key`]).
+    /// Distinguished at use time by [`looks_like_private_key_content`].
     #[serde(default)]
-    pub private_key_inline: Secret,
+    pub private_key: Secret,
     #[serde(default)]
     pub last_used: Option<String>,
     /// Optional folder/group name to organize sessions in the list (#41).
@@ -203,22 +207,16 @@ impl Serialize for Session {
                 map.serialize_entry("auth", &self.auth)?;
                 match self.auth {
                     AuthMethod::Password => {
-                        // Password auth: persist login password only.
                         if !self.password.is_empty() {
                             map.serialize_entry("password", &self.password)?;
                         }
                     }
                     AuthMethod::Key => {
-                        // Key auth: persist passphrase (reuses password field)
-                        // and private-key path / pasted body.
-                        if !self.password.is_empty() {
-                            map.serialize_entry("password", &self.password)?;
+                        if !self.key_passphrase.is_empty() {
+                            map.serialize_entry("key_passphrase", &self.key_passphrase)?;
                         }
-                        if !self.private_key_path.is_empty() {
-                            map.serialize_entry("private_key_path", &self.private_key_path)?;
-                        }
-                        if !self.private_key_inline.is_empty() {
-                            map.serialize_entry("private_key_inline", &self.private_key_inline)?;
+                        if !self.private_key.is_empty() {
+                            map.serialize_entry("private_key", &self.private_key)?;
                         }
                     }
                 }
@@ -335,12 +333,19 @@ impl Session {
             name_raw
         };
 
-        let (private_key_path, private_key_inline) = if auth == AuthMethod::Key {
-            let path = json_string(obj.get("private_key_path"));
-            let inline = json_string(obj.get("private_key_inline"));
-            (path.replace('\\', "/"), Secret::new(inline))
-        } else {
-            (String::new(), Secret::default())
+        let (password, key_passphrase, private_key) = match auth {
+            AuthMethod::Password => (
+                Secret::new(json_string(obj.get("password"))),
+                Secret::default(),
+                Secret::default(),
+            ),
+            AuthMethod::Key => (
+                Secret::default(),
+                Secret::new(json_string(obj.get("key_passphrase"))),
+                Secret::new(finalize_imported_private_key(&json_string(
+                    obj.get("private_key"),
+                ))),
+            ),
         };
 
         let mut session = Self {
@@ -350,9 +355,9 @@ impl Session {
             port,
             user,
             auth,
-            password: Secret::new(json_string(obj.get("password"))),
-            private_key_path,
-            private_key_inline,
+            password,
+            key_passphrase,
+            private_key,
             last_used: json_optional_string(obj.get("last_used")),
             group: json_string(obj.get("group")),
             kind,
@@ -449,21 +454,61 @@ impl Session {
         self.user.clear();
         self.auth = AuthMethod::Password;
         self.password = Secret::default();
-        self.private_key_path.clear();
-        self.private_key_inline = Secret::default();
+        self.key_passphrase = Secret::default();
+        self.private_key = Secret::default();
     }
 
     /// Drop credentials that do not apply to [`Self::auth`]:
-    /// password auth clears private-key fields; key auth keeps `password` as
-    /// the key passphrase only (there is no separate login-password slot).
+    /// password auth ignores `key_passphrase` / `private_key`;
+    /// key auth ignores `password`.
     fn sanitize_for_auth(&mut self) {
         match self.auth {
             AuthMethod::Password => {
-                self.private_key_path.clear();
-                self.private_key_inline = Secret::default();
+                self.key_passphrase = Secret::default();
+                self.private_key = Secret::default();
             }
-            AuthMethod::Key => {}
+            AuthMethod::Key => {
+                self.password = Secret::default();
+            }
         }
+    }
+}
+
+/// True when `raw` looks like pasted key material (PEM / OpenSSH / PuTTY)
+/// rather than a filesystem path.
+pub fn looks_like_private_key_content(raw: &str) -> bool {
+    let t = raw.trim();
+    if t.is_empty() {
+        return false;
+    }
+    // Avoid depending on the ssh module here (circular with Session consumers).
+    if t.lines()
+        .next()
+        .is_some_and(|l| l.starts_with("PuTTY-User-Key-File"))
+    {
+        return true;
+    }
+    let upper = t.to_ascii_uppercase();
+    if upper.contains("BEGIN") && upper.contains("PRIVATE KEY") {
+        return true;
+    }
+    // Paths are almost never several non-empty lines; treat multi-line blobs as keys.
+    t.lines().filter(|l| !l.trim().is_empty()).count() >= 3
+}
+
+/// Normalize a hand-edited `private_key` import value: `\n` → newlines for
+/// key content, forward slashes for paths.
+fn finalize_imported_private_key(raw: &str) -> String {
+    let t = raw.trim();
+    if t.is_empty() {
+        return String::new();
+    }
+    if looks_like_private_key_content(t) {
+        // JSON `\n` already becomes newlines during parse; also accept a
+        // literal backslash-n sequence for editors that leave `\\n` in the value.
+        t.replace("\\n", "\n")
+    } else {
+        t.replace('\\', "/")
     }
 }
 
@@ -659,8 +704,8 @@ mod sanitize_tests {
             user: "root".into(),
             auth: AuthMethod::Password,
             password: Secret::default(),
-            private_key_path: String::new(),
-            private_key_inline: Secret::default(),
+            key_passphrase: Secret::default(),
+            private_key: Secret::default(),
             last_used: None,
             group: String::new(),
             kind: SessionKind::Ssh,
@@ -686,15 +731,16 @@ mod sanitize_tests {
         s.kind = SessionKind::Ssh;
         s.auth = AuthMethod::Password;
         s.password = Secret::new("login");
-        s.private_key_path = "/home/u/.ssh/id_ed25519".into();
-        s.private_key_inline = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
+        s.key_passphrase = Secret::new("should-drop");
+        s.private_key = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
         s.sanitize_for_kind();
         assert_eq!(s.password.as_str(), "login");
-        assert!(s.private_key_path.is_empty());
-        assert!(s.private_key_inline.is_empty());
+        assert!(s.key_passphrase.is_empty());
+        assert!(s.private_key.is_empty());
         let raw = serde_json::to_string(&s).unwrap();
         assert!(raw.contains("\"password\""));
-        assert!(!raw.contains("\"private_key"));
+        assert!(!raw.contains("\"private_key\""));
+        assert!(!raw.contains("key_passphrase"));
     }
 
     #[test]
@@ -702,14 +748,17 @@ mod sanitize_tests {
         let mut s = new_empty();
         s.kind = SessionKind::Ssh;
         s.auth = AuthMethod::Key;
-        s.password = Secret::new("key-pass");
-        s.private_key_path = "/home/u/.ssh/id_ed25519".into();
+        s.password = Secret::new("should-drop-login");
+        s.key_passphrase = Secret::new("key-pass");
+        s.private_key = Secret::new("/home/u/.ssh/id_ed25519");
         s.sanitize_for_kind();
-        assert_eq!(s.password.as_str(), "key-pass");
-        assert_eq!(s.private_key_path, "/home/u/.ssh/id_ed25519");
+        assert!(s.password.is_empty());
+        assert_eq!(s.key_passphrase.as_str(), "key-pass");
+        assert_eq!(s.private_key.as_str(), "/home/u/.ssh/id_ed25519");
         let raw = serde_json::to_string(&s).unwrap();
-        assert!(raw.contains("\"password\""));
-        assert!(raw.contains("\"private_key_path\""));
+        assert!(!raw.contains("\"password\""));
+        assert!(raw.contains("\"key_passphrase\""));
+        assert!(raw.contains("\"private_key\""));
     }
 
     #[test]
@@ -743,8 +792,8 @@ mod sanitize_tests {
         s.user = "root".into();
         s.auth = AuthMethod::Key;
         s.password = Secret::new("secret");
-        s.private_key_path = "/key".into();
-        s.private_key_inline = Secret::new("PEM");
+        s.key_passphrase = Secret::new("kp");
+        s.private_key = Secret::new("PEM");
         s.enable_sftp = true;
         s.serial_port = "COM3".into();
         s.baud_rate = 115_200;
@@ -755,8 +804,8 @@ mod sanitize_tests {
         assert!(s.user.is_empty());
         assert_eq!(s.auth, AuthMethod::Password);
         assert!(s.password.is_empty());
-        assert!(s.private_key_path.is_empty());
-        assert!(s.private_key_inline.is_empty());
+        assert!(s.key_passphrase.is_empty());
+        assert!(s.private_key.is_empty());
         assert!(!s.enable_sftp);
         assert!(s.shell.is_empty());
         assert_eq!(s.serial_port, "COM3");

@@ -568,9 +568,12 @@ impl ConfigStore {
                             session.password = Secret::new(plain);
                         }
                         if let Some(plain) =
-                            Self::try_decrypt(&key, session.private_key_inline.as_str())
+                            Self::try_decrypt(&key, session.key_passphrase.as_str())
                         {
-                            session.private_key_inline = Secret::new(plain);
+                            session.key_passphrase = Secret::new(plain);
+                        }
+                        if let Some(plain) = Self::try_decrypt(&key, session.private_key.as_str()) {
+                            session.private_key = Secret::new(plain);
                         }
                         if session.sanitize_for_kind() {
                             migrated = true;
@@ -1429,8 +1432,8 @@ impl ConfigStore {
     pub fn clear_saved_passwords_and_keys(&mut self) {
         for session in &mut self.cache.sessions {
             session.password = Secret::default();
-            session.private_key_inline = Secret::default();
-            session.private_key_path.clear();
+            session.key_passphrase = Secret::default();
+            session.private_key = Secret::default();
         }
     }
     pub fn wallpaper_overlay(&self) -> f32 {
@@ -1734,14 +1737,17 @@ impl ConfigStore {
                 let enc = Self::encrypt(&self.key, session.password.as_str())?;
                 session.password = Secret::new(enc);
             }
-            if !session.private_key_inline.is_empty()
-                && !session
-                    .private_key_inline
-                    .as_str()
-                    .starts_with(Self::ENC_PREFIX)
+            if !session.key_passphrase.is_empty()
+                && !session.key_passphrase.as_str().starts_with(Self::ENC_PREFIX)
             {
-                let enc = Self::encrypt(&self.key, session.private_key_inline.as_str())?;
-                session.private_key_inline = Secret::new(enc);
+                let enc = Self::encrypt(&self.key, session.key_passphrase.as_str())?;
+                session.key_passphrase = Secret::new(enc);
+            }
+            if !session.private_key.is_empty()
+                && !session.private_key.as_str().starts_with(Self::ENC_PREFIX)
+            {
+                let enc = Self::encrypt(&self.key, session.private_key.as_str())?;
+                session.private_key = Secret::new(enc);
             }
         }
         let raw = serde_json::to_string_pretty(&disk)?;
@@ -1839,6 +1845,7 @@ impl ConfigStore {
     }
 
     /// Encrypt a password with the portable export key → `"enc:exp:v1:<b64>"`.
+    /// Kept so older export files can still be imported; new exports omit secrets.
     fn encrypt_export(plaintext: &str) -> Result<String> {
         let cipher = ChaCha20Poly1305::new((&Self::EXPORT_KEY).into());
         let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
@@ -1868,23 +1875,18 @@ impl ConfigStore {
         String::from_utf8(plain).ok()
     }
 
-    /// Export all sessions to a portable JSON file. Passwords are re-encrypted
-    /// with the built-in export key; everything else stays plaintext so the
-    /// file is human-readable and editable. Returns the number of sessions.
+    /// Export all sessions to a portable JSON file. Connection metadata stays
+    /// plaintext and editable; password / private-key fields are cleared so the
+    /// export never carries secrets. Returns the number of sessions.
     pub fn export_json(&self) -> Result<(String, usize)> {
         let empty_groups = self.collect_empty_groups();
         let mut sessions = self.cache.sessions.clone();
         for s in &mut sessions {
             s.sanitize_for_kind();
-            // `cache` holds plaintext passwords; obfuscate with the export key.
-            if !s.password.is_empty() {
-                let enc = Self::encrypt_export(s.password.as_str())?;
-                s.password = Secret::new(enc);
-            }
-            if !s.private_key_inline.is_empty() {
-                let enc = Self::encrypt_export(s.private_key_inline.as_str())?;
-                s.private_key_inline = Secret::new(enc);
-            }
+            // Never put secrets in the portable export; hand-fill on import.
+            s.password = Secret::default();
+            s.key_passphrase = Secret::default();
+            s.private_key = Secret::default();
             // `last_used` is machine-local noise — don't carry it across.
             s.last_used = None;
         }
@@ -1920,9 +1922,9 @@ impl ConfigStore {
             .collect()
     }
 
-    /// Export all sessions to a portable JSON file. Passwords are re-encrypted
-    /// with the built-in export key; everything else stays plaintext so the
-    /// file is human-readable and editable. Returns the number of sessions.
+    /// Export all sessions to a portable JSON file. Connection metadata stays
+    /// plaintext and editable; password / private-key fields are cleared so the
+    /// export never carries secrets. Returns the number of sessions.
     pub fn export_to(&self, path: &Path) -> Result<usize> {
         let (raw, count) = self.export_json()?;
         fs::write(path, raw).with_context(|| format!("failed to write {}", path.display()))?;
@@ -1933,9 +1935,12 @@ impl ConfigStore {
     ///
     /// Each session must include `kind`; SSH/Telnet also need a non-empty
     /// `host`, and Serial needs a non-empty `serial_port`. Other missing or
-    /// malformed fields follow new-session dialog defaults. A session is
-    /// skipped only when the same group already has that `id` or the same
-    /// `name`. Empty groups are restored first. Returns `(added, skipped)`.
+    /// malformed fields follow new-session dialog defaults. Optional plaintext
+    /// `password` (login, password auth), `key_passphrase` / `private_key`
+    /// (key auth; multi-line keys use `\n`) are kept only when Settings › Data ›
+    /// save passwords is on; otherwise they are dropped before persist. A
+    /// session is skipped only when the same group already has that `id` or the
+    /// same `name`. Empty groups are restored first. Returns `(added, skipped)`.
     /// The store is saved if anything was added (sessions or empty groups).
     pub fn import_json(&mut self, raw: &str) -> Result<(usize, usize)> {
         let file: ExportFileImport =
@@ -1964,23 +1969,35 @@ impl ConfigStore {
             }
         }
 
+        let save_passwords = self.save_passwords();
         let mut added = 0usize;
         let mut skipped = 0usize;
         for (i, raw_session) in file.sessions.iter().enumerate() {
             let mut s = Session::from_import_value(raw_session)
                 .with_context(|| format!("session[{i}]"))?;
-            // Recover the plaintext password (cache stores plaintext). Accept an
-            // export blob, our local enc:v1 blob, or a legacy plaintext value.
+            // Recover plaintext secrets (cache stores plaintext). Accept an
+            // older export blob, our local enc:v1 blob, or hand-edited plaintext.
             if let Some(plain) = Self::decrypt_export(s.password.as_str()) {
                 s.password = Secret::new(plain);
             } else if let Some(plain) = Self::try_decrypt(&self.key, s.password.as_str()) {
                 s.password = Secret::new(plain);
             }
-            if let Some(plain) = Self::decrypt_export(s.private_key_inline.as_str()) {
-                s.private_key_inline = Secret::new(plain);
-            } else if let Some(plain) = Self::try_decrypt(&self.key, s.private_key_inline.as_str())
-            {
-                s.private_key_inline = Secret::new(plain);
+            if let Some(plain) = Self::decrypt_export(s.key_passphrase.as_str()) {
+                s.key_passphrase = Secret::new(plain);
+            } else if let Some(plain) = Self::try_decrypt(&self.key, s.key_passphrase.as_str()) {
+                s.key_passphrase = Secret::new(plain);
+            }
+            if let Some(plain) = Self::decrypt_export(s.private_key.as_str()) {
+                s.private_key = Secret::new(plain);
+            } else if let Some(plain) = Self::try_decrypt(&self.key, s.private_key.as_str()) {
+                s.private_key = Secret::new(plain);
+            }
+            // Match Settings › Data › save passwords: ignore newly imported
+            // secrets when the switch is off.
+            if !save_passwords {
+                s.password = Secret::default();
+                s.key_passphrase = Secret::default();
+                s.private_key = Secret::default();
             }
             s.sanitize_for_kind();
             if is_reserved_session_group(s.group.trim()) {
@@ -2081,15 +2098,15 @@ mod tests {
 
         let mut session = Session::default();
         session.password = Secret::new("secret");
-        session.private_key_path = "/home/u/.ssh/id_ed25519".into();
-        session.private_key_inline = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
+        session.key_passphrase = Secret::new("kp");
+        session.private_key = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
         store.upsert(session);
 
         store.clear_saved_passwords_and_keys();
         let cleared = store.sessions().first().expect("session kept");
         assert!(cleared.password.is_empty());
-        assert!(cleared.private_key_inline.is_empty());
-        assert!(cleared.private_key_path.is_empty());
+        assert!(cleared.key_passphrase.is_empty());
+        assert!(cleared.private_key.is_empty());
 
         store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
         assert!(!store.save_passwords());
@@ -2559,7 +2576,7 @@ mod tests {
     }
 
     #[test]
-    fn export_import_roundtrip_preserves_password() {
+    fn export_omits_password_and_key_fields() {
         let mut a = temp_store();
         let id = "saved-1700000000000-ab12".to_string();
         let saved_at = 1_700_000_000_000u64;
@@ -2570,40 +2587,115 @@ mod tests {
             host: "192.168.100.2".into(),
             port: 22,
             user: "root".into(),
+            auth: AuthMethod::Key,
             password: Secret::new("s3cr3t"),
+            key_passphrase: Secret::new("kp"),
+            private_key: Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n"),
             ..Session::default()
         });
 
         let export_path = std::env::temp_dir().join(format!("ms-exp-{}.json", Uuid::new_v4()));
         assert_eq!(a.export_to(&export_path).unwrap(), 1);
 
-        // The file keeps host/user plaintext but the password is obfuscated.
         let raw = std::fs::read_to_string(&export_path).unwrap();
         assert!(raw.contains("\"zinterm_export\": \"sessions\""));
         assert!(raw.contains("\"version\": 1"));
         assert!(raw.contains("\"empty_groups\""));
         assert!(raw.contains("\"sessions\""));
-        assert!(!raw.contains("\"data\""));
         assert!(raw.contains("192.168.100.2"));
-        assert!(raw.contains(ConfigStore::EXPORT_PREFIX));
         assert!(!raw.contains("s3cr3t"));
+        assert!(!raw.contains("\"password\""));
+        assert!(!raw.contains("key_passphrase"));
+        assert!(!raw.contains("private_key"));
+        assert!(!raw.contains(ConfigStore::EXPORT_PREFIX));
 
-        // Importing into a fresh store recovers the plaintext password and
-        // keeps the original id / saved_at.
+        // Round-trip restores connection metadata without secrets.
         let mut b = temp_store();
         assert_eq!(b.import_from(&export_path).unwrap(), (1, 0));
         assert_eq!(b.cache.sessions.len(), 1);
-        assert_eq!(b.cache.sessions[0].password.as_str(), "s3cr3t");
+        assert!(b.cache.sessions[0].password.is_empty());
+        assert!(b.cache.sessions[0].key_passphrase.is_empty());
+        assert!(b.cache.sessions[0].private_key.is_empty());
         assert_eq!(b.cache.sessions[0].host, "192.168.100.2");
         assert_eq!(b.cache.sessions[0].id, id);
         assert_eq!(b.cache.sessions[0].saved_at, saved_at);
 
-        // Re-importing the same file skips the same-group id/name duplicate.
         assert_eq!(b.import_from(&export_path).unwrap(), (0, 1));
 
         let _ = std::fs::remove_file(&export_path);
         let _ = std::fs::remove_file(&a.path);
         let _ = std::fs::remove_file(&b.path);
+    }
+
+    #[test]
+    fn import_plaintext_secrets_honor_save_passwords_switch() {
+        let wrap = |sessions: &str| {
+            format!(
+                r#"{{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[{sessions}]}}"#
+            )
+        };
+        let body = r#"{
+            "kind":"ssh",
+            "name":"box",
+            "host":"10.0.0.9",
+            "user":"root",
+            "auth":"password",
+            "password":"p@ss"
+        }"#;
+
+        let mut off = temp_store();
+        assert!(!off.save_passwords());
+        assert_eq!(off.import_json(&wrap(body)).unwrap(), (1, 0));
+        assert!(off.cache.sessions[0].password.is_empty());
+
+        let mut on = temp_store();
+        on.set_save_passwords(true);
+        assert_eq!(on.import_json(&wrap(body)).unwrap(), (1, 0));
+        assert_eq!(on.cache.sessions[0].password.as_str(), "p@ss");
+
+        let key_body = r#"{
+            "kind":"ssh",
+            "name":"keybox",
+            "host":"10.0.0.10",
+            "user":"root",
+            "auth":"key",
+            "key_passphrase":"key-pass",
+            "private_key":"-----BEGIN OPENSSH PRIVATE KEY-----\\nAAAA\\n-----END OPENSSH PRIVATE KEY-----"
+        }"#;
+        let mut key_on = temp_store();
+        key_on.set_save_passwords(true);
+        assert_eq!(key_on.import_json(&wrap(key_body)).unwrap(), (1, 0));
+        let s = &key_on.cache.sessions[0];
+        assert!(s.password.is_empty());
+        assert_eq!(s.key_passphrase.as_str(), "key-pass");
+        assert_eq!(
+            s.private_key.as_str(),
+            "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----"
+        );
+
+        let mut key_off = temp_store();
+        assert_eq!(key_off.import_json(&wrap(key_body)).unwrap(), (1, 0));
+        assert!(key_off.cache.sessions[0].password.is_empty());
+        assert!(key_off.cache.sessions[0].key_passphrase.is_empty());
+        assert!(key_off.cache.sessions[0].private_key.is_empty());
+
+        let _ = std::fs::remove_file(&off.path);
+        let _ = std::fs::remove_file(&on.path);
+        let _ = std::fs::remove_file(&key_on.path);
+        let _ = std::fs::remove_file(&key_off.path);
+    }
+
+    #[test]
+    fn import_accepts_legacy_export_encrypted_password_when_save_passwords_on() {
+        let mut store = temp_store();
+        store.set_save_passwords(true);
+        let enc = ConfigStore::encrypt_export("legacy-secret").unwrap();
+        let raw = format!(
+            r#"{{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[{{"kind":"ssh","name":"legacy","host":"1.2.3.4","password":"{enc}"}}]}}"#
+        );
+        assert_eq!(store.import_json(&raw).unwrap(), (1, 0));
+        assert_eq!(store.cache.sessions[0].password.as_str(), "legacy-secret");
+        let _ = std::fs::remove_file(&store.path);
     }
 
     #[test]

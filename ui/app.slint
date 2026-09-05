@@ -4859,12 +4859,12 @@ export component AppWindow inherits Window {
                 : "确定清除所有已记住的 SSH 主机公钥？下次连接各主机时会再次要求确认信任。")
             : root.data-clear-kind == "passwords"
             ? (root.lang-en
-                ? "Clear every saved password, key passphrase, private-key file path, and pasted private key? This cannot be undone."
-                : "确定清除所有已保存的密码、密钥口令、私钥文件路径与粘贴的私钥？此操作不可撤销。")
+                ? "Clear every saved password, private-keys? This cannot be undone."
+                : "确定清除所有已保存的密码、私钥？此操作不可撤销。")
             : root.data-clear-kind == "restore-settings"
             ? (root.lang-en
-                ? "Restore settings preferences to defaults? Saved sessions, commands, passwords, and SSH known hosts which are not in the settings interface will be kept."
-                : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码和 SSH 已知主机公钥会保留。")
+                ? "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."
+                : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码、私钥和 SSH 已知主机公钥会保留。")
             : (root.lang-en
                 ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
                 : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");

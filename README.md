@@ -84,6 +84,7 @@ open /Applications/meatshell.app
   - 配置位置：`%APPDATA%/meatshell/sessions.json`（Windows）
     / `~/.config/meatshell/sessions.json`（Linux）
     / `~/Library/Application Support/meatshell/sessions.json`（macOS）
+  - 导出文件不含密码 / 私钥；若需导入凭据，见下方 [导入连接与密码字段](#导入连接与密码字段)
 - [x] SSH（`russh`，纯 Rust）：密码 / 私钥 / 加密私钥（密码短语）
 - [x] SFTP 文件浏览 + 上传 / 下载（拖拽）+ 终端内 ZMODEM（`sz`）接收
 - [x] 快捷命令 + 命令输入框（可群发到所有会话）+ 命令历史
@@ -118,6 +119,70 @@ cargo run --release
 
 首次启动会在 `%APPDATA%/meatshell/sessions.json` 建立空的会话库。点击右上
 角 **“＋ 新建会话”** 添加第一台服务器。
+
+## 导入连接与密码字段
+
+设置菜单中的 **导出连接** 会写出可移植 JSON（`zinterm_export: "sessions"`），
+但**不会**写入 `password`、`key_passphrase`、`private_key`。
+需要带凭据迁移时，可在导入前用文本编辑器手工补上这些字段，再用
+**导入连接** 读入。
+
+是否把导入的密码 / 密钥落到本地，取决于 **设置 → 数据 → 保存密码/密钥**：
+
+- 开关**打开**：按认证方式写入对应字段并加密持久化。
+- 开关**关闭**：上述字段即使写在文件里也会被忽略，连接仍可导入，
+  首次连接时再输入凭据。
+
+### 字段说明（仅 SSH）
+
+| 字段 | 含义 |
+| ---- | ---- |
+| `auth` | `"password"`（默认）或 `"key"` |
+| `password` | **仅密码认证**：登录密码 |
+| `key_passphrase` | **仅密钥认证**：加密私钥的口令（可空） |
+| `private_key` | **仅密钥认证**：本机私钥路径，或粘贴的私钥正文（程序按内容自动区分） |
+
+多行私钥请写在**一行 JSON 字符串**里，行与行之间用 `\n` 分隔，例如：
+
+```json
+{
+  "zinterm_export": "sessions",
+  "version": 1,
+  "exported_at": "manual",
+  "empty_groups": [],
+  "sessions": [
+    {
+      "kind": "ssh",
+      "name": "lab",
+      "host": "192.168.1.10",
+      "port": 22,
+      "user": "root",
+      "auth": "password",
+      "password": "your-login-password"
+    },
+    {
+      "kind": "ssh",
+      "name": "key-host",
+      "host": "192.168.1.11",
+      "user": "ubuntu",
+      "auth": "key",
+      "key_passphrase": "optional-key-passphrase",
+      "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA...\n-----END OPENSSH PRIVATE KEY-----"
+    },
+    {
+      "kind": "ssh",
+      "name": "key-path",
+      "host": "192.168.1.12",
+      "user": "ubuntu",
+      "auth": "key",
+      "private_key": "/home/ubuntu/.ssh/id_ed25519"
+    }
+  ]
+}
+```
+
+> 导入文件中的明文密码仅用于一次性迁移；落盘后仍会用本机 ChaCha20-Poly1305
+> 加密。请勿把含明文密码的 JSON 提交到公开仓库。
 
 ## 项目布局
 

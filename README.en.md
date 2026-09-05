@@ -89,6 +89,8 @@ open /Applications/meatshell.app
   - Config location: `%APPDATA%/meatshell/sessions.json` (Windows)
     / `~/.config/meatshell/sessions.json` (Linux)
     / `~/Library/Application Support/meatshell/sessions.json` (macOS)
+  - Export files omit passwords / private keys; to import credentials see
+    [Importing connections and password fields](#importing-connections-and-password-fields)
 - [x] SSH (`russh`, pure Rust): password / private key / encrypted key (passphrase)
 - [x] SFTP browser + upload / download (drag-and-drop) + in-terminal ZMODEM (`sz`) receive
 - [x] Quick commands + command box (broadcast to all sessions) + command history
@@ -124,6 +126,73 @@ cargo run --release
 On first launch an empty session store is created at
 `%APPDATA%/meatshell/sessions.json`. Click **"＋ New Session"** in the top-right
 to add your first server.
+
+## Importing connections and password fields
+
+**Export connections** writes a portable JSON file (`zinterm_export: "sessions"`)
+but **does not** include `password`, `key_passphrase`, or `private_key`.
+To migrate credentials, hand-edit those fields into the file before
+**Import connections**.
+
+Whether imported secrets are persisted follows **Settings → Data → Save
+passwords / keys**:
+
+- **On**: keep the auth-specific secret fields and encrypt them for local storage.
+- **Off**: ignore those fields even if present; connections still import, and
+  you will be prompted on first connect.
+
+### Fields (SSH only)
+
+| Field | Meaning |
+| ----- | ------- |
+| `auth` | `"password"` (default) or `"key"` |
+| `password` | **Password auth only**: login password |
+| `key_passphrase` | **Key auth only**: passphrase for an encrypted private key (optional) |
+| `private_key` | **Key auth only**: local key path **or** pasted key body (classified automatically) |
+
+Put a multi-line private key in a **single JSON string**, separating lines with
+`\n`, for example:
+
+```json
+{
+  "zinterm_export": "sessions",
+  "version": 1,
+  "exported_at": "manual",
+  "empty_groups": [],
+  "sessions": [
+    {
+      "kind": "ssh",
+      "name": "lab",
+      "host": "192.168.1.10",
+      "port": 22,
+      "user": "root",
+      "auth": "password",
+      "password": "your-login-password"
+    },
+    {
+      "kind": "ssh",
+      "name": "key-host",
+      "host": "192.168.1.11",
+      "user": "ubuntu",
+      "auth": "key",
+      "key_passphrase": "optional-key-passphrase",
+      "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA...\n-----END OPENSSH PRIVATE KEY-----"
+    },
+    {
+      "kind": "ssh",
+      "name": "key-path",
+      "host": "192.168.1.12",
+      "user": "ubuntu",
+      "auth": "key",
+      "private_key": "/home/ubuntu/.ssh/id_ed25519"
+    }
+  ]
+}
+```
+
+> Plaintext passwords in an import file are only for one-shot migration; once
+> saved they are encrypted locally with ChaCha20-Poly1305. Do not commit JSON
+> that still contains plaintext secrets.
 
 ## Project layout
 

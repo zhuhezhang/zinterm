@@ -245,13 +245,11 @@ pub struct ConfigFile {
     pub defaults_rev: u32,
 }
 
-/// Portable export file (issue #46): sessions with everything in plaintext
-/// **except** the password, which is encrypted with a fixed key baked into the
-/// binary so the file opens on *any* machine running meatshell.
+/// Portable export file (issue #46): connection metadata in plaintext.
 ///
-/// Security note: a built-in key in open-source code is **obfuscation, not real
-/// security** — anyone with the source can derive it. It only stops a casual
-/// over-the-shoulder read of the file, same level as FinalShell's export.
+/// Password / private-key fields (`password`, `key_passphrase`, `private_key`)
+/// are **omitted on export**. Hand-edit those fields into an import file if
+/// needed; persistence still follows Settings › Data › save passwords.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct ExportFile {
     /// Must be `"sessions"` for a connection export.

@@ -1900,10 +1900,10 @@ export component InterfacePanel inherits Rectangle {
                         }
 
                         SettingRow {
-                            label: root.lang-en ? "Save passwords / keys" : "保存密码/密钥";
+                            label: root.lang-en ? "Save passwords / private-keys" : "保存密码/私钥";
                             desc: root.lang-en
-                                ? "When on, passwords, key passphrases, private-key file paths, and pasted private keys are stored with the session (encrypted where needed). Turning this off does not clear credentials already saved."
-                                : "开启后,密码、密钥口令、私钥文件路径与粘贴的私钥会随会话保存(敏感内容加密)。关闭此选项不会清除已保存的内容。";
+                                ? "When on, passwords, private-keys are stored with the session (encrypted where needed). Turning this off does not clear credentials already saved."
+                                : "开启后密码、私钥会随会话保存(敏感内容加密)。关闭此选项不会清除已保存的内容。";
                             Switch {
                                 on: root.save-passwords;
                                 toggled(v) => { root.save-passwords = v; root.set-save-passwords(v); }
@@ -1911,10 +1911,10 @@ export component InterfacePanel inherits Rectangle {
                         }
 
                         SettingRow {
-                            label: root.lang-en ? "Clear saved passwords / keys" : "清除所有保存的密码/密钥";
+                            label: root.lang-en ? "Clear saved passwords / private-keys" : "清除所有保存的密码/私钥";
                             desc: root.lang-en
-                                ? "Remove every stored password, key passphrase, private-key file path, and pasted private key from saved sessions."
-                                : "清除所有已保存会话中的密码、密钥口令、私钥文件路径与粘贴的私钥。";
+                                ? "Remove every stored password, private-keys from saved sessions."
+                                : "清除所有已保存会话中的密码、私钥。";
                             DangerButton {
                                 text: root.lang-en ? "Clear" : "清除";
                                 clicked => { root.request-clear-passwords(); }
@@ -1946,8 +1946,8 @@ export component InterfacePanel inherits Rectangle {
                         SettingRow {
                             label: root.lang-en ? "Restore default settings" : "恢复默认设置";
                             desc: root.lang-en
-                                ? "Reset settings preferences to defaults. Saved groups, sessions, commands, passwords, and SSH known hosts are kept."
-                                : "将设置相关偏好恢复为默认值。已保存的分组、会话、命令、密码和 SSH 已知主机公钥不会被清除。";
+                                ? "Reset settings preferences to defaults. Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
+                                : "将设置相关偏好恢复为默认值。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除。";
                             show-divider: false;
                             PrimaryButton {
                                 text: root.lang-en ? "Restore" : "恢复";
