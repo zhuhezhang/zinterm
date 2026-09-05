@@ -525,12 +525,16 @@ pub fn run() -> Result<()> {
     #[cfg(target_os = "macos")]
     window.set_custom_titlebar(false);
 
-    // Apply the saved UI language.  The Rust-side flag drives `i18n::t(...)`;
-    // `apply_to_slint` selects the bundled `.po` for the static `@tr(...)` text
-    // (must run after the first component exists, which it now does).
-    crate::i18n::set_language(store.borrow().language());
-    crate::i18n::apply_to_slint();
-    window.set_lang_en(crate::i18n::is_en());
+    // Apply the saved UI language preference (auto / zh / en).  The Rust-side
+    // flag drives `i18n::t(...)`; `apply_to_slint` selects the bundled `.po`
+    // for the static `@tr(...)` text (must run after the first component exists).
+    {
+        let pref = store.borrow().language().to_string();
+        crate::i18n::set_language(&pref);
+        crate::i18n::apply_to_slint();
+        window.set_language_pref(pref.into());
+        window.set_lang_en(crate::i18n::is_en());
+    }
 
     // Apply the saved (or system-detected) theme.
     // "dark" / "light" → use that directly; "system" or unset → ask the OS;
@@ -1229,8 +1233,10 @@ pub fn run() -> Result<()> {
                 return;
             };
             let s = store.borrow();
-            crate::i18n::set_language(s.language());
+            let lang_pref = s.language().to_string();
+            crate::i18n::set_language(&lang_pref);
             crate::i18n::apply_to_slint();
+            w.set_language_pref(lang_pref.into());
             w.set_lang_en(crate::i18n::is_en());
             for i in 0..tabs_model.row_count() {
                 if let Some(mut row) = tabs_model.row_data(i) {
@@ -1516,18 +1522,20 @@ pub fn run() -> Result<()> {
         ssh_keepalive_secs.clone(),
     );
 
-    // Switch UI language at runtime.  Static `@tr(...)` text updates live via
-    // select_bundled_translation; we additionally refresh the Rust-driven
-    // dynamic strings (sidebar status + the welcome tab title).
+    // Switch UI language at runtime.  Preference is "auto" / "zh" / "en"
+    // (auto follows the OS; non-Chinese OS locales → English).  Static
+    // `@tr(...)` text updates live via select_bundled_translation; we also
+    // refresh Rust-driven dynamic strings (welcome tab title).
     {
         let weak = window.as_weak();
         let store = store.clone();
         let tabs_model = tabs_model.clone();
         window.on_set_language(move |code| {
-            crate::i18n::set_language(&code.to_string());
+            let pref = crate::i18n::normalize_pref(&code).to_string();
+            crate::i18n::set_language(&pref);
             {
                 let mut s = store.borrow_mut();
-                s.set_language(crate::i18n::current_code().to_string());
+                s.set_language(pref.clone());
                 let _ = s.save();
             }
             // Re-translate the welcome tab's dynamic title.
@@ -1540,6 +1548,7 @@ pub fn run() -> Result<()> {
                 }
             }
             if let Some(w) = weak.upgrade() {
+                w.set_language_pref(pref.into());
                 w.set_lang_en(crate::i18n::is_en());
             }
         });

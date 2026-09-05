@@ -56,7 +56,8 @@ pub struct ConfigFile {
     /// Preset SFTP download directory. Empty = ask each time.
     #[serde(default)]
     pub download_dir: String,
-    /// UI language code: "zh" (default) or "en".
+    /// UI language preference: "auto" (default, follow OS) | "zh" | "en".
+    /// Empty is treated as "auto" when read.
     #[serde(default)]
     pub language: String,
     /// Theme preference: "system" (default) | "dark" | "light".

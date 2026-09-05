@@ -571,6 +571,8 @@ component WallpaperSwatch inherits Rectangle {
 // The settings content (nav + pages). Embedded in AppWindow's modal overlay.
 export component InterfacePanel inherits Rectangle {
     in property <bool> lang-en;
+    // Language preference: "auto" | "zh" | "en".
+    in-out property <string> language-pref: "auto";
     in property <bool> is-windows;
     in-out property <string> renderer-mode: "software";
     in property <[string]> term-fonts;
@@ -647,6 +649,7 @@ export component InterfacePanel inherits Rectangle {
     callback set-quick-commands-as-sidebar(bool);
     callback set-update-check-enabled(bool);   // startup new-version check (#184)
     callback set-ssh-keepalive-secs(int);
+    callback set-language(string);             // "auto" / "zh" / "en"
     callback persist-wallpaper-overlay(float);   // save the overlay opacity
     callback set-wallpaper(string);    // none / builtin selection
     callback pick-wallpaper-file();    // open the OS file dialog (Rust)
@@ -748,6 +751,13 @@ export component InterfacePanel inherits Rectangle {
                         label: root.lang-en ? "Download" : "下载";
                         active: root.ifd-page == "download";
                         clicked => { root.ifd-page = "download"; }
+                    }
+
+                    NavItem {
+                        icon: "\u{E894}";
+                        label: root.lang-en ? "Language" : "语言";
+                        active: root.ifd-page == "language";
+                        clicked => { root.ifd-page = "language"; }
                     }
 
                     NavItem {
@@ -1966,6 +1976,49 @@ export component InterfacePanel inherits Rectangle {
                             Switch {
                                 on: root.download-always-ask;
                                 toggled(v) => { root.download-always-ask = v; root.set-download-always-ask(v); }
+                            }
+                        }
+                    }
+
+                    // --- Language page -----------------------------------------
+                    if root.ifd-page == "language": VerticalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        padding-top: 15px;
+                        spacing: 0;
+                        alignment: start;
+                        SectionHeader {
+                            text: root.lang-en ? "LANGUAGE" : "语言";
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Interface language" : "界面语言";
+                            desc: root.lang-en
+                                ? "Auto follows the system language. Systems that are neither Chinese nor English use English."
+                                : "自动跟随系统语言。系统既非中文也非英文时使用英文。";
+                            show-divider: false;
+                            ComboBox {
+                                width: 150px;
+                                model: root.lang-en
+                                    ? ["Auto", "Chinese", "English"]
+                                    : ["自动", "中文", "英文"];
+                                current-value: root.language-pref == "zh"
+                                    ? (root.lang-en ? "Chinese" : "中文")
+                                    : root.language-pref == "en"
+                                    ? (root.lang-en ? "English" : "英文")
+                                    : (root.lang-en ? "Auto" : "自动");
+                                selected(v) => {
+                                    if (v == "Chinese" || v == "中文") {
+                                        root.language-pref = "zh";
+                                        root.set-language("zh");
+                                    } else if (v == "English" || v == "英文") {
+                                        root.language-pref = "en";
+                                        root.set-language("en");
+                                    } else {
+                                        root.language-pref = "auto";
+                                        root.set-language("auto");
+                                    }
+                                }
                             }
                         }
                     }

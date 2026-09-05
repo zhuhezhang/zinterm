@@ -858,17 +858,13 @@ impl ConfigStore {
         self.cache.download_dir = dir;
     }
 
-    /// UI language code ("zh" default / "en").
+    /// UI language preference ("auto" default / "zh" / "en").
     pub fn language(&self) -> &str {
-        if self.cache.language.is_empty() {
-            "zh"
-        } else {
-            &self.cache.language
-        }
+        crate::i18n::normalize_pref(&self.cache.language)
     }
 
     pub fn set_language(&mut self, lang: String) {
-        self.cache.language = lang;
+        self.cache.language = crate::i18n::normalize_pref(&lang).to_string();
     }
 
     /// Theme preference: "system" (default) | "dark" | "light".
@@ -2465,6 +2461,7 @@ mod tests {
         assert!(!store.zen_mode());
         assert!(!store.update_check_enabled());
         assert_eq!(store.terminal_cursor_style(), "bar");
+        assert_eq!(store.language(), "auto");
         assert!(store.collapse_sftp_default());
         assert!(store.quick_commands_as_sidebar());
         assert!(store.welcome_single_click_connect());

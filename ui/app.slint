@@ -364,7 +364,10 @@ export component AppWindow inherits Window {
     callback delete-quick-group(string /* name */);
     in property <[TransferInfo]> transfers; // download/upload records (newest first)
     in property <[string]> about-libs;      // open-source libraries used
-    in-out property <bool> lang-en: false;  // current UI language (false = 中文)
+    in-out property <bool> lang-en: false;  // effective UI language (false = 中文)
+    // Language preference: "auto" (follow OS) | "zh" | "en".
+    in-out property <string> language-pref: "auto";
+    callback set-language(string);           // switch UI language ("auto" / "zh" / "en")
     // Two-way binding to Theme.dark — Rust reads/writes this property and
     // Slint propagates it to every widget that references Theme colours.
     in-out property <bool> dark-mode <=> Theme.dark;
@@ -605,7 +608,6 @@ export component AppWindow inherits Window {
     callback open-download-dir();            // reveal the folder in the OS
     callback clear-transfers();              // wipe the transfer history
     callback cancel-transfer(string);        // cancel an in-progress transfer by id (#100)
-    callback set-language(string);           // switch UI language ("zh" / "en")
 
     // --- Update check (#48) ------------------------------------------------
     // Set by Rust after a background GitHub-releases query; purely informational
@@ -4696,6 +4698,7 @@ export component AppWindow inherits Window {
                 InterfacePanel {
                     vertical-stretch: 1;
                     lang-en: root.lang-en;
+                    language-pref <=> root.language-pref;
                     is-windows: root.is-windows;
                     renderer-mode <=> root.renderer-mode;
                     term-fonts: root.term-fonts;
@@ -4777,6 +4780,7 @@ export component AppWindow inherits Window {
                     set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
                     set-ssh-keepalive-secs(v) => { root.set-ssh-keepalive-secs(v); }
                     set-save-passwords(v) => { root.set-save-passwords(v); }
+                    set-language(v) => { root.set-language(v); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
                     request-clear-known-hosts => {
                         root.data-clear-kind = "known-hosts";
