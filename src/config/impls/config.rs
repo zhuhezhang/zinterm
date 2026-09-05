@@ -1844,24 +1844,7 @@ impl ConfigStore {
         )
     }
 
-    /// Encrypt a password with the portable export key → `"enc:exp:v1:<b64>"`.
-    /// Kept so older export files can still be imported; new exports omit secrets.
-    fn encrypt_export(plaintext: &str) -> Result<String> {
-        let cipher = ChaCha20Poly1305::new((&Self::EXPORT_KEY).into());
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
-        let ciphertext = cipher
-            .encrypt(&nonce, plaintext.as_bytes())
-            .map_err(|e| anyhow::anyhow!("export encrypt error: {e}"))?;
-        let mut blob = nonce.to_vec();
-        blob.extend_from_slice(&ciphertext);
-        Ok(format!(
-            "{}{}",
-            Self::EXPORT_PREFIX,
-            URL_SAFE_NO_PAD.encode(&blob)
-        ))
-    }
-
-    /// Decrypt a value produced by [`Self::encrypt_export`]; `None` if it isn't one.
+    /// Decrypt a legacy export ciphertext (`enc:exp:v1:…`); `None` if it isn't one.
     fn decrypt_export(s: &str) -> Option<String> {
         let b64 = s.strip_prefix(Self::EXPORT_PREFIX)?;
         let blob = URL_SAFE_NO_PAD.decode(b64).ok()?;
@@ -2052,6 +2035,22 @@ mod tests {
             cache: ConfigFile::default(),
             key: [7u8; 32],
         }
+    }
+
+    /// Build a legacy `enc:exp:v1:…` blob so import can still decrypt older exports.
+    fn encrypt_export(plaintext: &str) -> Result<String> {
+        let cipher = ChaCha20Poly1305::new((&ConfigStore::EXPORT_KEY).into());
+        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+        let ciphertext = cipher
+            .encrypt(&nonce, plaintext.as_bytes())
+            .map_err(|e| anyhow::anyhow!("export encrypt error: {e}"))?;
+        let mut blob = nonce.to_vec();
+        blob.extend_from_slice(&ciphertext);
+        Ok(format!(
+            "{}{}",
+            ConfigStore::EXPORT_PREFIX,
+            URL_SAFE_NO_PAD.encode(&blob)
+        ))
     }
 
     #[test]
@@ -2689,7 +2688,7 @@ mod tests {
     fn import_accepts_legacy_export_encrypted_password_when_save_passwords_on() {
         let mut store = temp_store();
         store.set_save_passwords(true);
-        let enc = ConfigStore::encrypt_export("legacy-secret").unwrap();
+        let enc = encrypt_export("legacy-secret").unwrap();
         let raw = format!(
             r#"{{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[{{"kind":"ssh","name":"legacy","host":"1.2.3.4","password":"{enc}"}}]}}"#
         );
