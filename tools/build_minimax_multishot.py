@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 SOURCE = Path(r"E:\ComfyUI\user\default\workflows\MiniMax_H3_I2V_Official.json")
-OUTPUT = Path(r"D:\WorkSpace\rust\meatshell\MiniMax_H3_4图分镜_连续性优化_V2.json")
+OUTPUT = Path(r"D:\WorkSpace\rust\zinterm\MiniMax_H3_4图分镜_连续性优化_V2.json")
 IMAGE_COUNT = 4
 SEGMENT_COUNT = IMAGE_COUNT - 1
 

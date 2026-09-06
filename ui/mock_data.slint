@@ -25,8 +25,8 @@ export global MockData {
         },
         {
             name: "打包发布",
-            command: "cargo build --release && tar czf dist/meatshell-$(date +%Y%m%d).tar.gz target/release/meatshell",
-            summary: "cargo build --release && tar czf dist/meatshell-$(date +%Y%m%d).tar.gz …",
+            command: "cargo build --release && tar czf dist/zinterm-$(date +%Y%m%d).tar.gz target/release/zinterm",
+            summary: "cargo build --release && tar czf dist/zinterm-$(date +%Y%m%d).tar.gz …",
             group: "default",
             group-header: "",
             collapsed: false,
@@ -52,8 +52,8 @@ export global MockData {
         },
         {
             name: "滚动日志",
-            command: "journalctl -u meatshell -f --since \"1 hour ago\"",
-            summary: "journalctl -u meatshell -f --since \"1 hour ago\"",
+            command: "journalctl -u zinterm -f --since \"1 hour ago\"",
+            summary: "journalctl -u zinterm -f --since \"1 hour ago\"",
             group: "运维",
             group-header: "",
             collapsed: false,

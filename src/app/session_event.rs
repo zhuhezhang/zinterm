@@ -255,7 +255,7 @@ pub(super) fn apply_session_event_to_window(
                     win,
                     tab_id,
                     SessionEvent::Output(format!(
-                        "\r\n[meatshell] {} {}: {}\r\n",
+                        "\r\n[zinterm] {} {}: {}\r\n",
                         crate::i18n::t("无法打开", "Cannot open"),
                         name,
                         error

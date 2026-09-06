@@ -113,22 +113,22 @@ const ZMODEM_CANCEL: [u8; 16] = [
 ];
 
 const PROMPT_SETUP_PREFIX: &str = "test -z \"$FISH_VERSION\"";
-const PROMPT_SETUP_SUFFIX: &str = "__ms7'";
+const PROMPT_SETUP_SUFFIX: &str = "__zt7'";
 #[cfg(test)]
-const PROMPT_SETUP_HISTORY_MARKER: &str = "__MEATSHELL_INTERNAL_SETUP_1";
+const PROMPT_SETUP_HISTORY_MARKER: &str = "__ZINTERM_INTERNAL_SETUP_1";
 const PROMPT_SETUP_DONE: &str = "\u{1b}]699;ready\u{07}";
 // Multiline history: zsh's `fc -ln` prints real newlines as the two-char
 // sequence `\n`. We keep this hook short (long lines leak under zsh/ZLE
 // redraw) and expand those escapes in `repair_fc_newlines` on receive.
-const PROMPT_BODY: &str = "test -z \"$FISH_VERSION\" && eval '__msc(){ __c=\"$(fc -ln -1 2>/dev/null)\"; [ -n \"$__c\" ] && [ \"$__c\" != \"$__cl\" ] && { __cl=\"$__c\"; printf \"\\033]697;%s\\007\" \"$__c\"; }; }; __ms7(){ printf \"\\033]7;file://%s%s\\007\" \"$HOSTNAME\" \"$PWD\"; __msc; }; if [ -n \"$ZSH_VERSION\" ]; then autoload -Uz add-zsh-hook 2>/dev/null; add-zsh-hook precmd __ms7; else PROMPT_COMMAND=\"__ms7${PROMPT_COMMAND:+;$PROMPT_COMMAND}\"; fi; : __MEATSHELL_INTERNAL_SETUP_1; if [ -n \"$BASH_VERSION\" ]; then __md=\"$(history 2>/dev/null | { __md=\"\"; while read -r __mn __mr; do case \"$__mr\" in *\"__ms7()\"*\"PROMPT_COMMAND=\"*) __mn=\"${__mn%\\*}\"; __md=\"$__mn $__md\";; esac; done; printf \"%s\" \"$__md\"; })\"; for __mn in $__md; do history -d \"$__mn\" 2>/dev/null; done; unset __md __mn __mr; fi; __cl=\"$(fc -ln -1 2>/dev/null)\"; printf \"\\033]699;ready\\007\"; __ms7'";
-const PROMPT_SHELL_PROBE: &[u8] = b"if [ -n \"$BASH_VERSION\" ]; then printf '__MEATSHELL_SHELL__:bash\\n'; elif [ -n \"$ZSH_VERSION\" ]; then printf '__MEATSHELL_SHELL__:zsh\\n'; else printf '__MEATSHELL_SHELL__:other\\n'; fi";
+const PROMPT_BODY: &str = "test -z \"$FISH_VERSION\" && eval '__ztc(){ __c=\"$(fc -ln -1 2>/dev/null)\"; [ -n \"$__c\" ] && [ \"$__c\" != \"$__cl\" ] && { __cl=\"$__c\"; printf \"\\033]697;%s\\007\" \"$__c\"; }; }; __zt7(){ printf \"\\033]7;file://%s%s\\007\" \"$HOSTNAME\" \"$PWD\"; __ztc; }; if [ -n \"$ZSH_VERSION\" ]; then autoload -Uz add-zsh-hook 2>/dev/null; add-zsh-hook precmd __zt7; else PROMPT_COMMAND=\"__zt7${PROMPT_COMMAND:+;$PROMPT_COMMAND}\"; fi; : __ZINTERM_INTERNAL_SETUP_1; if [ -n \"$BASH_VERSION\" ]; then __md=\"$(history 2>/dev/null | { __md=\"\"; while read -r __mn __mr; do case \"$__mr\" in *\"__zt7()\"*\"PROMPT_COMMAND=\"*) __mn=\"${__mn%\\*}\"; __md=\"$__mn $__md\";; esac; done; printf \"%s\" \"$__md\"; })\"; for __mn in $__md; do history -d \"$__mn\" 2>/dev/null; done; unset __md __mn __mr; fi; __cl=\"$(fc -ln -1 2>/dev/null)\"; printf \"\\033]699;ready\\007\"; __zt7'";
+const PROMPT_SHELL_PROBE: &[u8] = b"if [ -n \"$BASH_VERSION\" ]; then printf '__ZINTERM_SHELL__:bash\\n'; elif [ -n \"$ZSH_VERSION\" ]; then printf '__ZINTERM_SHELL__:zsh\\n'; else printf '__ZINTERM_SHELL__:other\\n'; fi";
 
 fn prompt_setup_supported(probe_output: &str) -> Option<bool> {
-    if probe_output.contains("__MEATSHELL_SHELL__:bash")
-        || probe_output.contains("__MEATSHELL_SHELL__:zsh")
+    if probe_output.contains("__ZINTERM_SHELL__:bash")
+        || probe_output.contains("__ZINTERM_SHELL__:zsh")
     {
         Some(true)
-    } else if probe_output.contains("__MEATSHELL_SHELL__:other") {
+    } else if probe_output.contains("__ZINTERM_SHELL__:other") {
         Some(false)
     } else {
         None
@@ -239,7 +239,7 @@ fn strip_late_prompt_setup_echo(text: &mut String) -> bool {
         }
     }
     // Partial redraw: no prefix, but the unique setup marker / tail is present.
-    const MARKER: &str = "__MEATSHELL_INTERNAL_SETUP";
+    const MARKER: &str = "__ZINTERM_INTERNAL_SETUP";
     let Some(marker_pos) = text.find(MARKER) else {
         return false;
     };
@@ -399,7 +399,7 @@ pub fn repair_fc_newlines(cmd: &str) -> String {
     out
 }
 
-/// Find a meatshell command-capture sequence (`ESC ] 697 ; <command> BEL|ST`)
+/// Find a zinterm command-capture sequence (`ESC ] 697 ; <command> BEL|ST`)
 /// emitted by the shell hook (#113). Returns the command text and the byte
 /// range of the whole escape sequence, so the caller can strip it before the
 /// text is rendered. An incomplete sequence (terminator not yet received)
@@ -719,7 +719,7 @@ fn ssh_config_with_preferred(
         keepalive_interval: keepalive_interval(keepalive_secs),
         // Short, RFC-shaped ident. russh's default (`SSH-2.0-russh_<ver>`) is
         // fine on OpenSSH but some VRP parsers are picky about the software tag.
-        client_id: russh::SshId::Standard("SSH-2.0-meatshell".into()),
+        client_id: russh::SshId::Standard("SSH-2.0-zinterm".into()),
         preferred,
         // russh's 2 MiB initial window / 32 KiB packet is fine on OpenSSH, but
         // H3C/Huawei VRP 3.x (S3100) drops CHANNEL_OPEN when the advertised
@@ -913,12 +913,12 @@ async fn run_session(
 
     // Cwd-notification (OSC 7) setup, injected once after the first prompt so
     // the SFTP panel can follow `cd` (#91). It must work across shells:
-    //   • bash/sh  → PROMPT_COMMAND runs `__ms7` before every prompt.
+    //   • bash/sh  → PROMPT_COMMAND runs `__zt7` before every prompt.
     //   • zsh      → bash's PROMPT_COMMAND is IGNORED by zsh, so we register a
     //                `precmd` hook via `add-zsh-hook` instead (non-destructive —
     //                it preserves oh-my-zsh / p10k hooks, unlike `precmd(){…}`).
     //   • fish     → guarded out (fish 3.1+ emits OSC 7 itself).
-    // `__ms7` is called once at the end so the initial cwd arrives immediately.
+    // `__zt7` is called once at the end so the initial cwd arrives immediately.
     //
     // The whole shell-specific body lives inside `eval '…'`: fish can't parse
     // bash/zsh function & `if` syntax, but it CAN parse `eval '<opaque string>'`,
@@ -934,7 +934,7 @@ async fn run_session(
     // Besides OSC 7 (cwd), the hook also captures the command the user just ran
     // and reports it via a private `OSC 697 ; <cmd> BEL` so it can join the
     // command-box history (#113) — terminal-typed commands aren't otherwise
-    // recorded. `__msc` reads the last history entry with `fc -ln -1`; this only
+    // recorded. `__ztc` reads the last history entry with `fc -ln -1`; this only
     // ever sees real executed commands, never password prompts (those use
     // `read -s` and aren't shell commands). `__cl` remembers the last reported
     // command so a redrawn prompt (e.g. Enter on an empty line) doesn't re-emit
@@ -1004,7 +1004,7 @@ async fn run_session(
                                     tracing::warn!("zmodem receive failed: {e:#}");
                                     let _ = channel.data(&ZMODEM_CANCEL[..]).await;
                                     let _ = events.send(SessionEvent::Output(format!(
-                                        "\r\n[meatshell] {}: {e}\r\n",
+                                        "\r\n[zinterm] {}: {e}\r\n",
                                         t("ZMODEM 接收失败,已取消", "ZMODEM receive failed; cancelled")
                                     ).into()));
                                 }
@@ -1091,7 +1091,7 @@ async fn run_session(
                         while let Some((cmd, range)) = extract_osc_command(&text) {
                             text.replace_range(range, "");
                             let cmd = repair_fc_newlines(cmd.trim());
-                            if !cmd.is_empty() && !cmd.contains("__ms7") {
+                            if !cmd.is_empty() && !cmd.contains("__zt7") {
                                 let _ = events.send(SessionEvent::CommandRan(cmd));
                             }
                         }
@@ -1242,15 +1242,15 @@ mod prompt_setup_echo_tests {
     #[test]
     fn only_bash_and_zsh_receive_prompt_setup() {
         assert_eq!(
-            prompt_setup_supported("__MEATSHELL_SHELL__:bash\n"),
+            prompt_setup_supported("__ZINTERM_SHELL__:bash\n"),
             Some(true)
         );
         assert_eq!(
-            prompt_setup_supported("__MEATSHELL_SHELL__:zsh\n"),
+            prompt_setup_supported("__ZINTERM_SHELL__:zsh\n"),
             Some(true)
         );
         assert_eq!(
-            prompt_setup_supported("__MEATSHELL_SHELL__:other\n"),
+            prompt_setup_supported("__ZINTERM_SHELL__:other\n"),
             Some(false)
         );
         assert_eq!(prompt_setup_supported("ash: syntax error\n"), None);
@@ -1260,7 +1260,7 @@ mod prompt_setup_echo_tests {
     fn bash_setup_removes_current_and_stale_history_entries() {
         assert!(PROMPT_BODY.contains(PROMPT_SETUP_HISTORY_MARKER));
         assert!(PROMPT_BODY.contains("history 2>/dev/null"));
-        assert!(PROMPT_BODY.contains("__ms7()"));
+        assert!(PROMPT_BODY.contains("__zt7()"));
         assert!(PROMPT_BODY.contains("history -d \"$__mn\""));
         // Multiline escapes are expanded in repair_fc_newlines on receive —
         // keep this hook short so zsh/ZLE redraws don't leak it to the screen.
@@ -1302,7 +1302,7 @@ mod prompt_setup_echo_tests {
     #[test]
     fn strips_oh_my_zsh_echo_without_newline() {
         let mut text = format!(
-            "➜  ~  {} && eval 'body; __ms7'\rafter prompt",
+            "➜  ~  {} && eval 'body; __zt7'\rafter prompt",
             PROMPT_SETUP_PREFIX
         );
         let p = text.find(PROMPT_SETUP_PREFIX).unwrap();
@@ -1314,7 +1314,7 @@ mod prompt_setup_echo_tests {
     #[test]
     fn strips_echo_through_osc7() {
         let mut text = format!(
-            "banner\n➜  ~  {} && eval 'body; __ms7'\r\u{1b}]7;file://host/home/jeff\u{07}prompt",
+            "banner\n➜  ~  {} && eval 'body; __zt7'\r\u{1b}]7;file://host/home/jeff\u{07}prompt",
             PROMPT_SETUP_PREFIX
         );
         let p = text.find(PROMPT_SETUP_PREFIX).unwrap();
@@ -1326,7 +1326,7 @@ mod prompt_setup_echo_tests {
     #[test]
     fn strips_late_echoed_setup_command() {
         let mut text = format!(
-            "prompt\r\n{} && eval 'body; __ms7'\r\nafter",
+            "prompt\r\n{} && eval 'body; __zt7'\r\nafter",
             PROMPT_SETUP_PREFIX
         );
         assert!(strip_late_prompt_setup_echo(&mut text));
@@ -1336,7 +1336,7 @@ mod prompt_setup_echo_tests {
     #[test]
     fn late_setup_filter_disables_itself_after_one_match() {
         let echoed = format!(
-            "prompt\r\n{} && eval 'body; __ms7'\r\nafter",
+            "prompt\r\n{} && eval 'body; __zt7'\r\nafter",
             PROMPT_SETUP_PREFIX
         );
         let mut pending = true;
@@ -1362,7 +1362,7 @@ mod prompt_setup_echo_tests {
         // injected. The buffered setup echo must replace, not append to, it.
         parser.process(prompt.as_bytes());
         let mut echoed = format!(
-            "{prompt}{} && eval 'body; __ms7'\r\n\u{1b}]7;file://host/root\u{07}{prompt}",
+            "{prompt}{} && eval 'body; __zt7'\r\n\u{1b}]7;file://host/root\u{07}{prompt}",
             PROMPT_SETUP_PREFIX
         );
         let prefix = echoed.find(PROMPT_SETUP_PREFIX).unwrap();
@@ -1501,7 +1501,7 @@ mod legacy_ssh_compat_tests {
     fn client_ident_is_short_rfc_string() {
         for config in [ssh_client_config(0), ssh_legacy_client_config(0)] {
             match &config.client_id {
-                russh::SshId::Standard(s) => assert_eq!(s, "SSH-2.0-meatshell"),
+                russh::SshId::Standard(s) => assert_eq!(s, "SSH-2.0-zinterm"),
                 russh::SshId::Raw(s) => panic!("expected Standard ident, got raw {s:?}"),
             }
         }

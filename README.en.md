@@ -1,4 +1,4 @@
-# meatshell
+# ZinTerm
 
 [简体中文](./README.md) | **English**
 
@@ -24,18 +24,18 @@ a native binary.
 
 Every `v*` tag triggers a GitHub Actions build that produces native binaries for
 **Windows / Linux / macOS**, published on the
-[Releases](https://github.com/jeff141/meatshell/releases) page.
+[Releases](https://github.com/zhuhezhang/zinterm/releases) page.
 
 ### Windows
 
-Download `meatshell-*-windows-x86_64.zip`, unzip, and run `meatshell.exe`.
+Download `zinterm-*-windows-x86_64.zip`, unzip, and run `zinterm.exe`.
 
 ### Linux
 
 ```bash
-tar -xzf meatshell-*-linux-x86_64.tar.gz
-cd meatshell-*-linux-x86_64
-./meatshell                                  # run it directly
+tar -xzf zinterm-*-linux-x86_64.tar.gz
+cd zinterm-*-linux-x86_64
+./zinterm                                  # run it directly
 # Optional: install the app icon + launcher entry (shows the icon in the dock /
 # app list — no argument needed, it finds the binary next to the script)
 chmod +x install-linux.sh && ./install-linux.sh
@@ -60,20 +60,20 @@ sudo apt install -y --no-install-recommends \
 
 ### macOS
 
-The download is a `.zip` containing the `meatshell.app` bundle:
+The download is a `.zip` containing the `zinterm.app` bundle:
 
 ```bash
 # Unzip (aarch64 = Apple Silicon, x86_64 = Intel)
-unzip meatshell-*-macos-*.zip
+unzip zinterm-*-macos-*.zip
 # Move it to Applications (optional — it also runs in place)
-mv meatshell.app /Applications/
-# Clear the quarantine flag, otherwise macOS says "meatshell is damaged and can't be opened"
-xattr -dr com.apple.quarantine /Applications/meatshell.app
+mv zinterm.app /Applications/
+# Clear the quarantine flag, otherwise macOS says "zinterm is damaged and can't be opened"
+xattr -dr com.apple.quarantine /Applications/zinterm.app
 # Open it (or double-click in Finder)
-open /Applications/meatshell.app
+open /Applications/zinterm.app
 ```
 
-> If you didn't move it to `/Applications`, point both paths above at wherever the `.app` actually is (e.g. `~/Downloads/meatshell.app`).
+> If you didn't move it to `/Applications`, point both paths above at wherever the `.app` actually is (e.g. `~/Downloads/zinterm.app`).
 
 > To build from source, see [Running](#running) below.
 
@@ -86,9 +86,9 @@ open /Applications/meatshell.app
 - [x] Color emoji, including skin tones, flags, and ZWJ sequences
 - [x] Tabs (welcome page + multiple sessions)
 - [x] Session management: create / edit / delete / groups, local JSON, export / import
-  - Config location: `%APPDATA%/meatshell/sessions.json` (Windows)
-    / `~/.config/meatshell/sessions.json` (Linux)
-    / `~/Library/Application Support/meatshell/sessions.json` (macOS)
+  - Config location: `%APPDATA%/zinterm/sessions.json` (Windows)
+    / `~/.config/zinterm/sessions.json` (Linux)
+    / `~/Library/Application Support/zinterm/sessions.json` (macOS)
   - Export files omit passwords / private keys; to import credentials see
     [Importing connections and password fields](#importing-connections-and-password-fields)
 - [x] SSH (`russh`, pure Rust): password / private key / encrypted key (passphrase)
@@ -124,7 +124,7 @@ cargo run --release
 ```
 
 On first launch an empty session store is created at
-`%APPDATA%/meatshell/sessions.json`. Click **"＋ New Session"** in the top-right
+`%APPDATA%/zinterm/sessions.json`. Click **"＋ New Session"** in the top-right
 to add your first server.
 
 ## Importing connections and password fields
@@ -198,7 +198,7 @@ Put a multi-line private key in a **single JSON string**, separating lines with
 ## Project layout
 
 ```
-meatshell/
+zinterm/
 ├── Cargo.toml
 ├── build.rs                 # Slint compiler entry point
 ├── ui/
@@ -235,7 +235,7 @@ so the tag points at a commit that already contains the matching Cargo version:
 ```
 
 The script updates `Cargo.toml` / `Cargo.lock`, runs `cargo check --locked`,
-verifies `meatshell --version`, commits `Release v0.6.0`, creates an annotated
+verifies `zinterm --version`, commits `Release v0.6.0`, creates an annotated
 tag, and pushes the current branch plus the tag. See
 [docs/release.md](docs/release.md) for details.
 

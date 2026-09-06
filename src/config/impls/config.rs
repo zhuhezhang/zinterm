@@ -1,8 +1,8 @@
 //! Session / application configuration.
 //!
 //! Persists a simple JSON file in the app's **per-user OS config directory**
-//! (e.g. `%APPDATA%/meatshell`, `~/.config/meatshell`,
-//! `~/Library/Application Support/meatshell`). See [`data_dir`].
+//! (e.g. `%APPDATA%/zinterm`, `~/.config/zinterm`,
+//! `~/Library/Application Support/zinterm`). See [`data_dir`].
 //!
 //! ## Password / key storage
 //!
@@ -35,8 +35,8 @@ static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 /// The single directory holding all user data (sessions, credentials vault,
 /// known-hosts). Resolved once and cached.
 ///
-/// Always the per-user OS config dir (`%APPDATA%/meatshell`,
-/// `~/.config/meatshell`, `~/Library/Application Support/meatshell`).
+/// Always the per-user OS config dir (`%APPDATA%/zinterm`,
+/// `~/.config/zinterm`, `~/Library/Application Support/zinterm`).
 pub fn data_dir() -> PathBuf {
     DATA_DIR.get_or_init(resolve_data_dir).clone()
 }
@@ -49,9 +49,9 @@ pub fn log_dir() -> PathBuf {
 }
 
 fn resolve_data_dir() -> PathBuf {
-    let dir = ProjectDirs::from("dev", "meatshell", "meatshell")
+    let dir = ProjectDirs::from("dev", "zinterm", "zinterm")
         .map(|d| d.config_dir().to_path_buf())
-        .unwrap_or_else(|| std::env::temp_dir().join("meatshell"));
+        .unwrap_or_else(|| std::env::temp_dir().join("zinterm"));
     let _ = fs::create_dir_all(&dir);
     dir
 }
@@ -302,7 +302,7 @@ impl ConfigStore {
 
     /// Fixed 32-byte key for portable exports. Baked into the binary so an
     /// exported file decrypts on any machine. Obfuscation only — see `ExportFile`.
-    const EXPORT_KEY: [u8; 32] = *b"meatshell.export.portable.key.01";
+    const EXPORT_KEY: [u8; 32] = *b"zinterm.export.portable.key.v01!";
 
     fn data_dir_path(&self) -> Result<PathBuf> {
         self.path

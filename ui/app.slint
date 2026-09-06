@@ -2,7 +2,7 @@
 // Embedding means Windows / Linux / macOS all render the same glyphs without
 // relying on Consolas / Segoe MDL2 Assets being installed.
 //
-// "Meatshell Mono" is Cascadia Mono re-named to a unique family (#114): full
+// "ZinTerm Mono" is Cascadia Mono re-named to a unique family (#114): full
 //   box-drawing + block-elements + braille (needed by htop/btop graphs). The
 //   original "Cascadia Mono" name collides with the system font family, so on a
 //   machine without Cascadia installed (e.g. Win11 Home) the OS font matcher
@@ -10,8 +10,8 @@
 //   name (like Material Icons) can't be shadowed, so the embedded font is always
 //   used.
 // Material Icons: open-source icon font replacing Windows-only Segoe MDL2 Assets.
-import "fonts/MeatshellMono-Regular.ttf";
-import "fonts/MeatshellMono-Bold.ttf";
+import "fonts/ZinTermMono-Regular.ttf";
+import "fonts/ZinTermMono-Bold.ttf";
 import "fonts/MaterialIcons-Regular.ttf";
 
 import { Theme } from "theme.slint";
@@ -217,7 +217,7 @@ export component AppWindow inherits Window {
     property <bool> welcome-use-mock: false;
     // =============================================================================
 
-    title: "meatshell";
+    title: "ZinTerm";
     icon: @image-url("../assets/icon.png");
     // Frameless when we draw our own title bar (#119); Rust sets custom-titlebar
     // true on Windows/Linux. Slint maps no-frame → winit set_decorations(false).
@@ -950,7 +950,7 @@ export component AppWindow inherits Window {
                 VerticalLayout {
                     alignment: center;
                     Text {
-                        text: "meatshell";
+                        text: "ZinTerm";
                         color: Theme.text-secondary;
                         font-size: Theme.fs-sm;
                     }
@@ -3845,7 +3845,7 @@ export component AppWindow inherits Window {
                 padding: 8px;
                 spacing: 8px;
                 Text {
-                    text: root.lang-en ? "Close meatshell?" : "确定关闭 meatshell?";
+                    text: root.lang-en ? "Close ZinTerm?" : "确定关闭 ZinTerm?";
                     color: Theme.text-primary;
                     font-size: Theme.fs-lg;
                     font-weight: 700;
@@ -4259,7 +4259,7 @@ export component AppWindow inherits Window {
                         alignment: start;
                         spacing: 8px;
                         Text {
-                            text: "meatshell";
+                            text: "ZinTerm";
                             color: Theme.text-primary;
                             font-size: 22px;
                             font-weight: 700;
@@ -4275,7 +4275,7 @@ export component AppWindow inherits Window {
                     }
 
                     Text {
-                        text: @tr("meatshell — a lightweight Rust + Slint SSH client by 'lil meatball'");
+                        text: @tr("ZinTerm — a lightweight Rust + Slint SSH client");
                         color: Theme.text-secondary;
                         font-size: Theme.fs-sm;
                         wrap: word-wrap;
@@ -4299,7 +4299,7 @@ export component AppWindow inherits Window {
                                 padding-left: 4px;
                                 padding-right: 4px;
                                 Text {
-                                    text: "github.com/jeff141/meatshell";
+                                    text: "github.com/zhuhezhang/zinterm";
                                     color: Theme.accent;
                                     font-size: Theme.fs-sm;
                                     vertical-alignment: center;

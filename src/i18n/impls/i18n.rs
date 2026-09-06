@@ -4,7 +4,7 @@
 //!
 //! * **Static `.slint` text** uses Slint's own `@tr("English")` plus bundled
 //!   `.po` translations.  The source language (the msgids) is **English**; the
-//!   Chinese strings live in `lang/zh/LC_MESSAGES/meatshell.po`.  Switching is
+//!   Chinese strings live in `lang/zh/LC_MESSAGES/zinterm.po`.  Switching is
 //!   done with `slint::select_bundled_translation` (`"zh"` → Chinese, `""`/`"en"`
 //!   → the English source).
 //!
@@ -76,7 +76,7 @@ pub fn t(zh: &'static str, en: &'static str) -> &'static str {
     }
 }
 
-/// OS UI language mapped to meatshell's two locales.  Chinese variants → `"zh"`;
+/// OS UI language mapped to zinterm's two locales.  Chinese variants → `"zh"`;
 /// English and every other / undetectable locale → `"en"`.
 pub fn system_language() -> &'static str {
     if system_locale_is_chinese() {

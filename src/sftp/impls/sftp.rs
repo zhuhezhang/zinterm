@@ -266,7 +266,7 @@ async fn run_sftp(
     // can therefore open the same remote basename without sharing one temp
     // file or editor document (#318).
     let external_edit_prefix = sanitize_filename(&session.host);
-    let external_edit_dir = std::env::temp_dir().join("meatshell").join(format!(
+    let external_edit_dir = std::env::temp_dir().join("zinterm").join(format!(
         "{}-{}-{}",
         external_edit_prefix,
         session.port,
@@ -620,7 +620,7 @@ async fn run_sftp(
                 let cancels_done = cancels.clone();
                 tokio::spawn(async move {
                     let n = names.len();
-                    let tmp = format!("/tmp/meatshell-{}.tar", Uuid::new_v4());
+                    let tmp = format!("/tmp/zinterm-{}.tar", Uuid::new_v4());
                     // Name the archive after the first item's stem, per the user:
                     // 11.txt → "11等文件.tar". Sanitize since names come from the server.
                     let first = names.first().map(|s| s.as_str()).unwrap_or("download");
@@ -1565,7 +1565,7 @@ async fn stage_remote_for_copy(
     events: &UnboundedSender<SessionEvent>,
 ) -> Result<(PathBuf, PathBuf)> {
     let cleanup_root =
-        std::env::temp_dir().join(format!("meatshell-remote-copy-{}", Uuid::new_v4()));
+        std::env::temp_dir().join(format!("zinterm-remote-copy-{}", Uuid::new_v4()));
     tokio::fs::create_dir_all(&cleanup_root)
         .await
         .with_context(|| format!("failed to create temp dir {}", cleanup_root.display()))?;
@@ -2239,7 +2239,7 @@ mod sanitize_tests {
     #[test]
     fn keep_both_uses_the_first_available_numbered_name() {
         let dir =
-            std::env::temp_dir().join(format!("meatshell-download-test-{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("zinterm-download-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let requested = download_target_path("/remote/report.txt", dir.to_str().unwrap());
         std::fs::write(&requested, b"old").unwrap();

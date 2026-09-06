@@ -57,7 +57,7 @@ fn terminal_query_and_hvp_scanners_survive_split_output_chunks() {
 }
 
 #[test]
-fn csi_3j_clears_meatshell_scrollback_even_when_split() {
+fn csi_3j_clears_zinterm_scrollback_even_when_split() {
     let mut buffer = make_buf(3, 20, &["old one", "old two"], &["current"], 2);
     buffer.raw.extend(b"old one\nold two\n");
     buffer.prev.push(hist_line("old two"));

@@ -24,7 +24,7 @@
 
   <assemblyIdentity
     type="win32"
-    name="meatshell"
+    name="zinterm"
     version="1.0.0.0"
     processorArchitecture="*"/>
 

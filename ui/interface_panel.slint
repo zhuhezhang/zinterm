@@ -842,8 +842,8 @@ export component InterfacePanel inherits Rectangle {
                         SettingRow {
                             label: root.lang-en ? "Installed fonts" : "已安装字体";
                             desc: root.lang-en
-                                ? "Install a TTF/OTF font in Windows, then restart meatshell to refresh this list."
-                                : "在 Windows 中安装 TTF/OTF 字体后，重启 meatshell 即可刷新字体列表。";
+                                ? "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list."
+                                : "在 Windows 中安装 TTF/OTF 字体后，重启 ZinTerm 即可刷新字体列表。";
                             show-divider: false;
                             Rectangle {
                                 width: 1px;
@@ -947,7 +947,7 @@ export component InterfacePanel inherits Rectangle {
                             border-color: Theme.border-subtle;
                             Text {
                                 x: 12px;
-                                text: "meatshell ~$ echo preview 0123";
+                                text: "ZinTerm ~$ echo preview 0123";
                                 font-family: Theme.term-font-family;
                                 font-size: Theme.term-font-size;
                                 font-weight: Theme.term-font-bold ? 700 : 400;
@@ -1086,8 +1086,8 @@ export component InterfacePanel inherits Rectangle {
                         SettingHint {
                             text: root.renderer-restart-required
                                 ? (root.lang-en
-                                ? "Restart MeatShell to apply the renderer change."
-                                : "重启 MeatShell 后渲染器设置才会生效。")
+                                ? "Restart ZinTerm to apply the renderer change."
+                                : "重启 ZinTerm 后渲染器设置才会生效。")
                                 : (root.lang-en
                                 ? (Theme.is-mac
                                 ? "CPU is the default renderer on macOS."
@@ -2046,7 +2046,7 @@ export component InterfacePanel inherits Rectangle {
                         SettingRow {
                             label: root.lang-en ? "Check for new versions on startup" : "启动时检查新版本";
                             desc: root.lang-en
-                                ? "Off: meatshell no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
+                                ? "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
                                 : "关闭后:不再向 GitHub 查询新版本,也不会弹出更新提示(下次启动生效)。";
                             show-divider: false;
                             Switch {

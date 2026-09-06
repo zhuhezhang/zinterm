@@ -1,5 +1,5 @@
 [package]
-name = "meatshell"
+name = "zinterm"
 version = "0.6.12"
 edition = "2021"
 authors = ["ZinTerm contributors"]
@@ -37,7 +37,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "io-util", "net", "time", "fs"] }
 # Pinned below 0.60: RUSTSEC-2026-0154 (ssh-agent frame DoS) is fixed only in
 # >= 0.60.3, which pulls pre-release crypto crates (ed25519-dalek 3.0.0-pre,
-# aes-gcm 0.11.0-rc, …). meatshell never uses the ssh-agent, so the advisory is
+# aes-gcm 0.11.0-rc, …). zinterm never uses the ssh-agent, so the advisory is
 # not reachable — see audit.toml. 0.52 is the first release that accepts RFC 4253
 # SSH-1.99- banners (H3C/Huawei VRP); stay on this line until russh's crypto
 # deps leave the -rc channel (cf. PR #151).
@@ -116,7 +116,7 @@ slint = { version = "1.8", features = ["renderer-skia"] }
 [build-dependencies]
 slint-build = "1.8"
 
-# Embeds assets/meatshell.ico into the .exe so Explorer / taskbar / shortcuts
+# Embeds assets/zinterm.ico into the .exe so Explorer / taskbar / shortcuts
 # show the app icon. Windows-only; ignored on other targets.
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

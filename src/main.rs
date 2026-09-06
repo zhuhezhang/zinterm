@@ -16,7 +16,7 @@ mod wallpaper;
 
 fn main() -> anyhow::Result<()> {
     if std::env::args().any(|arg| arg == "--version" || arg == "-V") {
-        println!("meatshell {}", env!("CARGO_PKG_VERSION"));
+        println!("zinterm {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 

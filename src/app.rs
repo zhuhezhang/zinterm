@@ -483,9 +483,9 @@ pub fn run() -> Result<()> {
     // --- Build window + models ------------------------------------------
     // Set the Wayland app_id / X11 WM_CLASS *before* the window is created so
     // the Linux desktop shell can match the running window to the installed
-    // `meatshell.desktop` entry and show our icon in the dock/taskbar.  (On
+    // `zinterm.desktop` entry and show our icon in the dock/taskbar.  (On
     // Windows the icon comes from the embedded .ico, so this is a no-op there.)
-    let _ = slint::set_xdg_app_id("meatshell");
+    let _ = slint::set_xdg_app_id("zinterm");
     let window = AppWindow::new().context("failed to build Slint window")?;
     // Slint applies preferred-width/height while the native window is being
     // created. Do not treat those startup Resized events as user adjustments;
@@ -572,7 +572,7 @@ pub fn run() -> Result<()> {
     // failed to register "PingFang SC", so the UI default font resolved to nothing
     // and *all* text vanished (#129) — icons survived only because they use an
     // embedded font. Instead probe what fontdb actually loaded and pick the first
-    // resolvable CJK family, falling back to the embedded "Meatshell Mono" so the
+    // resolvable CJK family, falling back to the embedded "ZinTerm Mono" so the
     // window is never fully blank even when the system font DB is unreadable.
     window.set_ui_font_family(resolve_ui_font_family());
     // Populate the Interface font picker with installed monospace families.
@@ -1237,7 +1237,7 @@ pub fn run() -> Result<()> {
 
             let fam = s.font_family();
             w.set_term_font_family(if fam.is_empty() {
-                "Meatshell Mono".into()
+                "ZinTerm Mono".into()
             } else {
                 fam.into()
             });
@@ -1654,7 +1654,7 @@ pub fn run() -> Result<()> {
     // --- In-app update check (#48) -----------------------------------------
     // "Download" on the banner opens the latest-release page in the browser.
     window.on_open_update_url(move || {
-        let url = "https://github.com/jeff141/meatshell/releases/latest";
+        let url = "https://github.com/zhuhezhang/zinterm/releases/latest";
         #[cfg(windows)]
         let _ = std::process::Command::new("explorer").arg(url).spawn();
         #[cfg(target_os = "macos")]
@@ -1664,7 +1664,7 @@ pub fn run() -> Result<()> {
     });
     // The open-source link in the About dialog opens the project page.
     window.on_open_repo(move || {
-        let url = "https://github.com/jeff141/meatshell";
+        let url = "https://github.com/zhuhezhang/zinterm";
         #[cfg(windows)]
         let _ = std::process::Command::new("explorer").arg(url).spawn();
         #[cfg(target_os = "macos")]
@@ -1680,8 +1680,8 @@ pub fn run() -> Result<()> {
         let weak = window.as_weak();
         std::thread::spawn(move || {
             let body =
-                match ureq::get("https://api.github.com/repos/jeff141/meatshell/releases/latest")
-                    .set("User-Agent", "meatshell-update-check")
+                match ureq::get("https://api.github.com/repos/zhuhezhang/zinterm/releases/latest")
+                    .set("User-Agent", "zinterm-update-check")
                     .timeout(std::time::Duration::from_secs(8))
                     .call()
                 {
@@ -5625,7 +5625,7 @@ fn clipboard_set_text(text: String) {
 /// Enumerate installed monospace font families for the Interface font picker.
 /// Terminals want fixed-width fonts, so non-monospace families are filtered out.
 /// Choose a UI font family that fontdb can actually resolve, falling back to the
-/// embedded "Meatshell Mono" when the system font database is empty/unreadable.
+/// embedded "ZinTerm Mono" when the system font database is empty/unreadable.
 ///
 /// macOS 26 (Tahoe) shipped a system where fontdb couldn't register the named
 /// CJK font ("PingFang SC"), so hard-coding that name made the whole UI render
@@ -5639,12 +5639,12 @@ fn resolve_ui_font_family() -> slint::SharedString {
     use fontdb::{Database, Family, Query, Stretch, Style, Weight};
 
     // Diagnostic / escape hatch (#129): force a specific UI font without a rebuild.
-    // e.g. MEATSHELL_UI_FONT="Meatshell Mono" to test whether the embedded font
+    // e.g. ZINTERM_UI_FONT="ZinTerm Mono" to test whether the embedded font
     // renders when system fonts don't. Empty value is ignored.
-    if let Some(f) = std::env::var_os("MEATSHELL_UI_FONT") {
+    if let Some(f) = std::env::var_os("ZINTERM_UI_FONT") {
         let f = f.to_string_lossy().into_owned();
         if !f.trim().is_empty() {
-            tracing::debug!(font = %f, "ui-font: overridden via MEATSHELL_UI_FONT");
+            tracing::debug!(font = %f, "ui-font: overridden via ZINTERM_UI_FONT");
             return f.into();
         }
     }
@@ -5662,7 +5662,7 @@ fn resolve_ui_font_family() -> slint::SharedString {
     // ship on every macOS, so we prefer them and keep PingFang only as a late
     // fallback. (Verified on an M2/macOS 26: Heiti SC/STHeiti/Songti SC render,
     // PingFang/Hiragino don't.) Power users can still force one via
-    // MEATSHELL_UI_FONT. Heiti SC is a clean sans-serif (better for UI than the
+    // ZINTERM_UI_FONT. Heiti SC is a clean sans-serif (better for UI than the
     // serif Songti), so it leads.
     #[cfg(target_os = "macos")]
     let candidates: &[&str] = &[
@@ -5715,9 +5715,9 @@ fn resolve_ui_font_family() -> slint::SharedString {
     }
     tracing::warn!(
         faces = face_count,
-        "ui-font: falling back to embedded 'Meatshell Mono' (system fonts unusable, #129)"
+        "ui-font: falling back to embedded 'ZinTerm Mono' (system fonts unusable, #129)"
     );
-    "Meatshell Mono".into()
+    "ZinTerm Mono".into()
 }
 
 fn system_monospace_fonts() -> Vec<slint::SharedString> {
@@ -5733,8 +5733,8 @@ fn system_monospace_fonts() -> Vec<slint::SharedString> {
     // Surface the built-in glyph-complete font first so it's selectable and the
     // default selection is shown — it isn't a system face so fontdb won't list it
     // (#114).
-    names.retain(|n| n != "Meatshell Mono");
-    let mut out = vec![slint::SharedString::from("Meatshell Mono")];
+    names.retain(|n| n != "ZinTerm Mono");
+    let mut out = vec![slint::SharedString::from("ZinTerm Mono")];
     out.extend(names.into_iter().map(slint::SharedString::from));
     out
 }
