@@ -96,7 +96,7 @@ open /Applications/meatshell.app
 - [x] Quick commands + command box (broadcast to all sessions) + command history
 - [x] Serial / Telnet sessions
 - [x] Session passwords encrypted at rest (ChaCha20-Poly1305 + OS keyring master key, `zinterm-credentials-vault.json`)
-- [x] Known-hosts (`known_hosts`) verification + first-connect confirmation
+- [x] Known-hosts (`zinterm-known-hosts.json` fingerprint store) verification + first-connect confirmation
 - [x] Split panes for tabbed terminals
 
 Color emoji graphics are provided by [Twemoji](https://github.com/jdecked/twemoji)
@@ -222,7 +222,7 @@ meatshell/
   `cargo check` is the fastest feedback loop.
 - The application event loop is single-threaded (required by Slint); all
   cross-thread UI updates go through `slint::invoke_from_event_loop` callbacks.
-- SSH / SFTP share the `known_hosts` verification path: first contact asks for
+- SSH / SFTP share the known-hosts path (`zinterm-known-hosts.json` fingerprints): first contact asks for
   trust and remembers the host key, while later key changes prompt again.
 
 ## Release

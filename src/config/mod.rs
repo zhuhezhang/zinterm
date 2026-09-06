@@ -6,4 +6,4 @@ pub(crate) mod vault;
 
 pub(crate) use config::*;
 pub(crate) use structs::*;
-pub(crate) use vault::{is_encryption_available, VAULT_FILE};
+pub(crate) use vault::is_encryption_available;

@@ -27,13 +27,13 @@ use super::structs::*;
 
 // ── Data directory resolution (per-user OS config) ───────────────────────────
 //
-// All user data — sessions.json, credentials vault, known_hosts — lives in
+// All user data — sessions.json, credentials vault, known-hosts JSON — lives in
 // ONE directory resolved here. Diagnostic logs use a `log/` subdir under it.
 
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// The single directory holding all user data (sessions, credentials vault,
-/// known_hosts). Resolved once and cached.
+/// known-hosts). Resolved once and cached.
 ///
 /// Always the per-user OS config dir (`%APPDATA%/meatshell`,
 /// `~/.config/meatshell`, `~/Library/Application Support/meatshell`).
@@ -504,7 +504,7 @@ impl ConfigStore {
 
     /// Reset Interface / appearance preferences to the current new-user defaults
     /// while keeping sessions, groups, quick commands, command history, and
-    /// saved credentials intact. Does not touch known_hosts (separate file).
+    /// saved credentials intact. Does not touch known-hosts (separate file).
     pub fn restore_settings_defaults(&mut self) {
         let sessions = std::mem::take(&mut self.cache.sessions);
         let groups = std::mem::take(&mut self.cache.groups);
@@ -2291,7 +2291,7 @@ mod tests {
 
         let dir = store.path.parent().unwrap();
         let vault_raw =
-            std::fs::read_to_string(dir.join(crate::config::VAULT_FILE)).unwrap();
+            std::fs::read_to_string(dir.join(crate::config::vault::VAULT_FILE)).unwrap();
         assert!(!vault_raw.contains(password));
         let loaded = crate::config::vault::get_secrets(dir, &id)
             .unwrap()
@@ -2299,7 +2299,7 @@ mod tests {
         assert_eq!(loaded.password, password);
 
         let _ = std::fs::remove_file(&store.path);
-        let _ = std::fs::remove_file(dir.join(crate::config::VAULT_FILE));
+        let _ = std::fs::remove_file(dir.join(crate::config::vault::VAULT_FILE));
     }
 
     #[test]

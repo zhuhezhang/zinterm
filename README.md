@@ -90,7 +90,7 @@ open /Applications/meatshell.app
 - [x] 快捷命令 + 命令输入框（可群发到所有会话）+ 命令历史
 - [x] 串口 / Telnet 会话
 - [x] 会话密码加密存储（ChaCha20-Poly1305 + OS 钥匙串主密钥，`zinterm-credentials-vault.json`）
-- [x] 已知主机（`known_hosts`）校验 + 首次连接确认
+- [x] 已知主机（`zinterm-known-hosts.json` 指纹库）校验 + 首次连接确认
 - [x] 多标签页终端分屏
 
 彩色 emoji 图形来自 [Twemoji](https://github.com/jdecked/twemoji)，按
@@ -212,7 +212,7 @@ meatshell/
   反馈方式。
 - 应用事件循环是单线程（Slint 要求），所有跨线程 UI 更新通过
   `slint::invoke_from_event_loop` 回调。
-- SSH / SFTP 共享 `known_hosts` 校验逻辑：首次连接会确认并记住主机密钥，
+- SSH / SFTP 共享已知主机校验：指纹存于 `zinterm-known-hosts.json`，首次连接会确认并记住，
   后续密钥变化会再次提示。
 
 ## 发版
