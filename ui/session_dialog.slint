@@ -206,7 +206,7 @@ export component SessionDialog inherits Rectangle {
         height: 0px;
         clip: true;
         VerticalLayout {
-            m-conn := Text { text: @tr("Connection type"); font-size: Theme.fs-sm; }
+            m-conn := Text { text: @tr("Session type"); font-size: Theme.fs-sm; }
             m-name := Text { text: @tr("Name"); font-size: Theme.fs-sm; }
             m-group := Text { text: @tr("Group"); font-size: Theme.fs-sm; }
             m-shell := Text { text: @tr("Shell"); font-size: Theme.fs-sm; }
@@ -307,7 +307,7 @@ export component SessionDialog inherits Rectangle {
                     padding: 16px;
                     spacing: 12px;
 
-                    // Connection type selector (always shown).
+                    // Session type selector (always shown).
                     HorizontalLayout {
                         spacing: 10px;
                         Rectangle {
@@ -315,7 +315,7 @@ export component SessionDialog inherits Rectangle {
                             Text {
                                 width: 100%;
                                 height: 100%;
-                                text: @tr("Connection type");
+                                text: @tr("Session type");
                                 color: Theme.text-secondary;
                                 font-size: Theme.fs-sm;
                                 horizontal-alignment: right;

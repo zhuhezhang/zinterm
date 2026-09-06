@@ -474,8 +474,8 @@ msgstr "No sessions yet"
 msgid "Use 'New session' (top-right) to add your first server"
 msgstr "Use 'New session' (top-right) to add your first server"
 
-msgid "Connection type"
-msgstr "Connection type"
+msgid "Session type"
+msgstr "Session type"
 
 msgid "Serial"
 msgstr "Serial"

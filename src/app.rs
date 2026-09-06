@@ -2692,13 +2692,15 @@ fn wire_session_callbacks(
                     let hint = match res {
                         Ok((added, skipped)) => {
                             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
-                            format!(
-                                "{} {} / {} {}",
-                                t("已导入", "imported"),
-                                added,
-                                t("跳过重复", "skipped"),
-                                skipped
-                            )
+                            if crate::i18n::is_en() {
+                                format!(
+                                    "Import succeeded - imported {added} session(s)/skipped {skipped} duplicate(s)"
+                                )
+                            } else {
+                                format!(
+                                    "导入成功 - 已导入{added}个会话/跳过{skipped}个重复会话"
+                                )
+                            }
                         }
                         Err(e) => format!("{} - {}", t("导入失败", "import failed"), e),
                     };

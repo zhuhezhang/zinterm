@@ -474,8 +474,8 @@ msgstr "尚无会话"
 msgid "Use 'New session' (top-right) to add your first server"
 msgstr "点击右上角 “新建会话” 添加你的第一台服务器"
 
-msgid "Connection type"
-msgstr "连接类型"
+msgid "Session type"
+msgstr "会话类型"
 
 msgid "Serial"
 msgstr "串口"
