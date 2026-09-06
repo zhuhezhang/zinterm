@@ -336,6 +336,12 @@ impl ConfigStore {
     }
 
     /// Persist in-memory secrets for every session into the vault.
+    ///
+    /// When Settings › Data › "保存密码/私钥" is on, every session's secrets are
+    /// written (empty fields clear that vault slot). When the switch is off,
+    /// non-empty secrets are left untouched in the vault — except an all-empty
+    /// in-memory secret still removes the vault entry so clearing a password /
+    /// passphrase / key field in the session editor sticks.
     fn sync_all_secrets_to_vault(&self) -> Result<()> {
         let config_dir = self.data_dir_path()?;
         if !crate::config::vault::is_encryption_available() {
@@ -356,10 +362,7 @@ impl ConfigStore {
                 &session.private_key,
                 &session.key_passphrase,
             );
-            // When save-passwords is on, empty fields clear the vault entry.
-            // When off, only push non-empty in-memory secrets (e.g. duplicate);
-            // never wipe an existing vault slot just because memory is empty.
-            if save_passwords || !secrets.is_empty() {
+            if save_passwords || secrets.is_empty() {
                 crate::config::vault::sync_secrets(&config_dir, &session.id, &secrets)
                     .with_context(|| format!("failed to sync vault for session {}", session.id))?;
             }
@@ -2302,6 +2305,49 @@ mod tests {
 
         let _ = std::fs::remove_file(&store.path);
         let _ = std::fs::remove_file(dir.join(crate::config::vault::VAULT_FILE));
+    }
+
+    #[test]
+    fn save_passwords_switch_gates_key_material_vault_write() {
+        let _guard = crate::config::vault::tests::with_test_master_key();
+        let dir_cleanup;
+        {
+            let mut store = temp_store();
+            assert!(!store.save_passwords());
+            let key_body = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n";
+            let id = store.upsert(Session {
+                name: "key-prompt".into(),
+                host: "10.0.0.8".into(),
+                user: "ubuntu".into(),
+                auth: AuthMethod::Key,
+                private_key: Secret::new(key_body),
+                key_passphrase: Secret::new("kp-secret"),
+                ..Session::default()
+            });
+            // Switch off: in-memory secrets must not be pushed to the vault
+            // (same rule as the welcome-page credential dialog).
+            store.save().unwrap();
+            let dir = store.path.parent().unwrap().to_path_buf();
+            dir_cleanup = dir.clone();
+            assert!(
+                crate::config::vault::get_secrets(&dir, &id)
+                    .unwrap()
+                    .is_none(),
+                "vault must stay empty while save-passwords is off"
+            );
+
+            store.set_save_passwords(true);
+            store.save().unwrap();
+            let loaded = crate::config::vault::get_secrets(&dir, &id)
+                .unwrap()
+                .expect("vault entry after enabling save-passwords");
+            assert!(loaded.password.is_empty());
+            assert_eq!(loaded.private_key, key_body);
+            assert_eq!(loaded.passphrase, "kp-secret");
+
+            let _ = std::fs::remove_file(&store.path);
+        }
+        let _ = std::fs::remove_file(dir_cleanup.join(crate::config::vault::VAULT_FILE));
     }
 
     #[test]

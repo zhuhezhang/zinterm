@@ -205,22 +205,25 @@ pub(super) fn copy_tab_credentials(from_tab: &str, to_tab: &str) {
 /// For reconnect (R) / duplicate: prefer this tab's in-memory credential cache.
 /// If none is cached, clear the session login password / key passphrase so we
 /// do **not** fall back to whatever may be stored on disk — the UI will prompt
-/// again (password auth) or fail auth for encrypted keys until re-entered.
+/// again (password auth, or key auth when the key is encrypted / missing).
 pub(super) fn apply_cached_credentials_for_reconnect(
     session: &mut crate::config::Session,
     tab_id: &str,
 ) {
     use crate::config::AuthMethod;
-    if let Some((user, password)) = CRED_DECIDED.with(|d| d.borrow().get(tab_id).cloned()) {
-        if !user.trim().is_empty() {
-            session.user = user;
+    if let Some(cred) = CRED_DECIDED.with(|d| d.borrow().get(tab_id).cloned()) {
+        if !cred.user.trim().is_empty() {
+            session.user = cred.user;
         }
         match session.auth {
             AuthMethod::Key => {
-                session.key_passphrase = crate::config::Secret::new(password);
+                session.key_passphrase = crate::config::Secret::new(cred.secret);
+                if !cred.private_key.trim().is_empty() {
+                    session.private_key = crate::config::Secret::new(cred.private_key);
+                }
             }
             _ => {
-                session.password = crate::config::Secret::new(password);
+                session.password = crate::config::Secret::new(cred.secret);
             }
         }
     } else {
@@ -243,8 +246,10 @@ pub(super) fn enqueue_cred_prompt(
     tab_id: String,
     session_id: String,
     host: String,
+    auth: String,
     user: String,
     password: String,
+    private_key: String,
     need_user: bool,
     need_password: bool,
     responder: crate::ssh::CredentialResponder,
@@ -264,8 +269,10 @@ pub(super) fn enqueue_cred_prompt(
             tab_id,
             session_id,
             host,
+            auth,
             user,
             password,
+            private_key,
             need_user,
             need_password,
             responders: vec![responder],
@@ -282,26 +289,29 @@ pub(super) fn show_front_cred(win: &AppWindow) {
     CRED_QUEUE.with(|q| {
         if let Some(p) = q.borrow().front() {
             win.set_cred_host(p.host.clone().into());
+            win.set_cred_auth(p.auth.clone().into());
             win.set_cred_need_user(p.need_user);
             win.set_cred_need_password(p.need_password);
             win.set_cred_user(p.user.clone().into());
-            // Prefill existing password so the field stays visible and usable.
+            // Prefill existing password / passphrase so the field stays usable.
             win.set_cred_password(p.password.clone().into());
+            win.set_cred_key_inline(p.private_key.clone().into());
             win.set_cred_prompt_open(true);
         }
     });
 }
 
 /// Apply the user's answer to the front credential prompt (or cancel).
-/// Non-ephemeral sessions always persist the username; the password is written
-/// only when Settings › Data › save passwords is on. "Connect without saving"
-/// (ephemeral) never writes back.
+/// Non-ephemeral sessions always persist the username; the password / key
+/// material is written only when Settings › Data › save passwords is on.
+/// "Connect without saving" (ephemeral) never writes back.
 pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
     let reply: Option<crate::ssh::CredentialReply> = if accept {
-        Some((
-            win.get_cred_user().to_string(),
-            win.get_cred_password().to_string(),
-        ))
+        Some(crate::ssh::CredentialReply {
+            user: win.get_cred_user().to_string(),
+            secret: win.get_cred_password().to_string(),
+            private_key: win.get_cred_key_inline().to_string(),
+        })
     } else {
         None
     };
@@ -325,8 +335,10 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
                     });
                     persist_credentials(
                         &p.session_id,
-                        &accepted.0,
-                        &accepted.1,
+                        &p.auth,
+                        &accepted.user,
+                        &accepted.secret,
+                        &accepted.private_key,
                         true,
                         save_password,
                     );
@@ -338,8 +350,9 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
         }
         !q.is_empty()
     });
-    // Don't leave the typed password lingering in the UI property.
+    // Don't leave typed secrets lingering in the UI properties.
     win.set_cred_password("".into());
+    win.set_cred_key_inline("".into());
     if has_next {
         show_front_cred(win);
     } else {
@@ -348,10 +361,17 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
 }
 
 /// Persist newly-entered credentials onto the saved session (#110).
+///
+/// Username is always written back for non-ephemeral sessions. Login password
+/// / private key / key passphrase are written only when `set_password` is true
+/// (Settings › Data › 保存密码/私钥). Same rule for password auth and key auth
+/// so a welcome-page credential prompt honors the switch either way.
 pub(super) fn persist_credentials(
     session_id: &str,
+    auth: &str,
     user: &str,
-    password: &str,
+    secret: &str,
+    private_key: &str,
     set_user: bool,
     set_password: bool,
 ) {
@@ -359,22 +379,32 @@ pub(super) fn persist_credentials(
         if let Some(store) = s.borrow().as_ref() {
             let mut st = store.borrow_mut();
             if let Some(mut sess) = st.get(session_id).cloned() {
-                if set_user && !user.trim().is_empty() {
+                let mut changed = false;
+                if set_user && !user.trim().is_empty() && sess.user != user.trim() {
                     sess.user = user.trim().to_string();
+                    changed = true;
                 }
                 if set_password {
-                    match sess.auth {
-                        crate::config::AuthMethod::Key => {
-                            sess.key_passphrase =
-                                crate::config::Secret::new(password.to_string());
+                    if auth == "key" || matches!(sess.auth, crate::config::AuthMethod::Key) {
+                        sess.key_passphrase = crate::config::Secret::new(secret.to_string());
+                        let key = private_key.trim();
+                        if !key.is_empty() {
+                            sess.private_key = if crate::config::looks_like_private_key_content(key)
+                            {
+                                crate::config::Secret::new(key.to_string())
+                            } else {
+                                crate::config::Secret::new(key.replace('\\', "/"))
+                            };
                         }
-                        _ => {
-                            sess.password = crate::config::Secret::new(password.to_string());
-                        }
+                    } else {
+                        sess.password = crate::config::Secret::new(secret.to_string());
                     }
+                    changed = true;
                 }
-                st.upsert(sess);
-                let _ = st.save();
+                if changed {
+                    st.upsert(sess);
+                    let _ = st.save();
+                }
             }
         }
     });

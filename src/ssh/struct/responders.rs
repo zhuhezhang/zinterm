@@ -32,9 +32,17 @@ impl std::fmt::Debug for HostKeyResponder {
     }
 }
 
-/// The user's answer to a connect-time credential prompt: `(username, password)`,
-/// or `None` if they cancelled.
-pub type CredentialReply = (String, String);
+/// The user's answer to a connect-time credential prompt (#110), or `None` if
+/// they cancelled.
+///
+/// `secret` is the login password for password auth, or the key passphrase for
+/// private-key auth. `private_key` is the path / pasted key body (key auth only).
+#[derive(Debug, Clone, Default)]
+pub struct CredentialReply {
+    pub user: String,
+    pub secret: String,
+    pub private_key: String,
+}
 
 /// Carries the credential prompt's answer back to the blocked auth flow (#110).
 /// `Arc<Mutex<Option<…>>>` so the enclosing [`SessionEvent`] stays `Clone`.

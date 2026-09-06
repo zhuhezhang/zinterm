@@ -278,9 +278,9 @@ async fn run_sftp(
     .await
     .with_context(|| format!("sftp connect {} failed", addr))?;
 
-    // Resolve missing username/password (shares the shell's prompt; the UI
+    // Resolve missing username/secret/key (shares the shell's prompt; the UI
     // de-dupes by tab id so SFTP on the same tab doesn't prompt a second time) (#110).
-    let (user, password) = match crate::ssh::resolve_credentials(&session, &events).await {
+    let creds = match crate::ssh::resolve_credentials(&session, &events).await {
         Some(c) => c,
         None => return Err(anyhow!(t("已取消登录", "login cancelled"))),
     };
@@ -288,22 +288,22 @@ async fn run_sftp(
     // --- Authenticate (same method as the shell session) -------------------
     let authed = match session.auth {
         AuthMethod::Password => handle
-            .authenticate_password(&user, password.as_str())
+            .authenticate_password(&creds.user, creds.secret.as_str())
             .await
             .context("sftp password auth failed")?
             .success(),
         AuthMethod::Key => {
-            // An encrypted private key needs its passphrase; reuse the session's
-            // password field for it (empty = unencrypted), exactly like the shell
-            // session does — otherwise a passphrase-protected key authenticates the
-            // shell but fails SFTP with "the key is encrypted" (#133).
-            let pass = password.as_str();
-            let keypair = crate::ssh::load_session_private_key(&session, pass)?;
+            // Same dialog-supplied key / passphrase as the shell path (#133).
+            let mut key_session = session.clone();
+            if !creds.private_key.trim().is_empty() {
+                key_session.private_key = crate::config::Secret::new(creds.private_key.clone());
+            }
+            let keypair = crate::ssh::load_session_private_key(&key_session, creds.secret.as_str())?;
             // RSA keys need an explicit SHA-2 hash; other key types don't.
             let hash = keypair.algorithm().is_rsa().then_some(HashAlg::Sha256);
             let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash);
             handle
-                .authenticate_publickey(&user, key_with_hash)
+                .authenticate_publickey(&creds.user, key_with_hash)
                 .await
                 .context("sftp publickey auth failed")?
                 .success()

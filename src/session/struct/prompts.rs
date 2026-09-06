@@ -54,9 +54,13 @@ pub(crate) struct PendingCred {
     pub(crate) tab_id: String,
     pub(crate) session_id: String,
     pub(crate) host: String,
+    /// `"password"` or `"key"` — drives which fields the dialog shows.
+    pub(crate) auth: String,
     pub(crate) user: String,
     /// Existing password/passphrase to prefill (may be empty).
     pub(crate) password: String,
+    /// Existing private key path/body to prefill (key auth; may be empty).
+    pub(crate) private_key: String,
     pub(crate) need_user: bool,
     pub(crate) need_password: bool,
     pub(crate) responders: Vec<CredentialResponder>,

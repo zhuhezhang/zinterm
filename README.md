@@ -97,9 +97,6 @@ open /Applications/zinterm.app
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) 使用；完整署名见
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-### 计划中
-
-- （暂无）
 
 ## 技术栈
 

@@ -1593,7 +1593,7 @@ pub fn run() -> Result<()> {
     }
 
     // Connect-time credential prompt (#110): the user supplies the missing
-    // username/password (or cancels); the answer unblocks the SSH/SFTP auth.
+    // username/password/key (or cancels); the answer unblocks the SSH/SFTP auth.
     {
         let weak = window.as_weak();
         window.on_cred_accept(move || {
@@ -1607,6 +1607,29 @@ pub fn run() -> Result<()> {
         window.on_cred_reject(move || {
             if let Some(w) = weak.upgrade() {
                 resolve_front_cred(&w, false);
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
+        window.on_cred_pick_key(move || {
+            let mut dialog =
+                rfd::FileDialog::new().set_title(t("选择私钥文件", "Choose private key file"));
+            #[cfg(not(target_os = "macos"))]
+            {
+                dialog =
+                    dialog.add_filter(t("SSH 私钥", "SSH private keys"), &["ppk", "pem", "key"]);
+            }
+            if let Some(home) = directories::UserDirs::new().map(|u| u.home_dir().join(".ssh")) {
+                if home.is_dir() {
+                    dialog = dialog.set_directory(home);
+                }
+            }
+            if let Some(file) = dialog.pick_file() {
+                let path = file.to_string_lossy().replace('\\', "/");
+                if let Some(w) = weak.upgrade() {
+                    w.set_cred_key_inline(path.into());
+                }
             }
         });
     }
@@ -3153,7 +3176,7 @@ fn wire_session_callbacks(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft, persist: bool, connect: bool| {
-            let mut new_session = session_from_draft(&draft, &store.borrow());
+            let mut new_session = session_from_draft(&draft);
 
             if persist {
                 // Disk copy may strip secrets when save-passwords is off; keep
@@ -3479,38 +3502,22 @@ fn wire_session_callbacks(
     }
 }
 
-fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
+fn session_from_draft(draft: &SessionDraft) -> Session {
     let id = draft.id.to_string();
     let auth = AuthMethod::from_str(&draft.auth.to_string());
-    let existing = store.get(&id);
 
-    // Login password and key passphrase are separate fields. Blank keeps the
-    // previously stored value only when auth did not change.
+    // Login password and key passphrase are separate fields. The editor echoes
+    // stored values when opening a session; an empty field means clear (same as
+    // the private-key box), not "keep the previous secret".
     let (password, key_passphrase) = match auth {
-        AuthMethod::Key => {
-            let typed = draft.key_passphrase.as_str();
-            let kp = if typed.is_empty() {
-                existing
-                    .filter(|s| s.auth == AuthMethod::Key)
-                    .map(|s| s.key_passphrase.clone())
-                    .unwrap_or_default()
-            } else {
-                Secret::new(typed.to_string())
-            };
-            (Secret::default(), kp)
-        }
-        _ => {
-            let typed = draft.password.as_str();
-            let pw = if typed.is_empty() {
-                existing
-                    .filter(|s| s.auth == AuthMethod::Password)
-                    .map(|s| s.password.clone())
-                    .unwrap_or_default()
-            } else {
-                Secret::new(typed.to_string())
-            };
-            (pw, Secret::default())
-        }
+        AuthMethod::Key => (
+            Secret::default(),
+            Secret::new(draft.key_passphrase.to_string()),
+        ),
+        _ => (
+            Secret::new(draft.password.to_string()),
+            Secret::default(),
+        ),
     };
 
     // Unified private_key: path or pasted body (classified by content).
@@ -3614,7 +3621,8 @@ fn session_from_draft(draft: &SessionDraft, store: &ConfigStore) -> Session {
 
 /// When Settings › Data › save passwords is off, keep already-stored secrets
 /// / key material but do not write newly typed passwords, passphrases, or keys
-/// to disk.
+/// to disk. Clearing a field (empty draft) is intentional and is allowed to
+/// wipe the stored secret.
 fn apply_password_save_policy(
     session: &mut Session,
     draft: &SessionDraft,
@@ -3628,6 +3636,7 @@ fn apply_password_save_policy(
     let auth = AuthMethod::from_str(&draft.auth.to_string());
     match auth {
         AuthMethod::Key => {
+            // Non-empty typed passphrase stays out of disk; empty means clear.
             if !draft.key_passphrase.is_empty() {
                 session.key_passphrase = existing
                     .map(|s| s.key_passphrase.clone())
@@ -3659,8 +3668,8 @@ fn apply_password_save_policy(
             String::new()
         }
     };
-    // Any newly entered key material (path or pasted body) stays out of the
-    // on-disk session; keep whatever was already stored.
+    // Newly entered key material stays out of the on-disk session; an empty
+    // field clears. Non-empty typed values fall back to whatever was stored.
     if !key_raw.is_empty() {
         session.private_key = existing
             .map(|s| s.private_key.clone())

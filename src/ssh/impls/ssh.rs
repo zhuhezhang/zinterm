@@ -603,27 +603,31 @@ pub(crate) async fn authenticate_session(
     session: &Session,
     events: &UnboundedSender<SessionEvent>,
 ) -> Result<AuthResult> {
-    let (user, password) = match resolve_credentials(session, events).await {
+    let creds = match resolve_credentials(session, events).await {
         Some(c) => c,
         None => return Ok(AuthResult::Cancelled),
     };
 
     let authed = match session.auth {
         AuthMethod::Password => handle
-            .authenticate_password(&user, password.as_str())
+            .authenticate_password(&creds.user, creds.secret.as_str())
             .await
             .context("password auth failed")?
             .success(),
         AuthMethod::Key => {
-            // Encrypted private keys use key_passphrase (empty = unencrypted) (#90).
-            let pass = session.key_passphrase.as_str();
-            let keypair = load_session_private_key(session, pass)?;
+            // Prefer dialog-supplied key / passphrase over the saved session
+            // values so a connect-time prompt can fill blanks (#110 / key auth).
+            let mut key_session = session.clone();
+            if !creds.private_key.trim().is_empty() {
+                key_session.private_key = crate::config::Secret::new(creds.private_key.clone());
+            }
+            let keypair = load_session_private_key(&key_session, creds.secret.as_str())?;
             // RSA keys must be signed with an explicit SHA-2 hash; every other
             // key type carries its own algorithm, so no override is needed.
             let hash = keypair.algorithm().is_rsa().then_some(HashAlg::Sha256);
             let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash);
             handle
-                .authenticate_publickey(&user, key_with_hash)
+                .authenticate_publickey(&creds.user, key_with_hash)
                 .await
                 .context("publickey auth failed")?
                 .success()
@@ -1178,38 +1182,75 @@ pub(crate) async fn verify_host_key(
     }
 }
 
-/// Resolve a session's username/password, prompting the UI for whatever is
-/// missing (#110). Returns the effective `(user, password)`, or `None` if the
-/// user cancelled. Both the shell and SFTP connections call this; the UI
+/// Resolve a session's username/secret/private key, prompting the UI for
+/// whatever is missing (#110). Returns the effective credentials, or `None` if
+/// the user cancelled. Both the shell and SFTP connections call this; the UI
 /// de-duplicates by tab id so a single dialog serves both. A dropped reply
 /// channel (no UI) falls through with the stored values so auth fails normally.
 pub(crate) async fn resolve_credentials(
     session: &Session,
     events: &UnboundedSender<SessionEvent>,
-) -> Option<(String, String)> {
+) -> Option<CredentialReply> {
     let user = session.user.trim().to_string();
-    let password = session.password.as_str().to_string();
+    let is_key = matches!(session.auth, AuthMethod::Key);
+    let secret = if is_key {
+        session.key_passphrase.as_str().to_string()
+    } else {
+        session.password.as_str().to_string()
+    };
+    let private_key = if is_key {
+        session.private_key.as_str().to_string()
+    } else {
+        String::new()
+    };
     let need_user = user.is_empty();
-    let need_password = matches!(session.auth, AuthMethod::Password) && password.is_empty();
+    let need_password = if is_key {
+        // Missing key material always prompts. An empty passphrase only prompts
+        // when the key looks encrypted (unencrypted keys connect without a
+        // dialog). Password auth still prompts whenever the login password is
+        // blank.
+        if private_key.trim().is_empty() {
+            true
+        } else if secret.is_empty() {
+            load_session_private_key(session, "").is_err()
+        } else {
+            false
+        }
+    } else {
+        secret.is_empty()
+    };
     if !(need_user || need_password) {
-        return Some((user, password));
+        return Some(CredentialReply {
+            user,
+            secret,
+            private_key,
+        });
     }
     let (tx, rx) = tokio::sync::oneshot::channel();
     let sent = events.send(SessionEvent::CredentialPrompt {
         session_id: session.id.clone(),
         host: session.host.clone(),
+        auth: session.auth.as_str().to_string(),
         user: user.clone(),
-        password: password.clone(),
+        password: secret.clone(),
+        private_key: private_key.clone(),
         need_user,
         need_password,
         responder: CredentialResponder::new(tx),
     });
     if sent.is_err() {
-        return Some((user, password));
+        return Some(CredentialReply {
+            user,
+            secret,
+            private_key,
+        });
     }
     match rx.await {
-        // Dialog always shows both fields (prefilled when known); take both.
-        Ok(Some((u, p))) => Some((u.trim().to_string(), p)),
+        Ok(Some(reply)) => Some(CredentialReply {
+            user: reply.user.trim().to_string(),
+            secret: reply.secret,
+            private_key: reply.private_key,
+        }),
         _ => None,
     }
 }

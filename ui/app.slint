@@ -572,15 +572,19 @@ export component AppWindow inherits Window {
     callback hostkey-accept-once();                // trust this attempt only, do not remember
     callback hostkey-reject();                      // abort the connection
     // Connect-time credential prompt (#110). Rust opens this when a session is
-    // missing its username and/or password; the answer flows back via accept.
+    // missing its username and/or password / private key; the answer flows back
+    // via accept. `cred-auth` is "password" or "key".
     in-out property <bool> cred-prompt-open: false;
     in-out property <string> cred-host;            // host shown in the dialog title
+    in-out property <string> cred-auth: "password";
     in-out property <bool> cred-need-user: false;
     in-out property <bool> cred-need-password: false;
     in-out property <string> cred-user;            // username field value
-    in-out property <string> cred-password;        // password field value
+    in-out property <string> cred-password;        // login password or key passphrase
+    in-out property <string> cred-key-inline;      // private key path or pasted body
     callback cred-accept();                        // use the entered credentials
     callback cred-reject();                        // cancel the connection
+    callback cred-pick-key();                      // browse for a private key file
     // Group create / rename dialog (#41).
     in-out property <bool> group-dialog-open: false;
     in-out property <string> group-dialog-orig;    // "" = create, else rename
@@ -4474,7 +4478,8 @@ export component AppWindow inherits Window {
     }
 
     // Connect-time credential prompt (#110). Backdrop / Cancel abort the connect.
-    // Both username and password fields stay visible (prefilled when known).
+    // Password auth: username + password. Key auth: username + private key +
+    // passphrase (same fields as the session dialog).
     if root.cred-prompt-open: Rectangle {
         width: parent.width;
         height: parent.height;
@@ -4484,7 +4489,7 @@ export component AppWindow inherits Window {
         }
 
         cred-wrap := Rectangle {
-            width: 300px;
+            width: root.cred-auth == "key" ? 420px : 300px;
             height: cred-card.preferred-height;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
@@ -4495,8 +4500,9 @@ export component AppWindow inherits Window {
             drop-shadow-blur: 24px;
             drop-shadow-color: #00000080;
 
-            // Match Username / Password label column width (locale-aware via @tr).
-            property <length> cred-label-width: max(cred-lu.preferred-width, cred-lp.preferred-width);
+            // Match label column width across visible fields (locale-aware via @tr).
+            property <length> cred-label-width: max(cred-lu.preferred-width,
+                max(cred-lp.preferred-width, max(cred-lk.preferred-width, cred-lpp.preferred-width)));
             // Enter→Connect then hand focus back to the active terminal.
             public function cred-connect-and-focus-term() {
                 root.cred-accept();
@@ -4510,6 +4516,8 @@ export component AppWindow inherits Window {
                 clip: true;
                 cred-lu := Text { text: @tr("Username"); font-size: Theme.fs-sm; }
                 cred-lp := Text { text: @tr("Password"); font-size: Theme.fs-sm; }
+                cred-lk := Text { text: @tr("Private key"); font-size: Theme.fs-sm; }
+                cred-lpp := Text { text: @tr("Key passphrase"); font-size: Theme.fs-sm; }
             }
 
             TouchArea { }   // swallow clicks inside the card
@@ -4530,38 +4538,107 @@ export component AppWindow inherits Window {
                     font-size: Theme.fs-sm;
                 }
 
-                // Always show both fields. Focus: empty user (or both empty) →
-                // username; else empty password → password; else username.
+                // Username — always shown (prefilled when known).
                 cred-user-input := LabeledInput {
                     label: @tr("Username");
                     label-width: cred-wrap.cred-label-width;
                     gap: 8px;
                     value <=> root.cred-user;
-                    auto-focus: root.cred-user == "" || root.cred-password != "";
+                    auto-focus: root.cred-user == "" || (root.cred-auth != "key" && root.cred-password != "");
                     accepted => {
                         if (root.cred-user == "") {
                             // Current field empty → ignore Enter.
-                        } else if (root.cred-password == "") {
-                            cred-pass-input.focus-input();
+                        } else if (root.cred-auth == "key" && root.cred-key-inline == "") {
+                            // Need a key before connecting; passphrase field is next.
+                            cred-secret-input.focus-input();
+                        } else if (root.cred-auth != "key" && root.cred-password == "") {
+                            cred-secret-input.focus-input();
                         } else {
                             cred-wrap.cred-connect-and-focus-term();
                         }
                     }
                     canceled => { root.cred-reject(); }   // Esc cancels (#140-3)
                 }
-                cred-pass-input := LabeledInput {
-                    label: @tr("Password");
+
+                // Key auth: path / pasted PEM (same unified field as session dialog).
+                if root.cred-auth == "key": HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        width: cred-wrap.cred-label-width;
+                        height: cred-key-label.preferred-height;
+                        y: 8px;
+                        cred-key-label := Text {
+                            width: 100%;
+                            text: @tr("Private key");
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                            horizontal-alignment: right;
+                        }
+                        TooltipArea {
+                            width: parent.width;
+                            height: parent.height;
+                            tooltip-text: @tr("Enter a key file path or paste the private key. Pasted keys are encrypted before saving.");
+                            anchor-width: parent.width;
+                            anchor-height: parent.height;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        horizontal-stretch: 1;
+                        BorderedTextArea {
+                            horizontal-stretch: 1;
+                            area-height: 96px;
+                            idle-border: Theme.border-strong;
+                            area-background: Theme.bg-elevated;
+                            text <=> root.cred-key-inline;
+                            font-family: Theme.font-mono;
+                            font-size: Theme.fs-sm;
+                            placeholder: @tr("/path/to/private_key_file or \nprivate_key_content") + "(-----BEGIN OPENSSH PRIVATE KEY...)";
+                        }
+
+                        Rectangle {
+                            width: 64px;
+                            height: 32px;
+                            y: 0px;
+                            border-radius: Theme.radius-sm;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+                            background: cred-browse-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                            Text {
+                                text: @tr("Browse…");
+                                color: Theme.text-primary;
+                                font-size: Theme.fs-sm;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            cred-browse-ta := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.cred-pick-key(); }
+                            }
+                        }
+                    }
+                }
+
+                // Login password (password auth) or key passphrase (key auth).
+                cred-secret-input := LabeledInput {
+                    label: root.cred-auth == "key" ? @tr("Key passphrase") : @tr("Password");
                     label-width: cred-wrap.cred-label-width;
                     gap: 8px;
                     password: true;
+                    placeholder: root.cred-auth == "key" ? @tr("Leave blank if the key isn't encrypted") : "";
                     value <=> root.cred-password;
-                    auto-focus: root.cred-user != "" && root.cred-password == "";
+                    auto-focus: root.cred-user != "" && root.cred-password == "" && (root.cred-auth != "key" || root.cred-key-inline != "");
                     accepted => {
-                        if (root.cred-password == "") {
-                            // Current field empty → ignore Enter.
+                        if (root.cred-auth != "key" && root.cred-password == "") {
+                            // Password required — ignore empty Enter.
                         } else if (root.cred-user == "") {
                             cred-user-input.focus-input();
+                        } else if (root.cred-auth == "key" && root.cred-key-inline == "") {
+                            // Need a key before connecting.
                         } else {
+                            // Key passphrase may be blank (unencrypted key).
                             cred-wrap.cred-connect-and-focus-term();
                         }
                     }

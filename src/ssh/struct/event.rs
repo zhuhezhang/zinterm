@@ -28,15 +28,20 @@ pub enum SessionEvent {
         changed: bool,
         responder: HostKeyResponder,
     },
-    /// The session is missing a username and/or password; the UI must prompt for
-    /// them and answer via `responder`. The auth flow is blocked meanwhile (#110).
-    /// Existing `user` / `password` are still shown (prefilled); the dialog does
-    /// not hide fields that already have values.
+    /// The session is missing a username and/or secret (login password or key
+    /// passphrase) and/or private key; the UI must prompt and answer via
+    /// `responder`. The auth flow is blocked meanwhile (#110). Existing values
+    /// are still shown (prefilled); the dialog does not hide fields that already
+    /// have values. `auth` is `"password"` or `"key"`.
     CredentialPrompt {
         session_id: String,
         host: String,
+        auth: String,
         user: String,
+        /// Prefill: login password (password auth) or key passphrase (key auth).
         password: String,
+        /// Prefill: private key path or pasted body (key auth only).
+        private_key: String,
         need_user: bool,
         need_password: bool,
         responder: CredentialResponder,
