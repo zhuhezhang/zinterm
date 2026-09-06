@@ -11,6 +11,25 @@ fn is_normal_session_close(reason: &str) -> bool {
         || reason == crate::i18n::t("已取消登录", "login cancelled")
 }
 
+/// Drop a temporary AcceptOnce host-key cache for this tab's session host:port.
+fn clear_accept_once_for_tab(tab_id: &str, statuses: &TabStatuses) {
+    let session_id = statuses
+        .lock()
+        .ok()
+        .and_then(|m| m.get(tab_id).map(|s| s.session_id.clone()))
+        .unwrap_or_default();
+    if session_id.is_empty() {
+        return;
+    }
+    HISTORY_STORE.with(|s| {
+        if let Some(store) = s.borrow().as_ref() {
+            if let Some(sess) = store.borrow().get(&session_id) {
+                clear_hostkey_once(&sess.host, sess.port);
+            }
+        }
+    });
+}
+
 pub(super) fn update_tab_connection(
     win: &AppWindow,
     tab_id: &str,
@@ -124,10 +143,21 @@ pub(super) fn apply_session_event_to_window(
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 1;
             }
+            // No follow-up SFTP SSH handshake → AcceptOnce will not be reused.
+            let sftp_available = (0..terminals.row_count()).any(|i| {
+                terminals
+                    .row_data(i)
+                    .is_some_and(|r| r.id.as_str() == tab_id && r.sftp_available)
+            });
+            if !sftp_available {
+                clear_accept_once_for_tab(tab_id, statuses);
+            }
         }
         SessionEvent::Closed(reason) => {
             // Keep per-tab credential cache across disconnect so R can reconnect
             // without re-prompting; cache is cleared only when the tab closes.
+            // AcceptOnce host-key cache must not survive the attempt.
+            clear_accept_once_for_tab(tab_id, statuses);
             // Print disconnect info + reconnect hint into the terminal
             // (FinalShell-style), via synthetic Output (#79).
             let hint = crate::i18n::t(
@@ -200,6 +230,11 @@ pub(super) fn apply_session_event_to_window(
                 .unwrap_or_default();
             sort_sftp_entries(&mut slint_entries, &sort_key, sort_dir);
             let model = ModelRc::from(std::rc::Rc::new(VecModel::from(slint_entries)));
+            let was_ready = (0..terminals.row_count()).any(|i| {
+                terminals
+                    .row_data(i)
+                    .is_some_and(|r| r.id.as_str() == tab_id && r.sftp_ready)
+            });
             update_terminal(&|t| {
                 t.sftp_path = path.clone().into();
                 t.sftp_entries = model.clone();
@@ -210,6 +245,10 @@ pub(super) fn apply_session_event_to_window(
                 // controls hide after refresh or directory change (#100).
                 t.sftp_selected_count = 0;
             });
+            // First successful listing = SFTP connect finished; drop AcceptOnce.
+            if !was_ready {
+                clear_accept_once_for_tab(tab_id, statuses);
+            }
         }
         SessionEvent::SftpStatus(msg) => {
             update_terminal(&|t| t.sftp_status = msg.clone().into());
@@ -217,10 +256,19 @@ pub(super) fn apply_session_event_to_window(
         SessionEvent::SftpError(msg) => {
             // Show the reason and stop the spinner; leave the current listing in
             // place so a failed navigation doesn't blank the panel (#112).
+            let was_ready = (0..terminals.row_count()).any(|i| {
+                terminals
+                    .row_data(i)
+                    .is_some_and(|r| r.id.as_str() == tab_id && r.sftp_ready)
+            });
             update_terminal(&|t| {
                 t.sftp_status = msg.clone().into();
                 t.sftp_loading = false;
             });
+            // First-list failure still means the SFTP SSH handshake finished.
+            if !was_ready {
+                clear_accept_once_for_tab(tab_id, statuses);
+            }
         }
         SessionEvent::SftpFailed(msg) => {
             // Connection-level failure: keep the bar collapsed / disabled.
@@ -230,6 +278,7 @@ pub(super) fn apply_session_event_to_window(
                 t.sftp_ready = false;
                 t.sftp_collapsed = true;
             });
+            clear_accept_once_for_tab(tab_id, statuses);
         }
         SessionEvent::SftpFileText {
             path,
@@ -415,7 +464,10 @@ thread_local! {
     /// Prompts awaiting a decision; the front one is shown. Lives on the Slint
     /// event-loop thread (all access is from there).
     pub(super) static HOSTKEY_QUEUE: RefCell<VecDeque<PendingHostKey>> = RefCell::new(VecDeque::new());
-    /// host:port → decision, remembered for this run so a duplicate prompt
-    /// (second connection to the same host) is answered without a new dialog.
-    pub(super) static HOSTKEY_DECIDED: RefCell<HashMap<String, bool>> = RefCell::new(HashMap::new());
+    /// host:port → accept decision for this run so a duplicate prompt (e.g. the
+    /// follow-up SFTP SSH handshake) is answered without a new dialog.
+    /// `AcceptRemember` lasts for the run; `AcceptOnce` is cleared after SFTP
+    /// finishes (or when no SFTP handshake will reuse it).
+    pub(super) static HOSTKEY_DECIDED: RefCell<HashMap<String, crate::ssh::HostKeyDecision>> =
+        RefCell::new(HashMap::new());
 }

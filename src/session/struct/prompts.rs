@@ -45,6 +45,7 @@ pub(crate) struct PendingHostKey {
     pub(crate) message: String,
     pub(crate) detail: String,
     pub(crate) confirm_label: String,
+    pub(crate) once_label: String,
     pub(crate) responders: Vec<HostKeyResponder>,
 }
 

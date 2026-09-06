@@ -6,8 +6,9 @@ pub(super) fn hostkey_dialog_text(
     key_type: &str,
     fingerprint: &str,
     changed: bool,
-) -> (String, String, String, String) {
+) -> (String, String, String, String, String) {
     let detail = format!("{host}:{port}  ({key_type})\n{fingerprint}");
+    let once_label = crate::i18n::t("仅信任一次", "Trust once").to_string();
     if changed {
         (
             crate::i18n::t("⚠ 主机密钥已改变", "⚠ Host key changed").to_string(),
@@ -18,6 +19,7 @@ pub(super) fn hostkey_dialog_text(
             .to_string(),
             detail,
             crate::i18n::t("仍然信任", "Trust anyway").to_string(),
+            once_label,
         )
     } else {
         (
@@ -29,6 +31,7 @@ pub(super) fn hostkey_dialog_text(
             .to_string(),
             detail,
             crate::i18n::t("信任并连接", "Trust & connect").to_string(),
+            once_label,
         )
     }
 }
@@ -45,7 +48,7 @@ pub(super) fn enqueue_hostkey_prompt(
     changed: bool,
     responder: crate::ssh::HostKeyResponder,
 ) {
-    let id = format!("{host}:{port}");
+    let id = hostkey_cache_id(&host, port);
     if let Some(ans) = HOSTKEY_DECIDED.with(|d| d.borrow().get(&id).copied()) {
         responder.respond(ans);
         return;
@@ -57,7 +60,7 @@ pub(super) fn enqueue_hostkey_prompt(
             return false;
         }
         let was_empty = q.is_empty();
-        let (title, message, detail, confirm_label) =
+        let (title, message, detail, confirm_label, once_label) =
             hostkey_dialog_text(&host, port, &key_type, &fingerprint, changed);
         q.push_back(PendingHostKey {
             host,
@@ -67,6 +70,7 @@ pub(super) fn enqueue_hostkey_prompt(
             message,
             detail,
             confirm_label,
+            once_label,
             responders: vec![responder],
         });
         was_empty
@@ -74,6 +78,29 @@ pub(super) fn enqueue_hostkey_prompt(
     if show_now {
         show_front_hostkey(win);
     }
+}
+
+/// Drop in-memory host-key accepts so the next connect re-prompts after a
+/// settings "clear known hosts" (disk wipe alone is not enough — see #152-adjacent).
+pub(super) fn clear_hostkey_decisions() {
+    HOSTKEY_DECIDED.with(|d| d.borrow_mut().clear());
+}
+
+/// Drop a temporary `AcceptOnce` entry for `host:port` (after SFTP finishes, or
+/// when no follow-up SFTP handshake will reuse it).
+pub(super) fn clear_hostkey_once(host: &str, port: u16) {
+    use crate::ssh::HostKeyDecision;
+    let id = format!("{}:{}", host.trim().to_lowercase(), port);
+    HOSTKEY_DECIDED.with(|d| {
+        let mut d = d.borrow_mut();
+        if matches!(d.get(&id), Some(HostKeyDecision::AcceptOnce)) {
+            d.remove(&id);
+        }
+    });
+}
+
+fn hostkey_cache_id(host: &str, port: u16) -> String {
+    format!("{}:{}", host.trim().to_lowercase(), port)
 }
 
 /// Push the front pending prompt's details into the window and open the dialog.
@@ -85,6 +112,7 @@ pub(super) fn show_front_hostkey(win: &AppWindow) {
             win.set_hostkey_message(p.message.clone().into());
             win.set_hostkey_detail(p.detail.clone().into());
             win.set_hostkey_confirm_label(p.confirm_label.clone().into());
+            win.set_hostkey_once_label(p.once_label.clone().into());
             win.set_hostkey_prompt_open(true);
         }
     });
@@ -92,25 +120,22 @@ pub(super) fn show_front_hostkey(win: &AppWindow) {
 
 /// Apply the user's decision to the front prompt, then show the next one (or
 /// close the dialog if the queue is now empty).
-pub(super) fn resolve_front_hostkey(win: &AppWindow, accept: bool) {
+pub(super) fn resolve_front_hostkey(win: &AppWindow, decision: crate::ssh::HostKeyDecision) {
     let has_next = HOSTKEY_QUEUE.with(|q| {
         let mut q = q.borrow_mut();
         if let Some(p) = q.pop_front() {
-            // Only remember an *accept* for this run (so a slightly-later SFTP
-            // prompt for the same host is answered without a second dialog). We
-            // must NOT cache a reject: a single dismissal — e.g. an accidental
-            // backdrop click instead of "Trust & connect" — used to poison the
-            // host for the whole session, auto-rejecting every later connect with
-            // "Unknown server key" until the app was restarted (#152). A reject now
-            // only fails the current attempt; the next connect prompts again.
-            if accept {
+            // Cache accepts for this run so a slightly-later SFTP handshake to
+            // the same host (after shell Connected) is answered without a second
+            // dialog. AcceptOnce is temporary — cleared once SFTP finishes (or
+            // when no SFTP will follow). Reject is never cached (#152).
+            if decision.accepted() {
                 HOSTKEY_DECIDED.with(|d| {
                     d.borrow_mut()
-                        .insert(format!("{}:{}", p.host, p.port), true);
+                        .insert(hostkey_cache_id(&p.host, p.port), decision);
                 });
             }
             for r in &p.responders {
-                r.respond(accept);
+                r.respond(decision);
             }
         }
         !q.is_empty()

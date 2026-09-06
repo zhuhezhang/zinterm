@@ -567,7 +567,9 @@ export component AppWindow inherits Window {
     in-out property <string> hostkey-message;
     in-out property <string> hostkey-detail;       // host:port + type + fingerprint
     in-out property <string> hostkey-confirm-label; // trust-button text (from Rust, bilingual)
-    callback hostkey-accept();                     // trust (and remember) the key
+    in-out property <string> hostkey-once-label;    // "Trust once" (from Rust, bilingual)
+    callback hostkey-accept();                     // trust and remember the key (default / Enter)
+    callback hostkey-accept-once();                // trust this attempt only, do not remember
     callback hostkey-reject();                      // abort the connection
     // Connect-time credential prompt (#110). Rust opens this when a session is
     // missing its username and/or password; the answer flows back via accept.
@@ -4454,17 +4456,20 @@ export component AppWindow inherits Window {
     // Host-key confirmation (#109-5). Reuses the confirm-dialog card. The backdrop
     // is NOT a dismiss here (#152): clicking outside the card used to count as a
     // reject and — worse — poison the host for the whole run. The user must pick
-    // "Trust & connect" or the explicit Cancel/Reject button.
+    // Trust & connect / Trust once / Cancel. Enter = default permanent trust.
     ConfirmDialog {
         width: parent.width;
         height: parent.height;
         is-open <=> root.hostkey-prompt-open;
         dismiss-on-backdrop: false;
+        enter-confirms: true;
         title: root.hostkey-title;
         message: root.hostkey-message;
         detail: root.hostkey-detail;
         confirm-label: root.hostkey-confirm-label;
+        secondary-label: root.hostkey-once-label;
         confirm => { root.hostkey-accept(); }
+        secondary => { root.hostkey-accept-once(); }
         cancel => { root.hostkey-reject(); }
     }
 

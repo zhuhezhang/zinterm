@@ -1,22 +1,26 @@
 use std::sync::Arc;
 
+use super::HostKeyDecision;
+
 /// Carries the user's answer to a host-key confirmation prompt back to the
 /// blocked `check_server_key` handler. Wrapped in `Arc<Mutex<Option<…>>>` so the
 /// enclosing [`SessionEvent`] stays `Clone` (a bare `oneshot::Sender` is not);
 /// the first `respond` consumes the sender, later calls are no-ops.
 #[derive(Clone)]
-pub struct HostKeyResponder(Arc<std::sync::Mutex<Option<tokio::sync::oneshot::Sender<bool>>>>);
+pub struct HostKeyResponder(
+    Arc<std::sync::Mutex<Option<tokio::sync::oneshot::Sender<HostKeyDecision>>>>,
+);
 
 impl HostKeyResponder {
-    pub fn new(tx: tokio::sync::oneshot::Sender<bool>) -> Self {
+    pub fn new(tx: tokio::sync::oneshot::Sender<HostKeyDecision>) -> Self {
         Self(Arc::new(std::sync::Mutex::new(Some(tx))))
     }
 
-    /// Deliver the user's decision (`true` = trust). Idempotent.
-    pub fn respond(&self, accept: bool) {
+    /// Deliver the user's decision. Idempotent.
+    pub fn respond(&self, decision: HostKeyDecision) {
         if let Ok(mut guard) = self.0.lock() {
             if let Some(tx) = guard.take() {
-                let _ = tx.send(accept);
+                let _ = tx.send(decision);
             }
         }
     }

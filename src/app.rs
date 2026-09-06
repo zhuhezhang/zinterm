@@ -700,6 +700,8 @@ pub fn run() -> Result<()> {
             if let Err(err) = crate::ssh::known_hosts::clear() {
                 tracing::warn!("failed to clear known_hosts: {err:#}");
             }
+            // Also drop this-run accepts so reconnects re-prompt immediately.
+            clear_hostkey_decisions();
         });
     }
     {
@@ -1562,14 +1564,22 @@ pub fn run() -> Result<()> {
         });
     }
 
-    // Host-key confirmation dialog (#109-5): the user trusts or rejects the
-    // presented server key; the decision fans back out to the blocked SSH/SFTP
-    // handler(s) and the next queued prompt (if any) is shown.
+    // Host-key confirmation dialog (#109-5): the user trusts (remember / once)
+    // or rejects the presented server key; the decision fans back out to the
+    // blocked SSH/SFTP handler(s) and the next queued prompt (if any) is shown.
     {
         let weak = window.as_weak();
         window.on_hostkey_accept(move || {
             if let Some(w) = weak.upgrade() {
-                resolve_front_hostkey(&w, true);
+                resolve_front_hostkey(&w, crate::ssh::HostKeyDecision::AcceptRemember);
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
+        window.on_hostkey_accept_once(move || {
+            if let Some(w) = weak.upgrade() {
+                resolve_front_hostkey(&w, crate::ssh::HostKeyDecision::AcceptOnce);
             }
         });
     }
@@ -1577,7 +1587,7 @@ pub fn run() -> Result<()> {
         let weak = window.as_weak();
         window.on_hostkey_reject(move || {
             if let Some(w) = weak.upgrade() {
-                resolve_front_hostkey(&w, false);
+                resolve_front_hostkey(&w, crate::ssh::HostKeyDecision::Reject);
             }
         });
     }

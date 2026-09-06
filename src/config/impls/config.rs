@@ -49,7 +49,9 @@ pub fn log_dir() -> PathBuf {
 }
 
 fn resolve_data_dir() -> PathBuf {
-    let dir = ProjectDirs::from("dev", "zinterm", "zinterm")
+    // Use a plain `zinterm` fragment (not `dev.zinterm.zinterm`) so macOS lands in
+    // `~/Library/Application Support/zinterm`, matching Linux `~/.config/zinterm`.
+    let dir = ProjectDirs::from_path(PathBuf::from("zinterm"))
         .map(|d| d.config_dir().to_path_buf())
         .unwrap_or_else(|| std::env::temp_dir().join("zinterm"));
     let _ = fs::create_dir_all(&dir);

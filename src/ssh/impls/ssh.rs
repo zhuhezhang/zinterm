@@ -1164,9 +1164,11 @@ pub(crate) async fn verify_host_key(
                 return false; // no UI to ask
             }
             match rx.await {
-                Ok(true) => {
-                    if let Err(e) = crate::ssh::known_hosts::remember(host, port, key) {
-                        tracing::warn!("could not save host key for {host}:{port}: {e:#}");
+                Ok(decision) if decision.accepted() => {
+                    if decision.remember() {
+                        if let Err(e) = crate::ssh::known_hosts::remember(host, port, key) {
+                            tracing::warn!("could not save host key for {host}:{port}: {e:#}");
+                        }
                     }
                     true
                 }

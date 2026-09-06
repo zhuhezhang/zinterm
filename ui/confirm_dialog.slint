@@ -4,14 +4,17 @@ import { ScrollView } from "std-widgets.slint";
 
 // In-app modal confirmation dialog, styled to match the rest of zinterm
 // (a dark card over a dimmed backdrop, like SessionDialog).  Purely
-// presentational: it emits `confirm` / `cancel` and the caller decides what
-// to do.  Used for the irreversible SFTP delete (#28).
+// presentational: it emits `confirm` / `cancel` (and optional `secondary`)
+// and the caller decides what to do.  Used for the irreversible SFTP delete
+// (#28) and host-key trust.
 export component ConfirmDialog inherits Rectangle {
     in-out property <bool> is-open: false;
     in property <string> title: @tr("Please confirm");
     in property <string> message;
     in property <string> detail;                  // optional, e.g. the file path
     in property <string> confirm-label: @tr("Confirm");
+    // Optional middle action (e.g. host-key "Trust once"). Empty = hidden.
+    in property <string> secondary-label: "";
     // Long AI prompts and other large multi-line pastes need a review surface
     // with room for the payload and fixed footer actions.
     in property <bool> large-detail: false;
@@ -22,7 +25,10 @@ export component ConfirmDialog inherits Rectangle {
     // security prompts (e.g. host-key trust) so an accidental click outside the card
     // doesn't count as "reject" and abort the connection (#152).
     in property <bool> dismiss-on-backdrop: true;
+    // When true, Enter runs the default confirm action and Escape cancels.
+    in property <bool> enter-confirms: false;
     callback confirm();
+    callback secondary();
     callback cancel();
 
     visible: is-open && !covered;
@@ -35,8 +41,27 @@ export component ConfirmDialog inherits Rectangle {
         clicked => { if (root.dismiss-on-backdrop) { root.cancel(); } }
     }
 
+    // Grab keyboard while open so Enter confirms / Escape cancels when enabled.
+    if root.is-open && root.enter-confirms: FocusScope {
+        init => { self.focus(); }
+        key-pressed(e) => {
+            if (e.text == Key.Escape) {
+                root.cancel();
+                accept
+            } else if (e.text == Key.Return) {
+                root.confirm();
+                accept
+            } else {
+                accept
+            }
+        }
+        key-released(e) => { accept }
+    }
+
     Rectangle {
-        width: root.large-detail ? min(parent.width - 40px, 1160px) : 380px;
+        // Extra width when a secondary action is present (e.g. host-key three buttons).
+        width: root.large-detail ? min(parent.width - 40px, 1160px)
+             : (root.secondary-label != "" ? 460px : 380px);
         height: root.large-detail ? min(parent.height - 40px, 760px) : card.preferred-height;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -126,6 +151,11 @@ export component ConfirmDialog inherits Rectangle {
                 GhostButton {
                     text: @tr("Cancel");
                     clicked => { root.cancel(); }
+                }
+
+                if root.secondary-label != "": GhostButton {
+                    text: root.secondary-label;
+                    clicked => { root.secondary(); }
                 }
 
                 DangerButton {
