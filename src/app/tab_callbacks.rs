@@ -177,6 +177,41 @@ pub(super) fn wire_tab_callbacks(
         });
     }
 
+    // Select the welcome tab (and its pane) so session search can take focus
+    // when welcome is a full page rather than a sidebar.
+    {
+        let weak = window.as_weak();
+        let layout = layout.clone();
+        let content_size = content_size.clone();
+        let tabs_model = tabs_model.clone();
+        let panes_model = panes_model.clone();
+        let splitters_model = splitters_model.clone();
+        let bufs_welcome = bufs.clone();
+        window.on_select_welcome_tab(move || {
+            {
+                let mut lay = layout.borrow_mut();
+                let Some(pane_id) = lay.leaf_of_tab("welcome") else {
+                    return;
+                };
+                lay.focused = pane_id;
+                if let Some(l) = lay.leaf_mut(pane_id) {
+                    l.active = "welcome".into();
+                }
+            }
+            if let Some(w) = weak.upgrade() {
+                refresh_panes(
+                    &w,
+                    &layout.borrow(),
+                    content_size.get(),
+                    &tabs_model,
+                    &panes_model,
+                    &splitters_model,
+                );
+                rebuild_tab_display(&w, &bufs_welcome, "welcome");
+            }
+        });
+    }
+
     // Select a tab inside a pane: make it that pane's active tab and focus the
     // pane. refresh_panes propagates active-tab-id.
     {
