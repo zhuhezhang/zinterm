@@ -494,6 +494,8 @@ export component AppWindow inherits Window {
     in-out property <bool> data-clear-open: false;
     in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings"
     in-out property <bool> save-passwords: false;
+    /// False when the OS keyring cannot hold a vault master key.
+    in-out property <bool> credentials-vault-available: true;
     callback set-save-passwords(bool);
     callback clear-known-hosts();
     callback clear-all-sessions();
@@ -4730,6 +4732,7 @@ export component AppWindow inherits Window {
                     update-check-enabled <=> root.update-check-enabled;
                     ssh-keepalive-secs <=> root.ssh-keepalive-secs;
                     save-passwords <=> root.save-passwords;
+                    credentials-vault-available <=> root.credentials-vault-available;
                     wallpaper-overlay <=> root.wallpaper-overlay;
                     current-wallpaper: root.current-wallpaper;
                     custom-wallpaper-name: root.custom-wallpaper-name;

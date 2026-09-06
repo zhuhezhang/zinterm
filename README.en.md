@@ -95,7 +95,7 @@ open /Applications/meatshell.app
 - [x] SFTP browser + upload / download (drag-and-drop) + in-terminal ZMODEM (`sz`) receive
 - [x] Quick commands + command box (broadcast to all sessions) + command history
 - [x] Serial / Telnet sessions
-- [x] Session passwords encrypted at rest (ChaCha20-Poly1305)
+- [x] Session passwords encrypted at rest (ChaCha20-Poly1305 + OS keyring master key, `zinterm-credentials-vault.json`)
 - [x] Known-hosts (`known_hosts`) verification + first-connect confirmation
 - [x] Split panes for tabbed terminals
 
@@ -105,7 +105,7 @@ under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See
 
 ### Planned
 
-- [ ] Store session passwords in the OS keychain
+- (none currently)
 
 ## Tech stack
 
@@ -137,7 +137,8 @@ To migrate credentials, hand-edit those fields into the file before
 Whether imported secrets are persisted follows **Settings → Data → Save
 passwords / keys**:
 
-- **On**: keep the auth-specific secret fields and encrypt them for local storage.
+- **On**: keep the auth-specific secret fields and store them in the encrypted
+  credentials vault (`zinterm-credentials-vault.json`, master key in the OS keyring).
 - **Off**: ignore those fields even if present; connections still import, and
   you will be prompted on first connect.
 
@@ -190,9 +191,9 @@ Put a multi-line private key in a **single JSON string**, separating lines with
 }
 ```
 
-> Plaintext passwords in an import file are only for one-shot migration; once
-> saved they are encrypted locally with ChaCha20-Poly1305. Do not commit JSON
-> that still contains plaintext secrets.
+> Plaintext passwords in an import file are only for one-shot migration; with
+> “Save passwords” on they go into the local encrypted vault (ChaCha20-Poly1305,
+> master key in the OS keyring). Do not commit JSON that still contains plaintext secrets.
 
 ## Project layout
 

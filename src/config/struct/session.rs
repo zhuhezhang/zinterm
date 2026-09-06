@@ -205,21 +205,8 @@ impl Serialize for Session {
                 map.serialize_entry("port", &self.port)?;
                 map.serialize_entry("user", &self.user)?;
                 map.serialize_entry("auth", &self.auth)?;
-                match self.auth {
-                    AuthMethod::Password => {
-                        if !self.password.is_empty() {
-                            map.serialize_entry("password", &self.password)?;
-                        }
-                    }
-                    AuthMethod::Key => {
-                        if !self.key_passphrase.is_empty() {
-                            map.serialize_entry("key_passphrase", &self.key_passphrase)?;
-                        }
-                        if !self.private_key.is_empty() {
-                            map.serialize_entry("private_key", &self.private_key)?;
-                        }
-                    }
-                }
+                // password / key_passphrase / private_key live in the OS-keyring
+                // vault (`zinterm-credentials-vault.json`), never in sessions.json.
             }
             SessionKind::Serial => {
                 map.serialize_entry("serial_port", &self.serial_port)?;
@@ -738,7 +725,7 @@ mod sanitize_tests {
         assert!(s.key_passphrase.is_empty());
         assert!(s.private_key.is_empty());
         let raw = serde_json::to_string(&s).unwrap();
-        assert!(raw.contains("\"password\""));
+        assert!(!raw.contains("\"password\":"));
         assert!(!raw.contains("\"private_key\""));
         assert!(!raw.contains("key_passphrase"));
     }
@@ -756,9 +743,9 @@ mod sanitize_tests {
         assert_eq!(s.key_passphrase.as_str(), "key-pass");
         assert_eq!(s.private_key.as_str(), "/home/u/.ssh/id_ed25519");
         let raw = serde_json::to_string(&s).unwrap();
-        assert!(!raw.contains("\"password\""));
-        assert!(raw.contains("\"key_passphrase\""));
-        assert!(raw.contains("\"private_key\""));
+        assert!(!raw.contains("\"password\":"));
+        assert!(!raw.contains("\"private_key\""));
+        assert!(!raw.contains("key_passphrase"));
     }
 
     #[test]

@@ -9,19 +9,12 @@
 //! which is also where every pre-0.4.15 version stored its data — so existing
 //! installs keep working untouched. See [`data_dir`].
 //!
-//! ## Password encryption
+//! ## Password / key storage
 //!
-//! Passwords are **not** stored in plaintext.  On first launch a random
-//! 256-bit key is written to `secret.key` in the same config directory
-//! (mode `0600` on Unix).  Every non-empty password is then encrypted with
-//! **ChaCha20-Poly1305** (a random 96-bit nonce per value) and stored as
-//!
-//! ```text
-//! enc:v1:<base64url(nonce_12_bytes || ciphertext)>
-//! ```
-//!
-//! Legacy plaintext passwords (from older installs) are left untouched in
-//! memory and silently re-encrypted the next time the config is saved.
+//! Secrets (`password`, `key_passphrase`, `private_key`) are **never** written
+//! to `sessions.json`. When Settings › Data › save passwords is on, they go
+//! into `zinterm-credentials-vault.json` as ChaCha20-Poly1305 ciphertext, with
+//! the master key held by the OS keyring (`keyring` crate). See [`crate::config::vault`].
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -30,22 +23,22 @@ use std::sync::OnceLock;
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit},
+    aead::{Aead, KeyInit},
     ChaCha20Poly1305,
 };
 use directories::ProjectDirs;
-use rand::rngs::OsRng;
 
 use super::structs::*;
 
 // ── Data directory resolution (portable-first, #141) ──────────────────────────
 //
-// All user data — sessions.json, secret.key, known_hosts, error.log — lives in
-// ONE directory resolved here, and `errlog` / `known_hosts` route through it too.
+// All user data — sessions.json, credentials vault, known_hosts, error.log —
+// lives in ONE directory resolved here, and `errlog` / `known_hosts` route
+// through it too.
 
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-/// The single directory holding all user data (sessions, encryption key,
+/// The single directory holding all user data (sessions, credentials vault,
 /// known_hosts, error.log). Resolved once and cached; any one-time migration
 /// from the legacy per-user dir runs exactly once.
 ///
@@ -137,16 +130,18 @@ fn migrate_legacy(legacy: &Path, portable: &Path) {
     if legacy == portable {
         return;
     }
-    for name in ["sessions.json", "secret.key", "known_hosts"] {
+    for name in [
+        "sessions.json",
+        crate::config::VAULT_FILE,
+        "known_hosts",
+    ] {
         let src = legacy.join(name);
         let dst = portable.join(name);
         if src.exists() && !dst.exists() {
             match fs::copy(&src, &dst) {
                 Ok(_) => {
-                    // Keep the key owner-only on Unix (copy preserves bytes, not
-                    // necessarily the mode).
                     #[cfg(unix)]
-                    if name == "secret.key" {
+                    if name == crate::config::VAULT_FILE {
                         use std::os::unix::fs::PermissionsExt;
                         let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o600));
                     }
@@ -186,14 +181,18 @@ fn restore_user_backup_if_needed(primary_dir: &Path, backup_dir: &Path) {
         return;
     }
     let _ = fs::create_dir_all(primary_dir);
-    for name in ["sessions.json", "secret.key", "known_hosts"] {
+    for name in [
+        "sessions.json",
+        crate::config::VAULT_FILE,
+        "known_hosts",
+    ] {
         let src = backup_dir.join(name);
         let dst = primary_dir.join(name);
         if src.exists() {
             match fs::copy(&src, &dst) {
                 Ok(_) => {
                     #[cfg(unix)]
-                    if name == "secret.key" {
+                    if name == crate::config::VAULT_FILE {
                         use std::os::unix::fs::PermissionsExt;
                         let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o600));
                     }
@@ -453,84 +452,73 @@ fn normalize_macos_renderer_mode(mode: &str) -> &'static str {
 }
 
 impl ConfigStore {
-    /// The prefix that marks an encrypted password blob in sessions.json.
-    const ENC_PREFIX: &'static str = "enc:v1:";
-
     /// Marks a password encrypted with the **portable export key** (issue #46).
+    /// Kept only so hand-edited / older import files can still decrypt.
     const EXPORT_PREFIX: &'static str = "enc:exp:v1:";
 
     /// Fixed 32-byte key for portable exports. Baked into the binary so an
     /// exported file decrypts on any machine. Obfuscation only — see `ExportFile`.
     const EXPORT_KEY: [u8; 32] = *b"meatshell.export.portable.key.01";
 
-    // ── Encryption helpers ────────────────────────────────────────────────
-
-    /// Encrypt `plaintext` with ChaCha20-Poly1305 and return
-    /// `"enc:v1:<base64url(nonce_12_bytes || ciphertext)>"`.
-    fn encrypt(key: &[u8; 32], plaintext: &str) -> Result<String> {
-        let cipher = ChaCha20Poly1305::new(key.into());
-        let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 12 random bytes
-        let ciphertext = cipher
-            .encrypt(&nonce, plaintext.as_bytes())
-            .map_err(|e| anyhow::anyhow!("password encrypt error: {e}"))?;
-        let mut blob = nonce.to_vec();
-        blob.extend_from_slice(&ciphertext);
-        Ok(format!(
-            "{}{}",
-            Self::ENC_PREFIX,
-            URL_SAFE_NO_PAD.encode(&blob)
-        ))
+    fn data_dir_path(&self) -> Result<PathBuf> {
+        self.path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .context("config path has no parent directory")
     }
 
-    /// Try to decrypt a value produced by [`Self::encrypt`].
-    /// Returns `None` if the string is not an encrypted blob (e.g. a legacy
-    /// plaintext value, an empty string, or a tampered/corrupt blob).
-    fn try_decrypt(key: &[u8; 32], s: &str) -> Option<String> {
-        let b64 = s.strip_prefix(Self::ENC_PREFIX)?;
-        let blob = URL_SAFE_NO_PAD.decode(b64).ok()?;
-        if blob.len() < 12 {
-            return None;
-        }
-        let (nonce_bytes, ciphertext) = blob.split_at(12);
-        let cipher = ChaCha20Poly1305::new(key.into());
-        let nonce = chacha20poly1305::Nonce::from_slice(nonce_bytes);
-        let plain = cipher.decrypt(nonce, ciphertext).ok()?;
-        String::from_utf8(plain).ok()
-    }
-
-    // ── Key file management ───────────────────────────────────────────────
-
-    /// Load the 32-byte key from `<config_dir>/secret.key`, or generate and
-    /// persist a fresh one.  On Unix the key file is created with mode `0600`
-    /// so other local accounts cannot read it.  On Windows files in `%APPDATA%`
-    /// are already restricted to the owning user by default ACLs.
-    fn load_or_create_key(config_dir: &Path) -> Result<[u8; 32]> {
-        use rand::RngCore as _;
-        let key_path = config_dir.join("secret.key");
-
-        if key_path.exists() {
-            let bytes = fs::read(&key_path)
-                .with_context(|| format!("failed to read {}", key_path.display()))?;
-            if bytes.len() == 32 {
-                let mut key = [0u8; 32];
-                key.copy_from_slice(&bytes);
-                return Ok(key);
+    /// Hydrate in-memory secrets from the OS-keyring vault.
+    fn hydrate_secrets_from_vault(config_dir: &Path, sessions: &mut [Session]) {
+        for session in sessions {
+            // sessions.json must never carry secrets; drop anything leftover.
+            session.password = Secret::default();
+            session.key_passphrase = Secret::default();
+            session.private_key = Secret::default();
+            match crate::config::vault::get_secrets(config_dir, &session.id) {
+                Ok(Some(secrets)) => {
+                    session.password = Secret::new(secrets.password);
+                    session.private_key = Secret::new(secrets.private_key);
+                    session.key_passphrase = Secret::new(secrets.passphrase);
+                }
+                Ok(None) => {}
+                Err(e) => tracing::warn!(
+                    "failed to load vault secrets for session {}: {e:#}",
+                    session.id
+                ),
             }
-            tracing::warn!("secret.key has wrong length — regenerating");
         }
+    }
 
-        let mut key = [0u8; 32];
-        OsRng.fill_bytes(&mut key);
-        fs::write(&key_path, &key)
-            .with_context(|| format!("failed to write {}", key_path.display()))?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&key_path, fs::Permissions::from_mode(0o600))
-                .with_context(|| format!("failed to set permissions on {}", key_path.display()))?;
+    /// Persist in-memory secrets for every session into the vault.
+    fn sync_all_secrets_to_vault(&self) -> Result<()> {
+        let config_dir = self.data_dir_path()?;
+        if !crate::config::vault::is_encryption_available() {
+            let any_secrets = self.cache.sessions.iter().any(|s| {
+                !s.password.is_empty() || !s.key_passphrase.is_empty() || !s.private_key.is_empty()
+            });
+            if any_secrets {
+                tracing::warn!(
+                    "credentials vault unavailable (OS keyring); secrets kept in memory only"
+                );
+            }
+            return Ok(());
         }
-        tracing::info!("generated new encryption key at {}", key_path.display());
-        Ok(key)
+        let save_passwords = self.save_passwords();
+        for session in &self.cache.sessions {
+            let secrets = crate::config::vault::PlainSecrets::from_session_fields(
+                &session.password,
+                &session.private_key,
+                &session.key_passphrase,
+            );
+            // When save-passwords is on, empty fields clear the vault entry.
+            // When off, only push non-empty in-memory secrets (e.g. duplicate);
+            // never wipe an existing vault slot just because memory is empty.
+            if save_passwords || !secrets.is_empty() {
+                crate::config::vault::sync_secrets(&config_dir, &session.id, &secrets)
+                    .with_context(|| format!("failed to sync vault for session {}", session.id))?;
+            }
+        }
+        Ok(())
     }
 
     // ── Public API ────────────────────────────────────────────────────────
@@ -553,28 +541,20 @@ impl ConfigStore {
             restore_user_backup_if_needed(&config_dir, backup);
         }
 
-        let key = Self::load_or_create_key(&config_dir)?;
-
         let mut migrated = false;
         let cache = if path.exists() {
             let raw = fs::read_to_string(&path)
                 .with_context(|| format!("failed to read {}", path.display()))?;
             match serde_json::from_str::<ConfigFile>(&raw) {
                 Ok(mut cfg) => {
-                    // Decrypt any encrypted passwords; leave legacy plaintext
-                    // values untouched (they will be encrypted on next save).
+                    if cfg.save_passwords && !crate::config::vault::is_encryption_available() {
+                        tracing::warn!(
+                            "save_passwords was on but credentials vault is unavailable; disabling"
+                        );
+                        cfg.save_passwords = false;
+                    }
+                    Self::hydrate_secrets_from_vault(&config_dir, &mut cfg.sessions);
                     for session in &mut cfg.sessions {
-                        if let Some(plain) = Self::try_decrypt(&key, session.password.as_str()) {
-                            session.password = Secret::new(plain);
-                        }
-                        if let Some(plain) =
-                            Self::try_decrypt(&key, session.key_passphrase.as_str())
-                        {
-                            session.key_passphrase = Secret::new(plain);
-                        }
-                        if let Some(plain) = Self::try_decrypt(&key, session.private_key.as_str()) {
-                            session.private_key = Secret::new(plain);
-                        }
                         if session.sanitize_for_kind() {
                             migrated = true;
                         }
@@ -613,7 +593,6 @@ impl ConfigStore {
             path,
             backup_dir,
             cache,
-            key,
         };
         // Persist the migration so it runs exactly once (and so a later opt-out —
         // e.g. turning the welcome sidebar back off — isn't reverted next launch).
@@ -666,6 +645,11 @@ impl ConfigStore {
 
     pub fn remove(&mut self, id: &str) {
         self.cache.sessions.retain(|s| s.id != id);
+        if let Ok(dir) = self.data_dir_path() {
+            if let Err(e) = crate::config::vault::remove_secrets(&dir, id) {
+                tracing::warn!("failed to remove vault secrets for {id}: {e:#}");
+            }
+        }
     }
 
     /// Delete every saved session and group folder (Quick Connect tree).
@@ -673,6 +657,11 @@ impl ConfigStore {
         self.cache.sessions.clear();
         self.cache.groups.clear();
         self.cache.collapsed_session_groups = None;
+        if let Ok(dir) = self.data_dir_path() {
+            if let Err(e) = crate::config::vault::clear_all(&dir) {
+                tracing::warn!("failed to clear credentials vault: {e:#}");
+            }
+        }
     }
 
     /// Reset Interface / appearance preferences to the current new-user defaults
@@ -1420,20 +1409,30 @@ impl ConfigStore {
     pub fn set_ssh_keepalive_secs(&mut self, secs: u32) {
         self.cache.ssh_keepalive_secs = secs.min(SSH_KEEPALIVE_SECS_MAX);
     }
-    /// Whether newly entered passwords / key paths / key material may be written to disk.
+    /// Whether newly entered passwords / key paths / key material may be written
+    /// to the credentials vault.
     pub fn save_passwords(&self) -> bool {
         self.cache.save_passwords
     }
     pub fn set_save_passwords(&mut self, enabled: bool) {
-        self.cache.save_passwords = enabled;
+        // Refuse enabling when the OS keyring cannot hold a master key.
+        self.cache.save_passwords = enabled && crate::config::vault::is_encryption_available();
+        if enabled && !self.cache.save_passwords {
+            tracing::warn!("save passwords requested but credentials vault is unavailable");
+        }
     }
     /// Wipe every session's stored password/passphrase, pasted private key, and
-    /// private-key file path.
+    /// private-key file path (memory + vault).
     pub fn clear_saved_passwords_and_keys(&mut self) {
         for session in &mut self.cache.sessions {
             session.password = Secret::default();
             session.key_passphrase = Secret::default();
             session.private_key = Secret::default();
+        }
+        if let Ok(dir) = self.data_dir_path() {
+            if let Err(e) = crate::config::vault::clear_all(&dir) {
+                tracing::warn!("failed to clear credentials vault: {e:#}");
+            }
         }
     }
     pub fn wallpaper_overlay(&self) -> f32 {
@@ -1725,39 +1724,20 @@ impl ConfigStore {
     }
 
     pub fn save(&self) -> Result<()> {
-        // Build a disk copy where every non-empty password is encrypted.
-        // Also strip kind-irrelevant fields so legacy dirty sessions get cleaned
-        // on the next write (SSH without serial baud, serial without SSH auth, …).
+        // Metadata only in sessions.json — strip secrets before write (Serialize
+        // already omits them; clear for defence in depth / older test helpers).
         let mut disk = self.cache.clone();
         for session in &mut disk.sessions {
             session.sanitize_for_kind();
-            if !session.password.is_empty()
-                && !session.password.as_str().starts_with(Self::ENC_PREFIX)
-            {
-                let enc = Self::encrypt(&self.key, session.password.as_str())?;
-                session.password = Secret::new(enc);
-            }
-            if !session.key_passphrase.is_empty()
-                && !session.key_passphrase.as_str().starts_with(Self::ENC_PREFIX)
-            {
-                let enc = Self::encrypt(&self.key, session.key_passphrase.as_str())?;
-                session.key_passphrase = Secret::new(enc);
-            }
-            if !session.private_key.is_empty()
-                && !session.private_key.as_str().starts_with(Self::ENC_PREFIX)
-            {
-                let enc = Self::encrypt(&self.key, session.private_key.as_str())?;
-                session.private_key = Secret::new(enc);
-            }
+            session.password = Secret::default();
+            session.key_passphrase = Secret::default();
+            session.private_key = Secret::default();
         }
         let raw = serde_json::to_string_pretty(&disk)?;
         // Write to a sibling temp file then rename — cheap atomicity.
         let tmp = self.path.with_extension("json.tmp");
         fs::write(&tmp, &raw).with_context(|| format!("failed to write {}", tmp.display()))?;
-        // Restrict to owner-only before publishing (#34): sessions.json holds
-        // (encrypted) credentials, so it shouldn't be world-readable. Set 0600
-        // on the temp file so the permission is already in place at rename.
-        // Windows %APPDATA% is owner-restricted by default ACLs — no-op there.
+        // Restrict to owner-only before publishing (#34).
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -1767,6 +1747,11 @@ impl ConfigStore {
         fs::rename(&tmp, &self.path)
             .with_context(|| format!("failed to finalise {}", self.path.display()))?;
         self.sync_backup(&raw);
+        // Sync in-memory secrets to the OS-keyring vault. apply_password_save_policy
+        // already decided what may sit in memory; empty entries remove vault slots.
+        if let Err(e) = self.sync_all_secrets_to_vault() {
+            tracing::warn!("failed to sync credentials vault: {e:#}");
+        }
         Ok(())
     }
 
@@ -1798,7 +1783,7 @@ impl ConfigStore {
         }
 
         if let Some(config_dir) = self.path.parent() {
-            for name in ["secret.key", "known_hosts"] {
+            for name in [crate::config::VAULT_FILE, "known_hosts"] {
                 let src = config_dir.join(name);
                 let dst = backup_dir.join(name);
                 if src.exists() {
@@ -1810,7 +1795,7 @@ impl ConfigStore {
                         );
                     }
                     #[cfg(unix)]
-                    if name == "secret.key" {
+                    if name == crate::config::VAULT_FILE {
                         use std::os::unix::fs::PermissionsExt;
                         let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o600));
                     }
@@ -1958,21 +1943,15 @@ impl ConfigStore {
         for (i, raw_session) in file.sessions.iter().enumerate() {
             let mut s = Session::from_import_value(raw_session)
                 .with_context(|| format!("session[{i}]"))?;
-            // Recover plaintext secrets (cache stores plaintext). Accept an
-            // older export blob, our local enc:v1 blob, or hand-edited plaintext.
+            // Recover plaintext secrets for in-memory use / vault sync.
+            // Accept an older export blob or hand-edited plaintext.
             if let Some(plain) = Self::decrypt_export(s.password.as_str()) {
-                s.password = Secret::new(plain);
-            } else if let Some(plain) = Self::try_decrypt(&self.key, s.password.as_str()) {
                 s.password = Secret::new(plain);
             }
             if let Some(plain) = Self::decrypt_export(s.key_passphrase.as_str()) {
                 s.key_passphrase = Secret::new(plain);
-            } else if let Some(plain) = Self::try_decrypt(&self.key, s.key_passphrase.as_str()) {
-                s.key_passphrase = Secret::new(plain);
             }
             if let Some(plain) = Self::decrypt_export(s.private_key.as_str()) {
-                s.private_key = Secret::new(plain);
-            } else if let Some(plain) = Self::try_decrypt(&self.key, s.private_key.as_str()) {
                 s.private_key = Secret::new(plain);
             }
             // Match Settings › Data › save passwords: ignore newly imported
@@ -2025,6 +2004,7 @@ impl ConfigStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chacha20poly1305::aead::{AeadCore, OsRng};
     use uuid::Uuid;
 
     fn temp_store() -> ConfigStore {
@@ -2033,7 +2013,6 @@ mod tests {
             path,
             backup_dir: None,
             cache: ConfigFile::default(),
-            key: [7u8; 32],
         }
     }
 
@@ -2087,6 +2066,7 @@ mod tests {
 
     #[test]
     fn save_passwords_defaults_off_and_clear_wipes_key_paths() {
+        let _guard = crate::config::vault::tests::with_test_master_key();
         let mut store = temp_store();
         assert!(!store.save_passwords());
 
@@ -2245,8 +2225,7 @@ mod tests {
 
         let mut session = sample_session("server");
         session.group = "SYSTEM".into();
-        let id = session.id.clone();
-        store.upsert(session);
+        let id = store.upsert(session);
         assert_eq!(store.get(&id).unwrap().group, "");
     }
 
@@ -2342,16 +2321,13 @@ mod tests {
             serde_json::to_string_pretty(&backup_cfg).unwrap(),
         )
         .unwrap();
-        std::fs::write(backup.join("secret.key"), [9u8; 32]).unwrap();
+        std::fs::write(backup.join(crate::config::VAULT_FILE), "{}").unwrap();
 
         restore_user_backup_if_needed(&primary, &backup);
         assert!(sessions_file_has_connections(
             &primary.join("sessions.json")
         ));
-        assert_eq!(
-            std::fs::read(primary.join("secret.key")).unwrap(),
-            [9u8; 32]
-        );
+        assert!(primary.join(crate::config::VAULT_FILE).exists());
 
         let store = ConfigStore {
             path: primary.join("sessions.json"),
@@ -2360,16 +2336,13 @@ mod tests {
                 sessions: vec![sample_session("new")],
                 ..ConfigFile::default()
             },
-            key: [7u8; 32],
         };
-        std::fs::write(primary.join("secret.key"), [7u8; 32]).unwrap();
         store.save().unwrap();
 
         let raw = std::fs::read_to_string(backup.join("sessions.json")).unwrap();
         let cfg: ConfigFile = serde_json::from_str(&raw).unwrap();
         assert_eq!(cfg.sessions.len(), 1);
         assert_eq!(cfg.sessions[0].name, "new");
-        assert_eq!(std::fs::read(backup.join("secret.key")).unwrap(), [7u8; 32]);
 
         let _ = std::fs::remove_dir_all(base);
     }
@@ -2443,6 +2416,7 @@ mod tests {
 
     #[test]
     fn restore_settings_defaults_keeps_sessions_commands_and_secrets() {
+        let _guard = crate::config::vault::tests::with_test_master_key();
         let mut store = temp_store();
         store.set_save_passwords(true);
         let mut session = sample_session("keep-me");
@@ -2548,10 +2522,13 @@ mod tests {
     }
 
     #[test]
-    fn saved_password_encrypts_and_decrypts_without_changes() {
+    fn saved_password_goes_to_vault_not_sessions_json() {
+        let _guard = crate::config::vault::tests::with_test_master_key();
         let mut store = temp_store();
+        store.set_save_passwords(true);
+        assert!(store.save_passwords());
         let password = "p@ss word!^&*中文";
-        store.cache.sessions.push(Session {
+        let id = store.upsert(Session {
             name: "windows-password".into(),
             host: "192.168.100.2".into(),
             port: 22,
@@ -2563,15 +2540,22 @@ mod tests {
         store.save().unwrap();
         let raw = std::fs::read_to_string(&store.path).unwrap();
         assert!(!raw.contains(password));
-        let disk: ConfigFile = serde_json::from_str(&raw).unwrap();
-        let encrypted = disk.sessions[0].password.as_str();
-        assert!(encrypted.starts_with(ConfigStore::ENC_PREFIX));
-        assert_eq!(
-            ConfigStore::try_decrypt(&store.key, encrypted).as_deref(),
-            Some(password)
-        );
+        // `save_passwords` may appear; session secret fields must not.
+        assert!(!raw.contains("\"password\":"));
+        assert!(!raw.contains("\"private_key\""));
+        assert!(!raw.contains("\"key_passphrase\""));
+
+        let dir = store.path.parent().unwrap();
+        let vault_raw =
+            std::fs::read_to_string(dir.join(crate::config::VAULT_FILE)).unwrap();
+        assert!(!vault_raw.contains(password));
+        let loaded = crate::config::vault::get_secrets(dir, &id)
+            .unwrap()
+            .expect("vault entry");
+        assert_eq!(loaded.password, password);
 
         let _ = std::fs::remove_file(&store.path);
+        let _ = std::fs::remove_file(dir.join(crate::config::VAULT_FILE));
     }
 
     #[test]
@@ -2628,6 +2612,7 @@ mod tests {
 
     #[test]
     fn import_plaintext_secrets_honor_save_passwords_switch() {
+        let _guard = crate::config::vault::tests::with_test_master_key();
         let wrap = |sessions: &str| {
             format!(
                 r#"{{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[{sessions}]}}"#
@@ -2686,6 +2671,7 @@ mod tests {
 
     #[test]
     fn import_accepts_legacy_export_encrypted_password_when_save_passwords_on() {
+        let _guard = crate::config::vault::tests::with_test_master_key();
         let mut store = temp_store();
         store.set_save_passwords(true);
         let enc = encrypt_export("legacy-secret").unwrap();

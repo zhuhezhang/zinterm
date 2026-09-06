@@ -232,9 +232,9 @@ pub struct ConfigFile {
     #[serde(default)]
     pub ssh_keepalive_secs: u32,
     /// Persist passwords / key passphrases / private-key paths / pasted private
-    /// keys into sessions.json (secrets encrypted). Default off. Turning this
-    /// off does **not** wipe credentials already stored — use the Data › clear
-    /// action for that.
+    /// keys into the OS-keyring vault (`zinterm-credentials-vault.json`).
+    /// Default off. Turning this off does **not** wipe credentials already
+    /// stored — use the Data › clear action for that.
     #[serde(default)]
     pub save_passwords: bool,
     /// One-time default-layout migration marker (#new-user-defaults). 0 = config

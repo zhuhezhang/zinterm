@@ -122,10 +122,12 @@ component SettingRow inherits Rectangle {
 // binding-break-on-self-assign gotcha).
 component Switch inherits Rectangle {
     in property <bool> on;
+    in property <bool> enabled: true;
     callback toggled(bool);
     width: 38px;
     height: 22px;
     border-radius: 11px;
+    opacity: root.enabled ? 1.0 : 0.45;
     background: root.on ? Theme.accent : Theme.bg-active;
     animate background { duration: 120ms; }
     Rectangle {
@@ -142,7 +144,8 @@ component Switch inherits Rectangle {
     }
 
     TouchArea {
-        mouse-cursor: pointer;
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
         clicked => { root.toggled(!root.on); }
     }
 }
@@ -604,6 +607,7 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> update-check-enabled: false;
     in-out property <int> ssh-keepalive-secs: 0;
     in-out property <bool> save-passwords: false;
+    in-out property <bool> credentials-vault-available: true;
     in-out property <float> wallpaper-overlay;   // frosted-panel opacity 0.30-1.00
     // Active wallpaper id: "" / "builtin:light" / "builtin:dark" / a file path.
     in property <string> current-wallpaper;
@@ -1901,10 +1905,15 @@ export component InterfacePanel inherits Rectangle {
 
                         SettingRow {
                             label: root.lang-en ? "Save passwords / private-keys" : "保存密码/私钥";
-                            desc: root.lang-en
-                                ? "When on, passwords, private-keys are stored with the session (encrypted where needed). Turning this off does not clear credentials already saved."
-                                : "开启后密码、私钥会随会话保存(敏感内容加密)。关闭此选项不会清除已保存的内容。";
+                            desc: !root.credentials-vault-available
+                                ? (root.lang-en
+                                    ? "Unavailable: OS keyring cannot store the vault master key."
+                                    : "不可用：系统钥匙串无法保存凭证库主密钥。")
+                                : (root.lang-en
+                                    ? "When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved."
+                                    : "开启后密码与私钥写入加密凭证库(主密钥在系统钥匙串)。关闭此选项不会清除已保存的内容。");
                             Switch {
+                                enabled: root.credentials-vault-available;
                                 on: root.save-passwords;
                                 toggled(v) => { root.save-passwords = v; root.set-save-passwords(v); }
                             }

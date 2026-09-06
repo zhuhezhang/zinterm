@@ -638,6 +638,7 @@ pub fn run() -> Result<()> {
     window.set_confirm_delete_session_enabled(store.borrow().confirm_delete_session());
     window.set_welcome_single_click_connect(store.borrow().welcome_single_click_connect());
     window.set_save_passwords(store.borrow().save_passwords());
+    window.set_credentials_vault_available(crate::config::is_encryption_available());
     {
         let store = store.clone();
         window.on_set_download_always_ask(move |ask| {
@@ -710,11 +711,16 @@ pub fn run() -> Result<()> {
         });
     }
     {
+        let weak = window.as_weak();
         let store = store.clone();
         window.on_set_save_passwords(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_save_passwords(enabled);
             let _ = s.save();
+            if let Some(w) = weak.upgrade() {
+                w.set_save_passwords(s.save_passwords());
+                w.set_credentials_vault_available(crate::config::is_encryption_available());
+            }
         });
     }
     {
@@ -1294,6 +1300,7 @@ pub fn run() -> Result<()> {
             w.set_confirm_delete_session_enabled(s.confirm_delete_session());
             w.set_welcome_single_click_connect(s.welcome_single_click_connect());
             w.set_save_passwords(s.save_passwords());
+            w.set_credentials_vault_available(crate::config::is_encryption_available());
             w.set_update_check_enabled(s.update_check_enabled());
             w.set_wallpaper_overlay(s.wallpaper_overlay());
 
@@ -2808,11 +2815,21 @@ fn wire_session_callbacks(
             {
                 let mut s = store.borrow_mut();
                 if let Some(orig) = s.get(&id.to_string()).cloned() {
+                    let from_id = orig.id.clone();
                     let mut copy = orig;
                     copy.id = crate::config::Session::new_saved_id();
                     copy.name = format!("{} (copy)", copy.name);
                     copy.last_used = None;
+                    let to_id = copy.id.clone();
                     s.upsert(copy);
+                    // Copy encrypted vault entry when present (no re-encrypt).
+                    if let Err(e) = crate::config::vault::duplicate_secrets(
+                        &crate::config::data_dir(),
+                        &from_id,
+                        &to_id,
+                    ) {
+                        tracing::warn!("failed to duplicate vault secrets: {e:#}");
+                    }
                     if let Err(err) = s.save() {
                         tracing::warn!("failed to save config: {err:#}");
                     }
