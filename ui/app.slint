@@ -1718,6 +1718,9 @@ export component AppWindow inherits Window {
                         }
                         edit(orig-index) => { root.edit-quick-command(orig-index); }
                         toggle-group(group) => { root.toggle-quick-group(group); }
+                        rename-group(g) => { root.qcg-orig = g; root.qcg-name = g; root.qcg-open = true; }
+                        delete-group(g) => { root.delete-quick-group(g); }
+                        new-group() => { root.qcg-orig = ""; root.qcg-name = ""; root.qcg-open = true; }
                         manage => {
                             root.qcm-name = "";
                             root.qcm-command = "";
@@ -3184,6 +3187,7 @@ export component AppWindow inherits Window {
                         qcm-list := VerticalLayout {
                             alignment: start;
                             spacing: 0px;
+                            padding-top: root.qcm-display-commands.length == 0 ? 6px : 0px;
                             if root.qcm-display-commands.length == 0: Text {
                                 text: root.qcm-search != "" ? @tr("No match") : @tr("No quick commands yet");
                                 color: Theme.text-muted;
@@ -3212,7 +3216,7 @@ export component AppWindow inherits Window {
                                             && root.qcm-drop-before-group == q.group
                                             && root.qcm-drag-group-from != q.group)
                                         ? Theme.accent.with-alpha(0.12)
-                                        : (grp-header-ta.has-hover ? Theme.bg-hover : transparent));
+                                        : (grp-header-ta.has-hover || qgrp-menu.is-open ? Theme.bg-hover : transparent));
 
                                     HorizontalLayout {
                                         padding-left: 8px;
