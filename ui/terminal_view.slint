@@ -112,6 +112,8 @@ component FindToggle inherits Rectangle {
     border-color: Theme.accent.with-alpha(0.7);
 
     Text {
+        width: 100%;
+        height: 100%;
         text: root.label;
         color: root.on ? Theme.text-primary : Theme.text-secondary;
         font-size: Theme.fs-sm;
@@ -1491,10 +1493,11 @@ export component TerminalView inherits Rectangle {
 
                         if root.find-active: Rectangle {
                             // Floating find bar — top-right, not full terminal width.
+                            // 40px = 32px BorderedLineInput + 4px top/bottom padding.
                             x: max(8px, parent.width - self.width - 10px);
                             y: 8px;
                             width: min(460px, parent.width - 16px);
-                            height: 34px;
+                            height: 40px;
                             background: Theme.popup-bg;
                             border-width: 1px;
                             border-color: Theme.border-strong;
@@ -1517,11 +1520,16 @@ export component TerminalView inherits Rectangle {
                                 padding-top: 4px;
                                 padding-bottom: 4px;
                                 spacing: 4px;
+                                // Vertically center the 24px toggles/buttons next to the
+                                // 32px input (Slint 1.17+: cross-axis, not `alignment`).
+                                cross-axis-alignment: center;
 
                                 find-input := BorderedLineInput {
                                     horizontal-stretch: 1;
                                     min-width: 96px;
-                                    height: parent.height;
+                                    // Keep the widget's default 32px height — do not use
+                                    // parent.height, which includes layout padding and
+                                    // pushes the field below the find-bar chrome.
                                     pad-x: 6px;
                                     font-size: Theme.fs-md;
                                     leading-icon: "\u{E8B6}";
