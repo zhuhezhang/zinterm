@@ -1,13 +1,8 @@
 //! Session / application configuration.
 //!
-//! Persists a simple JSON file in the app's data directory. Resolution is
-//! **portable-first** (#141): a `config/` folder next to the executable is
-//! preferred so the whole app can ride along on a USB stick and never litters
-//! the user profile. When the executable lives somewhere read-only (a
-//! system-wide install under Program Files / `/usr`), it falls back to the
-//! per-user OS config dir (e.g. `%APPDATA%/meatshell`, `~/.config/meatshell`),
-//! which is also where every pre-0.4.15 version stored its data — so existing
-//! installs keep working untouched. See [`data_dir`].
+//! Persists a simple JSON file in the app's **per-user OS config directory**
+//! (e.g. `%APPDATA%/meatshell`, `~/.config/meatshell`,
+//! `~/Library/Application Support/meatshell`). See [`data_dir`].
 //!
 //! ## Password / key storage
 //!
@@ -30,186 +25,35 @@ use directories::ProjectDirs;
 
 use super::structs::*;
 
-// ── Data directory resolution (portable-first, #141) ──────────────────────────
+// ── Data directory resolution (per-user OS config) ───────────────────────────
 //
-// All user data — sessions.json, credentials vault, known_hosts, error.log —
-// lives in ONE directory resolved here, and `errlog` / `known_hosts` route
-// through it too.
+// All user data — sessions.json, credentials vault, known_hosts — lives in
+// ONE directory resolved here. Diagnostic logs use a `log/` subdir under it.
 
 static DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// The single directory holding all user data (sessions, credentials vault,
-/// known_hosts, error.log). Resolved once and cached; any one-time migration
-/// from the legacy per-user dir runs exactly once.
+/// known_hosts). Resolved once and cached.
 ///
-/// Portable-first: prefers a `config/` folder beside the executable, falling
-/// back to the per-user OS config dir when the exe dir is read-only (#141).
+/// Always the per-user OS config dir (`%APPDATA%/meatshell`,
+/// `~/.config/meatshell`, `~/Library/Application Support/meatshell`).
 pub fn data_dir() -> PathBuf {
     DATA_DIR.get_or_init(resolve_data_dir).clone()
 }
 
-/// Directory for diagnostic logs (`error.log`). Kept *separate* from the config
-/// dir so logs don't clutter user data: portable-first → a `log/` folder beside
-/// the executable (a sibling of `config/`), falling back to a `log/` subdir
-/// under the per-user data dir when the exe dir is read-only (Program Files etc.)
-/// (#log-dir).
+/// Directory for diagnostic logs (`error.log`): `<data_dir>/log`.
 pub fn log_dir() -> PathBuf {
-    // Portable: <exe_dir>/log, sibling of the portable config/ folder.
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            let log = parent.join("log");
-            if fs::create_dir_all(&log).is_ok() && dir_is_writable(&log) {
-                return log;
-            }
-        }
-    }
-    // Read-only exe dir → put logs in their own subdir under the per-user data
-    // dir (still not mixed in with sessions.json et al.).
     let dir = data_dir().join("log");
     let _ = fs::create_dir_all(&dir);
     dir
 }
 
-/// Pre-0.4.15 location: the per-user OS config dir
-/// (`%APPDATA%/meatshell`, `~/.config/meatshell`, …).
-fn legacy_data_dir() -> Option<PathBuf> {
-    ProjectDirs::from("dev", "meatshell", "meatshell").map(|d| d.config_dir().to_path_buf())
-}
-
-/// Portable location: a `config/` folder beside the executable.
-fn portable_data_dir() -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    Some(exe.parent()?.join("config"))
-}
-
-/// True only if we can actually create and write a file in `dir` — Program Files
-/// and other system locations can reject writes even when the dir appears to
-/// exist, so a real write probe is the reliable test.
-fn dir_is_writable(dir: &Path) -> bool {
-    let probe = dir.join(format!(".write_probe_{}", std::process::id()));
-    match fs::write(&probe, b"") {
-        Ok(()) => {
-            let _ = fs::remove_file(&probe);
-            true
-        }
-        Err(_) => false,
-    }
-}
-
 fn resolve_data_dir() -> PathBuf {
-    let legacy = legacy_data_dir();
-
-    if let Some(portable) = portable_data_dir() {
-        // Already a portable install → keep using it (nothing to migrate).
-        if portable.exists() && dir_is_writable(&portable) {
-            return portable;
-        }
-        // Otherwise try to claim the portable dir. This succeeds only where the
-        // exe directory is writable (i.e. not a Program Files / system install),
-        // which is exactly when portable mode makes sense.
-        if fs::create_dir_all(&portable).is_ok() && dir_is_writable(&portable) {
-            if let Some(ref legacy) = legacy {
-                migrate_legacy(legacy, &portable);
-            }
-            return portable;
-        }
-    }
-
-    // Fall back to the legacy per-user dir (also the pre-0.4.15 location). Last
-    // resort: a temp dir, so the app still launches if neither is available.
-    let dir = legacy.unwrap_or_else(|| std::env::temp_dir().join("meatshell"));
+    let dir = ProjectDirs::from("dev", "meatshell", "meatshell")
+        .map(|d| d.config_dir().to_path_buf())
+        .unwrap_or_else(|| std::env::temp_dir().join("meatshell"));
     let _ = fs::create_dir_all(&dir);
     dir
-}
-
-/// On the first launch that lands on the portable dir, copy user data over from
-/// the legacy per-user dir so upgrading users keep their saved sessions. The
-/// originals are left in place (copy, not move) as a safety net, and existing
-/// destination files are never overwritten (#141).
-fn migrate_legacy(legacy: &Path, portable: &Path) {
-    if legacy == portable {
-        return;
-    }
-    for name in [
-        "sessions.json",
-        crate::config::VAULT_FILE,
-        "known_hosts",
-    ] {
-        let src = legacy.join(name);
-        let dst = portable.join(name);
-        if src.exists() && !dst.exists() {
-            match fs::copy(&src, &dst) {
-                Ok(_) => {
-                    #[cfg(unix)]
-                    if name == crate::config::VAULT_FILE {
-                        use std::os::unix::fs::PermissionsExt;
-                        let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o600));
-                    }
-                    tracing::info!(
-                        "migrated {name} to portable config dir {}",
-                        portable.display()
-                    );
-                }
-                Err(e) => tracing::warn!(
-                    "data migration: failed to copy {} → {}: {e}",
-                    src.display(),
-                    dst.display()
-                ),
-            }
-        }
-    }
-}
-
-fn sessions_file_has_connections(path: &Path) -> bool {
-    let Ok(raw) = fs::read_to_string(path) else {
-        return false;
-    };
-    serde_json::from_str::<ConfigFile>(&raw)
-        .map(|cfg| !cfg.sessions.is_empty())
-        .unwrap_or(false)
-}
-
-fn restore_user_backup_if_needed(primary_dir: &Path, backup_dir: &Path) {
-    if primary_dir == backup_dir {
-        return;
-    }
-    let primary_sessions = primary_dir.join("sessions.json");
-    let backup_sessions = backup_dir.join("sessions.json");
-    if sessions_file_has_connections(&primary_sessions)
-        || !sessions_file_has_connections(&backup_sessions)
-    {
-        return;
-    }
-    let _ = fs::create_dir_all(primary_dir);
-    for name in [
-        "sessions.json",
-        crate::config::VAULT_FILE,
-        "known_hosts",
-    ] {
-        let src = backup_dir.join(name);
-        let dst = primary_dir.join(name);
-        if src.exists() {
-            match fs::copy(&src, &dst) {
-                Ok(_) => {
-                    #[cfg(unix)]
-                    if name == crate::config::VAULT_FILE {
-                        use std::os::unix::fs::PermissionsExt;
-                        let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o600));
-                    }
-                    tracing::info!(
-                        "restored {name} from user config backup {}",
-                        backup_dir.display()
-                    );
-                }
-                Err(e) => tracing::warn!(
-                    "failed to restore {} from {} to {}: {e}",
-                    name,
-                    src.display(),
-                    dst.display()
-                ),
-            }
-        }
-    }
 }
 
 fn normalize_hex_color(value: &str) -> Option<String> {
@@ -536,11 +380,6 @@ impl ConfigStore {
         fs::create_dir_all(&config_dir)
             .with_context(|| format!("failed to create config dir {}", config_dir.display()))?;
 
-        let backup_dir = legacy_data_dir().filter(|dir| dir != &config_dir);
-        if let Some(ref backup) = backup_dir {
-            restore_user_backup_if_needed(&config_dir, backup);
-        }
-
         let mut migrated = false;
         let cache = if path.exists() {
             let raw = fs::read_to_string(&path)
@@ -591,7 +430,6 @@ impl ConfigStore {
 
         let store = Self {
             path,
-            backup_dir,
             cache,
         };
         // Persist the migration so it runs exactly once (and so a later opt-out —
@@ -1746,62 +1584,12 @@ impl ConfigStore {
         }
         fs::rename(&tmp, &self.path)
             .with_context(|| format!("failed to finalise {}", self.path.display()))?;
-        self.sync_backup(&raw);
         // Sync in-memory secrets to the OS-keyring vault. apply_password_save_policy
         // already decided what may sit in memory; empty entries remove vault slots.
         if let Err(e) = self.sync_all_secrets_to_vault() {
             tracing::warn!("failed to sync credentials vault: {e:#}");
         }
         Ok(())
-    }
-
-    fn sync_backup(&self, raw: &str) {
-        let Some(backup_dir) = &self.backup_dir else {
-            return;
-        };
-        if let Err(e) = fs::create_dir_all(backup_dir) {
-            tracing::warn!(
-                "failed to create user config backup dir {}: {e}",
-                backup_dir.display()
-            );
-            return;
-        }
-
-        let backup_sessions = backup_dir.join("sessions.json");
-        let tmp = backup_sessions.with_extension("json.tmp");
-        if let Err(e) = fs::write(&tmp, raw) {
-            tracing::warn!("failed to write {}: {e}", tmp.display());
-            return;
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600));
-        }
-        if let Err(e) = fs::rename(&tmp, &backup_sessions) {
-            tracing::warn!("failed to finalise {}: {e}", backup_sessions.display());
-        }
-
-        if let Some(config_dir) = self.path.parent() {
-            for name in [crate::config::VAULT_FILE, "known_hosts"] {
-                let src = config_dir.join(name);
-                let dst = backup_dir.join(name);
-                if src.exists() {
-                    if let Err(e) = fs::copy(&src, &dst) {
-                        tracing::warn!(
-                            "failed to sync {} to user config backup {}: {e}",
-                            src.display(),
-                            dst.display()
-                        );
-                    }
-                    #[cfg(unix)]
-                    if name == crate::config::VAULT_FILE {
-                        use std::os::unix::fs::PermissionsExt;
-                        let _ = fs::set_permissions(&dst, fs::Permissions::from_mode(0o600));
-                    }
-                }
-            }
-        }
     }
 
     // ── Portable export / import (issue #46) ──────────────────────────────
@@ -2011,7 +1799,6 @@ mod tests {
         let path = std::env::temp_dir().join(format!("ms-test-{}.json", Uuid::new_v4()));
         ConfigStore {
             path,
-            backup_dir: None,
             cache: ConfigFile::default(),
         }
     }
@@ -2302,49 +2089,6 @@ mod tests {
             user: "root".into(),
             ..Session::default()
         }
-    }
-
-    #[test]
-    fn restores_and_syncs_user_config_backup() {
-        let base = std::env::temp_dir().join(format!("ms-backup-{}", Uuid::new_v4()));
-        let primary = base.join("portable");
-        let backup = base.join("user");
-        std::fs::create_dir_all(&primary).unwrap();
-        std::fs::create_dir_all(&backup).unwrap();
-
-        let backup_cfg = ConfigFile {
-            sessions: vec![sample_session("saved")],
-            ..ConfigFile::default()
-        };
-        std::fs::write(
-            backup.join("sessions.json"),
-            serde_json::to_string_pretty(&backup_cfg).unwrap(),
-        )
-        .unwrap();
-        std::fs::write(backup.join(crate::config::VAULT_FILE), "{}").unwrap();
-
-        restore_user_backup_if_needed(&primary, &backup);
-        assert!(sessions_file_has_connections(
-            &primary.join("sessions.json")
-        ));
-        assert!(primary.join(crate::config::VAULT_FILE).exists());
-
-        let store = ConfigStore {
-            path: primary.join("sessions.json"),
-            backup_dir: Some(backup.clone()),
-            cache: ConfigFile {
-                sessions: vec![sample_session("new")],
-                ..ConfigFile::default()
-            },
-        };
-        store.save().unwrap();
-
-        let raw = std::fs::read_to_string(backup.join("sessions.json")).unwrap();
-        let cfg: ConfigFile = serde_json::from_str(&raw).unwrap();
-        assert_eq!(cfg.sessions.len(), 1);
-        assert_eq!(cfg.sessions[0].name, "new");
-
-        let _ = std::fs::remove_dir_all(base);
     }
 
     #[test]

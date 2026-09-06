@@ -23,8 +23,8 @@ fn id(host: &str, port: u16) -> String {
     format!("{host}:{port}")
 }
 
-/// Path to the known_hosts file (alongside sessions.json, in the portable-first
-/// data dir — #141).
+/// Path to the known_hosts file (alongside sessions.json in the per-user
+/// data dir — see [`crate::config::data_dir`]).
 fn path() -> Option<PathBuf> {
     Some(crate::config::data_dir().join("known_hosts"))
 }
