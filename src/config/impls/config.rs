@@ -544,8 +544,9 @@ impl ConfigStore {
     }
 
     /// Revert Settings-panel preferences from a snapshot taken when the panel
-    /// opened. Leaves sessions, commands, and layout chrome untouched so Cancel
-    /// does not undo edits made elsewhere while the panel was open.
+    /// opened. Leaves sessions, commands, and most layout chrome untouched so
+    /// Cancel does not undo dock/panel resizes made elsewhere. Does restore
+    /// download_dir and welcome_sidebar_width so Cancel can undo Restore defaults.
     pub fn restore_settings_prefs(&mut self, snap: &ConfigFile) {
         let c = &mut self.cache;
         c.language = snap.language.clone();
@@ -580,6 +581,9 @@ impl ConfigStore {
         c.update_check_disabled = snap.update_check_disabled;
         c.ssh_keepalive_secs = snap.ssh_keepalive_secs;
         c.save_passwords = snap.save_passwords;
+        // Included so Cancel can undo Restore defaults (deferred until Save).
+        c.download_dir = snap.download_dir.clone();
+        c.welcome_sidebar_width = snap.welcome_sidebar_width;
     }
 
     pub fn get(&self, id: &str) -> Option<&Session> {

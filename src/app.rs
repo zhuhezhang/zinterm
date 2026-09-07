@@ -1181,14 +1181,10 @@ pub fn run() -> Result<()> {
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let tabs_model = tabs_model.clone();
-        let settings_snapshot = settings_snapshot.clone();
         window.on_restore_settings_defaults(move || {
             {
                 let mut s = store.borrow_mut();
                 s.restore_settings_defaults();
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config after restoring settings: {err:#}");
-                }
             }
             let Some(w) = weak.upgrade() else {
                 return;
@@ -1201,14 +1197,8 @@ pub fn run() -> Result<()> {
                 &ssh_keepalive_secs,
                 &tabs_model,
             );
-            // Layout chrome + download path are outside Cancel's prefs snapshot,
-            // but Restore defaults must push them onto the live window.
-            let s = store.borrow();
-            w.set_welcome_sidebar_width(s.welcome_sidebar_width());
-            w.set_download_dir(s.download_dir().into());
-            // Confirmed restore already hit disk — refresh the open-panel
-            // baseline so Cancel cannot resurrect the pre-restore prefs.
-            *settings_snapshot.borrow_mut() = Some(s.snapshot_settings_prefs());
+            // Preview only — disk write waits for Save / Save and close.
+            // Keep the open-panel snapshot so Cancel can undo the restore.
         });
     }
 
@@ -4000,8 +3990,11 @@ fn apply_settings_prefs_to_window(
         welcome_collapsed = true;
     }
     w.set_collapse_sftp_default(collapse_sftp);
-    // Preference toggles only — do not overwrite live panel geometry from a
-    // settings cancel (those sizes are layout chrome, not Settings prefs).
+    // Preference toggles + settings-owned paths/sizes. Other live panel geometry
+    // (SFTP/quick docks) stays as layout chrome so Cancel does not undo
+    // resizes made outside the Settings prefs snapshot.
+    w.set_download_dir(s.download_dir().into());
+    w.set_welcome_sidebar_width(s.welcome_sidebar_width());
     w.set_quick_commands_as_sidebar(quick_commands_as_sidebar);
     if !quick_commands_as_sidebar {
         w.set_quick_panel_open(false);
