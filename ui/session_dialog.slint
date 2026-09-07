@@ -135,6 +135,8 @@ export component SessionDialog inherits Rectangle {
 
     // Clear required-field flags each time the dialog opens (#110).
     // Host focus (search Enter) bumps host-focus-seq for the Host field.
+    // Otherwise grab keyboard so Esc closes even with no input focused (#140-3).
+    property <bool> grab-focus-pending: false;
     changed is-open => {
         if (self.is-open) {
             self.host-missing = false;
@@ -143,8 +145,18 @@ export component SessionDialog inherits Rectangle {
                 && self.draft-kind != "serial"
                 && self.draft-kind != "local") {
                 self.host-focus-seq += 1;
+            } else {
+                self.grab-focus-pending = true;
             }
             self.focus-host-on-open = false;
+        }
+    }
+    grab-focus-timer := Timer {
+        interval: 0ms;
+        running: root.grab-focus-pending;
+        triggered => {
+            root.grab-focus-pending = false;
+            dialog-fs.focus();
         }
     }
 
@@ -192,40 +204,65 @@ export component SessionDialog inherits Rectangle {
         }, persist, connect);
     }
 
-    // Swallow clicks on the backdrop
-    TouchArea {
+    // Capture Esc before focused children so the dialog always closes; also
+    // grab focus on open (above) when no field is auto-focused (#140-3).
+    dialog-fs := FocusScope {
         width: 100%;
         height: 100%;
-    }
-
-    // Off-screen label probes used only to compute `form-label-width`.
-    Rectangle {
-        x: -10000px;
-        y: -10000px;
-        width: 0px;
-        height: 0px;
-        clip: true;
-        VerticalLayout {
-            m-conn := Text { text: @tr("Session type"); font-size: Theme.fs-sm; }
-            m-name := Text { text: @tr("Name"); font-size: Theme.fs-sm; }
-            m-group := Text { text: @tr("Group"); font-size: Theme.fs-sm; }
-            m-shell := Text { text: @tr("Shell"); font-size: Theme.fs-sm; }
-            m-cwd := Text { text: @tr("Working directory"); font-size: Theme.fs-sm; }
-            m-enc := Text { text: @tr("Terminal encoding"); font-size: Theme.fs-sm; }
-            m-host := Text { text: @tr("Host / IP"); font-size: Theme.fs-sm; }
-            m-user := Text { text: @tr("Username"); font-size: Theme.fs-sm; }
-            m-auth := Text { text: @tr("Authentication"); font-size: Theme.fs-sm; }
-            m-pass := Text { text: @tr("Password"); font-size: Theme.fs-sm; }
-            m-pkey := Text { text: @tr("Private key"); font-size: Theme.fs-sm; }
-            m-passphrase := Text { text: @tr("Key passphrase"); font-size: Theme.fs-sm; }
-            m-sport := Text { text: @tr("Serial port"); font-size: Theme.fs-sm; }
-            m-baud := Text { text: @tr("Baud rate"); font-size: Theme.fs-sm; }
-            m-bs := Text { text: @tr("Backspace mode"); font-size: Theme.fs-sm; }
+        capture-key-pressed(e) => {
+            if (e.text == Key.Escape) {
+                root.cancel();
+                accept
+            } else {
+                reject
+            }
         }
-    }
+        key-pressed(e) => {
+            if (e.text == Key.Escape) {
+                root.cancel();
+                accept
+            } else {
+                accept
+            }
+        }
+        key-released(e) => { accept }
 
-    Rectangle {
-        width: 580px;
+        // Swallow clicks on the backdrop
+        TouchArea {
+            width: 100%;
+            height: 100%;
+            // Re-grab keyboard if the user clicks the dim area (no text field).
+            clicked => { dialog-fs.focus(); }
+        }
+
+        // Off-screen label probes used only to compute `form-label-width`.
+        Rectangle {
+            x: -10000px;
+            y: -10000px;
+            width: 0px;
+            height: 0px;
+            clip: true;
+            VerticalLayout {
+                m-conn := Text { text: @tr("Session type"); font-size: Theme.fs-sm; }
+                m-name := Text { text: @tr("Name"); font-size: Theme.fs-sm; }
+                m-group := Text { text: @tr("Group"); font-size: Theme.fs-sm; }
+                m-shell := Text { text: @tr("Shell"); font-size: Theme.fs-sm; }
+                m-cwd := Text { text: @tr("Working directory"); font-size: Theme.fs-sm; }
+                m-enc := Text { text: @tr("Terminal encoding"); font-size: Theme.fs-sm; }
+                m-host := Text { text: @tr("Host / IP"); font-size: Theme.fs-sm; }
+                m-user := Text { text: @tr("Username"); font-size: Theme.fs-sm; }
+                m-auth := Text { text: @tr("Authentication"); font-size: Theme.fs-sm; }
+                m-pass := Text { text: @tr("Password"); font-size: Theme.fs-sm; }
+                m-pkey := Text { text: @tr("Private key"); font-size: Theme.fs-sm; }
+                m-passphrase := Text { text: @tr("Key passphrase"); font-size: Theme.fs-sm; }
+                m-sport := Text { text: @tr("Serial port"); font-size: Theme.fs-sm; }
+                m-baud := Text { text: @tr("Baud rate"); font-size: Theme.fs-sm; }
+                m-bs := Text { text: @tr("Backspace mode"); font-size: Theme.fs-sm; }
+            }
+        }
+
+        Rectangle {
+            width: 580px;
         // Height follows the content, but never exceeds the window — past that
         // the body scrolls.
         height: min(body.preferred-height + 53px, parent.height - 40px);
@@ -238,10 +275,12 @@ export component SessionDialog inherits Rectangle {
         drop-shadow-blur: 24px;
         drop-shadow-color: #00000080;
 
-        // Prevent backdrop click from propagating when user clicks inside the card
+        // Prevent backdrop click from propagating when user clicks inside the card.
+        // Re-grab keyboard so Esc still works after clicking non-input chrome.
         TouchArea {
             width: 100%;
             height: 100%;
+            clicked => { dialog-fs.focus(); }
         }
 
         VerticalLayout {
@@ -373,6 +412,7 @@ export component SessionDialog inherits Rectangle {
                         placeholder: @tr("optional, add number when repeated");
                         label-width: root.form-label-width;
                         value <=> root.draft-name;
+                        canceled => { root.cancel(); }
                     }
 
                     // Optional group/folder to organize sessions by business (#41).
@@ -383,6 +423,7 @@ export component SessionDialog inherits Rectangle {
                         placeholder: @tr("leave empty → root");
                         value <=> root.draft-group;
                         items: root.session-groups;
+                        canceled => { root.cancel(); }
                     }
 
                     // ── Local: shell / cwd / encoding ───────────────────────────────
@@ -394,6 +435,7 @@ export component SessionDialog inherits Rectangle {
                         placeholder: @tr("leave empty → system default");
                         value <=> root.draft-shell;
                         accepted => { root.emit-submit(true, true); }
+                        canceled => { root.cancel(); }
                     }
 
                     if root.draft-kind == "local": LabeledInput {
@@ -403,6 +445,7 @@ export component SessionDialog inherits Rectangle {
                         label-width: root.form-label-width;
                         placeholder: @tr("leave empty → home directory");
                         value <=> root.draft-working-directory;
+                        canceled => { root.cancel(); }
                     }
 
                     // ── SSH / Telnet share host + port ──────────────────────────────
@@ -419,6 +462,7 @@ export component SessionDialog inherits Rectangle {
                             // Bumped when the dialog opens from search Enter.
                             focus-request: root.host-focus-seq;
                             accepted => { root.emit-submit(true, true); }
+                            canceled => { root.cancel(); }
                         }
 
                         LabeledInput {
@@ -428,6 +472,7 @@ export component SessionDialog inherits Rectangle {
                             placeholder: root.draft-kind == "telnet" ? "23" : "22";
                             value <=> root.draft-port;
                             horizontal-stretch: 1;
+                            canceled => { root.cancel(); }
                         }
                     }
 
@@ -450,6 +495,7 @@ export component SessionDialog inherits Rectangle {
                         label-width: root.form-label-width;
                         placeholder: @tr("Prompted on connect if blank");
                         value <=> root.draft-user;
+                        canceled => { root.cancel(); }
                     }
 
                     if root.draft-kind == "ssh": HorizontalLayout {
@@ -492,6 +538,7 @@ export component SessionDialog inherits Rectangle {
                         placeholder: @tr("Prompted on connect if blank");
                         password: true;
                         value <=> root.draft-password;
+                        canceled => { root.cancel(); }
                     }
 
                     // Path vs pasted PEM/PPK is detected automatically from the text (#auto-key).
@@ -531,6 +578,14 @@ export component SessionDialog inherits Rectangle {
                                 font-size: Theme.fs-sm;
                                 // Paths and pasted keys are shown as plaintext (not masked).
                                 placeholder: @tr("/path/to/private_key_file or \nprivate_key_content") + "(-----BEGIN OPENSSH PRIVATE KEY...)";
+                                key-pressed(e) => {
+                                    if (e.text == Key.Escape) {
+                                        root.cancel();
+                                        accept
+                                    } else {
+                                        reject
+                                    }
+                                }
                             }
 
                             Rectangle {
@@ -567,6 +622,7 @@ export component SessionDialog inherits Rectangle {
                         placeholder: @tr("Leave blank if the key isn't encrypted");
                         password: true;
                         value <=> root.draft-key-passphrase;
+                        canceled => { root.cancel(); }
                     }
 
                     // ── Serial-only fields ──────────────────────────────────────────
@@ -594,6 +650,7 @@ export component SessionDialog inherits Rectangle {
                                 value <=> root.draft-serial-port;
                                 items: root.serial-ports;
                                 accepted => { root.emit-submit(true, true); }
+                                canceled => { root.cancel(); }
                             }
 
                             Rectangle {
@@ -641,6 +698,7 @@ export component SessionDialog inherits Rectangle {
                             "14400", "19200", "38400", "56000", "57600", "115200",
                             "128000", "230400", "256000", "460800", "921600"
                         ];
+                        canceled => { root.cancel(); }
                     }
 
                     if root.draft-kind == "serial": HorizontalLayout {
@@ -651,6 +709,7 @@ export component SessionDialog inherits Rectangle {
                             label-width: root.form-label-width;
                             value <=> root.draft-data-bits;
                             items: ["5", "6", "7", "8"];
+                            canceled => { root.cancel(); }
                         }
 
                         EditableCombo {
@@ -658,6 +717,7 @@ export component SessionDialog inherits Rectangle {
                             label: @tr("Stop bits");
                             value <=> root.draft-stop-bits;
                             items: ["1", "2"];
+                            canceled => { root.cancel(); }
                         }
                     }
 
@@ -878,5 +938,6 @@ export component SessionDialog inherits Rectangle {
                 }
             }
         }
-    }
+    }  // FocusScope
+}
 }

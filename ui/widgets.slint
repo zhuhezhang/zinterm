@@ -375,6 +375,7 @@ export component EditableCombo inherits HorizontalLayout {
     in-out property <string> value;
     in property <[string]> items;
     callback accepted();   // Enter pressed in the field
+    callback canceled();   // Esc pressed in the field (#140-3)
     spacing: 10px;
 
     if root.label != "": Rectangle {
@@ -419,6 +420,10 @@ export component EditableCombo inherits HorizontalLayout {
                 vertical-alignment: center;
                 single-line: true;
                 accepted => { root.accepted(); }
+                key-pressed(e) => {
+                    if (e.text == Key.Escape) { root.canceled(); accept }
+                    else { reject }
+                }
 
                 cursor-position-changed(cursor-position) => {
                     if (cursor-position.x + self.computed_x < 0px) {

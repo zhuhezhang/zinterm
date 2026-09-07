@@ -2454,6 +2454,19 @@ export component AppWindow inherits Window {
         height: parent.height;
         clicked => { root.download-open = false; }
     }
+    // Esc closes the download popup (#140-3).
+    if root.download-open: FocusScope {
+        init => { self.focus(); }
+        key-pressed(e) => {
+            if (e.text == Key.Escape) {
+                root.download-open = false;
+                accept
+            } else {
+                accept
+            }
+        }
+        key-released(e) => { accept }
+    }
     // Always present; toggled via `visible` (avoids destroying interactive
     // elements mid-event, which crashes when created/removed at the Window root).
     Rectangle {
@@ -2938,6 +2951,19 @@ export component AppWindow inherits Window {
         TouchArea {
             clicked => { root.group-dialog-open = false; }
         }
+        // Grab keyboard while open; Esc closes (#140-3).
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.group-dialog-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
+        }
 
         Rectangle {
             x: (parent.width - self.width) / 2;
@@ -2990,6 +3016,14 @@ export component AppWindow inherits Window {
                             }
                         }
                     }
+                    key-pressed(e) => {
+                        if (e.text == Key.Escape) {
+                            root.group-dialog-open = false;
+                            accept
+                        } else {
+                            reject
+                        }
+                    }
                 }
 
                 Text {
@@ -3034,6 +3068,19 @@ export component AppWindow inherits Window {
         background: #00000080;
         TouchArea {
             clicked => { root.quick-cmd-manage-open = false; }
+        }
+        // Grab keyboard while open; Esc closes (#140-3).
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.quick-cmd-manage-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
         }
 
         qcm-card := Rectangle {
@@ -3100,6 +3147,14 @@ export component AppWindow inherits Window {
                         qcm-name-in := BorderedLineInput {
                             text <=> root.qcm-name;
                             placeholder: @tr("e.g. tail log");
+                            key-pressed(e) => {
+                                if (e.text == Key.Escape) {
+                                    root.quick-cmd-manage-open = false;
+                                    accept
+                                } else {
+                                    reject
+                                }
+                            }
                         }
                     }
 
@@ -3117,6 +3172,14 @@ export component AppWindow inherits Window {
                         BorderedLineInput {
                             text <=> root.qcm-group;
                             placeholder: @tr("leave empty → default");
+                            key-pressed(e) => {
+                                if (e.text == Key.Escape) {
+                                    root.quick-cmd-manage-open = false;
+                                    accept
+                                } else {
+                                    reject
+                                }
+                            }
                         }
                     }
 
@@ -3132,6 +3195,14 @@ export component AppWindow inherits Window {
 
                         qcm-cmd-in := BorderedTextArea {
                             text <=> root.qcm-command;
+                            key-pressed(e) => {
+                                if (e.text == Key.Escape) {
+                                    root.quick-cmd-manage-open = false;
+                                    accept
+                                } else {
+                                    reject
+                                }
+                            }
                         }
                     }
                 }
@@ -3224,6 +3295,14 @@ export component AppWindow inherits Window {
                             text <=> root.qcm-search;
                             placeholder: @tr("Search commands");
                             edited => { root.search-qcm-commands(self.text); }
+                            key-pressed(e) => {
+                                if (e.text == Key.Escape) {
+                                    root.quick-cmd-manage-open = false;
+                                    accept
+                                } else {
+                                    reject
+                                }
+                            }
                         }
                     }
 
@@ -3780,6 +3859,19 @@ export component AppWindow inherits Window {
         TouchArea {
             clicked => { root.sftp-prompt-open = false; }
         }
+        // Grab keyboard while open; Esc closes (#140-3).
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.sftp-prompt-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
+        }
 
         Rectangle {
             x: (parent.width - self.width) / 2;
@@ -3829,6 +3921,14 @@ export component AppWindow inherits Window {
                                 root.sftp-prompt-tab, root.sftp-prompt-kind,
                                 root.sftp-prompt-target, root.sftp-prompt-value);
                             root.sftp-prompt-open = false;
+                        }
+                    }
+                    key-pressed(e) => {
+                        if (e.text == Key.Escape) {
+                            root.sftp-prompt-open = false;
+                            accept
+                        } else {
+                            reject
                         }
                     }
                 }
@@ -3948,6 +4048,19 @@ export component AppWindow inherits Window {
         TouchArea {
             clicked => { root.chmod-open = false; }
         }
+        // Grab keyboard while open; Esc closes (#140-3).
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.chmod-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
+        }
 
         Rectangle {
             x: (parent.width - self.width) / 2;
@@ -4045,6 +4158,19 @@ export component AppWindow inherits Window {
         background: #00000080;
         TouchArea {
             clicked => { root.shortcuts-open = false; }
+        }
+        // Esc closes when the dialog is shown (#140-3).
+        if root.shortcuts-open: FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.shortcuts-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
         }
 
         Rectangle {
@@ -4255,6 +4381,19 @@ export component AppWindow inherits Window {
         background: #00000080;            // dim backdrop
         TouchArea {
             clicked => { root.about-open = false; }
+        }
+        // Esc closes when the dialog is shown (#140-3).
+        if root.about-open: FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.about-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
         }
 
         // Landscape card: logo on the left, a short intro + repo link on the right.
