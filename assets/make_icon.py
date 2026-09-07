@@ -2,10 +2,16 @@
 """Generate the ZinTerm app icon.
 
 Brand mark: charcoal rounded tile + geometric "Z" (accent blue) with a
-terminal block cursor (teal). Pure-Pillow, 4× supersampled.
+terminal block cursor (teal). Pure-Pillow, 4× supersampled — same pipeline
+as upstream meatshell (https://github.com/yituorou/meatshell), so title-bar
+18px downscales stay crisp (no soft Z-glow / heavy Gaussian smear).
 
 Outputs (run from assets/):
   icon.png, icon@512.png, zinterm.ico
+
+The custom title bar uses assets/icon.svg (vector) so 18px stays sharp on
+HiDPI; these PNGs cover Window.icon, About, Linux/macOS packaging, and the
+embedded Windows .ico.
 """
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
@@ -38,24 +44,14 @@ def vgradient(size, top, bot):
     return col.resize((w, h))
 
 
-def rounded_mask(size, radius):
-    m = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(m).rounded_rectangle(
-        [0, 0, size - 1, size - 1], radius=radius, fill=255)
-    return m
-
-
 def draw_z(draw, box, fill, width):
     """Thick geometric Z that stays legible at 16×16."""
     x0, y0, x1, y1 = box
     w = x1 - x0
     t = max(width, int(w * 0.20))
     r = max(2, t // 3)
-    # Top & bottom bars
     draw.rounded_rectangle([x0, y0, x1, y0 + t], radius=r, fill=fill)
     draw.rounded_rectangle([x0, y1 - t, x1, y1], radius=r, fill=fill)
-    # Diagonal band (top-right → bottom-left), thickness ≈ t
-    # Outer/inner edges as a parallelogram
     half = t * 0.55
     pts = [
         (x1, y0 + t * 0.35),
@@ -67,17 +63,20 @@ def draw_z(draw, box, fill, width):
 
 
 img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-tile_mask = rounded_mask(S, int(S * 0.22))
 
-# ---------------------------------------------------------------- tile
+# ---------------------------------------------------------------- tile (same approach as meatshell)
+tile_mask = Image.new("L", (S, S), 0)
+ImageDraw.Draw(tile_mask).rounded_rectangle(
+    [0, 0, S - 1, S - 1], radius=int(S * 0.22), fill=255)
+
 grad = vgradient((S, S), TILE_TOP, TILE_BOT).convert("RGBA")
 img.paste(grad, (0, 0), tile_mask)
 
-# soft top sheen
+# subtle top sheen (opacity matched to meatshell)
 sheen = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 ImageDraw.Draw(sheen).ellipse(
-    [int(-S * 0.25), int(-S * 0.55), int(S * 1.25), int(S * 0.38)],
-    fill=(255, 255, 255, 18))
+    [int(-S * 0.3), int(-S * 0.55), int(S * 1.3), int(S * 0.35)],
+    fill=(255, 255, 255, 22))
 sheen.putalpha(ImageChops.multiply(sheen.getchannel("A"), tile_mask))
 img = Image.alpha_composite(img, sheen)
 
@@ -86,28 +85,29 @@ px0, py0 = int(S * 0.14), int(S * 0.14)
 px1, py1 = int(S * 0.86), int(S * 0.86)
 pr = int(S * 0.10)
 
+# drop shadow — meatshell-scale blur (≈2.5% of canvas), not a soft halo
 shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 ImageDraw.Draw(shadow).rounded_rectangle(
-    [px0, py0 + int(S * 0.018), px1, py1 + int(S * 0.022)],
-    radius=pr, fill=(0, 0, 0, 140))
-shadow = shadow.filter(ImageFilter.GaussianBlur(S * 0.02))
+    [px0, py0 + int(S * 0.02), px1, py1 + int(S * 0.03)],
+    radius=pr, fill=(0, 0, 0, 150))
+shadow = shadow.filter(ImageFilter.GaussianBlur(S * 0.025))
 img = Image.alpha_composite(img, shadow)
 
 panel = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 ImageDraw.Draw(panel).rounded_rectangle(
     [px0, py0, px1, py1], radius=pr, fill=PANEL + (255,))
-# faint inner border
+# thin rim so the panel edge stays defined after 18px downscale
 ImageDraw.Draw(panel).rounded_rectangle(
     [px0, py0, px1, py1], radius=pr,
-    outline=(58, 62, 72, 180), width=max(2, S // 180))
+    outline=(58, 62, 72, 200), width=max(2, int(S * 0.006)))
 img = Image.alpha_composite(img, panel)
 
-# window chrome dots (traffic lights) — reads as “app / terminal window”
+# window chrome dots — fully opaque (semi-transparent fill softens at 18px)
 dot_y = py0 + int((py1 - py0) * 0.11)
-dot_r = max(3, int(S * 0.018))
+dot_r = max(3, int(S * 0.020))
 dots = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 dd = ImageDraw.Draw(dots)
-colors = [(232, 92, 92, 200), (226, 168, 74, 200), (78, 201, 176, 200)]
+colors = [(232, 92, 92, 255), (226, 168, 74, 255), (78, 201, 176, 255)]
 gap = int(S * 0.055)
 x = px0 + int(S * 0.055)
 for c in colors:
@@ -115,55 +115,47 @@ for c in colors:
     x += gap
 img = Image.alpha_composite(img, dots)
 
-# ---------------------------------------------------------------- Z mark
+# ---------------------------------------------------------------- Z mark (no soft glow — that caused mushy edges at title-bar size)
 zx0 = px0 + int(S * 0.16)
 zy0 = py0 + int(S * 0.22)
 zx1 = px1 - int(S * 0.16)
 zy1 = py1 - int(S * 0.20)
 
-# soft glow behind Z
-glow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-gd = ImageDraw.Draw(glow)
-draw_z(gd, (zx0, zy0, zx1, zy1), ACCENT + (70,), int((zx1 - zx0) * 0.20))
-glow = glow.filter(ImageFilter.GaussianBlur(S * 0.035))
-img = Image.alpha_composite(img, glow)
+# dark contact shadow under Z for contrast on dark panel (tiny blur like meatshell prompt)
+z_shadow = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+draw_z(ImageDraw.Draw(z_shadow),
+       (zx0 + int(S * 0.012), zy0 + int(S * 0.012),
+        zx1 + int(S * 0.012), zy1 + int(S * 0.012)),
+       (0, 0, 0, 160), int((zx1 - zx0) * 0.20))
+z_shadow = z_shadow.filter(ImageFilter.GaussianBlur(1.2))
+img = Image.alpha_composite(img, z_shadow)
 
 zlayer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 zd = ImageDraw.Draw(zlayer)
-draw_z(zd, (zx0, zy0, zx1, zy1), ACCENT + (255,), int((zx1 - zx0) * 0.18))
-# highlight stripe on top bar for depth
-hi_t = int((zx1 - zx0) * 0.06)
+draw_z(zd, (zx0, zy0, zx1, zy1), ACCENT + (255,), int((zx1 - zx0) * 0.20))
+# solid highlight stripe (opaque-ish) instead of a soft translucent wash
+hi_t = max(2, int((zx1 - zx0) * 0.05))
 zd.rounded_rectangle(
     [zx0 + int(S * 0.01), zy0 + int(S * 0.008),
      zx1 - int(S * 0.01), zy0 + hi_t],
-    radius=hi_t // 2, fill=ACCENT_HI + (90,))
+    radius=max(1, hi_t // 2), fill=ACCENT_HI + (160,))
 img = Image.alpha_composite(img, zlayer)
 
-# ---------------------------------------------------------------- block cursor (bottom-right of Z area)
+# ---------------------------------------------------------------- block cursor (solid, meatshell-style contrast)
 cw = int(S * 0.085)
 ch = int(S * 0.11)
-cx1 = zx1 + int(S * 0.02)
-cy1 = zy1 - int(S * 0.01)
+cx1 = min(zx1 + int(S * 0.02), px1 - int(S * 0.06))
+cy1 = min(zy1 - int(S * 0.01), py1 - int(S * 0.08))
 cx0 = cx1 - cw
-cy0 = cy1 - ch
-# keep cursor inside panel
-cx1 = min(cx1, px1 - int(S * 0.06))
-cx0 = cx1 - cw
-cy1 = min(cy1, py1 - int(S * 0.08))
 cy0 = cy1 - ch
 
 cursor = Image.new("RGBA", (S, S), (0, 0, 0, 0))
 cd = ImageDraw.Draw(cursor)
-# Solid terminal block cursor (classic cell)
 cd.rounded_rectangle([cx0, cy0, cx1, cy1], radius=max(2, S // 140),
                      fill=CURSOR + (255,))
-# soft top highlight so it reads as a lit glyph cell at large sizes
-cd.rounded_rectangle(
-    [cx0 + S * 0.01, cy0 + S * 0.012, cx1 - S * 0.01, cy0 + (cy1 - cy0) * 0.38],
-    radius=max(1, S // 220), fill=(180, 255, 230, 70))
 img = Image.alpha_composite(img, cursor)
 
-# clip everything to rounded tile
+# clip to rounded tile
 img.putalpha(ImageChops.multiply(img.getchannel("A"), tile_mask))
 
 # ---------------------------------------------------------------- export

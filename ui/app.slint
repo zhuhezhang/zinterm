@@ -977,8 +977,10 @@ export component AppWindow inherits Window {
                 // Vertical-centering wrappers so the icon and name line up (#119).
                 VerticalLayout {
                     alignment: center;
+                    // Vector mark — same layout as meatshell (18×18), but SVG avoids
+                    // the soft PNG alpha fringe that looks blurry on HiDPI title bars.
                     Image {
-                        source: @image-url("../assets/icon.png");
+                        source: @image-url("../assets/icon.svg");
                         width: 18px;
                         height: 18px;
                     }

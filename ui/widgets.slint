@@ -681,14 +681,13 @@ export component BorderedTextArea inherits Rectangle {
     background: root.area-background;
     clip: true;
 
-    // ScrollView keeps scrollbars. Override its 50px min-size so the cmd-bar
-    // (~30px) can host it. Fluent bars overlay the flickable (~14px) — caret
-    // follow insets by that gutter so the caret is not drawn under a bar.
+    // ScrollView keeps scrollbars. Explicit width/height (fixed size) lets the
+    // cmd-bar (~30px) host it despite ScrollView's default 50px min-size.
+    // Fluent bars overlay the flickable (~14px) — caret follow insets by that
+    // gutter so the caret is not drawn under a bar.
     // TextInput sizing follows stock TextEdit (no fixed width): preferred-*
     // drives viewport-*, and cursor-position-changed scrolls the viewport.
     scroll := ScrollView {
-        min-width: 0px;
-        min-height: 0px;
         x: 8px;
         y: 6px;
         width: parent.width - 16px;

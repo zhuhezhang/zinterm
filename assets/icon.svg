@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Title-bar vector mark (matches assets/make_icon.py brand). -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#232630"/>
+      <stop offset="100%" stop-color="#16181e"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#tile)"/>
+  <rect x="36" y="36" width="184" height="184" rx="26" fill="#0e0f13" stroke="#3a3e48" stroke-width="3"/>
+  <circle cx="58" cy="62" r="5.5" fill="#e85c5c"/>
+  <circle cx="74" cy="62" r="5.5" fill="#e2a84a"/>
+  <circle cx="90" cy="62" r="5.5" fill="#4ec9b0"/>
+  <!-- Thick geometric Z: top bar, diagonal, bottom bar -->
+  <g fill="#4a90e2">
+    <rect x="72" y="90" width="112" height="28" rx="8"/>
+    <rect x="72" y="170" width="112" height="28" rx="8"/>
+    <polygon points="184,104 184,128 72,184 72,160"/>
+  </g>
+  <rect x="168" y="174" width="22" height="28" rx="3" fill="#4ec9b0"/>
+</svg>
