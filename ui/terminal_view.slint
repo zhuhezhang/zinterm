@@ -645,8 +645,10 @@ export component TerminalView inherits Rectangle {
     // Enter runs history-view[history-selected]. -1 = nothing selected yet.
     property <int> history-selected: -1;
     // Command-bar input height (draggable via the top edge); buttons stay 26px tall.
-    // Min height must fit one line inside BorderedTextArea (8px pad ×2 + border).
-    property <length> cmd-bar-input-min-height: Theme.input-min-height;
+    // Min height: BorderedTextArea chrome (~6px×2 pad + border) + one line, plus
+    // fluent ScrollView's overlay horizontal scrollbar (~14px) so a long command
+    // does not cover the caret.
+    property <length> cmd-bar-input-min-height: Theme.input-min-height + 14px;
     property <length> cmd-bar-input-height: root.cmd-bar-input-min-height;
     property <bool> cmd-bar-resizing: false;
     property <length> cmd-bar-resize-base-height;

@@ -613,9 +613,14 @@ export component BorderedLineInput inherits Rectangle {
         clip: true;
 
         input := TextInput {
+            // Match Slint LineEditBase: reserve caret width in the x clamp so a
+            // non-zero caret-margin is actually reachable (otherwise the clamp
+            // pins the caret flush to the clip edge and it disappears).
+            property <length> caret-margin: 4px;
             property <length> computed-x;
+            text-cursor-width: 2px;
 
-            x: min(0px, max(parent.width - self.width - self.text-cursor-width, self.computed-x));
+            x: min(0px, max(parent.width - self.width - self.text-cursor-width - self.caret-margin, self.computed-x));
             width: max(parent.width - self.text-cursor-width, self.preferred-width);
             height: parent.height;
             text <=> root.text;
@@ -630,10 +635,10 @@ export component BorderedLineInput inherits Rectangle {
             key-pressed(e) => { root.key-pressed(e) }
 
             cursor-position-changed(cursor-position) => {
-                if (cursor-position.x + self.computed_x < 0px) {
-                    self.computed_x = -cursor-position.x;
-                } else if (cursor-position.x + self.computed_x > parent.width - self.text-cursor-width) {
-                    self.computed_x = parent.width - cursor-position.x - self.text-cursor-width;
+                if (cursor-position.x + self.computed_x < self.caret-margin) {
+                    self.computed_x = -cursor-position.x + self.caret-margin;
+                } else if (cursor-position.x + self.computed_x > parent.width - self.caret-margin - self.text-cursor-width) {
+                    self.computed_x = parent.width - cursor-position.x - self.caret-margin - self.text-cursor-width;
                 }
             }
         }
@@ -676,15 +681,26 @@ export component BorderedTextArea inherits Rectangle {
     background: root.area-background;
     clip: true;
 
+    // ScrollView keeps scrollbars. Override its 50px min-size so the cmd-bar
+    // (~30px) can host it. Fluent bars overlay the flickable (~14px) — caret
+    // follow insets by that gutter so the caret is not drawn under a bar.
+    // TextInput sizing follows stock TextEdit (no fixed width): preferred-*
+    // drives viewport-*, and cursor-position-changed scrolls the viewport.
     scroll := ScrollView {
-        x: 10px;
-        y: 8px;
-        width: parent.width - 20px;
-        height: parent.height - 16px;
-        viewport-width: max(self.visible-width, input.preferred-width);
-        viewport-height: max(self.visible-height, input.preferred-height);
+        min-width: 0px;
+        min-height: 0px;
+        x: 8px;
+        y: 6px;
+        width: parent.width - 16px;
+        height: parent.height - 12px;
+        property <length> sb: 14px;
+        property <length> caret-margin: 4px;
+        property <length> line-h: max(20px, root.font-size + 6px);
+        viewport-width: max(self.visible-width, input.preferred-width + self.caret-margin + 2px);
+        viewport-height: max(self.visible-height, input.preferred-height + self.caret-margin);
 
         input := TextInput {
+            text-cursor-width: 2px;
             text <=> root.text;
             color: Theme.text-primary;
             font-family: root.font-family;
@@ -696,25 +712,29 @@ export component BorderedTextArea inherits Rectangle {
             key-pressed(e) => { root.key-pressed(e) }
 
             cursor-position-changed(cpos) => {
-                if (cpos.x + scroll.viewport-x < 12px) {
-                    scroll.viewport-x = min(0px, max(parent.visible-width - self.width, -cpos.x + 12px));
-                } else if (cpos.x + scroll.viewport-x > parent.visible-width - 12px) {
-                    scroll.viewport-x = min(0px, max(parent.visible-width - self.width, parent.visible-width - cpos.x - 12px));
+                if (cpos.x + scroll.viewport-x < scroll.caret-margin) {
+                    scroll.viewport-x = min(0px, max(scroll.visible-width - self.width,
+                        -cpos.x + scroll.caret-margin));
+                } else if (cpos.x + scroll.viewport-x > scroll.visible-width - scroll.sb - scroll.caret-margin - self.text-cursor-width) {
+                    scroll.viewport-x = min(0px, max(scroll.visible-width - self.width,
+                        scroll.visible-width - scroll.sb - cpos.x - scroll.caret-margin - self.text-cursor-width));
                 }
-                if (cpos.y + scroll.viewport-y < 12px) {
-                    scroll.viewport-y = min(0px, max(parent.visible-height - self.height, -cpos.y + 12px));
-                } else if (cpos.y + scroll.viewport-y > parent.visible-height - 12px - 20px) {
-                    scroll.viewport-y = min(0px, max(parent.visible-height - self.height, parent.visible-height - cpos.y - 12px - 20px));
+                if (cpos.y + scroll.viewport-y < scroll.caret-margin) {
+                    scroll.viewport-y = min(0px, max(scroll.visible-height - self.height,
+                        -cpos.y + scroll.caret-margin));
+                } else if (cpos.y + scroll.viewport-y > scroll.visible-height - scroll.sb - scroll.caret-margin - scroll.line-h) {
+                    scroll.viewport-y = min(0px, max(scroll.visible-height - self.height,
+                        scroll.visible-height - scroll.sb - cpos.y - scroll.caret-margin - scroll.line-h));
                 }
             }
         }
     }
 
     if input.text == "": Text {
-        x: 10px;
-        y: 8px;
-        width: parent.width - 20px;
-        height: parent.height - 16px;
+        x: 8px;
+        y: 6px;
+        width: parent.width - 16px;
+        height: parent.height - 12px;
         text: root.placeholder;
         color: Theme.text-muted;
         font-size: root.font-size;
