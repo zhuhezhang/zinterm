@@ -471,8 +471,8 @@ msgstr "+ New session"
 msgid "No sessions yet"
 msgstr "No sessions yet"
 
-msgid "Use 'New session' (top-right) to add your first server"
-msgstr "Use 'New session' (top-right) to add your first server"
+msgid "Click 'New session' (top-right) or import from file\n to add your server"
+msgstr "Click 'New session' (top-right) or import from file\n to add your server"
 
 msgid "Session type"
 msgstr "Session type"

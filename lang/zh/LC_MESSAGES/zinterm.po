@@ -471,8 +471,8 @@ msgstr "+ 新建会话"
 msgid "No sessions yet"
 msgstr "尚无会话"
 
-msgid "Use 'New session' (top-right) to add your first server"
-msgstr "点击右上角 “新建会话” 添加你的第一台服务器"
+msgid "Click 'New session' (top-right) or import from file\n to add your server"
+msgstr "点击右上角 “新建会话” 或者从文件导入\n来添加你的服务器"
 
 msgid "Session type"
 msgstr "会话类型"

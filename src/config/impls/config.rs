@@ -1191,7 +1191,7 @@ impl ConfigStore {
     pub fn welcome_sidebar_width(&self) -> f32 {
         let w = self.cache.welcome_sidebar_width;
         if w <= 0.0 {
-            240.0
+            350.0
         } else {
             w
         }
