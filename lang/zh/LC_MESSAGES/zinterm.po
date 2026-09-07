@@ -60,8 +60,8 @@ msgstr "轻量级 Rust + Slint SSH 终端客户端。"
 msgid "Open-source libraries used"
 msgstr "使用的开源库"
 
-msgid "Open source"
-msgstr "开源"
+msgid "MIT Open Source License"
+msgstr "MIT 开源协议"
 
 msgid "New session"
 msgstr "新建会话"

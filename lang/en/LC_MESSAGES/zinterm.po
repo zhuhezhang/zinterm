@@ -60,8 +60,8 @@ msgstr "A lightweight Rust + Slint SSH terminal client."
 msgid "Open-source libraries used"
 msgstr "Open-source libraries used"
 
-msgid "Open source"
-msgstr "Open source"
+msgid "MIT Open Source License"
+msgstr "MIT Open Source License"
 
 msgid "New session"
 msgstr "New session"

@@ -4261,8 +4261,8 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 520px;
-            height: 188px;
+            width: 465px;
+            height: 155px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-lg;
             border-width: 1px;
@@ -4345,7 +4345,7 @@ export component AppWindow inherits Window {
                         alignment: start;
                         spacing: 6px;
                         Text {
-                            text: @tr("Open source");
+                            text: @tr("MIT Open Source License");
                             color: Theme.text-muted;
                             font-size: Theme.fs-sm;
                             vertical-alignment: center;
@@ -4370,12 +4370,6 @@ export component AppWindow inherits Window {
                                 clicked => { root.open-repo(); }
                             }
                         }
-                    }
-
-                    Text {
-                        text: "MIT";
-                        color: Theme.text-muted;
-                        font-size: Theme.fs-xs;
                     }
                 }
             }
