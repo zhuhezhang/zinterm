@@ -21,7 +21,7 @@ use chacha20poly1305::{
     aead::{Aead, KeyInit},
     ChaCha20Poly1305,
 };
-use directories::ProjectDirs;
+use directories::{ProjectDirs, UserDirs};
 
 use super::structs::*;
 
@@ -510,6 +510,8 @@ impl ConfigStore {
     /// Reset Interface / appearance preferences to the current new-user defaults
     /// while keeping sessions, groups, quick commands, command history, and
     /// saved credentials intact. Does not touch known-hosts (separate file).
+    /// Also resets layout chrome that lives in Settings (welcome sidebar width)
+    /// and the SFTP preset download directory (system Downloads when available).
     pub fn restore_settings_defaults(&mut self) {
         let sessions = std::mem::take(&mut self.cache.sessions);
         let groups = std::mem::take(&mut self.cache.groups);
@@ -525,6 +527,14 @@ impl ConfigStore {
         self.cache.quick_commands = quick_commands;
         self.cache.quick_groups = quick_groups;
         self.cache.command_history = command_history;
+        // Same first-run seed as startup: empty → user's Downloads folder.
+        if self.cache.download_dir.is_empty() {
+            if let Some(dl) = UserDirs::new()
+                .and_then(|u| u.download_dir().map(|p| p.to_string_lossy().to_string()))
+            {
+                self.cache.download_dir = dl;
+            }
+        }
     }
 
     /// Snapshot of Settings-panel preferences (excludes sessions, commands, and
@@ -2229,6 +2239,8 @@ mod tests {
         store.set_wallpaper("builtin:dark");
         store.set_zen_mode(true);
         store.set_update_check_enabled(true);
+        store.set_welcome_sidebar_width(520.0);
+        store.set_download_dir("/tmp/custom-downloads".into());
 
         store.restore_settings_defaults();
 
@@ -2250,6 +2262,11 @@ mod tests {
         assert!(store.quick_commands_as_sidebar());
         assert!(store.welcome_single_click_connect());
         assert!(!store.save_passwords());
+        assert_eq!(store.welcome_sidebar_width(), 350.0);
+        let expected_dl = directories::UserDirs::new()
+            .and_then(|u| u.download_dir().map(|p| p.to_string_lossy().to_string()))
+            .unwrap_or_default();
+        assert_eq!(store.download_dir(), expected_dl);
     }
 
     #[test]

@@ -1201,9 +1201,14 @@ pub fn run() -> Result<()> {
                 &ssh_keepalive_secs,
                 &tabs_model,
             );
+            // Layout chrome + download path are outside Cancel's prefs snapshot,
+            // but Restore defaults must push them onto the live window.
+            let s = store.borrow();
+            w.set_welcome_sidebar_width(s.welcome_sidebar_width());
+            w.set_download_dir(s.download_dir().into());
             // Confirmed restore already hit disk — refresh the open-panel
             // baseline so Cancel cannot resurrect the pre-restore prefs.
-            *settings_snapshot.borrow_mut() = Some(store.borrow().snapshot_settings_prefs());
+            *settings_snapshot.borrow_mut() = Some(s.snapshot_settings_prefs());
         });
     }
 
