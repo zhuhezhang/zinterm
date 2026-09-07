@@ -389,7 +389,7 @@ export component AppWindow inherits Window {
     in-out property <string> output-highlight-rule-status;
     in-out property <float> ui-scale <=> Theme.ui-scale;   // global UI zoom (#100)
     in-out property <float> panel-font <=> Theme.panel-font;  // settings-panel font scale
-    callback set-panel-font(int);                          // apply + persist (percent)
+    callback set-panel-font(int);                          // apply (percent; Save to persist)
     in-out property <string> ui-font-family <=> Theme.ui-font-family;
     // Window focused & visible — Rust drives it from winit events; gates the
     // cursor blink so an idle background window stops repainting (#127).
@@ -437,33 +437,38 @@ export component AppWindow inherits Window {
             root.ifd-h = clamp(root.ifd-h, min(320px, root.height - 32px), max(320px, root.height - 32px));
             root.ifd-x = round((root.width - root.ifd-w) / 2 / 1px) * 1px;
             root.ifd-y = round((root.height - root.ifd-h) / 2 / 1px) * 1px;
+            root.begin-settings-edit();
         }
     }
-    callback set-term-font(string);                // apply + persist font family
-    callback set-term-font-size(int);              // apply + persist font size (px)
+    // Settings panel: edits apply live for preview; disk write waits for Save.
+    callback begin-settings-edit();
+    callback save-settings();
+    callback cancel-settings();
+    callback set-term-font(string);                // apply font family (Save to persist)
+    callback set-term-font-size(int);              // apply font size px (Save to persist)
     callback set-terminal-line-spacing(float);
-    callback set-term-font-bold(bool);             // apply + persist bold terminal text
-    callback set-term-cursor-style(string);        // apply + persist cursor shape (#275)
+    callback set-term-font-bold(bool);             // apply bold terminal text (Save to persist)
+    callback set-term-cursor-style(string);        // apply cursor shape (#275; Save to persist)
     callback set-term-cursor-color(string) -> bool;
-    // validate + persist cursor colour (#275)
+    // validate + apply cursor colour (#275; Save to persist)
     callback set-output-highlight(bool, string);   // enable + built-in preset
     callback set-json-format-output(bool);
     callback add-output-highlight-rule(string, bool, bool, bool, string) -> bool;
     callback remove-output-highlight-rule(int);
     callback set-output-highlight-rule-enabled(int, bool);
-    callback set-ui-scale(int);                    // apply + persist UI scale (percent) (#100)
+    callback set-ui-scale(int);                    // apply UI scale percent (#100; Save to persist)
     // Immersive wallpaper (set by Rust). The active id + custom file basename
     // feed the Interface → Wallpaper picker.
     in-out property <string> current-wallpaper: "";
     in-out property <string> custom-wallpaper-name: "";
-    callback set-wallpaper(string);                // apply + persist a wallpaper id
+    callback set-wallpaper(string);                // apply a wallpaper id (Save to persist)
     callback pick-wallpaper-file();                // open the OS file dialog (Rust)
     // SFTP follows the terminal's cd; opt out in Interface settings.
     in-out property <bool> sftp-follow-cd: true;
-    callback set-sftp-follow-cd(bool);             // apply + persist
+    callback set-sftp-follow-cd(bool);             // apply (Save to persist)
     // Always ask where to save on each download (#87); default off.
     in-out property <bool> download-always-ask: false;
-    callback set-download-always-ask(bool);        // apply + persist
+    callback set-download-always-ask(bool);        // apply (Save to persist)
     in-out property <bool> paste-confirm-enabled: true;
     callback set-paste-confirm-enabled(bool);
     in-out property <bool> extra-paste-shortcuts-enabled: true;
@@ -4368,7 +4373,7 @@ export component AppWindow inherits Window {
                     }
 
                     Text {
-                        text: "MIT / Apache-2.0";
+                        text: "MIT";
                         color: Theme.text-muted;
                         font-size: Theme.fs-xs;
                     }
@@ -4724,7 +4729,10 @@ export component AppWindow inherits Window {
         FocusScope {
             init => { self.focus(); }
             key-pressed(e) => {
-                if (e.text == Key.Escape) { root.interface-open = false; }
+                if (e.text == Key.Escape) {
+                    root.cancel-settings();
+                    root.interface-open = false;
+                }
                 accept
             }
             key-released(e) => { accept }
@@ -4806,7 +4814,10 @@ export component AppWindow inherits Window {
                                 background: if-close-ta.has-hover ? Theme.bg-hover : transparent;
                                 if-close-ta := TouchArea {
                                     mouse-cursor: pointer;
-                                    clicked => { root.interface-open = false; }
+                                    clicked => {
+                                        root.cancel-settings();
+                                        root.interface-open = false;
+                                    }
                                 }
 
                                 Text {
@@ -4930,6 +4941,39 @@ export component AppWindow inherits Window {
                     request-restore-settings => {
                         root.data-clear-kind = "restore-settings";
                         root.data-clear-open = true;
+                    }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
+                // Cancel / Save / Save and close — edits preview live; disk write
+                // waits for Save (no more auto-persist on every toggle).
+                HorizontalLayout {
+                    padding-right: 16px; // clear the resize grip
+                    padding-top: 10px;
+                    padding-bottom: 10px;
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    GhostButton {
+                        text: root.lang-en ? "Cancel" : "取消";
+                        clicked => {
+                            root.cancel-settings();
+                            root.interface-open = false;
+                        }
+                    }
+                    GhostButton {
+                        text: root.lang-en ? "Save" : "保存";
+                        clicked => { root.save-settings(); }
+                    }
+                    PrimaryButton {
+                        text: root.lang-en ? "Save and close" : "保存并关闭";
+                        clicked => {
+                            root.save-settings();
+                            root.interface-open = false;
+                        }
                     }
                 }
             }

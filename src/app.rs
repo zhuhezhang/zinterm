@@ -607,7 +607,6 @@ pub fn run() -> Result<()> {
             flag.store(follow, std::sync::atomic::Ordering::Relaxed);
             let mut s = store.borrow_mut();
             s.set_sftp_follow_cd(follow);
-            let _ = s.save();
         });
     }
 
@@ -623,7 +622,6 @@ pub fn run() -> Result<()> {
             flag.store(secs, std::sync::atomic::Ordering::Relaxed);
             let mut s = store.borrow_mut();
             s.set_ssh_keepalive_secs(secs);
-            let _ = s.save();
         });
     }
 
@@ -644,7 +642,6 @@ pub fn run() -> Result<()> {
         window.on_set_download_always_ask(move |ask| {
             let mut s = store.borrow_mut();
             s.set_download_always_ask(ask);
-            let _ = s.save();
         });
     }
     {
@@ -652,7 +649,6 @@ pub fn run() -> Result<()> {
         window.on_set_paste_confirm_enabled(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_paste_confirm_enabled(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -660,7 +656,6 @@ pub fn run() -> Result<()> {
         window.on_set_extra_paste_shortcuts_enabled(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_extra_paste_shortcuts_enabled(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -668,7 +663,6 @@ pub fn run() -> Result<()> {
         window.on_set_select_copy_right_paste_enabled(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_select_copy_right_paste_enabled(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -676,7 +670,6 @@ pub fn run() -> Result<()> {
         window.on_set_zen_mode(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_zen_mode(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -684,7 +677,6 @@ pub fn run() -> Result<()> {
         window.on_set_confirm_delete_group_enabled(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_confirm_delete_group(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -692,7 +684,6 @@ pub fn run() -> Result<()> {
         window.on_set_confirm_delete_session_enabled(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_confirm_delete_session(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -709,7 +700,6 @@ pub fn run() -> Result<()> {
         window.on_set_welcome_single_click_connect(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_welcome_single_click_connect(enabled);
-            let _ = s.save();
         });
     }
     {
@@ -718,7 +708,6 @@ pub fn run() -> Result<()> {
         window.on_set_save_passwords(move |enabled| {
             let mut s = store.borrow_mut();
             s.set_save_passwords(enabled);
-            let _ = s.save();
             if let Some(w) = weak.upgrade() {
                 w.set_save_passwords(s.save_passwords());
                 w.set_credentials_vault_available(crate::config::is_encryption_available());
@@ -791,7 +780,6 @@ pub fn run() -> Result<()> {
         window.on_set_quick_commands_as_sidebar(move |v| {
             let mut s = store.borrow_mut();
             s.set_quick_commands_as_sidebar(v);
-            let _ = s.save();
         });
     }
     {
@@ -801,7 +789,6 @@ pub fn run() -> Result<()> {
         window.on_set_update_check_enabled(move |v| {
             let mut s = store.borrow_mut();
             s.set_update_check_enabled(v);
-            let _ = s.save();
         });
     }
     {
@@ -811,7 +798,6 @@ pub fn run() -> Result<()> {
         window.on_set_renderer_mode(move |mode: SharedString| {
             let mut s = store.borrow_mut();
             s.set_renderer_mode(mode.to_string());
-            let _ = s.save();
         });
     }
     {
@@ -843,7 +829,6 @@ pub fn run() -> Result<()> {
         window.on_persist_wallpaper_overlay(move |v| {
             let mut s = store.borrow_mut();
             s.set_wallpaper_overlay(v);
-            let _ = s.save();
         });
     }
     {
@@ -851,7 +836,6 @@ pub fn run() -> Result<()> {
         window.on_set_collapse_sftp_default(move |v| {
             let mut s = store.borrow_mut();
             s.set_collapse_sftp_default(v);
-            let _ = s.save();
         });
     }
 
@@ -867,7 +851,6 @@ pub fn run() -> Result<()> {
                 if !s.set_terminal_cursor_color(value.as_str()) {
                     return false;
                 }
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 w.set_term_cursor_color(color);
@@ -910,7 +893,6 @@ pub fn run() -> Result<()> {
                         color: color.to_string(),
                         enabled: true,
                     });
-                    let _ = s.save();
                     w.set_output_highlight_rules(output_highlight_rule_model(&s));
                     apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
                 }
@@ -927,7 +909,6 @@ pub fn run() -> Result<()> {
             let Some(w) = weak.upgrade() else { return };
             let mut s = store.borrow_mut();
             s.remove_output_highlight_rule(index.max(0) as usize);
-            let _ = s.save();
             w.set_output_highlight_rules(output_highlight_rule_model(&s));
             apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
             w.set_output_highlight_rule_status("".into());
@@ -941,7 +922,6 @@ pub fn run() -> Result<()> {
             let Some(w) = weak.upgrade() else { return };
             let mut s = store.borrow_mut();
             s.set_output_highlight_rule_enabled(index.max(0) as usize, enabled);
-            let _ = s.save();
             w.set_output_highlight_rules(output_highlight_rule_model(&s));
             apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
         });
@@ -954,7 +934,6 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.set_font_family(family.to_string());
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 w.set_term_font_family(family);
@@ -973,7 +952,6 @@ pub fn run() -> Result<()> {
                 let mut s = store.borrow_mut();
                 s.set_output_highlight_enabled(enabled);
                 s.set_output_highlight_preset(preset.clone());
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 apply_output_highlight(&w, &bufs, enabled, &preset);
@@ -987,7 +965,6 @@ pub fn run() -> Result<()> {
             {
                 let mut settings = store.borrow_mut();
                 settings.set_json_format_output(enabled);
-                let _ = settings.save();
             }
             for buffer in bufs.lock().unwrap().values() {
                 buffer.lock().unwrap().json_format_output = enabled;
@@ -1001,7 +978,6 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.set_font_size(size as u32);
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 w.set_term_font_size(size as f32);
@@ -1032,9 +1008,7 @@ pub fn run() -> Result<()> {
             let normalized = {
                 let mut s = store.borrow_mut();
                 s.set_terminal_line_spacing(spacing);
-                let normalized = s.terminal_line_spacing();
-                let _ = s.save();
-                normalized
+                s.terminal_line_spacing()
             };
             if let Some(w) = weak.upgrade() {
                 w.set_terminal_line_spacing(normalized);
@@ -1048,7 +1022,6 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.set_terminal_bold(bold);
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 w.set_term_font_bold(bold);
@@ -1062,9 +1035,7 @@ pub fn run() -> Result<()> {
             let normalized = {
                 let mut s = store.borrow_mut();
                 s.set_terminal_cursor_style(style.to_string());
-                let normalized = s.terminal_cursor_style().to_string();
-                let _ = s.save();
-                normalized
+                s.terminal_cursor_style().to_string()
             };
             if let Some(w) = weak.upgrade() {
                 w.set_term_cursor_style(normalized.into());
@@ -1080,7 +1051,6 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.set_ui_scale(clamped);
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 w.set_ui_scale(clamped as f32 / 100.0);
@@ -1095,7 +1065,6 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.set_panel_font(clamped);
-                let _ = s.save();
             }
             if let Some(w) = weak.upgrade() {
                 w.set_panel_font(clamped as f32 / 100.0);
@@ -1120,12 +1089,11 @@ pub fn run() -> Result<()> {
             let mut s = store.borrow_mut();
             s.set_wallpaper(id);
             // Choosing a built-in wallpaper applies its recommended palette once;
-            // persist that result so it too survives the next launch. A later
+            // Save persists that so it survives the next launch. A later
             // manual theme toggle will overwrite this preference as expected.
             if let Some(dark) = selected_builtin_theme {
                 s.set_theme_pref(if dark { "dark" } else { "light" }.to_string());
             }
-            let _ = s.save();
         });
     }
     {
@@ -1144,7 +1112,6 @@ pub fn run() -> Result<()> {
                 }
                 let mut s = store.borrow_mut();
                 s.set_wallpaper(id);
-                let _ = s.save();
             }
         });
     }
@@ -1204,6 +1171,9 @@ pub fn run() -> Result<()> {
     window.set_tabs(ModelRc::from(tabs_model.clone()));
     window.set_active_tab_id("welcome".into());
 
+    // Settings panel: preference edits preview live; disk write waits for Save.
+    let settings_snapshot: Rc<RefCell<Option<crate::config::ConfigFile>>> =
+        Rc::new(RefCell::new(None));
     {
         let weak = window.as_weak();
         let store = store.clone();
@@ -1211,6 +1181,7 @@ pub fn run() -> Result<()> {
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let tabs_model = tabs_model.clone();
+        let settings_snapshot = settings_snapshot.clone();
         window.on_restore_settings_defaults(move || {
             {
                 let mut s = store.borrow_mut();
@@ -1222,126 +1193,17 @@ pub fn run() -> Result<()> {
             let Some(w) = weak.upgrade() else {
                 return;
             };
-            let s = store.borrow();
-            let lang_pref = s.language().to_string();
-            crate::i18n::set_language(&lang_pref);
-            crate::i18n::apply_to_slint();
-            w.set_language_pref(lang_pref.into());
-            w.set_lang_en(crate::i18n::is_en());
-            for i in 0..tabs_model.row_count() {
-                if let Some(mut row) = tabs_model.row_data(i) {
-                    if row.id.as_str() == "welcome" {
-                        row.title = t("欢迎页", "Welcome page").into();
-                        tabs_model.set_row_data(i, row);
-                    }
-                }
-            }
-
-            let fam = s.font_family();
-            w.set_term_font_family(if fam.is_empty() {
-                "ZinTerm Mono".into()
-            } else {
-                fam.into()
-            });
-            w.set_term_font_size(s.font_size() as f32);
-            w.set_terminal_line_spacing(s.terminal_line_spacing());
-            w.set_term_font_bold(s.terminal_bold());
-            w.set_term_cursor_style(s.terminal_cursor_style().into());
-            let dark = theme_pref_is_dark(&s);
-            let (hex, color) = if dark {
-                (
-                    "#D4D4D4",
-                    slint::Color::from_rgb_u8(0xD4, 0xD4, 0xD4),
-                )
-            } else {
-                (
-                    "#2D2D2F",
-                    slint::Color::from_rgb_u8(0x2D, 0x2D, 0x2F),
-                )
-            };
-            if let Some(custom) = parse_hex_color(s.terminal_cursor_color()) {
-                w.set_term_cursor_color_hex(s.terminal_cursor_color().into());
-                w.set_term_cursor_color(custom);
-            } else {
-                w.set_term_cursor_color_hex(hex.into());
-                w.set_term_cursor_color(color);
-            }
-            w.set_output_highlight_enabled(s.output_highlight_enabled());
-            w.set_json_format_output(s.json_format_output());
-            w.set_output_highlight_preset(s.output_highlight_preset().into());
-            w.set_output_highlight_rules(output_highlight_rule_model(&s));
-            w.set_ui_scale(s.ui_scale() as f32 / 100.0);
-            w.set_panel_font(s.panel_font() as f32 / 100.0);
-            w.set_renderer_mode(s.renderer_mode().into());
-
-            apply_wallpaper(&w, &s, &bufs, s.wallpaper(), false);
-            apply_output_highlight(
+            apply_settings_prefs_to_window(
                 &w,
+                &store.borrow(),
                 &bufs,
-                s.output_highlight_enabled(),
-                s.output_highlight_preset(),
+                &sftp_follow_cd,
+                &ssh_keepalive_secs,
+                &tabs_model,
             );
-            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
-            for buffer in bufs.lock().unwrap().values() {
-                buffer.lock().unwrap().json_format_output = s.json_format_output();
-            }
-
-            let follow = s.sftp_follow_cd();
-            sftp_follow_cd.store(follow, std::sync::atomic::Ordering::Relaxed);
-            w.set_sftp_follow_cd(follow);
-            let keepalive = s.ssh_keepalive_secs();
-            ssh_keepalive_secs.store(keepalive, std::sync::atomic::Ordering::Relaxed);
-            w.set_ssh_keepalive_secs(keepalive as i32);
-
-            w.set_download_always_ask(s.download_always_ask());
-            w.set_paste_confirm_enabled(s.paste_confirm_enabled());
-            w.set_extra_paste_shortcuts_enabled(s.extra_paste_shortcuts_enabled());
-            w.set_select_copy_right_paste_enabled(s.select_copy_right_paste_enabled());
-            w.set_zen_mode(s.zen_mode());
-            w.set_confirm_delete_group_enabled(s.confirm_delete_group());
-            w.set_confirm_delete_session_enabled(s.confirm_delete_session());
-            w.set_welcome_single_click_connect(s.welcome_single_click_connect());
-            w.set_save_passwords(s.save_passwords());
-            w.set_credentials_vault_available(crate::config::is_encryption_available());
-            w.set_update_check_enabled(s.update_check_enabled());
-            w.set_wallpaper_overlay(s.wallpaper_overlay());
-
-            let collapse_sftp = s.collapse_sftp_default();
-            let welcome_as_sidebar = s.welcome_as_sidebar();
-            let quick_commands_as_sidebar = s.quick_commands_as_sidebar();
-            let quick_panel_open = quick_commands_as_sidebar && s.quick_panel_open();
-            let quick_panel_collapsed = s.quick_panel_collapsed();
-            let quick_panel_dock = s.quick_panel_dock();
-            let welcome_sidebar_dock = s.welcome_sidebar_dock();
-            let mut welcome_collapsed = s.welcome_collapsed().unwrap_or(false);
-            if quick_panel_open
-                && !quick_panel_collapsed
-                && welcome_as_sidebar
-                && welcome_sidebar_dock == quick_panel_dock
-            {
-                welcome_collapsed = true;
-            }
-            w.set_collapse_sftp_default(collapse_sftp);
-            w.set_sftp_panel_width(s.sftp_panel_width());
-            w.set_sftp_panel_height(s.sftp_panel_height());
-            w.set_sftp_tree_width(s.sftp_tree_width());
-            w.set_sftp_dock(s.sftp_dock().into());
-            w.set_quick_commands_as_sidebar(quick_commands_as_sidebar);
-            w.set_quick_panel_open(quick_panel_open);
-            w.set_quick_panel_collapsed(quick_panel_collapsed);
-            w.set_quick_panel_width(s.quick_panel_width());
-            w.set_quick_panel_height(s.quick_panel_height());
-            w.set_quick_panel_dock(quick_panel_dock.into());
-            w.set_welcome_as_sidebar(welcome_as_sidebar);
-            w.set_welcome_sidebar_width(s.welcome_sidebar_width());
-            w.set_welcome_sidebar_dock(welcome_sidebar_dock.into());
-            w.set_welcome_collapsed(welcome_collapsed);
-            w.set_welcome_session_col_name(s.welcome_session_col_name());
-            w.set_welcome_session_col_host(s.welcome_session_col_host());
-            if collapse_sftp {
-                w.set_sftp_collapsed(true);
-                w.set_sftp_saved_height(s.sftp_panel_height());
-            }
+            // Confirmed restore already hit disk — refresh the open-panel
+            // baseline so Cancel cannot resurrect the pre-restore prefs.
+            *settings_snapshot.borrow_mut() = Some(store.borrow().snapshot_settings_prefs());
         });
     }
 
@@ -1430,7 +1292,6 @@ pub fn run() -> Result<()> {
                     {
                         let mut s = store.borrow_mut();
                         s.set_welcome_as_sidebar(v);
-                        let _ = s.save();
                     }
                     {
                         let mut lay = layout.borrow_mut();
@@ -1527,7 +1388,6 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.set_language(pref.clone());
-                let _ = s.save();
             }
             // Re-translate the welcome tab's dynamic title.
             for i in 0..tabs_model.row_count() {
@@ -1542,6 +1402,71 @@ pub fn run() -> Result<()> {
                 w.set_language_pref(pref.into());
                 w.set_lang_en(crate::i18n::is_en());
             }
+        });
+    }
+
+    {
+        let store = store.clone();
+        let settings_snapshot = settings_snapshot.clone();
+        window.on_begin_settings_edit(move || {
+            *settings_snapshot.borrow_mut() = Some(store.borrow().snapshot_settings_prefs());
+        });
+    }
+    {
+        let store = store.clone();
+        let settings_snapshot = settings_snapshot.clone();
+        window.on_save_settings(move || {
+            let s = store.borrow();
+            if let Err(err) = s.save() {
+                tracing::warn!("failed to save settings: {err:#}");
+            }
+            *settings_snapshot.borrow_mut() = Some(s.snapshot_settings_prefs());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        let sftp_follow_cd = sftp_follow_cd.clone();
+        let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let tabs_model = tabs_model.clone();
+        let layout = layout.clone();
+        let content_size = content_size.clone();
+        let panes_model = panes_model.clone();
+        let splitters_model = splitters_model.clone();
+        let settings_snapshot = settings_snapshot.clone();
+        window.on_cancel_settings(move || {
+            let Some(snap) = settings_snapshot.borrow_mut().take() else {
+                return;
+            };
+            {
+                let mut s = store.borrow_mut();
+                s.restore_settings_prefs(&snap);
+            }
+            let Some(w) = weak.upgrade() else {
+                return;
+            };
+            apply_settings_prefs_to_window(
+                &w,
+                &store.borrow(),
+                &bufs,
+                &sftp_follow_cd,
+                &ssh_keepalive_secs,
+                &tabs_model,
+            );
+            let welcome_as_sidebar = store.borrow().welcome_as_sidebar();
+            {
+                let mut lay = layout.borrow_mut();
+                update_welcome_tab(&mut lay, welcome_as_sidebar);
+            }
+            refresh_panes(
+                &w,
+                &layout.borrow(),
+                content_size.get(),
+                &tabs_model,
+                &panes_model,
+                &splitters_model,
+            );
         });
     }
 
@@ -3955,6 +3880,129 @@ fn update_terminal_row(
             }
         }
     }
+}
+
+/// Push Settings-panel preferences from `store` onto the window (and live
+/// terminal side-effects). Used after Restore defaults and Cancel.
+fn apply_settings_prefs_to_window(
+    w: &AppWindow,
+    s: &ConfigStore,
+    bufs: &TermBuffers,
+    sftp_follow_cd: &Arc<std::sync::atomic::AtomicBool>,
+    ssh_keepalive_secs: &Arc<std::sync::atomic::AtomicU32>,
+    tabs_model: &VecModel<TabInfo>,
+) {
+    let lang_pref = s.language().to_string();
+    crate::i18n::set_language(&lang_pref);
+    crate::i18n::apply_to_slint();
+    w.set_language_pref(lang_pref.into());
+    w.set_lang_en(crate::i18n::is_en());
+    for i in 0..tabs_model.row_count() {
+        if let Some(mut row) = tabs_model.row_data(i) {
+            if row.id.as_str() == "welcome" {
+                row.title = t("欢迎页", "Welcome page").into();
+                tabs_model.set_row_data(i, row);
+            }
+        }
+    }
+
+    let fam = s.font_family();
+    w.set_term_font_family(if fam.is_empty() {
+        "ZinTerm Mono".into()
+    } else {
+        fam.into()
+    });
+    w.set_term_font_size(s.font_size() as f32);
+    w.set_terminal_line_spacing(s.terminal_line_spacing());
+    w.set_term_font_bold(s.terminal_bold());
+    w.set_term_cursor_style(s.terminal_cursor_style().into());
+    let dark = theme_pref_is_dark(s);
+    let (hex, color) = if dark {
+        (
+            "#D4D4D4",
+            slint::Color::from_rgb_u8(0xD4, 0xD4, 0xD4),
+        )
+    } else {
+        (
+            "#2D2D2F",
+            slint::Color::from_rgb_u8(0x2D, 0x2D, 0x2F),
+        )
+    };
+    if let Some(custom) = parse_hex_color(s.terminal_cursor_color()) {
+        w.set_term_cursor_color_hex(s.terminal_cursor_color().into());
+        w.set_term_cursor_color(custom);
+    } else {
+        w.set_term_cursor_color_hex(hex.into());
+        w.set_term_cursor_color(color);
+    }
+    w.set_output_highlight_enabled(s.output_highlight_enabled());
+    w.set_json_format_output(s.json_format_output());
+    w.set_output_highlight_preset(s.output_highlight_preset().into());
+    w.set_output_highlight_rules(output_highlight_rule_model(s));
+    w.set_ui_scale(s.ui_scale() as f32 / 100.0);
+    w.set_panel_font(s.panel_font() as f32 / 100.0);
+    w.set_renderer_mode(s.renderer_mode().into());
+
+    apply_wallpaper(w, s, bufs, s.wallpaper(), false);
+    apply_output_highlight(
+        w,
+        bufs,
+        s.output_highlight_enabled(),
+        s.output_highlight_preset(),
+    );
+    apply_custom_output_rules(w, bufs, s.output_highlight_rules());
+    for buffer in bufs.lock().unwrap().values() {
+        buffer.lock().unwrap().json_format_output = s.json_format_output();
+    }
+
+    let follow = s.sftp_follow_cd();
+    sftp_follow_cd.store(follow, std::sync::atomic::Ordering::Relaxed);
+    w.set_sftp_follow_cd(follow);
+    let keepalive = s.ssh_keepalive_secs();
+    ssh_keepalive_secs.store(keepalive, std::sync::atomic::Ordering::Relaxed);
+    w.set_ssh_keepalive_secs(keepalive as i32);
+
+    w.set_download_always_ask(s.download_always_ask());
+    w.set_paste_confirm_enabled(s.paste_confirm_enabled());
+    w.set_extra_paste_shortcuts_enabled(s.extra_paste_shortcuts_enabled());
+    w.set_select_copy_right_paste_enabled(s.select_copy_right_paste_enabled());
+    w.set_zen_mode(s.zen_mode());
+    w.set_confirm_delete_group_enabled(s.confirm_delete_group());
+    w.set_confirm_delete_session_enabled(s.confirm_delete_session());
+    w.set_welcome_single_click_connect(s.welcome_single_click_connect());
+    w.set_save_passwords(s.save_passwords());
+    w.set_credentials_vault_available(crate::config::is_encryption_available());
+    w.set_update_check_enabled(s.update_check_enabled());
+    w.set_wallpaper_overlay(s.wallpaper_overlay());
+
+    let collapse_sftp = s.collapse_sftp_default();
+    let welcome_as_sidebar = s.welcome_as_sidebar();
+    let quick_commands_as_sidebar = s.quick_commands_as_sidebar();
+    let quick_panel_open = quick_commands_as_sidebar && s.quick_panel_open();
+    let quick_panel_collapsed = s.quick_panel_collapsed();
+    let quick_panel_dock = s.quick_panel_dock();
+    let welcome_sidebar_dock = s.welcome_sidebar_dock();
+    let mut welcome_collapsed = s.welcome_collapsed().unwrap_or(false);
+    if quick_panel_open
+        && !quick_panel_collapsed
+        && welcome_as_sidebar
+        && welcome_sidebar_dock == quick_panel_dock
+    {
+        welcome_collapsed = true;
+    }
+    w.set_collapse_sftp_default(collapse_sftp);
+    // Preference toggles only — do not overwrite live panel geometry from a
+    // settings cancel (those sizes are layout chrome, not Settings prefs).
+    w.set_quick_commands_as_sidebar(quick_commands_as_sidebar);
+    if !quick_commands_as_sidebar {
+        w.set_quick_panel_open(false);
+        w.set_quick_panel_collapsed(false);
+    } else {
+        w.set_quick_panel_open(quick_panel_open);
+        w.set_quick_panel_collapsed(quick_panel_collapsed);
+    }
+    w.set_welcome_as_sidebar(welcome_as_sidebar);
+    w.set_welcome_collapsed(welcome_collapsed);
 }
 
 fn update_welcome_tab(layout: &mut crate::layout::Layout, as_sidebar: bool) {

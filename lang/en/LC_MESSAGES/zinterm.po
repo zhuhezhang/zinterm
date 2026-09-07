@@ -57,9 +57,6 @@ msgstr "About ZinTerm"
 msgid "A lightweight Rust + Slint SSH terminal client."
 msgstr "A lightweight Rust + Slint SSH terminal client."
 
-msgid "Open source · MIT / Apache-2.0"
-msgstr "Open source · MIT / Apache-2.0"
-
 msgid "Open-source libraries used"
 msgstr "Open-source libraries used"
 

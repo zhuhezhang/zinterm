@@ -57,9 +57,6 @@ msgstr "关于 ZinTerm"
 msgid "A lightweight Rust + Slint SSH terminal client."
 msgstr "轻量级 Rust + Slint SSH 终端客户端。"
 
-msgid "Open source · MIT / Apache-2.0"
-msgstr "开源项目 · 协议 MIT / Apache-2.0"
-
 msgid "Open-source libraries used"
 msgstr "使用的开源库"
 

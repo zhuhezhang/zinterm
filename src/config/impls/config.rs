@@ -527,6 +527,51 @@ impl ConfigStore {
         self.cache.command_history = command_history;
     }
 
+    /// Snapshot of Settings-panel preferences (excludes sessions, commands, and
+    /// runtime layout chrome such as panel sizes / dock edges).
+    pub fn snapshot_settings_prefs(&self) -> ConfigFile {
+        self.cache.clone()
+    }
+
+    /// Revert Settings-panel preferences from a snapshot taken when the panel
+    /// opened. Leaves sessions, commands, and layout chrome untouched so Cancel
+    /// does not undo edits made elsewhere while the panel was open.
+    pub fn restore_settings_prefs(&mut self, snap: &ConfigFile) {
+        let c = &mut self.cache;
+        c.language = snap.language.clone();
+        c.theme_pref = snap.theme_pref.clone();
+        c.renderer_mode = snap.renderer_mode.clone();
+        c.font_family = snap.font_family.clone();
+        c.font_size = snap.font_size;
+        c.terminal_line_spacing = snap.terminal_line_spacing;
+        c.terminal_bold = snap.terminal_bold;
+        c.terminal_cursor_style = snap.terminal_cursor_style.clone();
+        c.terminal_cursor_color = snap.terminal_cursor_color.clone();
+        c.output_highlight_disabled = snap.output_highlight_disabled;
+        c.output_highlight_preset = snap.output_highlight_preset.clone();
+        c.output_highlight_rules = snap.output_highlight_rules.clone();
+        c.json_format_disabled = snap.json_format_disabled;
+        c.ui_scale = snap.ui_scale;
+        c.wallpaper = snap.wallpaper.clone();
+        c.sftp_no_follow_cd = snap.sftp_no_follow_cd;
+        c.download_always_ask = snap.download_always_ask;
+        c.paste_confirm_disabled = snap.paste_confirm_disabled;
+        c.extra_paste_shortcuts_disabled = snap.extra_paste_shortcuts_disabled;
+        c.select_copy_right_paste_disabled = snap.select_copy_right_paste_disabled;
+        c.zen_mode = snap.zen_mode;
+        c.quick_commands_as_sidebar = snap.quick_commands_as_sidebar;
+        c.collapse_sftp_default = snap.collapse_sftp_default;
+        c.welcome_as_sidebar = snap.welcome_as_sidebar;
+        c.confirm_delete_group_disabled = snap.confirm_delete_group_disabled;
+        c.confirm_delete_session = snap.confirm_delete_session;
+        c.welcome_single_click_connect = snap.welcome_single_click_connect;
+        c.wallpaper_overlay = snap.wallpaper_overlay;
+        c.panel_font = snap.panel_font;
+        c.update_check_disabled = snap.update_check_disabled;
+        c.ssh_keepalive_secs = snap.ssh_keepalive_secs;
+        c.save_passwords = snap.save_passwords;
+    }
+
     pub fn get(&self, id: &str) -> Option<&Session> {
         self.cache.sessions.iter().find(|s| s.id == id)
     }
