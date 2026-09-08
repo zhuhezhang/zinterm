@@ -418,7 +418,7 @@ export component AppWindow inherits Window {
     // window so it can't leave the parent); init centered.
     // Centred, snapped to whole logical pixels: a half-pixel origin makes the
     // card's text render on subpixel offsets and look blurry (#v0.5).
-    property <length> ifd-w: min(root.width - 32px, max(700px, 800px * Theme.panel-font));
+    property <length> ifd-w: min(root.width - 32px, max(700px, 750px * Theme.panel-font));
     property <length> ifd-h: min(root.height - 32px, max(320px, 480px * Theme.panel-font));
     property <length> ifd-x: round((root.width - root.ifd-w) / 2 / 1px) * 1px;
     property <length> ifd-y: round((root.height - root.ifd-h) / 2 / 1px) * 1px;
