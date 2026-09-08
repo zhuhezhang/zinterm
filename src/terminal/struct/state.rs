@@ -58,7 +58,7 @@ pub(crate) enum OutputHighlightPreset {
 pub(crate) struct CompiledOutputRule {
     pub(crate) matcher: regex::Regex,
     pub(crate) whole_line: bool,
-    pub(crate) ansi_index: u8,
+    pub(crate) fg: vt100::Color,
 }
 
 pub(crate) type TermBufferHandle = Arc<Mutex<TermBuffer>>;

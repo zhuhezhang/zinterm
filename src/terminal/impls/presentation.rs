@@ -76,7 +76,7 @@ fn highlight_custom_output(mut runs: Vec<HistSpan>, rules: &[CompiledOutputRule]
         {
             for run in &mut runs {
                 if custom_rule_eligible(run) {
-                    run.fg = vt100::Color::Idx(rule.ansi_index);
+                    run.fg = rule.fg;
                     run.bold = true;
                 }
             }
@@ -98,7 +98,7 @@ fn highlight_custom_output(mut runs: Vec<HistSpan>, rules: &[CompiledOutputRule]
             if matches.is_empty() {
                 next.push(run);
             } else {
-                next.extend(style_custom_matches(run, &matches, rule.ansi_index));
+                next.extend(style_custom_matches(run, &matches, rule.fg));
             }
         }
         runs = next;
@@ -116,7 +116,7 @@ fn custom_rule_eligible(run: &HistSpan) -> bool {
 fn style_custom_matches(
     run: HistSpan,
     matches: &[(usize, usize)],
-    ansi_index: u8,
+    fg: vt100::Color,
 ) -> Vec<HistSpan> {
     let mut out = Vec::with_capacity(matches.len() * 2 + 1);
     let mut byte_pos = 0usize;
@@ -140,7 +140,7 @@ fn style_custom_matches(
         let cells = text_cell_width(text);
         let mut hit = run.clone();
         hit.text = text.to_string();
-        hit.fg = vt100::Color::Idx(ansi_index);
+        hit.fg = fg;
         hit.bold = true;
         hit.col = col;
         hit.cells = cells;

@@ -58,7 +58,7 @@ fn resolve_data_dir() -> PathBuf {
     dir
 }
 
-fn normalize_hex_color(value: &str) -> Option<String> {
+pub(crate) fn normalize_hex_color(value: &str) -> Option<String> {
     let digits = value.trim().strip_prefix('#').unwrap_or(value.trim());
     if digits.len() != 6 || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
@@ -150,15 +150,38 @@ fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
     true
 }
 
-fn normalize_highlight_color(color: &str) -> &'static str {
-    match color {
-        "yellow" => "yellow",
-        "green" => "green",
-        "cyan" => "cyan",
-        "magenta" => "magenta",
-        "gray" => "gray",
-        _ => "red",
+/// Normalize a highlight colour to `#RRGGBB`. Accepts hex or legacy palette ids
+/// (red/yellow/green/cyan/magenta/gray) used before free-form colours.
+pub(crate) fn normalize_highlight_color(color: &str) -> String {
+    if let Some(hex) = normalize_hex_color(color) {
+        return hex;
     }
+    match color.trim().to_ascii_lowercase().as_str() {
+        "yellow" => "#F5F543".to_string(),
+        "green" => "#23D18B".to_string(),
+        "cyan" => "#29B8DB".to_string(),
+        "magenta" => "#D670D6".to_string(),
+        "gray" | "grey" => "#666666".to_string(),
+        // "red" and anything unrecognised → bright red (former ANSI idx 9).
+        _ => "#F14C4C".to_string(),
+    }
+}
+
+fn migrate_output_highlight_rules(cfg: &mut ConfigFile) -> bool {
+    let mut changed = false;
+    for rule in &mut cfg.output_highlight_rules {
+        let color = normalize_highlight_color(&rule.color);
+        if rule.color != color {
+            rule.color = color;
+            changed = true;
+        }
+        let name = rule.name.trim().to_string();
+        if rule.name != name {
+            rule.name = name;
+            changed = true;
+        }
+    }
+    changed
 }
 
 /// Remove duplicate entries in place, keeping the *last* (most recent)
@@ -417,6 +440,7 @@ impl ConfigStore {
                     // One-time push of the new default layout to existing users
                     // (only for items they never changed). (#new-user-defaults)
                     migrated |= migrate_defaults(&mut cfg);
+                    migrated |= migrate_output_highlight_rules(&mut cfg);
                     cfg
                 }
                 Err(err) => {
@@ -973,9 +997,22 @@ impl ConfigStore {
     }
 
     pub fn add_output_highlight_rule(&mut self, mut rule: OutputHighlightRule) {
+        rule.name = rule.name.trim().to_string();
         rule.pattern = rule.pattern.trim().to_string();
-        rule.color = normalize_highlight_color(&rule.color).to_string();
+        rule.color = normalize_highlight_color(&rule.color);
         self.cache.output_highlight_rules.push(rule);
+    }
+
+    pub fn update_output_highlight_rule(&mut self, index: usize, mut rule: OutputHighlightRule) {
+        let Some(slot) = self.cache.output_highlight_rules.get_mut(index) else {
+            return;
+        };
+        rule.name = rule.name.trim().to_string();
+        rule.pattern = rule.pattern.trim().to_string();
+        rule.color = normalize_highlight_color(&rule.color);
+        // Preserve enabled unless the caller set it explicitly via the dedicated API.
+        rule.enabled = slot.enabled;
+        *slot = rule;
     }
 
     pub fn remove_output_highlight_rule(&mut self, index: usize) {
@@ -2310,6 +2347,7 @@ mod tests {
         assert_eq!(store.output_highlight_preset(), "log");
 
         store.add_output_highlight_rule(OutputHighlightRule {
+            name: "  timeout  ".to_string(),
             pattern: "  connection refused  ".to_string(),
             regex: false,
             case_sensitive: false,
@@ -2318,11 +2356,29 @@ mod tests {
             enabled: true,
         });
         assert_eq!(store.output_highlight_rules().len(), 1);
+        assert_eq!(store.output_highlight_rules()[0].name, "timeout");
         assert_eq!(
             store.output_highlight_rules()[0].pattern,
             "connection refused"
         );
-        assert_eq!(store.output_highlight_rules()[0].color, "red");
+        assert_eq!(store.output_highlight_rules()[0].color, "#F14C4C");
+        store.update_output_highlight_rule(
+            0,
+            OutputHighlightRule {
+                name: "refused".to_string(),
+                pattern: "refused".to_string(),
+                regex: false,
+                case_sensitive: true,
+                whole_line: false,
+                color: "#29B8DB".to_string(),
+                enabled: false, // ignored; enabled kept from existing slot
+            },
+        );
+        assert_eq!(store.output_highlight_rules()[0].name, "refused");
+        assert_eq!(store.output_highlight_rules()[0].pattern, "refused");
+        assert_eq!(store.output_highlight_rules()[0].color, "#29B8DB");
+        assert!(store.output_highlight_rules()[0].enabled);
+        assert!(store.output_highlight_rules()[0].case_sensitive);
         store.set_output_highlight_rule_enabled(0, false);
         assert!(!store.output_highlight_rules()[0].enabled);
         store.remove_output_highlight_rule(0);

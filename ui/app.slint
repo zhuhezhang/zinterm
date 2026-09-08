@@ -382,6 +382,8 @@ export component AppWindow inherits Window {
     in-out property <string> term-cursor-style: "bar";
     in-out property <string> term-cursor-color-hex: root.dark-mode ? "#D4D4D4" : "#2D2D2F";
     in-out property <color> term-cursor-color: Theme.term-fg;
+    in-out property <string> highlight-draft-color-hex: "#F14C4C";
+    in-out property <color> highlight-draft-swatch: #F14C4C;
     in-out property <bool> output-highlight-enabled: true;
     in-out property <bool> json-format-output: true;
     in-out property <string> output-highlight-preset: "log";
@@ -453,7 +455,9 @@ export component AppWindow inherits Window {
     // validate + apply cursor colour (#275; Save to persist)
     callback set-output-highlight(bool, string);   // enable + built-in preset
     callback set-json-format-output(bool);
-    callback add-output-highlight-rule(string, bool, bool, bool, string) -> bool;
+    callback set-highlight-draft-color(string) -> bool;
+    callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
+    callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
     callback remove-output-highlight-rule(int);
     callback set-output-highlight-rule-enabled(int, bool);
     callback set-ui-scale(int);                    // apply UI scale percent (#100; Save to persist)
@@ -4985,6 +4989,8 @@ export component AppWindow inherits Window {
                     term-cursor-style <=> root.term-cursor-style;
                     term-cursor-color-hex <=> root.term-cursor-color-hex;
                     term-cursor-color: root.term-cursor-color;
+                    highlight-draft-color-hex <=> root.highlight-draft-color-hex;
+                    highlight-draft-swatch <=> root.highlight-draft-swatch;
                     output-highlight-enabled <=> root.output-highlight-enabled;
                     json-format-output <=> root.json-format-output;
                     output-highlight-preset <=> root.output-highlight-preset;
@@ -5022,9 +5028,14 @@ export component AppWindow inherits Window {
                         root.set-output-highlight(enabled, preset);
                     }
                     set-json-format-output(enabled) => { root.set-json-format-output(enabled); }
-                    add-output-highlight-rule(pattern, regex, case-sensitive, whole-line, color) => {
+                    set-highlight-draft-color(v) => { root.set-highlight-draft-color(v) }
+                    add-output-highlight-rule(name, pattern, regex, case-sensitive, whole-line, color) => {
                         root.add-output-highlight-rule(
-                            pattern, regex, case-sensitive, whole-line, color)
+                            name, pattern, regex, case-sensitive, whole-line, color)
+                    }
+                    update-output-highlight-rule(index, name, pattern, regex, case-sensitive, whole-line, color) => {
+                        root.update-output-highlight-rule(
+                            index, name, pattern, regex, case-sensitive, whole-line, color)
                     }
                     remove-output-highlight-rule(index) => {
                         root.remove-output-highlight-rule(index);

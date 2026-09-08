@@ -19,6 +19,9 @@ pub struct QuickCommand {
 /// One user-defined client-side terminal highlighting rule.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputHighlightRule {
+    /// Display label shown in settings (required).
+    #[serde(default)]
+    pub name: String,
     pub pattern: String,
     #[serde(default)]
     pub regex: bool,
@@ -26,7 +29,7 @@ pub struct OutputHighlightRule {
     pub case_sensitive: bool,
     #[serde(default)]
     pub whole_line: bool,
-    /// Stable palette id: red | yellow | green | cyan | magenta | gray.
+    /// `#RRGGBB`. Legacy named ids (red/yellow/…) are normalized on load/save.
     #[serde(default)]
     pub color: String,
     #[serde(default = "default_true")]

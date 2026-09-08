@@ -860,23 +860,53 @@ pub fn run() -> Result<()> {
     }
     {
         let weak = window.as_weak();
+        window.on_set_highlight_draft_color(move |value: SharedString| {
+            let Some(color) = parse_hex_color(value.as_str()) else {
+                return false;
+            };
+            let Some(normalized) = crate::config::normalize_hex_color(value.as_str()) else {
+                return false;
+            };
+            let Some(w) = weak.upgrade() else {
+                return false;
+            };
+            w.set_highlight_draft_color_hex(normalized.into());
+            w.set_highlight_draft_swatch(color);
+            true
+        });
+    }
+    {
+        let weak = window.as_weak();
         let store = store.clone();
         let bufs = bufs.clone();
         window.on_add_output_highlight_rule(
-            move |pattern: SharedString,
+            move |name: SharedString,
+                  pattern: SharedString,
                   is_regex,
                   case_sensitive,
                   whole_line,
                   color: SharedString| {
+                let name = name.trim().to_string();
                 let pattern = pattern.trim().to_string();
-                let validation = validate_output_highlight_rule(&pattern, is_regex, case_sensitive);
                 let Some(w) = weak.upgrade() else {
                     return false;
                 };
-                if let Err(message) = validation {
+                if let Err(message) = validate_output_highlight_rule_name(&name) {
                     w.set_output_highlight_rule_status(message.into());
                     return false;
                 }
+                if let Err(message) = validate_output_highlight_rule(&pattern, is_regex, case_sensitive)
+                {
+                    w.set_output_highlight_rule_status(message.into());
+                    return false;
+                }
+                let color = match validate_output_highlight_color(color.as_str()) {
+                    Ok(color) => color,
+                    Err(message) => {
+                        w.set_output_highlight_rule_status(message.into());
+                        return false;
+                    }
+                };
                 if store.borrow().output_highlight_rules().len() >= 128 {
                     w.set_output_highlight_rule_status(
                         t("自定义规则最多 128 条", "Custom rules are limited to 128").into(),
@@ -886,13 +916,76 @@ pub fn run() -> Result<()> {
                 {
                     let mut s = store.borrow_mut();
                     s.add_output_highlight_rule(OutputHighlightRule {
+                        name,
                         pattern,
                         regex: is_regex,
                         case_sensitive,
                         whole_line,
-                        color: color.to_string(),
+                        color,
                         enabled: true,
                     });
+                    w.set_output_highlight_rules(output_highlight_rule_model(&s));
+                    apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+                }
+                w.set_output_highlight_rule_status("".into());
+                true
+            },
+        );
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_update_output_highlight_rule(
+            move |index,
+                  name: SharedString,
+                  pattern: SharedString,
+                  is_regex,
+                  case_sensitive,
+                  whole_line,
+                  color: SharedString| {
+                let name = name.trim().to_string();
+                let pattern = pattern.trim().to_string();
+                let index = index.max(0) as usize;
+                let Some(w) = weak.upgrade() else {
+                    return false;
+                };
+                if store.borrow().output_highlight_rules().get(index).is_none() {
+                    w.set_output_highlight_rule_status(
+                        t("规则不存在", "Rule not found").into(),
+                    );
+                    return false;
+                }
+                if let Err(message) = validate_output_highlight_rule_name(&name) {
+                    w.set_output_highlight_rule_status(message.into());
+                    return false;
+                }
+                if let Err(message) = validate_output_highlight_rule(&pattern, is_regex, case_sensitive)
+                {
+                    w.set_output_highlight_rule_status(message.into());
+                    return false;
+                }
+                let color = match validate_output_highlight_color(color.as_str()) {
+                    Ok(color) => color,
+                    Err(message) => {
+                        w.set_output_highlight_rule_status(message.into());
+                        return false;
+                    }
+                };
+                {
+                    let mut s = store.borrow_mut();
+                    s.update_output_highlight_rule(
+                        index,
+                        OutputHighlightRule {
+                            name,
+                            pattern,
+                            regex: is_regex,
+                            case_sensitive,
+                            whole_line,
+                            color,
+                            enabled: true,
+                        },
+                    );
                     w.set_output_highlight_rules(output_highlight_rule_model(&s));
                     apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
                 }

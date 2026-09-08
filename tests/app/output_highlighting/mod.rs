@@ -20,6 +20,7 @@ fn custom_rule(
     color: &str,
 ) -> CompiledOutputRule {
     compile_output_rules(&[OutputHighlightRule {
+        name: String::new(),
         pattern: pattern.to_string(),
         regex,
         case_sensitive,
@@ -139,7 +140,7 @@ fn custom_literal_is_case_insensitive_and_overrides_builtin_colour() {
     );
     let hits: Vec<_> = runs
         .iter()
-        .filter(|run| matches!(run.fg, vt100::Color::Idx(10)))
+        .filter(|run| matches!(run.fg, vt100::Color::Rgb(0x23, 0xd1, 0x8b)))
         .collect();
     assert_eq!(hits.len(), 2);
     assert_eq!(hits[0].text, "ERROR");
@@ -159,9 +160,21 @@ fn custom_regex_can_highlight_whole_line_without_overwriting_ansi() {
         OutputHighlightPreset::Log,
         &[rule],
     );
-    assert!(matches!(runs[0].fg, vt100::Color::Idx(13)));
+    assert!(matches!(runs[0].fg, vt100::Color::Rgb(0xd6, 0x70, 0xd6)));
     assert!(runs[0].bold);
     assert!(matches!(runs[1].fg, vt100::Color::Idx(2)));
+}
+
+#[test]
+fn custom_hex_colour_is_applied_as_truecolor() {
+    let rule = custom_rule("boom", false, true, false, "#448AFF");
+    let runs = highlight_plain_output(
+        vec![plain_run("boom", 0)],
+        OutputHighlightPreset::Log,
+        &[rule],
+    );
+    assert!(matches!(runs[0].fg, vt100::Color::Rgb(0x44, 0x8a, 0xff)));
+    assert!(runs[0].bold);
 }
 
 #[test]

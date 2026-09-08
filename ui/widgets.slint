@@ -1,6 +1,73 @@
 import { Theme } from "theme.slint";
 import { ScrollView, ComboBox } from "std-widgets.slint";
 
+// --- CompactCheckBox -------------------------------------------------------
+// Theme-colored checkbox with adjustable indicator↔label gap. std CheckBox
+// (fluent) hardcodes spacing at 12px and does not expose it.
+export component CompactCheckBox {
+    in property <string> text;
+    in property <bool> enabled: true;
+    in property <length> gap: 4px;
+    in-out property <bool> checked;
+    callback toggled();
+
+    min-height: 18px;
+    vertical-stretch: 0;
+    accessible-role: checkbox;
+    accessible-checkable: true;
+    accessible-enabled: root.enabled;
+    accessible-label: root.text;
+    accessible-checked <=> root.checked;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.checked = !root.checked;
+            root.toggled();
+        }
+    }
+
+    HorizontalLayout {
+        spacing: root.gap;
+        alignment: center;
+
+        Rectangle {
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 3px;
+            border-width: root.checked ? 0 : 1px;
+            border-color: Theme.border-strong;
+            background: root.checked ? Theme.accent : transparent;
+
+            if root.checked: Text {
+                text: "\u{E5CA}";
+                font-family: "Material Icons";
+                color: #ffffff;
+                font-size: 13px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+
+        if root.text != "": Text {
+            text: root.text;
+            color: root.enabled ? Theme.text-primary : Theme.text-muted;
+            font-size: Theme.fs-sm;
+            vertical-alignment: center;
+        }
+    }
+
+    TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled();
+        }
+    }
+}
+
 // --- TooltipSurface --------------------------------------------------------
 // Opaque tooltip chrome (PopupWindow content). Uses `tooltip-bg`, not frosted
 // `bg-elevated`, so text stays readable over busy UI underneath.

@@ -8,14 +8,16 @@
 
 import { Theme } from "theme.slint";
 import { ComboBox, Slider, ScrollView } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, DangerButton, BorderedLineInput } from "widgets.slint";
+import { LabeledInput, PrimaryButton, DangerButton, BorderedLineInput, GhostButton, CompactCheckBox } from "widgets.slint";
 
 export struct OutputRuleItem {
+    name: string,
     pattern: string,
     regex: bool,
     case-sensitive: bool,
     whole-line: bool,
     color: string,
+    swatch: color,
     enabled: bool,
 }
 
@@ -591,6 +593,9 @@ export component InterfacePanel inherits Rectangle {
     in-out property <string> output-highlight-preset;
     in property <[OutputRuleItem]> output-highlight-rules;
     in-out property <string> output-highlight-rule-status;
+    // Draft colour for the add/edit form (validated hex + live swatch).
+    in-out property <string> highlight-draft-color-hex: "#F14C4C";
+    in-out property <color> highlight-draft-swatch: #F14C4C;
     in property <float> ui-scale;
     in-out property <bool> sftp-follow-cd;
     in-out property <bool> collapse-sftp-default;
@@ -614,16 +619,24 @@ export component InterfacePanel inherits Rectangle {
     in property <string> custom-wallpaper-name;   // basename for the file row
 
     property <string> ifd-page: "font";
+    property <int> rule-edit-index: -1;   // -1 = add, >=0 = edit that rule
+    property <string> new-rule-name;
     property <string> new-rule-pattern;
     property <bool> new-rule-regex;
     property <bool> new-rule-case-sensitive;
     property <bool> new-rule-whole-line;
-    property <string> new-rule-color: "red";
     property <bool> renderer-restart-required;
     property <bool> wp-is-custom:
         root.current-wallpaper != "" && root.current-wallpaper != "builtin:light"
         && root.current-wallpaper != "builtin:dark" && root.current-wallpaper != "builtin:tech"
         && root.current-wallpaper != "builtin:miku" && root.current-wallpaper != "builtin:ms";
+
+    // Shared left-column width for the custom-rule form (locale-aware).
+    property <string> rule-name-label: root.lang-en ? "Rule name" : "规则名称";
+    property <string> rule-pattern-label: root.lang-en
+        ? "Keyword or regular expression" : "关键词或正则表达式";
+    property <length> rule-form-label-width:
+        max(m-rule-name.preferred-width, m-rule-pattern.preferred-width);
 
     callback set-term-font(string);
     callback set-term-font-size(int);
@@ -633,9 +646,59 @@ export component InterfacePanel inherits Rectangle {
     callback set-term-cursor-color(string) -> bool;
     callback set-output-highlight(bool, string);
     callback set-json-format-output(bool);
-    callback add-output-highlight-rule(string, bool, bool, bool, string) -> bool;
+    callback set-highlight-draft-color(string) -> bool;
+    // name, pattern, regex, case-sensitive, whole-line, color
+    callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
+    callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
     callback remove-output-highlight-rule(int);
     callback set-output-highlight-rule-enabled(int, bool);
+
+    function reset-rule-form() {
+        root.rule-edit-index = -1;
+        root.new-rule-name = "";
+        root.new-rule-pattern = "";
+        root.new-rule-regex = false;
+        root.new-rule-case-sensitive = false;
+        root.new-rule-whole-line = false;
+        root.highlight-draft-color-hex = "#F14C4C";
+        root.highlight-draft-swatch = #F14C4C;
+        root.output-highlight-rule-status = "";
+    }
+
+    function load-rule-into-form(index: int) {
+        if (index < 0 || index >= root.output-highlight-rules.length) {
+            return;
+        }
+        root.rule-edit-index = index;
+        root.new-rule-name = root.output-highlight-rules[index].name;
+        root.new-rule-pattern = root.output-highlight-rules[index].pattern;
+        root.new-rule-regex = root.output-highlight-rules[index].regex;
+        root.new-rule-case-sensitive = root.output-highlight-rules[index].case-sensitive;
+        root.new-rule-whole-line = root.output-highlight-rules[index].whole-line;
+        root.highlight-draft-color-hex = root.output-highlight-rules[index].color;
+        root.highlight-draft-swatch = root.output-highlight-rules[index].swatch;
+        root.output-highlight-rule-status = "";
+    }
+
+    function save-rule-form() -> bool {
+        if (root.rule-edit-index >= 0) {
+            return root.update-output-highlight-rule(
+                root.rule-edit-index,
+                root.new-rule-name,
+                root.new-rule-pattern,
+                root.new-rule-regex,
+                root.new-rule-case-sensitive,
+                root.new-rule-whole-line,
+                root.highlight-draft-color-hex);
+        }
+        return root.add-output-highlight-rule(
+            root.new-rule-name,
+            root.new-rule-pattern,
+            root.new-rule-regex,
+            root.new-rule-case-sensitive,
+            root.new-rule-whole-line,
+            root.highlight-draft-color-hex);
+    }
     callback set-ui-scale(int);
     callback set-panel-font(int);   // settings-panel font scale, percent
     callback set-renderer-mode(string);
@@ -662,6 +725,25 @@ export component InterfacePanel inherits Rectangle {
     callback request-clear-sessions();
     callback request-clear-passwords();
     callback request-restore-settings();
+
+    // Off-screen label probes used only to compute `rule-form-label-width`.
+    Rectangle {
+        x: -10000px;
+        y: -10000px;
+        width: 0px;
+        height: 0px;
+        clip: true;
+        VerticalLayout {
+            m-rule-name := Text {
+                text: root.rule-name-label;
+                font-size: Theme.fs-sm;
+            }
+            m-rule-pattern := Text {
+                text: root.rule-pattern-label;
+                font-size: Theme.fs-sm;
+            }
+        }
+    }
 
     HorizontalLayout {
         // --- Left nav ------------------------------------------------------
@@ -889,6 +971,7 @@ export component InterfacePanel inherits Rectangle {
                             desc: root.lang-en ? "Enter a hexadecimal RGB color."
                                 : "输入十六进制 RGB 颜色。";
                             CursorColorInput {
+                                width: 100px;
                                 value <=> root.term-cursor-color-hex;
                                 preview-color: root.term-cursor-color;
                                 apply-color(v) => { root.set-term-cursor-color(v) }
@@ -1232,15 +1315,31 @@ export component InterfacePanel inherits Rectangle {
                         }
 
                         LabeledInput {
-                            label: root.lang-en ? "Keyword or regular expression" : "关键词或正则表达式";
+                            label: root.rule-name-label;
+                            label-width: root.rule-form-label-width;
+                            placeholder: root.lang-en ? "Timeout errors" : "超时错误";
+                            value <=> root.new-rule-name;
+                            accepted => {
+                                if root.new-rule-name != "" && root.new-rule-pattern != ""
+                                    && root.save-rule-form() {
+                                    root.reset-rule-form();
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 8px;
+                        }
+
+                        LabeledInput {
+                            label: root.rule-pattern-label;
+                            label-width: root.rule-form-label-width;
                             placeholder: root.new-rule-regex ? "timeout|connection refused" : "connection refused";
                             value <=> root.new-rule-pattern;
                             accepted => {
-                                if root.add-output-highlight-rule(
-                            root.new-rule-pattern, root.new-rule-regex,
-                            root.new-rule-case-sensitive, root.new-rule-whole-line,
-                            root.new-rule-color) {
-                                    root.new-rule-pattern = "";
+                                if root.new-rule-name != "" && root.new-rule-pattern != ""
+                                    && root.save-rule-form() {
+                                    root.reset-rule-form();
                                 }
                             }
                         }
@@ -1251,69 +1350,54 @@ export component InterfacePanel inherits Rectangle {
 
                         HorizontalLayout {
                             spacing: 8px;
-                            ComboBox {
-                                width: 130px;
-                                model: [root.lang-en ? "Keyword" : "关键词", root.lang-en ? "Regex" : "正则"];
-                                current-value: root.new-rule-regex
-                                    ? (root.lang-en ? "Regex" : "正则")
-                                    : (root.lang-en ? "Keyword" : "关键词");
-                                selected(v) => {
-                                    root.new-rule-regex = v == "Regex" || v == "正则";
-                                }
+
+                            CompactCheckBox {
+                                text: root.lang-en ? "Regex" : "正则";
+                                gap: 4px;
+                                checked: root.new-rule-regex;
+                                toggled => { root.new-rule-regex = self.checked; }
                             }
 
-                            ComboBox {
-                                width: 120px;
-                                model: ["Red", "Yellow", "Green", "Cyan", "Magenta", "Gray"];
-                                current-value: root.new-rule-color == "yellow" ? "Yellow"
-                                    : root.new-rule-color == "green" ? "Green"
-                                    : root.new-rule-color == "cyan" ? "Cyan"
-                                    : root.new-rule-color == "magenta" ? "Magenta"
-                                    : root.new-rule-color == "gray" ? "Gray" : "Red";
-                                selected(v) => {
-                                    root.new-rule-color = v == "Yellow" ? "yellow"
-                                        : v == "Green" ? "green"
-                                        : v == "Cyan" ? "cyan"
-                                        : v == "Magenta" ? "magenta"
-                                        : v == "Gray" ? "gray" : "red";
-                                }
+                            CompactCheckBox {
+                                text: root.lang-en ? "Case sensitive" : "区分大小写";
+                                gap: 4px;
+                                checked: root.new-rule-case-sensitive;
+                                toggled => { root.new-rule-case-sensitive = self.checked; }
+                            }
+
+                            CompactCheckBox {
+                                text: root.lang-en ? "Whole line" : "高亮整行";
+                                gap: 4px;
+                                checked: root.new-rule-whole-line;
+                                toggled => { root.new-rule-whole-line = self.checked; }
+                            }
+
+                            CursorColorInput {
+                                width: 100px;
+                                value <=> root.highlight-draft-color-hex;
+                                preview-color: root.highlight-draft-swatch;
+                                apply-color(v) => { root.set-highlight-draft-color(v) }
                             }
 
                             Rectangle {
                                 horizontal-stretch: 1;
                             }
 
+                            if root.rule-edit-index >= 0: GhostButton {
+                                text: root.lang-en ? "Cancel" : "取消";
+                                clicked => { root.reset-rule-form(); }
+                            }
+
                             PrimaryButton {
-                                text: root.lang-en ? "Add rule" : "添加规则";
-                                disabled: root.new-rule-pattern == "";
+                                text: root.rule-edit-index >= 0
+                                    ? (root.lang-en ? "Save" : "保存")
+                                    : (root.lang-en ? "Add rule" : "添加规则");
+                                disabled: root.new-rule-name == "" || root.new-rule-pattern == "";
                                 clicked => {
-                                    if root.add-output-highlight-rule(
-                                root.new-rule-pattern, root.new-rule-regex,
-                                root.new-rule-case-sensitive, root.new-rule-whole-line,
-                                root.new-rule-color) {
-                                        root.new-rule-pattern = "";
+                                    if root.save-rule-form() {
+                                        root.reset-rule-form();
                                     }
                                 }
-                            }
-                        }
-
-                        SettingRow {
-                            label: root.lang-en ? "Case sensitive" : "区分大小写";
-                            Switch {
-                                on: root.new-rule-case-sensitive;
-                                toggled(v) => { root.new-rule-case-sensitive = v; }
-                            }
-                        }
-
-                        SettingRow {
-                            label: root.lang-en ? "Highlight whole line" : "高亮整行";
-                            desc: root.lang-en
-                                ? "Otherwise only matching text is coloured."
-                                : "关闭时仅高亮匹配到的文字。";
-                            show-divider: false;
-                            Switch {
-                                on: root.new-rule-whole-line;
-                                toggled(v) => { root.new-rule-whole-line = v; }
                             }
                         }
 
@@ -1327,8 +1411,14 @@ export component InterfacePanel inherits Rectangle {
                             height: 34px;
                             vertical-alignment: center;
                         }
+
+                        if root.output-highlight-rules.length > 0: Rectangle {
+                            height: 8px;
+                        }
                         for rule[index] in root.output-highlight-rules: Rectangle {
                             height: 44px;
+                            background: root.rule-edit-index == index
+                                ? Theme.bg-active : transparent;
                             Rectangle {
                                 y: 0px;
                                 width: 100%;
@@ -1338,16 +1428,13 @@ export component InterfacePanel inherits Rectangle {
 
                             HorizontalLayout {
                                 spacing: 9px;
+                                alignment: center;
+
                                 Rectangle {
                                     width: 8px;
                                     height: 8px;
                                     border-radius: 4px;
-                                    background: rule.color == "yellow" ? Theme.warning
-                                        : rule.color == "green" ? Theme.success
-                                        : rule.color == "cyan" ? Theme.accent
-                                        : rule.color == "magenta" ? #d670d6
-                                        : rule.color == "gray" ? Theme.text-muted
-                                        : Theme.danger;
+                                    background: rule.swatch;
                                     vertical-stretch: 0;
                                 }
 
@@ -1356,7 +1443,7 @@ export component InterfacePanel inherits Rectangle {
                                     alignment: center;
                                     spacing: 2px;
                                     Text {
-                                        text: rule.pattern;
+                                        text: rule.name;
                                         color: rule.enabled ? Theme.text-primary : Theme.text-muted;
                                         font-family: Theme.term-font-family;
                                         font-size: 12px * Theme.panel-font;
@@ -1364,11 +1451,13 @@ export component InterfacePanel inherits Rectangle {
                                     }
 
                                     Text {
-                                        text: (rule.regex ? "Regex" : (root.lang-en ? "Keyword" : "关键词"))
+                                        text: rule.pattern + " · "
+                                            + (rule.regex ? "Regex" : (root.lang-en ? "Keyword" : "关键词"))
                                             + (rule.case-sensitive ? " · Aa" : "")
                                             + (rule.whole-line ? (root.lang-en ? " · whole line" : " · 整行") : "");
                                         color: Theme.text-muted;
                                         font-size: 10px * Theme.panel-font;
+                                        overflow: elide;
                                     }
                                 }
 
@@ -1381,10 +1470,39 @@ export component InterfacePanel inherits Rectangle {
                                     width: 28px;
                                     height: 28px;
                                     border-radius: 5px;
+                                    background: edit-ta.has-hover ? Theme.bg-hover : transparent;
+                                    edit-ta := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { root.load-rule-into-form(index); }
+                                    }
+
+                                    Text {
+                                        text: "\u{E3C9}";
+                                        font-family: "Material Icons";
+                                        color: Theme.text-muted;
+                                        font-size: 15px * Theme.panel-font;
+                                        width: 100%;
+                                        height: 100%;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 28px;
+                                    height: 28px;
+                                    border-radius: 5px;
                                     background: delete-ta.has-hover ? Theme.bg-hover : transparent;
                                     delete-ta := TouchArea {
                                         mouse-cursor: pointer;
-                                        clicked => { root.remove-output-highlight-rule(index); }
+                                        clicked => {
+                                            if (root.rule-edit-index == index) {
+                                                root.reset-rule-form();
+                                            } else if (root.rule-edit-index > index) {
+                                                root.rule-edit-index = root.rule-edit-index - 1;
+                                            }
+                                            root.remove-output-highlight-rule(index);
+                                        }
                                     }
 
                                     Text {

@@ -1,5 +1,5 @@
 use super::state::OutputHighlightPreset;
-use crate::config::OutputHighlightRule;
+use crate::config::{normalize_highlight_color, OutputHighlightRule};
 use crate::terminal::CompiledOutputRule;
 
 pub(crate) fn compile_output_rules(rules: &[OutputHighlightRule]) -> Vec<CompiledOutputRule> {
@@ -19,21 +19,25 @@ pub(crate) fn compile_output_rules(rules: &[OutputHighlightRule]) -> Vec<Compile
             Some(CompiledOutputRule {
                 matcher,
                 whole_line: rule.whole_line,
-                ansi_index: highlight_color_index(&rule.color),
+                fg: highlight_fg_color(&rule.color),
             })
         })
         .collect()
 }
 
-fn highlight_color_index(color: &str) -> u8 {
-    match color {
-        "yellow" => 11,
-        "green" => 10,
-        "cyan" => 14,
-        "magenta" => 13,
-        "gray" => 8,
-        _ => 9,
+fn highlight_fg_color(color: &str) -> vt100::Color {
+    let hex = normalize_highlight_color(color);
+    let digits = hex.trim().trim_start_matches('#');
+    if digits.len() == 6 {
+        if let (Ok(r), Ok(g), Ok(b)) = (
+            u8::from_str_radix(&digits[0..2], 16),
+            u8::from_str_radix(&digits[2..4], 16),
+            u8::from_str_radix(&digits[4..6], 16),
+        ) {
+            return vt100::Color::Rgb(r, g, b);
+        }
     }
+    vt100::Color::Rgb(0xf1, 0x4c, 0x4c)
 }
 
 impl OutputHighlightPreset {

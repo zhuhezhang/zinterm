@@ -148,17 +148,21 @@ pub(super) fn output_highlight_rule_model(store: &ConfigStore) -> ModelRc<Output
     let rows: Vec<OutputRuleItem> = store
         .output_highlight_rules()
         .iter()
-        .map(|rule| OutputRuleItem {
-            pattern: rule.pattern.clone().into(),
-            regex: rule.regex,
-            case_sensitive: rule.case_sensitive,
-            whole_line: rule.whole_line,
-            color: match rule.color.as_str() {
-                "yellow" | "green" | "cyan" | "magenta" | "gray" => rule.color.clone(),
-                _ => "red".to_string(),
+        .map(|rule| {
+            let color = crate::config::normalize_highlight_color(&rule.color);
+            let swatch = parse_hex_color(&color).unwrap_or_else(|| {
+                slint::Color::from_rgb_u8(0xf1, 0x4c, 0x4c)
+            });
+            OutputRuleItem {
+                name: rule.name.clone().into(),
+                pattern: rule.pattern.clone().into(),
+                regex: rule.regex,
+                case_sensitive: rule.case_sensitive,
+                whole_line: rule.whole_line,
+                color: color.into(),
+                swatch,
+                enabled: rule.enabled,
             }
-            .into(),
-            enabled: rule.enabled,
         })
         .collect();
     ModelRc::from(Rc::new(VecModel::from(rows)))
@@ -206,6 +210,31 @@ pub(super) fn validate_output_highlight_rule(
             })?;
     }
     Ok(())
+}
+
+pub(super) fn validate_output_highlight_rule_name(name: &str) -> std::result::Result<(), String> {
+    if name.is_empty() {
+        return Err(t("请输入规则名称", "Enter a rule name").into());
+    }
+    if name.chars().count() > 64 {
+        return Err(t(
+            "规则名称不能超过 64 个字符",
+            "Rule names cannot exceed 64 characters",
+        )
+        .into());
+    }
+    Ok(())
+}
+
+pub(super) fn validate_output_highlight_color(color: &str) -> std::result::Result<String, String> {
+    // Accept hex only from the UI; legacy named ids are migrated on load.
+    crate::config::normalize_hex_color(color).ok_or_else(|| {
+        t(
+            "颜色格式无效，请使用 #RRGGBB",
+            "Invalid colour; use #RRGGBB",
+        )
+        .into()
+    })
 }
 
 /// Single-line label for a history row: first line, plus " …" when the stored
