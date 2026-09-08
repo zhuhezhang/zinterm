@@ -10,13 +10,15 @@ JVM 压到几十 MB 原生级别。
 ## 截图
 
 <p align="center">
-  <img src="docs/screenshots/01-welcome.png" alt="欢迎页 / 会话管理" width="800"><br>
-  <em>欢迎页：会话管理</em>
+  <img src="docs/screenshots/terminal.png" width="800"><br>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/02-terminal-htop.png" alt="终端 + SFTP" width="800"><br>
-  <em>多标签页终端（htop 全屏渲染）+ 底部 SFTP 文件浏览</em>
+  <img src="docs/screenshots/connection.png" width="800"><br>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" width="800"><br>
 </p>
 
 ## 下载与安装

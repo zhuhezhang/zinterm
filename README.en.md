@@ -11,13 +11,15 @@ a native binary.
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/01-welcome-en.png" alt="Welcome / session management" width="800"><br>
-  <em>Welcome page: session management</em>
+  <img src="docs/screenshots/terminal-en.png" width="800"><br>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/02-terminal-htop.png" alt="Terminal + SFTP" width="800"><br>
-  <em>Tabbed terminal (full-screen btop) + SFTP file browser</em>
+  <img src="docs/screenshots/connection-en.png" width="800"><br>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/settings-en.png" width="800"><br>
 </p>
 
 ## Download & install
