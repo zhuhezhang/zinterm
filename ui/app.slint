@@ -4400,7 +4400,7 @@ export component AppWindow inherits Window {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 465px;
+            width: 500px;
             height: 155px;
             background: Theme.popup-bg;
             border-radius: Theme.radius-lg;
@@ -5085,7 +5085,7 @@ export component AppWindow inherits Window {
                 // Cancel / Save / Save and close — edits preview live; disk write
                 // waits for Save (no more auto-persist on every toggle).
                 HorizontalLayout {
-                    padding-right: 16px; // clear the resize grip
+                    padding-right: 15px; // clear the resize grip
                     padding-top: 10px;
                     padding-bottom: 10px;
                     spacing: 8px;
