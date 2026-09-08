@@ -87,6 +87,21 @@ pub fn system_language() -> &'static str {
 }
 
 fn system_locale_is_chinese() -> bool {
+    // On Windows, prefer the OS *display* language over Unix LANG/LC_* vars.
+    // Git Bash / MSYS / some IDEs commonly export LANG=en_US.UTF-8 even when
+    // Windows itself is Chinese — trusting env first wrongly picks English.
+    #[cfg(windows)]
+    {
+        if let Some(chinese) = windows_ui_is_chinese() {
+            return chinese;
+        }
+        if let Some(name) = windows_locale_name() {
+            if let Some(chinese) = locale_looks_chinese(&name) {
+                return chinese;
+            }
+        }
+    }
+
     for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Ok(val) = std::env::var(key) {
             if let Some(chinese) = locale_looks_chinese(&val) {
@@ -100,12 +115,6 @@ fn system_locale_is_chinese() -> bool {
             if let Some(chinese) = locale_looks_chinese(part) {
                 return chinese;
             }
-        }
-    }
-    #[cfg(windows)]
-    {
-        if let Some(name) = windows_locale_name() {
-            return locale_looks_chinese(&name).unwrap_or(false);
         }
     }
     #[cfg(target_os = "macos")]
@@ -135,6 +144,22 @@ fn locale_looks_chinese(locale: &str) -> Option<bool> {
     Some(primary == "zh")
 }
 
+/// Windows UI display language (not regional format). `LANG_CHINESE` = 0x04.
+#[cfg(windows)]
+fn windows_ui_is_chinese() -> Option<bool> {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetUserDefaultUILanguage() -> u16;
+    }
+    let langid = unsafe { GetUserDefaultUILanguage() };
+    if langid == 0 {
+        return None;
+    }
+    // PRIMARYLANGID(lgid) == (lgid) & 0x3ff
+    Some((langid & 0x3ff) == 0x04)
+}
+
+/// User locale name for date/number formats (fallback when UI language is unknown).
 #[cfg(windows)]
 fn windows_locale_name() -> Option<String> {
     #[link(name = "kernel32")]
@@ -196,5 +221,24 @@ mod tests {
         assert_eq!(locale_looks_chinese("ja_JP"), Some(false));
         assert_eq!(locale_looks_chinese("C"), None);
         assert_eq!(locale_looks_chinese(""), None);
+    }
+
+    /// On Chinese Windows, Auto must follow the OS UI language even when a
+    /// Unix-style LANG=en_US is inherited (Git Bash / MSYS / IDE terminals).
+    #[cfg(windows)]
+    #[test]
+    fn windows_auto_ignores_english_lang_env() {
+        // Safety: test process only; restored below.
+        std::env::set_var("LANG", "en_US.UTF-8");
+        std::env::set_var("LC_ALL", "en_US.UTF-8");
+        let resolved = resolve_language("auto");
+        std::env::remove_var("LANG");
+        std::env::remove_var("LC_ALL");
+        // This CI/dev machine is expected to be Chinese UI (zh-CN); if the host
+        // is English Windows the assertion still documents preferred priority
+        // only when UI reports Chinese.
+        if windows_ui_is_chinese() == Some(true) {
+            assert_eq!(resolved, "zh");
+        }
     }
 }
