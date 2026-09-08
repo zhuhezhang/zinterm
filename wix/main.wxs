@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="windows-1252"?>
 <!--
-  WiX (v3) installer definition for zinterm, driven by `cargo wix`.
+  This is a manifest that tells the Windows installer what to install, where to install it,
+  how to perform upgrades, and what items to place on the Start Menu and desktop.
+  `cargo wix` reads this file and compiles it into an `.msi` installer package.
 
   cargo-wix injects these preprocessor variables:
     $(var.Version)            crate version from Cargo.toml
