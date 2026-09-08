@@ -731,7 +731,7 @@ export component AppWindow inherits Window {
 
     // --- Callbacks up to Rust ---------------------------------------------
     callback new-session-clicked(string /* host */);
-    in-out property <string> ssh-import-hint;  // import/export result; shown via MessageDialog
+    in-out property <string> ssh-import-hint;  // import/export/save-output result; shown via MessageDialog
     callback export-sessions();               // export all sessions to a file (#46)
     callback import-sessions();               // import sessions from a file (#46)
     // Multi-line terminal paste safety prompt (#262).
@@ -4580,7 +4580,7 @@ export component AppWindow inherits Window {
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
     }
 
-    // Import / export result notice (#46).
+    // Import / export / save-terminal-output result notice (#46).
     MessageDialog {
         width: parent.width;
         height: parent.height;

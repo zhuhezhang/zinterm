@@ -5135,29 +5135,50 @@ fn wire_key_input(
         });
     }
 
-    // Save scrollback + live screen to a user-chosen text file.
+    // Save scrollback + live screen to a user-chosen text file; result via MessageDialog.
     {
         let bufs = bufs.clone();
         let tabs_model = tabs_model.clone();
+        let weak = window.as_weak();
         window.on_save_terminal_output(move |tab_id: SharedString| {
             let tid = tab_id.to_string();
             let text = term_buf(&bufs, &tid)
                 .map(|h| h.lock().unwrap().extract_full_text())
                 .unwrap_or_default();
             if text.is_empty() {
+                if let Some(w) = weak.upgrade() {
+                    w.set_ssh_import_hint(
+                        t("没有可保存的终端输出。", "No terminal output to save.").into(),
+                    );
+                }
                 return;
             }
             let tab_title = tab_title_by_id(tabs_model.as_ref(), &tid);
             let default_name = terminal_output_default_filename(&tab_title);
             if let Some(path) = rfd::FileDialog::new()
-                .set_title(crate::i18n::t("保存终端输出", "Save terminal output"))
+                .set_title(t("保存终端输出", "Save terminal output"))
                 .set_file_name(&default_name)
                 .save_file()
             {
+                let weak = weak.clone();
                 std::thread::spawn(move || {
-                    if let Err(e) = std::fs::write(&path, text) {
-                        tracing::warn!("save_terminal_output: {}", e);
-                    }
+                    let hint = match std::fs::write(&path, &text) {
+                        Ok(()) => {
+                            let path_str = path.display().to_string();
+                            if crate::i18n::is_en() {
+                                format!("Terminal output saved to:\n{path_str}")
+                            } else {
+                                format!("终端输出已保存到：\n{path_str}")
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("save_terminal_output: {}", e);
+                            format!("{}: {}", t("保存失败", "Save failed"), e)
+                        }
+                    };
+                    let _ = weak.upgrade_in_event_loop(move |w| {
+                        w.set_ssh_import_hint(hint.into());
+                    });
                 });
             }
         });
