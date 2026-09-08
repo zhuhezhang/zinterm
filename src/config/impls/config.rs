@@ -66,11 +66,59 @@ pub(crate) fn normalize_hex_color(value: &str) -> Option<String> {
     Some(format!("#{}", digits.to_ascii_uppercase()))
 }
 
+/// Built-in starter custom highlight rules (aligned with zauterm defaults):
+/// error / success / warning keywords and IPv4 addresses.
+fn default_output_highlight_rules() -> Vec<OutputHighlightRule> {
+    vec![
+        OutputHighlightRule {
+            name: "error".into(),
+            pattern: r"(\berror\b)|(\bfailed\b)|(\bdenied\b)|(\bunauthorized\b)|(\bdown\b)"
+                .into(),
+            regex: true,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F1250E".into(),
+            enabled: true,
+        },
+        OutputHighlightRule {
+            name: "success".into(),
+            pattern: r"(\bsuccess\b)|(\bconnected\b)|(\bready\b)|(\bok\b)|(\bup\b)".into(),
+            regex: true,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#4ADE80".into(),
+            enabled: true,
+        },
+        OutputHighlightRule {
+            name: "warning".into(),
+            pattern: r"(\bwarning\b)|(\bnotice\b)|(\binfo\b)|(\bdebug\b)|(\bdisabled\b)"
+                .into(),
+            regex: true,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F1C40F".into(),
+            enabled: true,
+        },
+        OutputHighlightRule {
+            name: "IP".into(),
+            pattern:
+                r"\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b"
+                    .into(),
+            regex: true,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#C717D3".into(),
+            enabled: true,
+        },
+    ]
+}
+
 /// A brand-new config (no file yet, or the old one was corrupt). Seeds the
 /// new-user default layout (#new-user-defaults): no wallpaper, welcome page as
 /// a left sidebar, 15% wallpaper transparency, bar cursor, collapsed SFTP,
-/// quick-command sidebar enabled, single-click connect, update check off —
-/// and marks the migration done so it isn't re-applied.
+/// quick-command sidebar enabled, single-click connect, update check off,
+/// four starter custom highlight rules — and marks the migration done so it
+/// isn't re-applied.
 fn fresh_config() -> ConfigFile {
     ConfigFile {
         wallpaper: String::new(),
@@ -81,6 +129,7 @@ fn fresh_config() -> ConfigFile {
         quick_commands_as_sidebar: true,
         welcome_single_click_connect: true,
         update_check_disabled: true,
+        output_highlight_rules: default_output_highlight_rules(),
         defaults_rev: DEFAULTS_REV,
         ..ConfigFile::default()
     }
@@ -145,6 +194,12 @@ fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
         if !cfg.update_check_disabled {
             cfg.update_check_disabled = true;
         }
+    }
+    // rev 5: seed the four starter custom highlight rules when the list is
+    // still empty (old default). Users who already added/removed rules keep
+    // their list as-is.
+    if cfg.defaults_rev < 5 && cfg.output_highlight_rules.is_empty() {
+        cfg.output_highlight_rules = default_output_highlight_rules();
     }
     cfg.defaults_rev = DEFAULTS_REV;
     true
@@ -2331,6 +2386,14 @@ mod tests {
 
     #[test]
     fn output_highlight_defaults_and_preset_validation() {
+        let fresh = fresh_config();
+        assert_eq!(fresh.output_highlight_rules.len(), 4);
+        assert_eq!(fresh.output_highlight_rules[0].name, "error");
+        assert_eq!(fresh.output_highlight_rules[1].name, "success");
+        assert_eq!(fresh.output_highlight_rules[2].name, "warning");
+        assert_eq!(fresh.output_highlight_rules[3].name, "IP");
+        assert!(fresh.output_highlight_rules.iter().all(|r| r.regex && r.enabled));
+
         let mut store = temp_store();
         assert!(store.output_highlight_enabled());
         assert!(store.json_format_output());
@@ -2390,6 +2453,37 @@ mod tests {
         store.cache = legacy;
         assert!(store.output_highlight_enabled());
         assert_eq!(store.output_highlight_preset(), "log");
+    }
+
+    #[test]
+    fn defaults_rev5_seeds_empty_highlight_rules() {
+        let mut empty = ConfigFile {
+            defaults_rev: 4,
+            ..ConfigFile::default()
+        };
+        assert!(empty.output_highlight_rules.is_empty());
+        assert!(migrate_defaults(&mut empty));
+        assert_eq!(empty.output_highlight_rules.len(), 4);
+        assert_eq!(empty.output_highlight_rules[0].name, "error");
+        assert_eq!(empty.defaults_rev, DEFAULTS_REV);
+
+        let mut custom = ConfigFile {
+            output_highlight_rules: vec![OutputHighlightRule {
+                name: "mine".into(),
+                pattern: "mine".into(),
+                regex: false,
+                case_sensitive: false,
+                whole_line: false,
+                color: "#ABCDEF".into(),
+                enabled: true,
+            }],
+            defaults_rev: 4,
+            ..ConfigFile::default()
+        };
+        assert!(migrate_defaults(&mut custom));
+        assert_eq!(custom.output_highlight_rules.len(), 1);
+        assert_eq!(custom.output_highlight_rules[0].name, "mine");
+        assert_eq!(custom.defaults_rev, DEFAULTS_REV);
     }
 
     #[test]

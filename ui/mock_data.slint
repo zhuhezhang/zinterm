@@ -1,8 +1,83 @@
 // Temporary styling fixtures — flip the use-mock flags in app.slint when done.
 import { SessionInfo } from "welcome.slint";
 import { QuickCmd } from "terminal_view.slint";
+import { OutputRuleItem } from "interface_panel.slint";
 
 export global MockData {
+    // Interface → Output: custom highlight rule list
+    in property <[OutputRuleItem]> output-highlight-rules: [
+        {
+            name: "ERROR",
+            pattern: "ERROR|FATAL|panic!",
+            regex: true,
+            case-sensitive: false,
+            whole-line: false,
+            color: "#F14C4C",
+            swatch: #F14C4C,
+            enabled: true,
+        },
+        {
+            name: "WARN",
+            pattern: "WARN",
+            regex: false,
+            case-sensitive: true,
+            whole-line: false,
+            color: "#F5F543",
+            swatch: #F5F543,
+            enabled: true,
+        },
+        {
+            name: "Connection refused",
+            pattern: "connection refused",
+            regex: false,
+            case-sensitive: false,
+            whole-line: true,
+            color: "#29B8DB",
+            swatch: #29B8DB,
+            enabled: true,
+        },
+        {
+            name: "成功 / OK",
+            pattern: "\\b(OK|success|成功)\\b",
+            regex: true,
+            case-sensitive: false,
+            whole-line: false,
+            color: "#23D18B",
+            swatch: #23D18B,
+            enabled: true,
+        },
+        {
+            name: "Trace (disabled)",
+            pattern: "TRACE",
+            regex: false,
+            case-sensitive: true,
+            whole-line: false,
+            color: "#666666",
+            swatch: #666666,
+            enabled: false,
+        },
+        {
+            name: "Very Long Rule Name For Layout Elide Testing",
+            pattern: "very-long-pattern-that-should-elide-in-the-subtitle-row-when-narrow",
+            regex: false,
+            case-sensitive: false,
+            whole-line: false,
+            color: "#D670D6",
+            swatch: #D670D6,
+            enabled: true,
+        },
+        {
+            name: "超时",
+            pattern: "timeout|timed out|超时",
+            regex: true,
+            case-sensitive: false,
+            whole-line: false,
+            color: "#F14C4C",
+            swatch: #F14C4C,
+            enabled: true,
+        },
+    ];
+
     // Quick-command manage dialog
     in property <[QuickCmd]> qcm-mock-commands: [
         {

@@ -27,7 +27,6 @@ export component CompactCheckBox {
 
     HorizontalLayout {
         spacing: root.gap;
-        alignment: center;
 
         Rectangle {
             width: 16px;
@@ -55,6 +54,7 @@ export component CompactCheckBox {
             color: root.enabled ? Theme.text-primary : Theme.text-muted;
             font-size: Theme.fs-sm;
             vertical-alignment: center;
+            width: self.preferred-width;
         }
     }
 

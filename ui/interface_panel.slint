@@ -297,16 +297,17 @@ component CursorPaletteSwatch inherits Rectangle {
 component CursorColorInput inherits Rectangle {
     in-out property <string> value;
     in property <color> preview-color;
+    in property <length> input-height: 29px;
     property <bool> valid: true;
     callback apply-color(string) -> bool;
     width: 160px;
-    height: 30px;
+    height: root.input-height;
 
     HorizontalLayout {
         spacing: 6px;
         Rectangle {
-            width: 30px;
-            height: 30px;
+            width: root.input-height;
+            height: root.input-height;
             border-radius: 6px;
             border-width: 1px;
             border-color: Theme.border-strong;
@@ -319,7 +320,7 @@ component CursorColorInput inherits Rectangle {
 
         color-input := BorderedLineInput {
             horizontal-stretch: 1;
-            height: 30px;
+            height: root.input-height;
             pad-x: 8px;
             text <=> root.value;
             font-family: Theme.term-font-family;
@@ -618,7 +619,9 @@ export component InterfacePanel inherits Rectangle {
     in property <string> current-wallpaper;
     in property <string> custom-wallpaper-name;   // basename for the file row
 
-    property <string> ifd-page: "font";
+    // Styling mock can open directly on the Output page (see app.slint flag).
+    in property <string> ifd-start-page: "font";
+    property <string> ifd-page: root.ifd-start-page;
     property <int> rule-edit-index: -1;   // -1 = add, >=0 = edit that rule
     property <string> new-rule-name;
     property <string> new-rule-pattern;
@@ -1350,6 +1353,7 @@ export component InterfacePanel inherits Rectangle {
 
                         HorizontalLayout {
                             spacing: 8px;
+                            cross-axis-alignment: center;
 
                             CompactCheckBox {
                                 text: root.lang-en ? "Regex" : "正则";
@@ -1373,6 +1377,7 @@ export component InterfacePanel inherits Rectangle {
                             }
 
                             CursorColorInput {
+                                input-height: 20px;
                                 width: 100px;
                                 value <=> root.highlight-draft-color-hex;
                                 preview-color: root.highlight-draft-swatch;
@@ -1419,6 +1424,7 @@ export component InterfacePanel inherits Rectangle {
                             height: 44px;
                             background: root.rule-edit-index == index
                                 ? Theme.bg-active : transparent;
+                            border-radius: Theme.radius-md;
                             Rectangle {
                                 y: 0px;
                                 width: 100%;
@@ -1428,7 +1434,9 @@ export component InterfacePanel inherits Rectangle {
 
                             HorizontalLayout {
                                 spacing: 9px;
-                                alignment: center;
+                                cross-axis-alignment: center;
+
+                                Text{}
 
                                 Rectangle {
                                     width: 8px;
