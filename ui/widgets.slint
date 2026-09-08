@@ -554,6 +554,8 @@ export component BorderedLineInput inherits Rectangle {
     callback edited(string);
     callback accepted(string);
     callback key-pressed(KeyEvent) -> EventResult;
+    // Mirrors the inner TextInput so callers can clear chrome on blur.
+    out property <bool> has-focus: input.has-focus;
 
     public function select-all() { input.select-all(); }
     public function copy() { input.copy(); }

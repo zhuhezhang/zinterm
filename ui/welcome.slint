@@ -184,6 +184,10 @@ component SessionRow inherits Rectangle {
     // Drag-to-reparent: press-move past a small threshold, then drop on a group.
     in property <bool> is-drag-source: false;
     in property <bool> is-drop-highlight: false;
+    // Keyboard highlight from the session search box (↑/↓), same look as hover.
+    in property <bool> kb-highlight: false;
+    // Fired when the pointer enters this row — welcome clears kb-selected.
+    callback hover-entered();
     callback begin-drag();
     callback update-drag(length /* pointer-abs-y */);
     callback finish-drag(bool /* did-move */);
@@ -215,7 +219,7 @@ component SessionRow inherits Rectangle {
     border-radius: Theme.radius-sm;
     background: root.is-drag-source ? Theme.bg-active
         : (root.is-drop-highlight ? Theme.accent.with-alpha(0.12)
-        : (touch.has-hover ? Theme.bg-hover : transparent));
+        : (touch.has-hover || root.kb-highlight ? Theme.bg-hover : transparent));
     clip: true;
     animate background { duration: 120ms; }
 
@@ -274,6 +278,13 @@ component SessionRow inherits Rectangle {
                     root.update-drag(self.absolute-position.y + self.mouse-y);
                 }
             }
+        }
+    }
+
+    property <bool> row-hovered: touch.has-hover;
+    changed row-hovered => {
+        if (root.row-hovered) {
+            root.hover-entered();
         }
     }
 
@@ -621,6 +632,64 @@ export component Welcome inherits Rectangle {
     // Global ⌘/Ctrl+F bumps this so the visible search field grabs focus.
     in property <int> search-focus-seq: 0;
 
+    // Keyboard navigation while the session search box has focus: ↑/↓ move
+    // through visible group headers and sessions; Enter connects or toggles.
+    // The welcome model only emits visible rows (collapsed children are omitted),
+    // so indices map 1:1 to on-screen items — same pattern as history ↑/↓.
+    property <int> kb-selected: -1;
+
+    pure function row-is-session(i: int) -> bool {
+        return i >= 0 && i < root.sessions.length
+            && root.sessions[i].id != ""
+            && root.sessions[i].id != "__group__"
+            && !root.sessions[i].collapsed;
+    }
+
+    pure function row-is-group(i: int) -> bool {
+        return i >= 0 && i < root.sessions.length
+            && root.sessions[i].group-header != "";
+    }
+
+    function move-kb-selection(dir: int) {
+        if (root.sessions.length == 0) {
+            root.kb-selected = -1;
+            return;
+        }
+        if (root.kb-selected >= root.sessions.length) {
+            root.kb-selected = -1;
+        }
+        if (root.kb-selected < 0) {
+            root.kb-selected = dir > 0 ? 0 : root.sessions.length - 1;
+            return;
+        }
+        if (dir > 0) {
+            root.kb-selected = root.kb-selected >= root.sessions.length - 1
+                ? 0
+                : root.kb-selected + 1;
+        } else {
+            root.kb-selected = root.kb-selected <= 0
+                ? root.sessions.length - 1
+                : root.kb-selected - 1;
+        }
+    }
+
+    // Returns true when Enter should be consumed (connected / toggled).
+    function activate-kb-selection() -> bool {
+        if (root.kb-selected < 0 || root.kb-selected >= root.sessions.length) {
+            return false;
+        }
+        // Prefer connect when the row also shows a session (legacy combined rows).
+        if (root.row-is-session(root.kb-selected)) {
+            root.connect-session(root.sessions[root.kb-selected].id);
+            return true;
+        }
+        if (root.row-is-group(root.kb-selected)) {
+            root.toggle-group(root.sessions[root.kb-selected].group);
+            return true;
+        }
+        return false;
+    }
+
     background: Theme.bg-root;
 
     // Global ⌘/Ctrl+F is captured at AppWindow; this FocusScope keeps Ctrl+Tab
@@ -736,9 +805,36 @@ export component Welcome inherits Rectangle {
                                 leading-icon: "\u{E8B6}";
                                 text <=> root.session-search;
                                 placeholder: @tr("Search sessions");
-                                edited => { root.search-sessions(self.text); }
+                                edited => {
+                                    root.kb-selected = -1;
+                                    root.search-sessions(self.text);
+                                }
                                 accepted(text) => { root.new-session(text, true); }
                                 focus-request: root.search-focus-seq;
+                                changed has-focus => {
+                                    if (!self.has-focus) {
+                                        root.kb-selected = -1;
+                                    }
+                                }
+                                // ↑/↓ highlight list rows; Enter connects / toggles when
+                                // something is selected, otherwise falls through to accepted.
+                                key-pressed(e) => {
+                                    if (e.text == Key.UpArrow) {
+                                        root.move-kb-selection(-1);
+                                        accept
+                                    } else if (e.text == Key.DownArrow) {
+                                        root.move-kb-selection(1);
+                                        accept
+                                    } else if (e.text == Key.Return) {
+                                        if (root.activate-kb-selection()) {
+                                            accept
+                                        } else {
+                                            reject
+                                        }
+                                    } else {
+                                        reject
+                                    }
+                                }
                             }
 
                             if !root.compact: PrimaryButton {
@@ -758,9 +854,34 @@ export component Welcome inherits Rectangle {
                             leading-icon: "\u{E8B6}";
                             text <=> root.session-search;
                             placeholder: @tr("Search sessions");
-                            edited => { root.search-sessions(self.text); }
+                            edited => {
+                                root.kb-selected = -1;
+                                root.search-sessions(self.text);
+                            }
                             accepted(text) => { root.new-session(text, true); }
                             focus-request: root.search-focus-seq;
+                            changed has-focus => {
+                                if (!self.has-focus) {
+                                    root.kb-selected = -1;
+                                }
+                            }
+                            key-pressed(e) => {
+                                if (e.text == Key.UpArrow) {
+                                    root.move-kb-selection(-1);
+                                    accept
+                                } else if (e.text == Key.DownArrow) {
+                                    root.move-kb-selection(1);
+                                    accept
+                                } else if (e.text == Key.Return) {
+                                    if (root.activate-kb-selection()) {
+                                        accept
+                                    } else {
+                                        reject
+                                    }
+                                } else {
+                                    reject
+                                }
+                            }
                         }
 
                         PrimaryButton {
@@ -832,7 +953,7 @@ export component Welcome inherits Rectangle {
                                         ? Theme.bg-active
                                         : (root.welcome-drag-kind != "" && root.welcome-drop-target == session.group
                                             ? Theme.accent.with-alpha(0.12)
-                                            : (grp-ta.has-hover ? Theme.bg-hover : transparent));
+                                            : (grp-ta.has-hover || i == root.kb-selected ? Theme.bg-hover : transparent));
                                     clip: true;
                                     animate background { duration: 120ms; }
 
@@ -907,6 +1028,11 @@ export component Welcome inherits Rectangle {
                                     grp-ta := TouchArea {
                                         mouse-cursor: root.welcome-drag-kind == "group" && root.welcome-drag-from == session.group
                                             ? grabbing : (grp-pressing ? grab : pointer);
+                                        changed has-hover => {
+                                            if (self.has-hover) {
+                                                root.kb-selected = -1;
+                                            }
+                                        }
                                         // Left-click toggles collapse (any group, incl.
                                         // empty); right-click opens the group menu;
                                         // press-move re-parents the group.
@@ -1277,6 +1403,8 @@ export component Welcome inherits Rectangle {
                                     is-drop-highlight: root.welcome-drag-kind != ""
                                         && root.welcome-drop-target == session.group
                                         && session.group == "";
+                                    kb-highlight: i == root.kb-selected;
+                                    hover-entered => { root.kb-selected = -1; }
                                     connect => { root.connect-session(session.id); }
                                     edit => { root.edit-session(session.id); }
                                     duplicate => { root.duplicate-session(session.id); }
