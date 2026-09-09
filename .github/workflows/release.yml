@@ -38,12 +38,14 @@ jobs:
           ' Cargo.lock)"
           if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
             echo "Tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${CARGO_VERSION}."
-            echo "Run: pwsh ./scripts/release.ps1 ${GITHUB_REF_NAME}"
+            echo "Run: pwsh ./scripts/release.ps1 ${GITHUB_REF_NAME} -Remote <github-remote>"
+            echo "  or: ./scripts/release.sh ${GITHUB_REF_NAME} --remote <github-remote>"
             exit 1
           fi
           if [ "$TAG_VERSION" != "$LOCK_VERSION" ]; then
             echo "Tag ${GITHUB_REF_NAME} does not match Cargo.lock zinterm version ${LOCK_VERSION}."
-            echo "Run: pwsh ./scripts/release.ps1 ${GITHUB_REF_NAME}"
+            echo "Run: pwsh ./scripts/release.ps1 ${GITHUB_REF_NAME} -Remote <github-remote>"
+            echo "  or: ./scripts/release.sh ${GITHUB_REF_NAME} --remote <github-remote>"
             exit 1
           fi
 

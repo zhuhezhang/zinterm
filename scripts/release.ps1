@@ -1,20 +1,24 @@
 # windows powershell script to release a new version of zinterm
 #
-# When you run something like .\scripts\release.ps1 v1.2.3 -Push, the script:
+# When you run something like .\scripts\release.ps1 v1.2.3 -Push -Remote zinterm_github, the script:
 # - Ensures a clean git tree and that the tag doesn’t already exist
 # - Updates the version in Cargo.toml / Cargo.lock to 1.2.3
 # - Verifies with cargo check and cargo run -- --version
 # - Creates a commit and annotated tag v1.2.3
-# - If -Push is set, pushes the branch and tag
+# - If -Push is set, pushes the branch and tag to -Remote
 #
 # Usage: .\scripts\release.ps1 v1.2.3  # annotated tag
-# Usage: .\scripts\release.ps1 v1.2.3 -Push  # annotated tag and push
-# Usage: .\scripts\release.ps1 v1.2.3 -DryRun  # print actions only, no real modifications
+# Usage: .\scripts\release.ps1 v1.2.3 -Push -Remote zinterm_github  # annotated tag and push
+# Usage: .\scripts\release.ps1 v1.2.3 -DryRun                       # print actions only, no real modifications
 
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [ValidatePattern('^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')]
     [string] $Tag,               # Required; must look like v1.2.3 or v1.2.3-rc.1
+
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string] $Remote,            # Required; git remote name to push to (e.g. origin, zinterm_github)
 
     [switch] $Push,              # Optional; if set -Push, pushes the branch and tag
     [switch] $DryRun             # Optional; if set -DryRun, print actions only, no real modifications
@@ -96,6 +100,11 @@ if ($existingTag) {
     throw "Tag '$Tag' already exists."
 }
 
+& git remote get-url $Remote | Out-Null                                 # Fail early if the named remote is missing.
+if ($LASTEXITCODE -ne 0) {
+    throw "Git remote '$Remote' does not exist."
+}
+
 $version = $Tag.Substring(1)                                            # Extract version from tag, e.g. v1.2.3 → 1.2.3
 $cargoTomlPath = Join-Path $repoRoot "Cargo.toml"                       # Build full paths to Cargo manifests.
 $cargoLockPath = Join-Path $repoRoot "Cargo.lock"
@@ -142,11 +151,11 @@ Run-Git -GitArgs @("add", "Cargo.toml", "Cargo.lock")        # Stage the modifie
 Run-Git -GitArgs @("commit", "-m", "Release $Tag")           # Commit the release with a message
 Run-Git -GitArgs @("tag", "-a", $Tag, "-m", "Release $Tag")  # Annotate the commit with a tag
 
-if ($Push) {  # With -Push: push current branch and tag to origin.
-    Run-Git -GitArgs @("push", "origin", "HEAD")
-    Run-Git -GitArgs @("push", "origin", $Tag)
-    Write-Host "Released $Tag and pushed branch + tag."
+if ($Push) {  # With -Push: push current branch and tag to $Remote.
+    Run-Git -GitArgs @("push", $Remote, "HEAD")
+    Run-Git -GitArgs @("push", $Remote, $Tag)
+    Write-Host "Released $Tag and pushed branch + tag to '$Remote'."
 } else {      # Without -Push: local only; print the manual push commands.
     Write-Host "Created release commit and tag $Tag."
-    Write-Host "Push with: git push origin HEAD && git push origin $Tag"
+    Write-Host "Push with: git push $Remote HEAD && git push $Remote $Tag"
 }

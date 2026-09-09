@@ -227,10 +227,19 @@ zinterm/
 ## Release
 
 Use the release helper so the tag points at a commit whose Cargo package version
-matches the tag.
+matches the tag. Pass the git remote with `-Remote` / `--remote` (it may not be
+`origin`).
+
+Windows (PowerShell):
 
 ```powershell
-.\scripts\release.ps1 v0.6.0 -Push
+.\scripts\release.ps1 v0.6.0 -Push -Remote zinterm_github
+```
+
+macOS / Linux:
+
+```bash
+./scripts/release.sh v0.6.0 --push --remote zinterm_github
 ```
 
 The script:
@@ -241,14 +250,22 @@ The script:
 - verifies that `zinterm --version` matches the tag
 - commits the version bump
 - creates an annotated tag
-- pushes the current branch and tag when `-Push` is passed
+- pushes the current branch and tag to the given remote when `-Push` / `--push` is passed
 
 To prepare the commit and tag without pushing:
 
 ```powershell
-.\scripts\release.ps1 v0.6.0
-git push origin HEAD
-git push origin v0.6.0
+# Windows
+.\scripts\release.ps1 v0.6.0 -Remote zinterm_github
+git push zinterm_github HEAD
+git push zinterm_github v0.6.0
+```
+
+```bash
+# macOS / Linux
+./scripts/release.sh v0.6.0 --remote zinterm_github
+git push zinterm_github HEAD
+git push zinterm_github v0.6.0
 ```
 
 The release workflow also checks pushed tags. A tag named `v0.6.0` must match

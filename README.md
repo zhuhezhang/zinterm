@@ -217,9 +217,18 @@ zinterm/
 ## 发版
 
 使用发布脚本，让 Git tag 指向的提交本身就已经包含匹配的 Cargo 版本号。
+远程名通过 `-Remote` / `--remote` 传入（不一定是 `origin`）。
+
+Windows（PowerShell）：
 
 ```powershell
-.\scripts\release.ps1 v0.6.0 -Push
+.\scripts\release.ps1 v0.6.0 -Push -Remote zinterm_github
+```
+
+macOS / Linux：
+
+```bash
+./scripts/release.sh v0.6.0 --push --remote zinterm_github
 ```
 
 脚本会：
@@ -230,14 +239,22 @@ zinterm/
 - 验证 `zinterm --version` 输出匹配 tag
 - 提交版本号变更
 - 创建 annotated tag
-- 传入 `-Push` 时推送当前分支和 tag
+- 传入 `-Push` / `--push` 时推送到指定远程的当前分支和 tag
 
 如果想先在本地创建提交和 tag，不立即推送：
 
 ```powershell
-.\scripts\release.ps1 v0.6.0
-git push origin HEAD
-git push origin v0.6.0
+# Windows
+.\scripts\release.ps1 v0.6.0 -Remote zinterm_github
+git push zinterm_github HEAD
+git push zinterm_github v0.6.0
+```
+
+```bash
+# macOS / Linux
+./scripts/release.sh v0.6.0 --remote zinterm_github
+git push zinterm_github HEAD
+git push zinterm_github v0.6.0
 ```
 
 Release workflow 也会检查推送上来的 tag。比如 tag 名是 `v0.6.0` 时，
