@@ -216,13 +216,33 @@ zinterm/
 
 ## 发版
 
-不要直接手动修改 `Cargo.toml` 后再打标签。使用发布脚本，让 Git tag 指向的提交本身就已经包含正确版本号：
+使用发布脚本，让 Git tag 指向的提交本身就已经包含匹配的 Cargo 版本号。
 
 ```powershell
 .\scripts\release.ps1 v0.6.0 -Push
 ```
 
-脚本会更新 `Cargo.toml` / `Cargo.lock`，运行 `cargo check --locked`，验证 `zinterm --version`，提交 `Release v0.6.0`，创建 annotated tag，并推送当前分支和 tag。更多细节见 [docs/release.md](docs/release.md)。
+脚本会：
+
+- 要求已跟踪文件没有未提交改动
+- 更新 `Cargo.toml` 和 `Cargo.lock` 里的 `zinterm` 版本号
+- 运行 `cargo check --locked`
+- 验证 `zinterm --version` 输出匹配 tag
+- 提交版本号变更
+- 创建 annotated tag
+- 传入 `-Push` 时推送当前分支和 tag
+
+如果想先在本地创建提交和 tag，不立即推送：
+
+```powershell
+.\scripts\release.ps1 v0.6.0
+git push origin HEAD
+git push origin v0.6.0
+```
+
+Release workflow 也会检查推送上来的 tag。比如 tag 名是 `v0.6.0` 时，
+`Cargo.toml`、`Cargo.lock` 和构建出的 `zinterm --version` 都必须是
+`0.6.0`，否则 workflow 会在发布前失败。
 
 ## License
 

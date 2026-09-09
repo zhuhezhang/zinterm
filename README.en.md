@@ -226,17 +226,34 @@ zinterm/
 
 ## Release
 
-Do not bump `Cargo.toml` by hand and then create a tag. Use the release helper
-so the tag points at a commit that already contains the matching Cargo version:
+Use the release helper so the tag points at a commit whose Cargo package version
+matches the tag.
 
 ```powershell
 .\scripts\release.ps1 v0.6.0 -Push
 ```
 
-The script updates `Cargo.toml` / `Cargo.lock`, runs `cargo check --locked`,
-verifies `zinterm --version`, commits `Release v0.6.0`, creates an annotated
-tag, and pushes the current branch plus the tag. See
-[docs/release.md](docs/release.md) for details.
+The script:
+
+- requires no uncommitted tracked-file changes
+- updates `Cargo.toml` and the `zinterm` entry in `Cargo.lock`
+- runs `cargo check --locked`
+- verifies that `zinterm --version` matches the tag
+- commits the version bump
+- creates an annotated tag
+- pushes the current branch and tag when `-Push` is passed
+
+To prepare the commit and tag without pushing:
+
+```powershell
+.\scripts\release.ps1 v0.6.0
+git push origin HEAD
+git push origin v0.6.0
+```
+
+The release workflow also checks pushed tags. A tag named `v0.6.0` must match
+`Cargo.toml`, `Cargo.lock`, and the built `zinterm --version` output,
+otherwise the workflow fails before publishing.
 
 ## License
 
