@@ -1,9 +1,11 @@
+mod algorithm_preferences;
 mod config_file;
 mod config_store;
 mod quick_command;
 mod secret;
 mod session;
 
+pub(crate) use algorithm_preferences::*;
 pub(crate) use config_file::*;
 pub(crate) use config_store::*;
 pub(crate) use quick_command::*;

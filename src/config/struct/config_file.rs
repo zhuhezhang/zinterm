@@ -231,6 +231,10 @@ pub struct ConfigFile {
     /// Some older H3C/VRP stacks drop the TCP session when this is enabled.
     #[serde(default)]
     pub ssh_keepalive_secs: u32,
+    /// Preferred SSH/SFTP algorithm lists (KEX, host key, cipher, MAC, compress).
+    /// Applied to new connections; missing config uses the built-in COMPAT set.
+    #[serde(default)]
+    pub algorithm_preferences: crate::config::AlgorithmPreferences,
     /// Persist passwords / key passphrases / private-key paths / pasted private
     /// keys into the OS-keyring vault (`zinterm-credentials-vault.json`).
     /// Default off. Turning this off does **not** wipe credentials already

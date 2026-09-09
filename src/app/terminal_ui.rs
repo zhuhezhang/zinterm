@@ -168,6 +168,24 @@ pub(super) fn output_highlight_rule_model(store: &ConfigStore) -> ModelRc<Output
     ModelRc::from(Rc::new(VecModel::from(rows)))
 }
 
+pub(super) fn ssh_algorithm_row_model(
+    prefs: &crate::config::AlgorithmPreferences,
+    category_key: &str,
+) -> ModelRc<AlgorithmOptionRow> {
+    let category = AlgorithmCategory::from_str_key(category_key).unwrap_or(AlgorithmCategory::Kex);
+    let rows: Vec<AlgorithmOptionRow> = crate::ssh::algorithm_rows(prefs, category)
+        .into_iter()
+        .map(|row| AlgorithmOptionRow {
+            name: row.name.into(),
+            checked: row.checked,
+            weak: row.weak,
+            can_move_up: row.can_move_up,
+            can_move_down: row.can_move_down,
+        })
+        .collect();
+    ModelRc::from(Rc::new(VecModel::from(rows)))
+}
+
 pub(super) fn parse_hex_color(value: &str) -> Option<slint::Color> {
     let digits = value.trim().strip_prefix('#').unwrap_or(value.trim());
     if digits.len() != 6 || !digits.bytes().all(|byte| byte.is_ascii_hexdigit()) {

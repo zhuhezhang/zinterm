@@ -17,9 +17,10 @@ use russh::keys::{
 use russh::{ChannelMsg, Disconnect};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
-use crate::config::{AuthMethod, Session};
+use crate::config::{AlgorithmPreferences, AuthMethod, Session};
 use crate::i18n::t;
 
+use super::algorithms::{sanitize_algorithm_preferences, to_preferred};
 use super::structs::*;
 
 // ---------------------------------------------------------------------------
@@ -489,6 +490,7 @@ pub fn spawn_session(
     initial_cols: u32,
     initial_rows: u32,
     keepalive_secs: u32,
+    algorithms: AlgorithmPreferences,
 ) -> (SessionHandle, UnboundedReceiver<SessionEvent>) {
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<SessionCommand>();
     let (evt_tx, evt_rx) = mpsc::unbounded_channel::<SessionEvent>();
@@ -502,6 +504,7 @@ pub fn spawn_session(
             initial_cols,
             initial_rows,
             keepalive_secs,
+            algorithms,
         )
         .await
         {
@@ -525,9 +528,10 @@ async fn connect_ssh_handshake(
     session: &Session,
     events: &UnboundedSender<SessionEvent>,
     keepalive_secs: u32,
+    algorithms: &AlgorithmPreferences,
 ) -> Result<(Handle<ClientHandler>, Arc<client::Config>)> {
     let addr = format!("{}:{}", session.host, session.port);
-    connect_transport(&addr, keepalive_secs, || client_handler(session, events)).await
+    connect_transport(&addr, keepalive_secs, algorithms, || client_handler(session, events)).await
 }
 
 fn client_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> ClientHandler {
@@ -538,23 +542,25 @@ fn client_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> 
     }
 }
 
-/// Connect with the modern algorithm set, then retry once with a compact
-/// RFC-only profile. Old H3C/Huawei VRP SSH stacks (S3100 / VRP-3.3) drop the
-/// TCP session when the client's KEXINIT lists `@openssh.com` names or is
-/// simply too long — russh surfaces that as `Disconnected`.
+/// Connect with the configured algorithm set, then optionally retry once with a
+/// compact RFC-only profile. Legacy retry runs only when preferences are still
+/// the built-in default — custom lists are applied strictly.
 pub(crate) async fn connect_transport<H, F>(
     addr: &str,
     keepalive_secs: u32,
+    algorithms: &AlgorithmPreferences,
     make_handler: F,
 ) -> Result<(Handle<H>, Arc<client::Config>)>
 where
     H: Handler<Error = russh::Error> + Send + 'static,
     F: Fn() -> H,
 {
-    let modern = ssh_client_config(keepalive_secs);
+    let algorithms = sanitize_algorithm_preferences(algorithms);
+    let allow_legacy = algorithms.is_builtin_default();
+    let modern = ssh_client_config_with_algorithms(keepalive_secs, &algorithms);
     match client::connect(modern.clone(), addr, make_handler()).await {
         Ok(handle) => Ok((handle, modern)),
-        Err(err) if should_retry_legacy(&err) => {
+        Err(err) if allow_legacy && should_retry_legacy(&err) => {
             tracing::info!(
                 "ssh handshake failed ({err}); retrying {addr} with compact legacy algorithms"
             );
@@ -641,44 +647,6 @@ pub(crate) async fn authenticate_session(
     }
 }
 
-// Key-exchange algorithms offered to the server, strongest first. This is the
-// russh default set PLUS the ecdh-sha2-nistp* curves and the legacy
-// diffie-hellman-group{14,1}-sha1 exchanges appended as last-resort fallbacks, so
-// we can still reach old servers / network gear that only speak SHA-1 KEX and
-// otherwise fail with "No common algorithm" (#172). Modern servers still pick a
-// strong algorithm because the client's order decides and SHA-1 is last.
-//
-// Only *client* extension markers are advertised. russh's default also lists the
-// server-side `ext-info-s` / `kex-strict-s` names, which a client must not send
-// (https://github.com/Eugeny/russh/issues/611) and which crash some old parsers.
-pub(crate) const COMPAT_KEX: &[russh::kex::Name] = &[
-    russh::kex::CURVE25519,
-    russh::kex::CURVE25519_PRE_RFC_8731,
-    russh::kex::DH_G16_SHA512,
-    russh::kex::DH_G14_SHA256,
-    russh::kex::ECDH_SHA2_NISTP256,
-    russh::kex::ECDH_SHA2_NISTP384,
-    russh::kex::ECDH_SHA2_NISTP521,
-    russh::kex::DH_G14_SHA1, // legacy fallback
-    russh::kex::DH_G1_SHA1,  // legacy fallback
-    russh::kex::EXTENSION_SUPPORT_AS_CLIENT,
-    russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT,
-];
-
-// Ciphers offered to the server, strongest first: russh's AEAD/CTR defaults plus
-// the legacy CBC ciphers appended for old servers that only support CBC (#172).
-pub(crate) const COMPAT_CIPHER: &[russh::cipher::Name] = &[
-    russh::cipher::CHACHA20_POLY1305,
-    russh::cipher::AES_256_GCM,
-    russh::cipher::AES_256_CTR,
-    russh::cipher::AES_192_CTR,
-    russh::cipher::AES_128_CTR,
-    russh::cipher::AES_256_CBC,    // legacy fallback
-    russh::cipher::AES_192_CBC,    // legacy fallback
-    russh::cipher::AES_128_CBC,    // legacy fallback
-    russh::cipher::TRIPLE_DES_CBC, // legacy fallback
-];
-
 // Compact RFC-only set for ancient SSH2 stacks (H3C S3100 / Huawei VRP-3.3).
 // Those daemons often abort when the KEXINIT lists `@openssh.com` names or is
 // larger than their fixed parse buffer. Used only as a second-attempt fallback.
@@ -692,8 +660,11 @@ pub(crate) const LEGACY_CIPHER: &[russh::cipher::Name] = &[
     russh::cipher::AES_128_CTR,
 ];
 
-pub(crate) const LEGACY_MAC: &[russh::mac::Name] =
-    &[russh::mac::HMAC_SHA1, russh::mac::HMAC_SHA256];
+pub(crate) const LEGACY_MAC: &[russh::mac::Name] = &[
+    russh::mac::HMAC_SHA1,
+    russh::mac::HMAC_MD5,
+    russh::mac::HMAC_SHA256,
+];
 
 pub(crate) const LEGACY_KEY: &[Algorithm] = &[
     Algorithm::Rsa { hash: None },
@@ -738,16 +709,11 @@ fn is_compact_legacy_config(config: &client::Config) -> bool {
     std::ptr::eq(config.preferred.kex.as_ref(), LEGACY_KEX)
 }
 
-pub(crate) fn ssh_client_config(keepalive_secs: u32) -> Arc<client::Config> {
-    ssh_config_with_preferred(
-        russh::Preferred {
-            kex: Cow::Borrowed(COMPAT_KEX),
-            cipher: Cow::Borrowed(COMPAT_CIPHER),
-            ..russh::Preferred::DEFAULT
-        },
-        false,
-        keepalive_secs,
-    )
+pub(crate) fn ssh_client_config_with_algorithms(
+    keepalive_secs: u32,
+    algorithms: &AlgorithmPreferences,
+) -> Arc<client::Config> {
+    ssh_config_with_preferred(to_preferred(algorithms), false, keepalive_secs)
 }
 
 pub(crate) fn ssh_legacy_client_config(keepalive_secs: u32) -> Arc<client::Config> {
@@ -771,6 +737,7 @@ async fn run_session(
     initial_cols: u32,
     initial_rows: u32,
     keepalive_secs: u32,
+    algorithms: AlgorithmPreferences,
 ) -> Result<()> {
     let session_started = std::time::Instant::now();
     let _ = events.send(SessionEvent::Status(format!(
@@ -782,7 +749,7 @@ async fn run_session(
     )));
 
     let (mut handle, config) =
-        connect_ssh_handshake(&session, &events, keepalive_secs).await?;
+        connect_ssh_handshake(&session, &events, keepalive_secs, &algorithms).await?;
     tracing::info!(
         "[SESSION_START] id={} stage=transport-ready elapsed_ms={}",
         session.id,
@@ -843,7 +810,7 @@ async fn run_session(
             );
             let _ = handle.disconnect(Disconnect::ByApplication, "", "").await;
             let (new_handle, _) =
-                connect_ssh_handshake(&session, &events, keepalive_secs).await?;
+                connect_ssh_handshake(&session, &events, keepalive_secs, &algorithms).await?;
             handle = new_handle;
             match authenticate_session(&mut handle, &session, &events).await? {
                 AuthResult::Success => {}
@@ -1497,11 +1464,55 @@ mod expand_user_path_tests {
 }
 
 #[cfg(test)]
-mod legacy_ssh_compat_tests {
+pub(crate) mod legacy_ssh_compat_tests {
+    use std::sync::Arc;
+
+    use russh::client;
+
+    use crate::config::AlgorithmPreferences;
+
     use super::{
-        is_compact_legacy_config, should_retry_legacy, ssh_client_config, ssh_legacy_client_config,
-        COMPAT_KEX, LEGACY_CIPHER, LEGACY_KEX, LEGACY_MAC,
+        is_compact_legacy_config, should_retry_legacy, ssh_client_config_with_algorithms,
+        ssh_legacy_client_config, LEGACY_CIPHER, LEGACY_KEX, LEGACY_MAC,
     };
+
+    // Reference preferred sets (must stay in sync with
+    // AlgorithmPreferences::builtin_default / algorithms catalog defaults).
+    // Runtime code builds Preferred via to_preferred().
+    //
+    // Key-exchange: russh defaults PLUS ecdh-sha2-nistp* and legacy
+    // diffie-hellman-group{14,1}-sha1 last (#172). Only *client* extension
+    // markers (https://github.com/Eugeny/russh/issues/611).
+    pub(crate) const COMPAT_KEX: &[russh::kex::Name] = &[
+        russh::kex::CURVE25519,
+        russh::kex::CURVE25519_PRE_RFC_8731,
+        russh::kex::DH_G16_SHA512,
+        russh::kex::DH_G14_SHA256,
+        russh::kex::ECDH_SHA2_NISTP256,
+        russh::kex::ECDH_SHA2_NISTP384,
+        russh::kex::ECDH_SHA2_NISTP521,
+        russh::kex::DH_G14_SHA1, // legacy fallback
+        russh::kex::DH_G1_SHA1,  // legacy fallback
+        russh::kex::EXTENSION_SUPPORT_AS_CLIENT,
+        russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT,
+    ];
+
+    // Ciphers: AEAD/CTR defaults plus legacy CBC for old servers (#172).
+    pub(crate) const COMPAT_CIPHER: &[russh::cipher::Name] = &[
+        russh::cipher::CHACHA20_POLY1305,
+        russh::cipher::AES_256_GCM,
+        russh::cipher::AES_256_CTR,
+        russh::cipher::AES_192_CTR,
+        russh::cipher::AES_128_CTR,
+        russh::cipher::AES_256_CBC,    // legacy fallback
+        russh::cipher::AES_192_CBC,    // legacy fallback
+        russh::cipher::AES_128_CBC,    // legacy fallback
+        russh::cipher::TRIPLE_DES_CBC, // legacy fallback
+    ];
+
+    fn ssh_client_config(keepalive_secs: u32) -> Arc<client::Config> {
+        ssh_client_config_with_algorithms(keepalive_secs, &AlgorithmPreferences::builtin_default())
+    }
 
     fn has_at(name: impl AsRef<str>) -> bool {
         name.as_ref().contains('@')

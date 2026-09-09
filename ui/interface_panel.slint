@@ -21,6 +21,14 @@ export struct OutputRuleItem {
     enabled: bool,
 }
 
+export struct AlgorithmOptionRow {
+    name: string,
+    checked: bool,
+    weak: bool,
+    can-move-up: bool,
+    can-move-down: bool,
+}
+
 // One left-nav row (icon + label).
 component NavItem inherits Rectangle {
     in property <string> icon;
@@ -612,6 +620,8 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> quick-commands-as-sidebar;
     in-out property <bool> update-check-enabled: false;
     in-out property <int> ssh-keepalive-secs: 0;
+    in-out property <string> ssh-algorithm-category: "kex";
+    in property <[AlgorithmOptionRow]> ssh-algorithm-rows;
     in-out property <bool> save-passwords: false;
     in-out property <bool> credentials-vault-available: true;
     in-out property <float> wallpaper-overlay;   // frosted-panel opacity 0.30-1.00
@@ -719,6 +729,11 @@ export component InterfacePanel inherits Rectangle {
     callback set-quick-commands-as-sidebar(bool);
     callback set-update-check-enabled(bool);   // startup new-version check (#184)
     callback set-ssh-keepalive-secs(int);
+    callback set-ssh-algorithm-category(string);
+    callback toggle-ssh-algorithm(string);
+    callback move-ssh-algorithm(string, int);
+    callback reset-ssh-algorithm-section();
+    callback reset-ssh-algorithms();
     callback set-language(string);             // "auto" / "zh" / "en"
     callback persist-wallpaper-overlay(float);   // save the overlay opacity
     callback set-wallpaper(string);    // none / builtin selection
@@ -884,7 +899,8 @@ export component InterfacePanel inherits Rectangle {
                         SettingRow {
                             label: root.lang-en ? "Terminal font" : "终端字体";
                             ComboBox {
-                                width: 220px;
+                                width: 150px;
+                                height: 30px;
                                 model: root.term-fonts;
                                 current-value: root.term-font-family;
                                 selected(v) => { root.set-term-font(v); }
@@ -1109,6 +1125,7 @@ export component InterfacePanel inherits Rectangle {
                             show-divider: false;
                             ComboBox {
                                 width: 150px;
+                                height: 30px;
                                 model: Theme.is-mac
                                     ? ["CPU", "FemtoVG", "Skia"]
                                     : (root.lang-en
@@ -1215,7 +1232,8 @@ export component InterfacePanel inherits Rectangle {
                                 : "日志级别更保守；DevOps 还识别部署与健康状态。";
                             show-divider: false;
                             ComboBox {
-                                width: 190px;
+                                width: 150px;
+                                height: 30px;
                                 enabled: root.output-highlight-enabled;
                                 model: [root.lang-en ? "Log levels" : "日志级别", "DevOps"];
                                 current-value: root.output-highlight-preset == "devops"
@@ -1877,6 +1895,156 @@ export component InterfacePanel inherits Rectangle {
                         }
 
                         SectionHeader {
+                            text: root.lang-en ? "SSH ALGORITHMS" : "SSH 算法";
+                        }
+
+                        SettingHint {
+                            text: root.lang-en
+                                ? "Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections."
+                                : "勾选要协商的算法（顺序即优先级）。保持内置默认时，会对极老设备自动尝试精简兼容配置；自定义后严格按所选列表协商。对新连接生效。";
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Category" : "算法类别";
+                            desc: root.lang-en
+                                ? "Key exchange, host key, cipher, MAC, or compression."
+                                : "密钥交换、主机密钥、加密、消息认证码或压缩。";
+                            ComboBox {
+                                width: 150px;
+                                height: 30px;
+                                model: root.lang-en
+                                    ? ["Key exchange", "Host key", "Cipher", "MAC", "Compression"]
+                                    : ["密钥交换", "主机密钥", "加密算法", "消息认证码", "压缩算法"];
+                                current-index: root.ssh-algorithm-category == "serverHostKey" ? 1
+                                    : (root.ssh-algorithm-category == "cipher" ? 2
+                                    : (root.ssh-algorithm-category == "hmac" ? 3
+                                    : (root.ssh-algorithm-category == "compress" ? 4 : 0)));
+                                selected(v) => {
+                                    root.ssh-algorithm-category = v == "Host key" || v == "主机密钥" ? "serverHostKey"
+                                        : (v == "Cipher" || v == "加密算法" ? "cipher"
+                                        : (v == "MAC" || v == "消息认证码" ? "hmac"
+                                        : (v == "Compression" || v == "压缩算法" ? "compress" : "kex")));
+                                    root.set-ssh-algorithm-category(root.ssh-algorithm-category);
+                                }
+                            }
+                        }
+
+                        SettingRow {
+                            label: root.lang-en ? "Reset" : "重置";
+                            desc: root.lang-en
+                                ? "Restore this category or every algorithm list to the built-in defaults."
+                                : "将当前类别或全部算法恢复为内置默认。";
+                            show-divider: false;
+                            HorizontalLayout {
+                                spacing: 8px;
+                                GhostButton {
+                                    text: root.lang-en ? "This category" : "当前类别";
+                                    clicked => { root.reset-ssh-algorithm-section(); }
+                                }
+                                GhostButton {
+                                    text: root.lang-en ? "All defaults" : "全部默认";
+                                    clicked => { root.reset-ssh-algorithms(); }
+                                }
+                            }
+                        }
+
+                        for algo[index] in root.ssh-algorithm-rows: Rectangle {
+                            height: 34px * Theme.panel-font;
+                            HorizontalLayout {
+                                spacing: 8px;
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                cross-axis-alignment: center;
+
+                                CompactCheckBox {
+                                    horizontal-stretch: 1;
+                                    text: algo.name;
+                                    checked: algo.checked;
+                                    toggled => { root.toggle-ssh-algorithm(algo.name); }
+                                }
+
+                                if algo.weak: Rectangle {
+                                    border-radius: 4px;
+                                    background: Theme.danger.with-alpha(0.18);
+                                    HorizontalLayout {
+                                        padding-left: 6px;
+                                        padding-right: 6px;
+                                        padding-top: 2px;
+                                        padding-bottom: 2px;
+                                        Text {
+                                            text: root.lang-en ? "weak" : "不安全";
+                                            color: Theme.danger;
+                                            font-size: 10px * Theme.panel-font;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    horizontal-stretch: 1;
+                                }
+
+                                if algo.checked: HorizontalLayout {
+                                    spacing: 4px;
+                                    Rectangle {
+                                        width: 26px;
+                                        height: 26px;
+                                        border-radius: 5px;
+                                        opacity: algo.can-move-up ? 1.0 : 0.35;
+                                        background: up-ta.has-hover && algo.can-move-up ? Theme.bg-hover : transparent;
+                                        up-ta := TouchArea {
+                                            mouse-cursor: algo.can-move-up ? pointer : default;
+                                            clicked => {
+                                                if (algo.can-move-up) {
+                                                    root.move-ssh-algorithm(algo.name, -1);
+                                                }
+                                            }
+                                        }
+                                        Text {
+                                            text: "↑";
+                                            color: Theme.text-secondary;
+                                            font-size: 12px * Theme.panel-font;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: 100%;
+                                            height: 100%;
+                                        }
+                                    }
+                                    Rectangle {
+                                        width: 26px;
+                                        height: 26px;
+                                        border-radius: 5px;
+                                        opacity: algo.can-move-down ? 1.0 : 0.35;
+                                        background: down-ta.has-hover && algo.can-move-down ? Theme.bg-hover : transparent;
+                                        down-ta := TouchArea {
+                                            mouse-cursor: algo.can-move-down ? pointer : default;
+                                            clicked => {
+                                                if (algo.can-move-down) {
+                                                    root.move-ssh-algorithm(algo.name, 1);
+                                                }
+                                            }
+                                        }
+                                        Text {
+                                            text: "↓";
+                                            color: Theme.text-secondary;
+                                            font-size: 12px * Theme.panel-font;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: 100%;
+                                            height: 100%;
+                                        }
+                                    }
+                                }
+                            }
+                            Rectangle {
+                                y: parent.height - 1px;
+                                width: 100%;
+                                height: 1px;
+                                background: Theme.border-subtle;
+                            }
+                        }
+
+                        SectionHeader {
                             text: "SFTP";
                         }
 
@@ -2085,8 +2253,8 @@ export component InterfacePanel inherits Rectangle {
                         SettingRow {
                             label: root.lang-en ? "Restore default settings" : "恢复默认设置";
                             desc: root.lang-en
-                                ? "Reset settings preferences to defaults. Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
-                                : "将设置相关偏好恢复为默认值。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除。";
+                                ? "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
+                                : "将设置相关偏好恢复为默认值（含 SSH/SFTP 算法）。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除。";
                             show-divider: false;
                             PrimaryButton {
                                 text: root.lang-en ? "Restore" : "恢复";
@@ -2114,6 +2282,7 @@ export component InterfacePanel inherits Rectangle {
                             show-divider: false;
                             ComboBox {
                                 width: 150px;
+                                height: 30px;
                                 model: root.lang-en
                                     ? ["Auto", "Chinese", "English"]
                                     : ["自动", "中文", "英文"];

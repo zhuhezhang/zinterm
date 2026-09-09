@@ -161,12 +161,15 @@ pub fn spawn_sftp(
     session: Session,
     events: UnboundedSender<SessionEvent>,
     keepalive_secs: u32,
+    algorithms: crate::config::AlgorithmPreferences,
 ) -> SftpHandle {
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
     let self_tx = cmd_tx.clone();
     let events_err = events.clone();
     let join = runtime.spawn(async move {
-        if let Err(err) = run_sftp(session, cmd_rx, self_tx, events, keepalive_secs).await {
+        if let Err(err) =
+            run_sftp(session, cmd_rx, self_tx, events, keepalive_secs, algorithms).await
+        {
             let _ = events_err.send(SessionEvent::SftpFailed(friendly_sftp_error(&err)));
         }
     });
@@ -253,6 +256,7 @@ async fn run_sftp(
     self_tx: UnboundedSender<SftpCommand>,
     events: UnboundedSender<SessionEvent>,
     keepalive_secs: u32,
+    algorithms: crate::config::AlgorithmPreferences,
 ) -> Result<()> {
     let _ = events.send(SessionEvent::SftpStatus(
         t("SFTP 连接中...", "SFTP connecting...").into(),
@@ -272,11 +276,12 @@ async fn run_sftp(
         session.port,
         Uuid::new_v4()
     ));
-    let (mut handle, _) = crate::ssh::connect_transport(&addr, keepalive_secs, || {
-        sftp_handler(&session, &events)
-    })
-    .await
-    .with_context(|| format!("sftp connect {} failed", addr))?;
+    let (mut handle, _) =
+        crate::ssh::connect_transport(&addr, keepalive_secs, &algorithms, || {
+            sftp_handler(&session, &events)
+        })
+        .await
+        .with_context(|| format!("sftp connect {} failed", addr))?;
 
     // Resolve missing username/secret/key (shares the shell's prompt; the UI
     // de-dupes by tab id so SFTP on the same tab doesn't prompt a second time) (#110).

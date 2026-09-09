@@ -43,6 +43,11 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
     let keepalive_secs = ctx
         .ssh_keepalive_secs
         .load(std::sync::atomic::Ordering::Relaxed);
+    let algorithms = ctx
+        .ssh_algorithm_prefs
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or_else(|_| crate::config::AlgorithmPreferences::builtin_default());
     let (handle, rx) = match session.kind {
         SessionKind::Ssh => spawn_session(
             ctx.runtime.handle(),
@@ -51,6 +56,7 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
             initial_cols,
             initial_rows,
             keepalive_secs,
+            algorithms.clone(),
         ),
         SessionKind::Serial => crate::terminal::serial::spawn_serial_session(
             ctx.runtime.handle(),
@@ -95,6 +101,7 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 session,
                 sftp_tx,
                 keepalive_secs,
+                algorithms,
             );
             if let Ok(mut handles) = sftp_handles.lock() {
                 handles.insert(sftp_tab_id, sftp_handle);

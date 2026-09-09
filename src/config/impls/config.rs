@@ -496,6 +496,11 @@ impl ConfigStore {
                     // (only for items they never changed). (#new-user-defaults)
                     migrated |= migrate_defaults(&mut cfg);
                     migrated |= migrate_output_highlight_rules(&mut cfg);
+                    let sanitized = crate::ssh::sanitize_algorithm_preferences(&cfg.algorithm_preferences);
+                    if sanitized != cfg.algorithm_preferences {
+                        cfg.algorithm_preferences = sanitized;
+                        migrated = true;
+                    }
                     cfg
                 }
                 Err(err) => {
@@ -659,6 +664,7 @@ impl ConfigStore {
         c.panel_font = snap.panel_font;
         c.update_check_disabled = snap.update_check_disabled;
         c.ssh_keepalive_secs = snap.ssh_keepalive_secs;
+        c.algorithm_preferences = snap.algorithm_preferences.clone();
         c.save_passwords = snap.save_passwords;
         // Included so Cancel can undo Restore defaults (deferred until Save).
         c.download_dir = snap.download_dir.clone();
@@ -1403,6 +1409,14 @@ impl ConfigStore {
     pub fn set_ssh_keepalive_secs(&mut self, secs: u32) {
         self.cache.ssh_keepalive_secs = secs.min(SSH_KEEPALIVE_SECS_MAX);
     }
+
+    pub fn algorithm_preferences(&self) -> AlgorithmPreferences {
+        crate::ssh::sanitize_algorithm_preferences(&self.cache.algorithm_preferences)
+    }
+
+    pub fn set_algorithm_preferences(&mut self, prefs: AlgorithmPreferences) {
+        self.cache.algorithm_preferences = crate::ssh::sanitize_algorithm_preferences(&prefs);
+    }
     /// Whether newly entered passwords / key paths / key material may be written
     /// to the credentials vault.
     pub fn save_passwords(&self) -> bool {
@@ -2005,6 +2019,24 @@ mod tests {
 
         store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
         assert_eq!(store.ssh_keepalive_secs(), 0);
+    }
+
+    #[test]
+    fn algorithm_preferences_default_and_sanitize_on_set() {
+        let mut store = temp_store();
+        assert!(store.algorithm_preferences().is_builtin_default());
+
+        let mut prefs = store.algorithm_preferences();
+        prefs.cipher = vec!["nope".into(), "aes128-ctr".into()];
+        store.set_algorithm_preferences(prefs);
+        assert_eq!(
+            store.algorithm_preferences().cipher,
+            vec!["aes128-ctr".to_string()]
+        );
+        assert!(!store.algorithm_preferences().is_builtin_default());
+
+        store.cache = serde_json::from_str("{}").expect("legacy config must deserialize");
+        assert!(store.algorithm_preferences().is_builtin_default());
     }
 
     #[test]

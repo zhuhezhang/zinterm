@@ -35,6 +35,8 @@ pub(crate) struct ConnectCtx {
     pub(crate) sftp_follow_cd: Arc<AtomicBool>,
     /// SSH keepalive interval in seconds. 0 = off. Read when a session starts.
     pub(crate) ssh_keepalive_secs: Arc<AtomicU32>,
+    /// SSH/SFTP algorithm preferences. Cloned when a session starts.
+    pub(crate) ssh_algorithm_prefs: Arc<Mutex<crate::config::AlgorithmPreferences>>,
 }
 
 pub(crate) struct PendingHostKey {

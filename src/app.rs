@@ -141,7 +141,8 @@ use crate::layout::{LogicalRect, TerminalWheelHit};
 use crate::session::{ConnectCtx, PendingCred, PendingHostKey, TabStatus, TabStatuses};
 use crate::sftp::{download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd};
 use crate::ssh::{
-    format_mtime, format_size, spawn_session, SessionCommand, SessionEvent, SessionHandle,
+    format_mtime, format_size, spawn_session, AlgorithmCategory, SessionCommand, SessionEvent,
+    SessionHandle,
 };
 #[cfg(windows)]
 use crate::terminal::c0_letter_key_down;
@@ -622,6 +623,101 @@ pub fn run() -> Result<()> {
             flag.store(secs, std::sync::atomic::Ordering::Relaxed);
             let mut s = store.borrow_mut();
             s.set_ssh_keepalive_secs(secs);
+        });
+    }
+
+    let ssh_algorithm_prefs = Arc::new(std::sync::Mutex::new(
+        store.borrow().algorithm_preferences(),
+    ));
+    window.set_ssh_algorithm_category("kex".into());
+    window.set_ssh_algorithm_rows(ssh_algorithm_row_model(
+        &store.borrow().algorithm_preferences(),
+        "kex",
+    ));
+    {
+        let store = store.clone();
+        let weak = window.as_weak();
+        window.on_set_ssh_algorithm_category(move |cat: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                w.set_ssh_algorithm_category(cat.clone());
+                let current = store.borrow().algorithm_preferences();
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_toggle_ssh_algorithm(move |name: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::toggle_algorithm(&mut current, cat, name.as_str());
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_move_ssh_algorithm(move |name: SharedString, delta: i32| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::move_algorithm(&mut current, cat, name.as_str(), delta);
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_reset_ssh_algorithm_section(move || {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::reset_algorithm_section(&mut current, cat);
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_reset_ssh_algorithms(move || {
+            if let Some(w) = weak.upgrade() {
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::reset_all_algorithms(&mut current);
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                let cat = w.get_ssh_algorithm_category();
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
         });
     }
 
@@ -1273,6 +1369,7 @@ pub fn run() -> Result<()> {
         let bufs = bufs.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
         let tabs_model = tabs_model.clone();
         window.on_restore_settings_defaults(move || {
             {
@@ -1288,6 +1385,7 @@ pub fn run() -> Result<()> {
                 &bufs,
                 &sftp_follow_cd,
                 &ssh_keepalive_secs,
+                &ssh_algorithm_prefs,
                 &tabs_model,
             );
             // Preview only — disk write waits for Save / Save and close.
@@ -1460,6 +1558,7 @@ pub fn run() -> Result<()> {
         tab_statuses.clone(),
         sftp_follow_cd.clone(),
         ssh_keepalive_secs.clone(),
+        ssh_algorithm_prefs.clone(),
     );
 
     // Switch UI language at runtime.  Preference is "auto" / "zh" / "en"
@@ -1517,6 +1616,7 @@ pub fn run() -> Result<()> {
         let bufs = bufs.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
         let tabs_model = tabs_model.clone();
         let layout = layout.clone();
         let content_size = content_size.clone();
@@ -1540,6 +1640,7 @@ pub fn run() -> Result<()> {
                 &bufs,
                 &sftp_follow_cd,
                 &ssh_keepalive_secs,
+                &ssh_algorithm_prefs,
                 &tabs_model,
             );
             let welcome_as_sidebar = store.borrow().welcome_as_sidebar();
@@ -1862,6 +1963,7 @@ pub fn run() -> Result<()> {
             last_term_size: last_term_size.clone(),
             sftp_follow_cd: sftp_follow_cd.clone(),
             ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+            ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
         },
     );
 
@@ -2679,6 +2781,7 @@ fn wire_session_callbacks(
     tab_statuses: TabStatuses,
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: Arc<std::sync::atomic::AtomicU32>,
+    ssh_algorithm_prefs: Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
 ) {
     // New session -> open dialog with blank draft (host prefilled from search Enter).
     let weak = window.as_weak();
@@ -3192,6 +3295,7 @@ fn wire_session_callbacks(
         let sftp_last_cwd = sftp_last_cwd.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
         window.on_session_dialog_submit(move |draft: SessionDraft, persist: bool, connect: bool| {
             let mut new_session = session_from_draft(&draft);
 
@@ -3274,6 +3378,7 @@ fn wire_session_callbacks(
                     last_term_size: last_term_size.clone(),
                     sftp_follow_cd: sftp_follow_cd.clone(),
                     ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+                    ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
                 };
                 open_session_in_new_tab(
                     new_session,
@@ -3364,6 +3469,7 @@ fn wire_session_callbacks(
         let tab_statuses = tab_statuses.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
         let panes_model = panes_model.clone();
         let splitters_model = splitters_model.clone();
         window.on_connect_session(move |id: SharedString| {
@@ -3384,6 +3490,7 @@ fn wire_session_callbacks(
                 last_term_size: last_term_size.clone(),
                 sftp_follow_cd: sftp_follow_cd.clone(),
                 ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+                ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
             };
             open_session_in_new_tab(
                 session,
@@ -3421,6 +3528,7 @@ fn wire_session_callbacks(
         let sftp_last_cwd = sftp_last_cwd.clone();
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
         let panes_model = panes_model.clone();
         let splitters_model = splitters_model.clone();
         window.on_tab_duplicate(move |tab_id: SharedString| {
@@ -3456,6 +3564,7 @@ fn wire_session_callbacks(
                 last_term_size: last_term_size.clone(),
                 sftp_follow_cd: sftp_follow_cd.clone(),
                 ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+                ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
             };
             open_session_in_new_tab(
                 session,
@@ -3982,6 +4091,7 @@ fn apply_settings_prefs_to_window(
     bufs: &TermBuffers,
     sftp_follow_cd: &Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: &Arc<std::sync::atomic::AtomicU32>,
+    ssh_algorithm_prefs: &Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
     tabs_model: &VecModel<TabInfo>,
 ) {
     let lang_pref = s.language().to_string();
@@ -4053,6 +4163,12 @@ fn apply_settings_prefs_to_window(
     let keepalive = s.ssh_keepalive_secs();
     ssh_keepalive_secs.store(keepalive, std::sync::atomic::Ordering::Relaxed);
     w.set_ssh_keepalive_secs(keepalive as i32);
+    let algorithms = s.algorithm_preferences();
+    if let Ok(mut g) = ssh_algorithm_prefs.lock() {
+        *g = algorithms.clone();
+    }
+    let cat = w.get_ssh_algorithm_category();
+    w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&algorithms, cat.as_str()));
 
     w.set_download_always_ask(s.download_always_ask());
     w.set_paste_confirm_enabled(s.paste_confirm_enabled());

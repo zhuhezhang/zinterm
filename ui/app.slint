@@ -24,7 +24,7 @@ import { LabeledInput, PrimaryButton, GhostButton, IconButton, TooltipArea, Tool
 import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel, HistoryViewItem
 } from "terminal_view.slint";
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
-import { InterfacePanel, OutputRuleItem } from "interface_panel.slint";
+import { InterfacePanel, OutputRuleItem, AlgorithmOptionRow } from "interface_panel.slint";
 import { MockData } from "mock_data.slint";
 import { ComboBox, SpinBox, Button, ScrollView, CheckBox, Palette
 } from "std-widgets.slint";
@@ -518,6 +518,13 @@ export component AppWindow inherits Window {
     // SSH keepalive interval in seconds. 0 = off (default).
     in-out property <int> ssh-keepalive-secs: 0;
     callback set-ssh-keepalive-secs(int);
+    in-out property <string> ssh-algorithm-category: "kex";
+    in property <[AlgorithmOptionRow]> ssh-algorithm-rows;
+    callback set-ssh-algorithm-category(string);
+    callback toggle-ssh-algorithm(string);
+    callback move-ssh-algorithm(string, int);
+    callback reset-ssh-algorithm-section();
+    callback reset-ssh-algorithms();
     // Drag-resizable width of that welcome sidebar (logical px), persisted.
     in-out property <length> welcome-sidebar-width: 350px;
     callback persist-welcome-sidebar-width(float);
@@ -5015,6 +5022,8 @@ export component AppWindow inherits Window {
                     quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
                     update-check-enabled <=> root.update-check-enabled;
                     ssh-keepalive-secs <=> root.ssh-keepalive-secs;
+                    ssh-algorithm-category <=> root.ssh-algorithm-category;
+                    ssh-algorithm-rows: root.ssh-algorithm-rows;
                     save-passwords <=> root.save-passwords;
                     credentials-vault-available <=> root.credentials-vault-available;
                     wallpaper-overlay <=> root.wallpaper-overlay;
@@ -5071,6 +5080,11 @@ export component AppWindow inherits Window {
                     }
                     set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
                     set-ssh-keepalive-secs(v) => { root.set-ssh-keepalive-secs(v); }
+                    set-ssh-algorithm-category(v) => { root.set-ssh-algorithm-category(v); }
+                    toggle-ssh-algorithm(v) => { root.toggle-ssh-algorithm(v); }
+                    move-ssh-algorithm(name, delta) => { root.move-ssh-algorithm(name, delta); }
+                    reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
+                    reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
                     set-save-passwords(v) => { root.set-save-passwords(v); }
                     set-language(v) => { root.set-language(v); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
