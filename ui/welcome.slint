@@ -219,7 +219,7 @@ component SessionRow inherits Rectangle {
     border-radius: Theme.radius-sm;
     background: root.is-drag-source ? Theme.bg-active
         : (root.is-drop-highlight ? Theme.accent.with-alpha(0.12)
-        : (touch.has-hover || root.kb-highlight ? Theme.bg-hover : transparent));
+        : (touch.has-hover || root.kb-highlight || ctx-menu.is-open ? Theme.bg-hover : transparent));
     clip: true;
     animate background { duration: 120ms; }
 
@@ -953,7 +953,8 @@ export component Welcome inherits Rectangle {
                                         ? Theme.bg-active
                                         : (root.welcome-drag-kind != "" && root.welcome-drop-target == session.group
                                             ? Theme.accent.with-alpha(0.12)
-                                            : (grp-ta.has-hover || i == root.kb-selected ? Theme.bg-hover : transparent));
+                                            : (grp-ta.has-hover || i == root.kb-selected || grp-menu.is-open
+                                                ? Theme.bg-hover : transparent));
                                     clip: true;
                                     animate background { duration: 120ms; }
 
