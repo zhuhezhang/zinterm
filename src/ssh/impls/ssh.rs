@@ -594,6 +594,24 @@ fn should_retry_legacy(err: &russh::Error) -> bool {
     }
 }
 
+/// After the out-of-band shell probe, some network gear (switches/routers) keep
+/// the only allowed session slot busy or reject a second `CHANNEL_OPEN` with
+/// `AdministrativelyProhibited` / `ResourceShortage`. Reconnect without the
+/// probe (and skip prompt injection) so the interactive shell can use the
+/// single session channel.
+fn should_retry_shell_without_probe(err: &russh::Error) -> bool {
+    if should_retry_legacy(err) {
+        return true;
+    }
+    matches!(
+        err,
+        russh::Error::ChannelOpenFailure(
+            russh::ChannelOpenFailure::AdministrativelyProhibited
+                | russh::ChannelOpenFailure::ResourceShortage
+        )
+    )
+}
+
 /// Outcome of authenticating an SSH session, so callers can distinguish a user
 /// cancel from a credential rejection and word the status line accordingly.
 pub(crate) enum AuthResult {
@@ -793,10 +811,10 @@ async fn run_session(
     // The integration body is Bash/Zsh-specific. Probe out-of-band before the
     // interactive channel exists, so ash/dash/fish/unknown shells never receive
     // (and therefore can never display or get stuck parsing) the setup command.
-    // Skip that extra exec channel on compact/legacy transports: H3C/VRP SSH
-    // only speaks a single CLI session and disconnects the whole TCP socket
-    // when it sees CHANNEL_OPEN + exec (then the real shell open fails with
-    // `Disconnected`).
+    // Probe failure already skips injection. Skip the extra exec channel on
+    // compact/legacy transports: H3C/VRP SSH only speaks a single CLI session
+    // and disconnects (or returns AdministrativelyProhibited) when a second
+    // CHANNEL_OPEN arrives — then we reconnect without probing.
     let skip_exec_probe = is_compact_legacy_config(&config);
     let mut prompt_setup_supported =
         !skip_exec_probe && remote_supports_prompt_setup(&handle).await;
@@ -804,7 +822,7 @@ async fn run_session(
     // --- Shell channel --------------------------------------------------
     let mut channel = match handle.channel_open_session().await {
         Ok(ch) => ch,
-        Err(err) if !skip_exec_probe && should_retry_legacy(&err) => {
+        Err(err) if !skip_exec_probe && should_retry_shell_without_probe(&err) => {
             tracing::info!(
                 "session channel failed after shell probe ({err}); reconnecting without exec probe"
             );
@@ -1472,8 +1490,9 @@ pub(crate) mod legacy_ssh_compat_tests {
     use crate::config::AlgorithmPreferences;
 
     use super::{
-        is_compact_legacy_config, should_retry_legacy, ssh_client_config_with_algorithms,
-        ssh_legacy_client_config, LEGACY_CIPHER, LEGACY_KEX, LEGACY_MAC,
+        is_compact_legacy_config, should_retry_legacy, should_retry_shell_without_probe,
+        ssh_client_config_with_algorithms, ssh_legacy_client_config, LEGACY_CIPHER, LEGACY_KEX,
+        LEGACY_MAC,
     };
 
     // Reference preferred sets (must stay in sync with
@@ -1549,6 +1568,29 @@ pub(crate) mod legacy_ssh_compat_tests {
         )));
         assert!(!should_retry_legacy(&russh::Error::NotAuthenticated));
         assert!(!should_retry_legacy(&russh::Error::ConnectionTimeout));
+        // Handshake retry must not treat channel-open policy rejects as algo failure.
+        assert!(!should_retry_legacy(&russh::Error::ChannelOpenFailure(
+            russh::ChannelOpenFailure::AdministrativelyProhibited
+        )));
+    }
+
+    #[test]
+    fn retry_shell_without_probe_on_switch_session_limit() {
+        assert!(should_retry_shell_without_probe(
+            &russh::Error::ChannelOpenFailure(
+                russh::ChannelOpenFailure::AdministrativelyProhibited
+            )
+        ));
+        assert!(should_retry_shell_without_probe(
+            &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::ResourceShortage)
+        ));
+        assert!(should_retry_shell_without_probe(&russh::Error::Disconnect));
+        assert!(!should_retry_shell_without_probe(
+            &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::UnknownChannelType)
+        ));
+        assert!(!should_retry_shell_without_probe(
+            &russh::Error::NotAuthenticated
+        ));
     }
 
     #[test]
