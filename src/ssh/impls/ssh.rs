@@ -596,19 +596,23 @@ fn should_retry_legacy(err: &russh::Error) -> bool {
 
 /// After the out-of-band shell probe, some network gear (switches/routers) keep
 /// the only allowed session slot busy or reject a second `CHANNEL_OPEN` with
-/// `AdministrativelyProhibited` / `ResourceShortage`. Reconnect without the
-/// probe (and skip prompt injection) so the interactive shell can use the
-/// single session channel.
+/// `AdministrativelyProhibited` / `ResourceShortage`. Huawei VRP (S5720 and
+/// similar) often tears the SSH writer down instead — russh then surfaces
+/// `SendError` ("Channel send error") rather than a channel-open failure code.
+/// Reconnect without the probe (and skip prompt injection) so the interactive
+/// shell can use the single session channel.
 fn should_retry_shell_without_probe(err: &russh::Error) -> bool {
     if should_retry_legacy(err) {
         return true;
     }
     matches!(
         err,
-        russh::Error::ChannelOpenFailure(
-            russh::ChannelOpenFailure::AdministrativelyProhibited
-                | russh::ChannelOpenFailure::ResourceShortage
-        )
+        russh::Error::SendError
+            | russh::Error::RequestDenied
+            | russh::Error::ChannelOpenFailure(
+                russh::ChannelOpenFailure::AdministrativelyProhibited
+                    | russh::ChannelOpenFailure::ResourceShortage
+            )
     )
 }
 
@@ -701,7 +705,7 @@ fn keepalive_interval(secs: u32) -> Option<std::time::Duration> {
 
 fn ssh_config_with_preferred(
     preferred: russh::Preferred,
-    compact: bool,
+    _compact: bool,
     keepalive_secs: u32,
 ) -> Arc<client::Config> {
     Arc::new(client::Config {
@@ -713,11 +717,13 @@ fn ssh_config_with_preferred(
         // fine on OpenSSH but some VRP parsers are picky about the software tag.
         client_id: russh::SshId::Standard("SSH-2.0-zinterm".into()),
         preferred,
-        // russh's 2 MiB initial window / 32 KiB packet is fine on OpenSSH, but
-        // H3C/Huawei VRP 3.x (S3100) drops CHANNEL_OPEN when the advertised
-        // window is that large. Keep the compact profile inside a 64 KiB window.
-        window_size: if compact { 65_536 } else { 2 * 1024 * 1024 },
-        maximum_packet_size: if compact { 16_384 } else { 32_768 },
+        // russh's default 2 MiB window is fine on OpenSSH, but Huawei VRP
+        // (S3100 / S5720 and similar) drops CHANNEL_OPEN — the session loop
+        // then dies and the next open surfaces as `SendError` ("Channel send
+        // error"). PuTTY / libssh2-style clients advertise ~64 KiB; use that
+        // for every profile so a successful modern KEX still opens a channel.
+        window_size: 65_536,
+        maximum_packet_size: 16_384,
         ..<_>::default()
     })
 }
@@ -1584,6 +1590,10 @@ pub(crate) mod legacy_ssh_compat_tests {
             &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::ResourceShortage)
         ));
         assert!(should_retry_shell_without_probe(&russh::Error::Disconnect));
+        // Huawei VRP often tears the session down instead of sending
+        // CHANNEL_OPEN_FAILURE — russh reports SendError ("Channel send error").
+        assert!(should_retry_shell_without_probe(&russh::Error::SendError));
+        assert!(should_retry_shell_without_probe(&russh::Error::RequestDenied));
         assert!(!should_retry_shell_without_probe(
             &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::UnknownChannelType)
         ));
@@ -1603,7 +1613,7 @@ pub(crate) mod legacy_ssh_compat_tests {
     }
 
     #[test]
-    fn compact_legacy_profile_uses_small_windows() {
+    fn client_profiles_use_vrp_safe_windows() {
         let compact = ssh_legacy_client_config(0);
         assert!(is_compact_legacy_config(&compact));
         assert_eq!(compact.window_size, 65_536);
@@ -1611,7 +1621,10 @@ pub(crate) mod legacy_ssh_compat_tests {
 
         let modern = ssh_client_config(0);
         assert!(!is_compact_legacy_config(&modern));
-        assert_eq!(modern.window_size, 2 * 1024 * 1024);
+        // Modern KEX must still use the VRP-safe window; S5720 connects with
+        // current algorithms then fails CHANNEL_OPEN if the window is 2 MiB.
+        assert_eq!(modern.window_size, 65_536);
+        assert_eq!(modern.maximum_packet_size, 16_384);
     }
 
     #[test]
