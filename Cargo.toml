@@ -41,7 +41,8 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "io-ut
 # not reachable — see audit.toml. 0.52 is the first release that accepts RFC 4253
 # SSH-1.99- banners (H3C/Huawei VRP); stay on this line until russh's crypto
 # deps leave the -rc channel (cf. PR #151).
-russh = { version = "0.52.1", features = ["des", "flate2"] }
+# `md5-mac` is a ZinTerm vendor patch (vendor/russh) — upstream has no hmac-md5.
+russh = { path = "vendor/russh", version = "0.52.1", features = ["des", "flate2", "md5-mac"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
 rand = "0.8"

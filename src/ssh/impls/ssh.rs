@@ -686,6 +686,7 @@ pub(crate) const LEGACY_CIPHER: &[russh::cipher::Name] = &[
 
 pub(crate) const LEGACY_MAC: &[russh::mac::Name] = &[
     russh::mac::HMAC_SHA1,
+    russh::mac::HMAC_MD5,
     russh::mac::HMAC_SHA256,
 ];
 
