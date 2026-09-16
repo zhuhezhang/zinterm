@@ -595,10 +595,11 @@ fn should_retry_legacy(err: &russh::Error) -> bool {
 }
 
 /// After the out-of-band shell probe, some network gear (switches/routers) keep
-/// the only allowed session slot busy or reject a second `CHANNEL_OPEN` with
-/// `AdministrativelyProhibited` / `ResourceShortage`. Huawei VRP (S5720 and
-/// similar) often tears the SSH writer down instead — russh then surfaces
-/// `SendError` ("Channel send error") rather than a channel-open failure code.
+/// the only allowed session slot busy or reject a second `CHANNEL_OPEN`. The
+/// failure reason varies by vendor:
+/// - Huawei VRP (S5720): often tears the writer down → `SendError`
+/// - Maipu / some VRP: `ConnectFailed` / `AdministrativelyProhibited` /
+///   `ResourceShortage`
 /// Reconnect without the probe (and skip prompt injection) so the interactive
 /// shell can use the single session channel.
 fn should_retry_shell_without_probe(err: &russh::Error) -> bool {
@@ -611,6 +612,7 @@ fn should_retry_shell_without_probe(err: &russh::Error) -> bool {
             | russh::Error::RequestDenied
             | russh::Error::ChannelOpenFailure(
                 russh::ChannelOpenFailure::AdministrativelyProhibited
+                    | russh::ChannelOpenFailure::ConnectFailed
                     | russh::ChannelOpenFailure::ResourceShortage
             )
     )
@@ -1588,6 +1590,11 @@ pub(crate) mod legacy_ssh_compat_tests {
         ));
         assert!(should_retry_shell_without_probe(
             &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::ResourceShortage)
+        ));
+        // Maipu S3120 (and similar) rejects the post-probe shell open with
+        // SSH_OPEN_CONNECT_FAILED rather than AdministrativelyProhibited.
+        assert!(should_retry_shell_without_probe(
+            &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::ConnectFailed)
         ));
         assert!(should_retry_shell_without_probe(&russh::Error::Disconnect));
         // Huawei VRP often tears the session down instead of sending
