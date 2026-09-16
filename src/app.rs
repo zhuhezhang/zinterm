@@ -4886,7 +4886,7 @@ fn wire_key_input(
     // readline handles echo, history (↑↓), Tab completion, Ctrl+C, etc.
     {
         // Capture Slint's raw modifier mapping before app-shortcut routing.
-        // WARN is deliberate: packaged builds persist WARN+ to error.log.
+        // WARN is deliberate: packaged builds persist WARN+ to monthly error logs.
         window.on_diagnose_key_event(
             move |tab_id: SharedString,
                   key: SharedString,
@@ -5914,7 +5914,7 @@ fn clipboard_set_text(text: String) {
 /// still visible (Latin text shows; CJK may tofu — far better than a blank UI).
 ///
 /// Emits a one-line WARN summary (faces loaded + chosen font) so the choice lands
-/// in `error.log` for diagnostics without needing RUST_LOG.
+/// in the monthly error log for diagnostics without needing RUST_LOG.
 fn resolve_ui_font_family() -> slint::SharedString {
     use fontdb::{Database, Family, Query, Stretch, Style, Weight};
 

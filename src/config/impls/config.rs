@@ -51,7 +51,7 @@ pub fn data_dir() -> PathBuf {
     DATA_DIR.get_or_init(resolve_data_dir).clone()
 }
 
-/// Directory for diagnostic logs (`error.log`): `<data_dir>/log`.
+/// Directory for diagnostic logs (`error-YYYY-MM.log`): `<data_dir>/log`.
 pub fn log_dir() -> PathBuf {
     let dir = data_dir().join("log");
     let _ = fs::create_dir_all(&dir);

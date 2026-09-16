@@ -57,9 +57,9 @@ fn main() -> anyhow::Result<()> {
     app::run()
 }
 
-/// Set up tracing: stderr (honours RUST_LOG, default info) **plus** a capped
-/// `error.log` file at WARN and above so users can send diagnostics — e.g. a
-/// bastion disconnect reason — without setting RUST_LOG (#86).
+/// Set up tracing: stderr (honours RUST_LOG, default info) **plus** monthly
+/// `error-YYYY-MM.log` files at WARN and above so users can send diagnostics —
+/// e.g. a bastion disconnect reason — without setting RUST_LOG (#86).
 fn init_tracing() {
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::fmt::time::ChronoLocal;
@@ -93,17 +93,16 @@ fn init_tracing() {
         .with_timer(timer.clone())
         .with_filter(env_filter);
 
-    // One file, capped at 50 MiB, auto-overwriting when full (5 MiB was too
-    // small to diagnose anything useful).
-    let file_layer = logging::path()
-        .and_then(|p| logging::CappedFile::open(p, 50 * 1024 * 1024).ok())
-        .map(|cf| {
-            fmt::layer()
-                .with_ansi(false)
-                .with_writer(logging::CappedWriter::new(cf))
-                .with_timer(timer)
-                .with_filter(quiet_noise(EnvFilter::new("warn")))
-        });
+    // One file per calendar month; drop files older than twelve months (and any
+    // legacy single `error.log`) once at startup.
+    logging::cleanup_expired();
+    let file_layer = logging::MonthlyFile::open().ok().map(|f| {
+        fmt::layer()
+            .with_ansi(false)
+            .with_writer(logging::MonthlyWriter::new(f))
+            .with_timer(timer)
+            .with_filter(quiet_noise(EnvFilter::new("warn")))
+    });
 
     tracing_subscriber::registry()
         .with(stderr_layer)
