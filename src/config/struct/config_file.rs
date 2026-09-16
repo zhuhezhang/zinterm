@@ -67,7 +67,7 @@ pub struct ConfigFile {
     /// software/femtovg/skia. Missing or foreign-platform values use the platform default.
     #[serde(default)]
     pub renderer_mode: String,
-    /// Terminal font family. Empty = the built-in default ("ZinTerm Mono").
+    /// Terminal font family. Empty = the built-in default ("MeatShell Mono").
     #[serde(default)]
     pub font_family: String,
     /// Terminal font size in px. 0 = the built-in default.

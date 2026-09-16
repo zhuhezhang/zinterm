@@ -573,7 +573,7 @@ pub fn run() -> Result<()> {
     // failed to register "PingFang SC", so the UI default font resolved to nothing
     // and *all* text vanished (#129) — icons survived only because they use an
     // embedded font. Instead probe what fontdb actually loaded and pick the first
-    // resolvable CJK family, falling back to the embedded "ZinTerm Mono" so the
+    // resolvable CJK family, falling back to the embedded "MeatShell Mono" so the
     // window is never fully blank even when the system font DB is unreadable.
     window.set_ui_font_family(resolve_ui_font_family());
     // Populate the Interface font picker with installed monospace families.
@@ -4091,7 +4091,7 @@ fn apply_settings_prefs_to_window(
 
     let fam = s.font_family();
     w.set_term_font_family(if fam.is_empty() {
-        "ZinTerm Mono".into()
+        "MeatShell Mono".into()
     } else {
         fam.into()
     });
@@ -5905,7 +5905,7 @@ fn clipboard_set_text(text: String) {
 /// Enumerate installed monospace font families for the Interface font picker.
 /// Terminals want fixed-width fonts, so non-monospace families are filtered out.
 /// Choose a UI font family that fontdb can actually resolve, falling back to the
-/// embedded "ZinTerm Mono" when the system font database is empty/unreadable.
+/// embedded "MeatShell Mono" when the system font database is empty/unreadable.
 ///
 /// macOS 26 (Tahoe) shipped a system where fontdb couldn't register the named
 /// CJK font ("PingFang SC"), so hard-coding that name made the whole UI render
@@ -5919,7 +5919,7 @@ fn resolve_ui_font_family() -> slint::SharedString {
     use fontdb::{Database, Family, Query, Stretch, Style, Weight};
 
     // Diagnostic / escape hatch (#129): force a specific UI font without a rebuild.
-    // e.g. ZINTERM_UI_FONT="ZinTerm Mono" to test whether the embedded font
+    // e.g. ZINTERM_UI_FONT="MeatShell Mono" to test whether the embedded font
     // renders when system fonts don't. Empty value is ignored.
     if let Some(f) = std::env::var_os("ZINTERM_UI_FONT") {
         let f = f.to_string_lossy().into_owned();
@@ -5995,9 +5995,9 @@ fn resolve_ui_font_family() -> slint::SharedString {
     }
     tracing::warn!(
         faces = face_count,
-        "ui-font: falling back to embedded 'ZinTerm Mono' (system fonts unusable, #129)"
+        "ui-font: falling back to embedded 'MeatShell Mono' (system fonts unusable, #129)"
     );
-    "ZinTerm Mono".into()
+    "MeatShell Mono".into()
 }
 
 fn system_monospace_fonts() -> Vec<slint::SharedString> {
@@ -6013,8 +6013,8 @@ fn system_monospace_fonts() -> Vec<slint::SharedString> {
     // Surface the built-in glyph-complete font first so it's selectable and the
     // default selection is shown — it isn't a system face so fontdb won't list it
     // (#114).
-    names.retain(|n| n != "ZinTerm Mono");
-    let mut out = vec![slint::SharedString::from("ZinTerm Mono")];
+    names.retain(|n| n != "MeatShell Mono");
+    let mut out = vec![slint::SharedString::from("MeatShell Mono")];
     out.extend(names.into_iter().map(slint::SharedString::from));
     out
 }

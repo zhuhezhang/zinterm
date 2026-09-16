@@ -134,7 +134,7 @@ export global Theme {
     out property <length> toolbar-row-height: root.input-min-height + 12px;
 
     // Embedded glyph-complete monospace (Cascadia Mono under a unique name, #114).
-    out property <string> font-mono: "ZinTerm Mono";
+    out property <string> font-mono: "MeatShell Mono";
 
     // UI (sans) font for editable inputs. The embedded mono font has no CJK
     // glyphs and native TextInput doesn't glyph-fallback like Text does, so
@@ -144,7 +144,7 @@ export global Theme {
 
     // Terminal font — user-configurable via Interface settings, set by Rust
     // from the config on startup. cell size in terminal_view derives from these.
-    in-out property <string> term-font-family: "ZinTerm Mono";
+    in-out property <string> term-font-family: "MeatShell Mono";
     in-out property <length> term-font-size: 13px;
     in-out property <bool> term-font-bold: false;
 
