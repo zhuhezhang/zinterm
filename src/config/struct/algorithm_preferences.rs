@@ -51,6 +51,7 @@ fn default_kex() -> Vec<String> {
         "curve25519-sha256@libssh.org",
         "diffie-hellman-group16-sha512",
         "diffie-hellman-group14-sha256",
+        "diffie-hellman-group-exchange-sha256",
         "ecdh-sha2-nistp256",
         "ecdh-sha2-nistp384",
         "ecdh-sha2-nistp521",

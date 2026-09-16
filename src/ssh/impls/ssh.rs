@@ -11,8 +11,8 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use russh::client::{self, Handle, Handler};
 use russh::keys::{
-    decode_secret_key, load_secret_key, Algorithm, HashAlg, PrivateKey, PrivateKeyWithHashAlg,
-    PublicKey,
+    decode_secret_key, load_secret_key, Algorithm, EcdsaCurve, HashAlg, PrivateKey,
+    PrivateKeyWithHashAlg, PublicKey,
 };
 use russh::{ChannelMsg, Disconnect};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
@@ -564,6 +564,10 @@ where
             tracing::info!(
                 "ssh handshake failed ({err}); retrying {addr} with compact legacy algorithms"
             );
+            // Some network gear (Maipu SM3120 and similar) rate-limits or
+            // briefly refuses a second TCP handshake if the first KEXINIT
+            // made it abort — give the daemon a beat before the compact retry.
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
             let legacy = ssh_legacy_client_config(keepalive_secs);
             match client::connect(legacy.clone(), addr, make_handler()).await {
                 Ok(handle) => Ok((handle, legacy)),
@@ -671,11 +675,16 @@ pub(crate) async fn authenticate_session(
     }
 }
 
-// Compact RFC-only set for ancient SSH2 stacks (H3C S3100 / Huawei VRP-3.3).
-// Those daemons often abort when the KEXINIT lists `@openssh.com` names or is
-// larger than their fixed parse buffer. Used only as a second-attempt fallback.
-pub(crate) const LEGACY_KEX: &[russh::kex::Name] =
-    &[russh::kex::DH_G14_SHA1, russh::kex::DH_G1_SHA1];
+// Compact RFC-only set for ancient SSH2 stacks (H3C S3100 / Huawei VRP-3.3 /
+// Maipu SM3120). Those daemons often abort when the KEXINIT lists
+// `@openssh.com` names or is larger than their fixed parse buffer. Used only
+// as a second-attempt fallback. Includes DH-GEX-SHA1 (common on Maipu; also
+// a zauterm/libssh2 weak default) and ssh-dss host keys.
+pub(crate) const LEGACY_KEX: &[russh::kex::Name] = &[
+    russh::kex::DH_GEX_SHA1,
+    russh::kex::DH_G14_SHA1,
+    russh::kex::DH_G1_SHA1,
+];
 
 pub(crate) const LEGACY_CIPHER: &[russh::cipher::Name] = &[
     russh::cipher::AES_128_CBC,
@@ -695,6 +704,10 @@ pub(crate) const LEGACY_KEY: &[Algorithm] = &[
     Algorithm::Rsa {
         hash: Some(HashAlg::Sha256),
     },
+    Algorithm::Dsa,
+    Algorithm::Ecdsa {
+        curve: EcdsaCurve::NistP256,
+    },
 ];
 
 pub(crate) const LEGACY_COMPRESSION: &[russh::compression::Name] = &[russh::compression::NONE];
@@ -706,9 +719,15 @@ fn keepalive_interval(secs: u32) -> Option<std::time::Duration> {
     }
 }
 
+fn legacy_gex_params() -> client::GexParams {
+    // Match libssh2's historical request so Maipu / similar GEX-only daemons
+    // that still offer 1024-bit moduli can complete KEX.
+    client::GexParams::new_relaxed(1024, 2048, 8192).expect("legacy GexParams")
+}
+
 fn ssh_config_with_preferred(
     preferred: russh::Preferred,
-    _compact: bool,
+    compact: bool,
     keepalive_secs: u32,
 ) -> Arc<client::Config> {
     Arc::new(client::Config {
@@ -727,6 +746,12 @@ fn ssh_config_with_preferred(
         // for every profile so a successful modern KEX still opens a channel.
         window_size: 65_536,
         maximum_packet_size: 16_384,
+        gex: if compact {
+            legacy_gex_params()
+        } else {
+            // Softer than upstream's old 3072/8192/8192 default.
+            client::GexParams::default()
+        },
         ..<_>::default()
     })
 }
@@ -1509,14 +1534,15 @@ pub(crate) mod legacy_ssh_compat_tests {
     // AlgorithmPreferences::builtin_default / algorithms catalog defaults).
     // Runtime code builds Preferred via to_preferred().
     //
-    // Key-exchange: russh defaults PLUS ecdh-sha2-nistp* and legacy
-    // diffie-hellman-group{14,1}-sha1 last (#172). Only *client* extension
-    // markers (https://github.com/Eugeny/russh/issues/611).
+    // Key-exchange: russh defaults PLUS ecdh-sha2-nistp*, group-exchange-sha256,
+    // and legacy diffie-hellman-group{14,1}-sha1 last (#172). Only *client*
+    // extension markers (https://github.com/Eugeny/russh/issues/611).
     pub(crate) const COMPAT_KEX: &[russh::kex::Name] = &[
         russh::kex::CURVE25519,
         russh::kex::CURVE25519_PRE_RFC_8731,
         russh::kex::DH_G16_SHA512,
         russh::kex::DH_G14_SHA256,
+        russh::kex::DH_GEX_SHA256,
         russh::kex::ECDH_SHA2_NISTP256,
         russh::kex::ECDH_SHA2_NISTP384,
         russh::kex::ECDH_SHA2_NISTP521,
@@ -1552,6 +1578,27 @@ pub(crate) mod legacy_ssh_compat_tests {
         assert!(LEGACY_KEX.iter().all(|n| !has_at(n)));
         assert!(LEGACY_CIPHER.iter().all(|n| !has_at(n)));
         assert!(LEGACY_MAC.iter().all(|n| !has_at(n)));
+        // Maipu SM3120 / libssh2 parity: DH-GEX-SHA1 must be offered on the
+        // compact retry path (fixed group14/group1 alone is not enough).
+        let kex: Vec<&str> = LEGACY_KEX.iter().map(|n| n.as_ref()).collect();
+        assert!(
+            kex.contains(&"diffie-hellman-group-exchange-sha1"),
+            "{kex:?}"
+        );
+        assert!(kex.contains(&"diffie-hellman-group14-sha1"), "{kex:?}");
+        assert!(kex.contains(&"diffie-hellman-group1-sha1"), "{kex:?}");
+    }
+
+    #[test]
+    fn legacy_profile_accepts_small_dh_gex_groups() {
+        let compact = ssh_legacy_client_config(0);
+        assert_eq!(compact.gex.min_group_size(), 1024);
+        assert_eq!(compact.gex.preferred_group_size(), 2048);
+        assert_eq!(compact.gex.max_group_size(), 8192);
+
+        let modern = ssh_client_config(0);
+        // Modern stays on the OpenSSH-like floor (no 1024).
+        assert_eq!(modern.gex.min_group_size(), 2048);
     }
 
     #[test]

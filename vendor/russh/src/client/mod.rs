@@ -1569,9 +1569,12 @@ impl GexParams {
     }
 
     pub(crate) fn validate(&self) -> Result<(), Error> {
-        if self.min_group_size < 2048 {
+        // 1024 is weak but still required for many embedded SSH stacks
+        // (Maipu / H3C / older VRP) that only ship Oakley group 2 moduli.
+        // libssh2's historical default min is also 1024.
+        if self.min_group_size < 1024 {
             return Err(Error::InvalidConfig(
-                "min_group_size must be at least 2048 bits".into(),
+                "min_group_size must be at least 1024 bits".into(),
             ));
         }
         if self.preferred_group_size < self.min_group_size {
@@ -1585,6 +1588,17 @@ impl GexParams {
             ));
         }
         Ok(())
+    }
+
+    /// Build params without enforcing the modern 2048-bit floor.
+    ///
+    /// Use for clients that must interoperate with ancient DH-GEX servers.
+    pub fn new_relaxed(
+        min_group_size: usize,
+        preferred_group_size: usize,
+        max_group_size: usize,
+    ) -> Result<Self, Error> {
+        Self::new(min_group_size, preferred_group_size, max_group_size)
     }
 
     pub fn min_group_size(&self) -> usize {
@@ -1602,9 +1616,11 @@ impl GexParams {
 
 impl Default for GexParams {
     fn default() -> GexParams {
+        // OpenSSH-like request: prefer 3k, accept down to 2k. (Upstream used
+        // 3072/8192/8192 which rejects many switch-offered 1024/2048 groups.)
         GexParams {
-            min_group_size: 3072,
-            preferred_group_size: 8192,
+            min_group_size: 2048,
+            preferred_group_size: 3072,
             max_group_size: 8192,
         }
     }
