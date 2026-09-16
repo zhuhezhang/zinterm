@@ -2248,8 +2248,8 @@ export component InterfacePanel inherits Rectangle {
                         SettingRow {
                             label: root.lang-en ? "Clear all groups and sessions" : "清除所有分组和会话";
                             desc: root.lang-en
-                                ? "Permanently delete every saved Quick Connect group and session. Open tabs are not closed."
-                                : "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。";
+                                ? "Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys."
+                                : "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。可选择是否同时清除已保存的密码/私钥。";
                             DangerButton {
                                 text: root.lang-en ? "Clear" : "清除";
                                 clicked => { root.request-clear-sessions(); }

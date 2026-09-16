@@ -638,13 +638,18 @@ impl ConfigStore {
     }
 
     /// Delete every saved session and group folder (Quick Connect tree).
-    pub fn clear_sessions_and_groups(&mut self) {
+    /// When `clear_credentials` is true, also wipe the encrypted passwords /
+    /// private-keys vault; otherwise vault entries are left in place (e.g. so a
+    /// later restore of the same session ids can still unlock them).
+    pub fn clear_sessions_and_groups(&mut self, clear_credentials: bool) {
         self.cache.sessions.clear();
         self.cache.groups.clear();
         self.cache.collapsed_session_groups = None;
-        if let Ok(dir) = self.data_dir_path() {
-            if let Err(e) = crate::config::vault::clear_all(&dir) {
-                tracing::warn!("failed to clear credentials vault: {e:#}");
+        if clear_credentials {
+            if let Ok(dir) = self.data_dir_path() {
+                if let Err(e) = crate::config::vault::clear_all(&dir) {
+                    tracing::warn!("failed to clear credentials vault: {e:#}");
+                }
             }
         }
     }

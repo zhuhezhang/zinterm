@@ -1312,11 +1312,15 @@ pub fn run() -> Result<()> {
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
-        window.on_clear_all_sessions(move || {
+        window.on_clear_all_sessions(move |clear_credentials| {
             {
                 let mut s = store.borrow_mut();
-                s.clear_sessions_and_groups();
-                s.save_later(SaveKind::SESSIONS | SaveKind::UI | SaveKind::VAULT);
+                s.clear_sessions_and_groups(clear_credentials);
+                let mut kinds = SaveKind::SESSIONS | SaveKind::UI;
+                if clear_credentials {
+                    kinds |= SaveKind::VAULT;
+                }
+                s.save_later(kinds);
             }
             sync_welcome_sessions(
                 &store.borrow(),

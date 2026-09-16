@@ -1,5 +1,5 @@
 import { Theme } from "theme.slint";
-import { GhostButton, DangerButton } from "widgets.slint";
+import { GhostButton, DangerButton, CompactCheckBox } from "widgets.slint";
 import { ScrollView } from "std-widgets.slint";
 
 // In-app modal confirmation dialog, styled to match the rest of zinterm
@@ -15,6 +15,10 @@ export component ConfirmDialog inherits Rectangle {
     in property <string> confirm-label: @tr("Confirm");
     // Optional middle action (e.g. host-key "Trust once"). Empty = hidden.
     in property <string> secondary-label: "";
+    // Optional checkbox between message/detail and action buttons.
+    // Empty label hides it. Checked state is owned by the caller.
+    in property <string> option-label: "";
+    in-out property <bool> option-checked: false;
     // Long AI prompts and other large multi-line pastes need a review surface
     // with room for the payload and fixed footer actions.
     in property <bool> large-detail: false;
@@ -143,6 +147,11 @@ export component ConfirmDialog inherits Rectangle {
                         wrap: word-wrap;
                     }
                 }
+            }
+
+            if root.option-label != "": CompactCheckBox {
+                text: root.option-label;
+                checked <=> root.option-checked;
             }
 
             HorizontalLayout {

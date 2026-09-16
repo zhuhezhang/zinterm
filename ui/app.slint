@@ -505,12 +505,14 @@ export component AppWindow inherits Window {
     // the explicit clear does.
     in-out property <bool> data-clear-open: false;
     in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings"
+    // Only used when data-clear-kind == "sessions": also wipe vault credentials.
+    in-out property <bool> data-clear-also-passwords: false;
     in-out property <bool> save-passwords: false;
     /// False when the OS keyring cannot hold a vault master key.
     in-out property <bool> credentials-vault-available: true;
     callback set-save-passwords(bool);
     callback clear-known-hosts();
-    callback clear-all-sessions();
+    callback clear-all-sessions(bool);
     callback clear-saved-passwords();
     callback restore-settings-defaults();
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184)
@@ -5096,6 +5098,8 @@ export component AppWindow inherits Window {
                     }
                     request-clear-sessions => {
                         root.data-clear-kind = "sessions";
+                        // Opt-in: keep saved passwords/keys unless the user checks the box.
+                        root.data-clear-also-passwords = false;
                         root.data-clear-open = true;
                     }
                     request-clear-passwords => {
@@ -5209,6 +5213,12 @@ export component AppWindow inherits Window {
             : (root.lang-en
                 ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
                 : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");
+        option-label: root.data-clear-kind == "sessions"
+            ? (root.lang-en
+                ? "Also clear saved passwords / private keys"
+                : "同时清除已保存的密码/私钥")
+            : "";
+        option-checked <=> root.data-clear-also-passwords;
         confirm-label: root.data-clear-kind == "restore-settings"
             ? (root.lang-en ? "Restore" : "恢复")
             : (root.lang-en ? "Clear" : "清除");
@@ -5220,7 +5230,7 @@ export component AppWindow inherits Window {
             } else if (root.data-clear-kind == "restore-settings") {
                 root.restore-settings-defaults();
             } else {
-                root.clear-all-sessions();
+                root.clear-all-sessions(root.data-clear-also-passwords);
             }
             root.data-clear-open = false;
         }
