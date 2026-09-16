@@ -819,11 +819,13 @@ async fn run_session(
     // The integration body is Bash/Zsh-specific. Probe out-of-band before the
     // interactive channel exists, so ash/dash/fish/unknown shells never receive
     // (and therefore can never display or get stuck parsing) the setup command.
-    // Probe failure already skips injection. Skip the extra exec channel on
-    // compact/legacy transports: H3C/VRP SSH only speaks a single CLI session
-    // and disconnects (or returns AdministrativelyProhibited) when a second
-    // CHANNEL_OPEN arrives — then we reconnect without probing.
-    let skip_exec_probe = is_compact_legacy_config(&config);
+    // Probe failure already skips injection. Skip the extra exec channel when
+    // the session opts out, or on compact/legacy transports: H3C/VRP SSH only
+    // speaks a single CLI session and disconnects (or returns
+    // AdministrativelyProhibited) when a second CHANNEL_OPEN arrives — then we
+    // reconnect without probing.
+    let skip_exec_probe =
+        !session.enable_prompt_setup || is_compact_legacy_config(&config);
     let mut prompt_setup_supported =
         !skip_exec_probe && remote_supports_prompt_setup(&handle).await;
 

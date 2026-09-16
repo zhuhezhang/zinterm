@@ -510,11 +510,17 @@ msgstr "Please confirm"
 msgid "Confirm"
 msgstr "Confirm"
 
-msgid "Enable SFTP panel"
-msgstr "Enable SFTP panel"
+msgid "Enable SFTP"
+msgstr "Enable SFTP"
 
 msgid "When off, the SFTP side panel is hidden for this session."
 msgstr "When off, the SFTP side panel is hidden for this session."
+
+msgid "Enable shell integration"
+msgstr "Enable shell integration"
+
+msgid "When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells."
+msgstr "When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells."
 
 msgid "Enable command panel"
 msgstr "Enable command panel"

@@ -32,6 +32,8 @@ export struct SessionDraft {
     working-directory: string,  // "" = user home
     // SSH only: show the SFTP panel when connected (default off for new sessions).
     enable-sftp: bool,
+    // SSH only: probe bash/zsh and inject prompt hooks (default off for new sessions).
+    enable-prompt-setup: bool,
     // All connection kinds: show the bottom command panel (default off for new sessions).
     enable-command-panel: bool,
 }
@@ -101,6 +103,7 @@ export component SessionDialog inherits Rectangle {
     in-out property <string> draft-shell;
     in-out property <string> draft-working-directory;
     in-out property <bool> draft-enable-sftp: false;
+    in-out property <bool> draft-enable-prompt-setup: false;
     in-out property <bool> draft-enable-command-panel: false;
     // Set before opening (e.g. search-box Enter) so Host / IP is focused.
     in-out property <bool> focus-host-on-open: false;
@@ -200,6 +203,7 @@ export component SessionDialog inherits Rectangle {
             shell: root.draft-shell,
             working-directory: root.draft-working-directory,
             enable-sftp: root.draft-enable-sftp,
+            enable-prompt-setup: root.draft-enable-prompt-setup,
             enable-command-panel: root.draft-enable-command-panel,
         }, persist, connect);
     }
@@ -838,7 +842,7 @@ export component SessionDialog inherits Rectangle {
                                     width: sftp-label.preferred-width;
                                     height: 18px;
                                     sftp-label := Text {
-                                        text: @tr("Enable SFTP panel");
+                                        text: @tr("Enable SFTP");
                                         color: Theme.text-primary;
                                         font-size: Theme.fs-sm;
                                         vertical-alignment: center;
@@ -904,6 +908,58 @@ export component SessionDialog inherits Rectangle {
                                         anchor-width: parent.width;
                                         anchor-height: parent.height;
                                         activate => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
+                                    }
+                                }
+                            }
+
+                            if root.draft-kind == "ssh": HorizontalLayout {
+                                spacing: 8px;
+                                alignment: start;
+                                cross-axis-alignment: center;
+
+                                Rectangle {
+                                    width: 18px;
+                                    height: 18px;
+                                    border-radius: 4px;
+                                    border-width: 1px;
+                                    border-color: root.draft-enable-prompt-setup ? Theme.accent : Theme.border-strong;
+                                    background: root.draft-enable-prompt-setup ? Theme.accent : transparent;
+                                    Text {
+                                        text: root.draft-enable-prompt-setup ? "\u{E5CA}" : "";
+                                        font-family: "Material Icons";
+                                        color: white;
+                                        font-size: 14px;
+                                        width: 100%;
+                                        height: 100%;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+
+                                    TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { root.draft-enable-prompt-setup = !root.draft-enable-prompt-setup; }
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: prompt-setup-label.preferred-width;
+                                    height: 18px;
+                                    prompt-setup-label := Text {
+                                        text: @tr("Enable shell integration");
+                                        color: Theme.text-primary;
+                                        font-size: Theme.fs-sm;
+                                        vertical-alignment: center;
+                                        height: 100%;
+                                    }
+                                    TooltipArea {
+                                        width: parent.width;
+                                        height: parent.height;
+                                        mouse-cursor: pointer;
+                                        tip-from-cursor: true;
+                                        tooltip-text: @tr("When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells.");
+                                        anchor-width: parent.width;
+                                        anchor-height: parent.height;
+                                        activate => { root.draft-enable-prompt-setup = !root.draft-enable-prompt-setup; }
                                     }
                                 }
                             }

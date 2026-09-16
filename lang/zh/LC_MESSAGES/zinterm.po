@@ -510,11 +510,17 @@ msgstr "请确认"
 msgid "Confirm"
 msgstr "确认"
 
-msgid "Enable SFTP panel"
-msgstr "启用 SFTP 面板"
+msgid "Enable SFTP"
+msgstr "启用 SFTP"
 
 msgid "When off, the SFTP side panel is hidden for this session."
 msgstr "关闭后,此会话不显示 SFTP 侧栏。"
+
+msgid "Enable shell integration"
+msgstr "启用 Shell 集成"
+
+msgid "When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells."
+msgstr "开启后会通过独立 exec 通道探测 bash/zsh，并注入提示符钩子(目录跟随与命令捕获)。交换机/路由器或不支持的 shell 请保持关闭。"
 
 msgid "Enable command panel"
 msgstr "启用命令面板"

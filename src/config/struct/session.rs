@@ -180,6 +180,11 @@ pub struct Session {
     #[serde(default = "default_feature_enabled_compat")]
     pub enable_sftp: bool,
 
+    /// Probe bash/zsh and inject prompt hooks (SSH only). Opt-in; absent in
+    /// older configs means off so network gear is not probed by default.
+    #[serde(default)]
+    pub enable_prompt_setup: bool,
+
     /// Enable the bottom command panel.
     #[serde(
         default = "default_feature_enabled_compat",
@@ -228,9 +233,10 @@ impl Serialize for Session {
 
         map.serialize_entry("backspace_mode", &self.backspace_mode)?;
         map.serialize_entry("encoding", &self.encoding)?;
-        // SSH: enable_sftp is second-to-last (before enable_command_panel).
+        // SSH-only feature flags before the shared command-panel flag.
         if self.kind == SessionKind::Ssh {
             map.serialize_entry("enable_sftp", &self.enable_sftp)?;
+            map.serialize_entry("enable_prompt_setup", &self.enable_prompt_setup)?;
         }
         map.serialize_entry("enable_command_panel", &self.enable_command_panel)?;
         if let Some(ref last_used) = self.last_used {
@@ -369,6 +375,7 @@ impl Session {
             working_directory: json_string(obj.get("working_directory")),
             // Match new-session dialog defaults (off), not legacy config compat.
             enable_sftp: json_bool(obj.get("enable_sftp"), false),
+            enable_prompt_setup: json_bool(obj.get("enable_prompt_setup"), false),
             enable_command_panel: json_bool(
                 obj.get("enable_command_panel")
                     .or_else(|| obj.get("enable_quick_commands")),
@@ -395,6 +402,7 @@ impl Session {
                 self.clear_auth_fields();
                 self.clear_local_fields();
                 self.enable_sftp = false;
+                self.enable_prompt_setup = false;
             }
             SessionKind::Telnet => {
                 self.clear_serial_fields();
@@ -402,6 +410,7 @@ impl Session {
                 self.clear_auth_fields();
                 self.user.clear();
                 self.enable_sftp = false;
+                self.enable_prompt_setup = false;
                 if self.port == 0 {
                     self.port = 23;
                 }
@@ -411,6 +420,7 @@ impl Session {
                 self.clear_auth_fields();
                 self.clear_serial_fields();
                 self.enable_sftp = false;
+                self.enable_prompt_setup = false;
             }
         }
         before
@@ -708,6 +718,7 @@ mod sanitize_tests {
             shell: String::new(),
             working_directory: String::new(),
             enable_sftp: false,
+            enable_prompt_setup: false,
             enable_command_panel: false,
         }
     }
@@ -782,6 +793,7 @@ mod sanitize_tests {
         s.key_passphrase = Secret::new("kp");
         s.private_key = Secret::new("PEM");
         s.enable_sftp = true;
+        s.enable_prompt_setup = true;
         s.serial_port = "COM3".into();
         s.baud_rate = 115_200;
         s.shell = "/bin/zsh".into();
@@ -794,6 +806,7 @@ mod sanitize_tests {
         assert!(s.key_passphrase.is_empty());
         assert!(s.private_key.is_empty());
         assert!(!s.enable_sftp);
+        assert!(!s.enable_prompt_setup);
         assert!(s.shell.is_empty());
         assert_eq!(s.serial_port, "COM3");
         assert_eq!(s.baud_rate, 115_200);
@@ -846,7 +859,11 @@ mod sanitize_tests {
         assert!(raw.find("\"backspace_mode\"").unwrap() < raw.find("\"encoding\"").unwrap());
         assert!(raw.find("\"encoding\"").unwrap() < raw.find("\"enable_sftp\"").unwrap());
         assert!(
-            raw.find("\"enable_sftp\"").unwrap() < raw.find("\"enable_command_panel\"").unwrap()
+            raw.find("\"enable_sftp\"").unwrap() < raw.find("\"enable_prompt_setup\"").unwrap()
+        );
+        assert!(
+            raw.find("\"enable_prompt_setup\"").unwrap()
+                < raw.find("\"enable_command_panel\"").unwrap()
         );
     }
 
