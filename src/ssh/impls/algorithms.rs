@@ -139,7 +139,6 @@ const HMAC_CATALOG: &[AlgoDef] = &[
     def("hmac-sha2-256"),
     def("hmac-sha1-etm@openssh.com"),
     def("hmac-sha1"),
-    weak_default("hmac-md5"),
 ];
 
 const COMPRESS_CATALOG: &[AlgoDef] = &[
@@ -486,19 +485,5 @@ mod tests {
         assert!(prefs.is_builtin_default());
         prefs.hmac.retain(|n| n != "hmac-sha1");
         assert!(!prefs.is_builtin_default());
-    }
-
-    #[test]
-    fn hmac_md5_is_legacy_opt_in_and_negotiable() {
-        assert!(is_weak_algorithm(AlgorithmCategory::Hmac, "hmac-md5"));
-        assert!(!default_selection_for(AlgorithmCategory::Hmac)
-            .iter()
-            .any(|n| n == "hmac-md5"));
-
-        let mut prefs = AlgorithmPreferences::builtin_default();
-        prefs.hmac = vec!["hmac-md5".into()];
-        let preferred = to_preferred(&prefs);
-        let names: Vec<&str> = preferred.mac.iter().map(|n| n.as_ref()).collect();
-        assert_eq!(names, vec!["hmac-md5"]);
     }
 }
