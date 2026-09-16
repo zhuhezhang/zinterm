@@ -75,11 +75,12 @@ component SectionHeader inherits Text {
 }
 
 // Muted page-level hint under a section / setting (same metrics as SettingRow.desc).
+// Extra height: Slint preferred-height undershoots CJK descent on macOS (#129).
 component SettingHint inherits Text {
     color: Theme.text-muted;
     font-size: 11px * Theme.panel-font;
     wrap: word-wrap;
-    min-height: 15px * Theme.panel-font;
+    height: max(15px * Theme.panel-font, self.preferred-height + 8px * Theme.panel-font);
 }
 
 // A settings row: label (+ optional description) on the left, a control slot on
@@ -104,13 +105,18 @@ component SettingRow inherits Rectangle {
                     color: Theme.text-primary;
                 }
 
-                if root.desc != "": Text {
-                    text: root.desc;
-                    font-size: 11px * Theme.panel-font;
-                    color: Theme.text-muted;
-                    wrap: word-wrap;
-                    // Preferred height can undershoot CJK ink on macOS.
-                    min-height: 15px * Theme.panel-font;
+                // Pad height: preferred-height undershoots CJK ink on macOS (#129),
+                // so wrapped desc (e.g. keepalive) loses the last line's descent.
+                if root.desc != "": Rectangle {
+                    height: max(15px * Theme.panel-font, desc-text.preferred-height + 8px * Theme.panel-font);
+                    desc-text := Text {
+                        width: 100%;
+                        text: root.desc;
+                        font-size: 11px * Theme.panel-font;
+                        color: Theme.text-muted;
+                        wrap: word-wrap;
+                        vertical-alignment: top;
+                    }
                 }
             }
 
