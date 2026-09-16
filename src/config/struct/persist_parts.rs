@@ -1,4 +1,4 @@
-//! On-disk split of [`super::ConfigFile`]: sessions, settings, and UI chrome.
+//! On-disk split of [`super::ConfigFile`]: sessions, commands, settings, and UI chrome.
 //!
 //! In memory we still keep one [`ConfigFile`]. On disk the pieces live in
 //! sibling JSON files so a folder toggle does not rewrite hundreds of sessions.
@@ -21,7 +21,8 @@ impl SaveKind {
     pub const SETTINGS: Self = Self(2);
     pub const UI: Self = Self(4);
     pub const VAULT: Self = Self(8);
-    pub const ALL: Self = Self(1 | 2 | 4 | 8);
+    pub const COMMANDS: Self = Self(16);
+    pub const ALL: Self = Self(1 | 2 | 4 | 8 | 16);
 
     pub const fn contains(self, other: Self) -> bool {
         self.0 & other.0 == other.0
@@ -55,37 +56,52 @@ impl std::ops::BitOrAssign for SaveKind {
     }
 }
 
-/// `sessions.json` — saved connections and related lists.
+/// `sessions.json` — saved connections and empty session groups.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SessionsFile {
     #[serde(default)]
     pub sessions: Vec<Session>,
     #[serde(default)]
-    pub groups: Vec<String>,
-    #[serde(default)]
-    pub quick_commands: Vec<QuickCommand>,
-    #[serde(default)]
-    pub quick_groups: Vec<String>,
-    #[serde(default)]
-    pub command_history: Vec<String>,
+    pub empty_groups: Vec<String>,
 }
 
 impl SessionsFile {
     pub fn from_config(cfg: &ConfigFile) -> Self {
         Self {
             sessions: cfg.sessions.clone(),
-            groups: cfg.groups.clone(),
-            quick_commands: cfg.quick_commands.clone(),
-            quick_groups: cfg.quick_groups.clone(),
-            command_history: cfg.command_history.clone(),
+            empty_groups: cfg.empty_groups.clone(),
         }
     }
 
     pub fn apply_to(&self, cfg: &mut ConfigFile) {
         cfg.sessions = self.sessions.clone();
-        cfg.groups = self.groups.clone();
+        cfg.empty_groups = self.empty_groups.clone();
+    }
+}
+
+/// `commands.json` — quick commands and terminal command history.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CommandsFile {
+    #[serde(default)]
+    pub quick_commands: Vec<QuickCommand>,
+    #[serde(default)]
+    pub quick_empty_groups: Vec<String>,
+    #[serde(default)]
+    pub command_history: Vec<String>,
+}
+
+impl CommandsFile {
+    pub fn from_config(cfg: &ConfigFile) -> Self {
+        Self {
+            quick_commands: cfg.quick_commands.clone(),
+            quick_empty_groups: cfg.quick_empty_groups.clone(),
+            command_history: cfg.command_history.clone(),
+        }
+    }
+
+    pub fn apply_to(&self, cfg: &mut ConfigFile) {
         cfg.quick_commands = self.quick_commands.clone();
-        cfg.quick_groups = self.quick_groups.clone();
+        cfg.quick_empty_groups = self.quick_empty_groups.clone();
         cfg.command_history = self.command_history.clone();
     }
 }

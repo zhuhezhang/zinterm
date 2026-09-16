@@ -9,18 +9,20 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 
 use super::structs::{
-    SaveKind, SessionsFile, SettingsFile, UiStateFile,
+    CommandsFile, SaveKind, SessionsFile, SettingsFile, UiStateFile,
 };
 use super::vault::{self, PlainSecrets};
 
 const SETTINGS_FILE: &str = "settings.json";
 const UI_STATE_FILE: &str = "ui-state.json";
+const COMMANDS_FILE: &str = "commands.json";
 
 /// Snapshot of the pieces a background job may write.
 pub(crate) struct PersistSnapshot {
     pub data_dir: PathBuf,
     pub sessions_path: PathBuf,
     pub sessions: Option<SessionsFile>,
+    pub commands: Option<CommandsFile>,
     pub settings: Option<SettingsFile>,
     pub ui: Option<UiStateFile>,
     pub vault: Option<VaultSnapshot>,
@@ -122,6 +124,9 @@ fn merge_snapshot(dst: &mut PersistSnapshot, src: PersistSnapshot) {
     if src.sessions.is_some() {
         dst.sessions = src.sessions;
     }
+    if src.commands.is_some() {
+        dst.commands = src.commands;
+    }
     if src.settings.is_some() {
         dst.settings = src.settings;
     }
@@ -166,6 +171,10 @@ pub(crate) fn ui_state_path(data_dir: &Path) -> PathBuf {
     data_dir.join(UI_STATE_FILE)
 }
 
+pub(crate) fn commands_path(data_dir: &Path) -> PathBuf {
+    data_dir.join(COMMANDS_FILE)
+}
+
 pub(crate) fn write_snapshot(snap: &PersistSnapshot) -> Result<()> {
     if let Some(sessions) = &snap.sessions {
         // Strip secrets before serialising sessions.json.
@@ -177,6 +186,9 @@ pub(crate) fn write_snapshot(snap: &PersistSnapshot) -> Result<()> {
             session.private_key = crate::config::Secret::default();
         }
         atomic_write_json(&snap.sessions_path, &disk)?;
+    }
+    if let Some(commands) = &snap.commands {
+        atomic_write_json(&commands_path(&snap.data_dir), commands)?;
     }
     if let Some(settings) = &snap.settings {
         atomic_write_json(&settings_path(&snap.data_dir), settings)?;
@@ -208,6 +220,9 @@ pub(crate) fn build_snapshot(
         sessions: kind
             .contains(SaveKind::SESSIONS)
             .then(|| SessionsFile::from_config(cache)),
+        commands: kind
+            .contains(SaveKind::COMMANDS)
+            .then(|| CommandsFile::from_config(cache)),
         settings: kind
             .contains(SaveKind::SETTINGS)
             .then(|| SettingsFile::from_config(cache)),

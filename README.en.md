@@ -88,9 +88,10 @@ open /Applications/zinterm.app
 - [x] Color emoji, including skin tones, flags, and ZWJ sequences
 - [x] Tabs (welcome page + multiple sessions)
 - [x] Session management: create / edit / delete / groups, local JSON, export / import
-  - Config location: `%APPDATA%/zinterm/sessions.json` (Windows)
-    / `~/.config/zinterm/sessions.json` (Linux)
-    / `~/Library/Application Support/zinterm/sessions.json` (macOS)
+  - Config directory: `%APPDATA%/zinterm` (Windows)
+    / `~/.config/zinterm` (Linux)
+    / `~/Library/Application Support/zinterm` (macOS)
+  - `sessions.json`: sessions and empty groups (`empty_groups`); `commands.json`: quick commands, empty quick groups (`quick_empty_groups`), and history
   - Export files omit passwords / private keys; to import credentials see
     [Importing connections and password fields](#importing-connections-and-password-fields)
 - [x] SSH (`russh`, pure Rust): password / private key / encrypted key (passphrase)
@@ -122,8 +123,8 @@ under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See
 cargo run --release
 ```
 
-On first launch an empty session store is created at
-`%APPDATA%/zinterm/sessions.json`. Click **"＋ New Session"** in the top-right
+On first launch empty `sessions.json` / `commands.json` (and siblings) are created under
+`%APPDATA%/zinterm`. Click **"＋ New Session"** in the top-right
 to add your first server.
 
 ## Importing connections and password fields

@@ -6,7 +6,8 @@
 //!
 //! | File | Contents |
 //! |------|----------|
-//! | `sessions.json` | sessions, groups, quick commands, command history |
+//! | `sessions.json` | sessions and empty session groups |
+//! | `commands.json` | quick commands, empty quick groups, command history |
 //! | `settings.json` | Settings-panel preferences |
 //! | `ui-state.json` | layout chrome + Quick Connect fold state |
 //!
@@ -363,10 +364,10 @@ pub(crate) fn is_valid_group_segment(segment: &str) -> bool {
 /// Repair configurations created before #316/#324, when the Move-to menu exposed
 /// the built-in `system` group as a destination for saved server sessions.
 fn normalize_reserved_session_groups(cfg: &mut ConfigFile) -> bool {
-    let old_group_count = cfg.groups.len();
-    cfg.groups
+    let old_group_count = cfg.empty_groups.len();
+    cfg.empty_groups
         .retain(|group| !is_reserved_session_group(group.trim()));
-    let mut changed = cfg.groups.len() != old_group_count;
+    let mut changed = cfg.empty_groups.len() != old_group_count;
     for session in &mut cfg.sessions {
         if is_reserved_session_group(session.group.trim()) {
             session.group.clear();
@@ -428,9 +429,6 @@ impl ConfigStore {
     /// Load (or initialise) the config files. On any parse error we back up the
     /// broken file and start fresh — losing saved sessions is better than
     /// crashing at launch.
-    ///
-    /// Supports the legacy monolithic `sessions.json` (everything in one file)
-    /// and migrates to the split layout on the next save.
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
         let config_dir = path
@@ -443,12 +441,14 @@ impl ConfigStore {
 
         let settings_path = crate::config::persist::settings_path(&config_dir);
         let ui_path = crate::config::persist::ui_state_path(&config_dir);
-        let split_layout = settings_path.exists() || ui_path.exists();
+        let commands_path = crate::config::persist::commands_path(&config_dir);
+        let split_layout =
+            settings_path.exists() || ui_path.exists() || commands_path.exists();
 
         let mut migrated = false;
         let cache = if split_layout || path.exists() {
             let mut cfg = if split_layout {
-                Self::load_split(&path, &settings_path, &ui_path)?
+                Self::load_split(&path, &commands_path, &settings_path, &ui_path)?
             } else {
                 match Self::load_legacy_monolithic(&path)? {
                     Some(cfg) => {
@@ -497,7 +497,12 @@ impl ConfigStore {
         Ok(store)
     }
 
-    fn load_split(sessions_path: &Path, settings_path: &Path, ui_path: &Path) -> Result<ConfigFile> {
+    fn load_split(
+        sessions_path: &Path,
+        commands_path: &Path,
+        settings_path: &Path,
+        ui_path: &Path,
+    ) -> Result<ConfigFile> {
         let mut cfg = ConfigFile::default();
 
         if sessions_path.exists() {
@@ -516,6 +521,14 @@ impl ConfigStore {
                         );
                     }
                 },
+            }
+        }
+
+        match crate::config::persist::read_json_file::<CommandsFile>(commands_path) {
+            Ok(Some(commands)) => commands.apply_to(&mut cfg),
+            Ok(None) => {}
+            Err(err) => {
+                tracing::warn!("commands file unreadable ({err:#}); keeping defaults");
             }
         }
 
@@ -643,7 +656,7 @@ impl ConfigStore {
     /// later restore of the same session ids can still unlock them).
     pub fn clear_sessions_and_groups(&mut self, clear_credentials: bool) {
         self.cache.sessions.clear();
-        self.cache.groups.clear();
+        self.cache.empty_groups.clear();
         self.cache.collapsed_session_groups = None;
         if clear_credentials {
             if let Ok(dir) = self.data_dir_path() {
@@ -661,18 +674,18 @@ impl ConfigStore {
     /// and the SFTP preset download directory (system Downloads when available).
     pub fn restore_settings_defaults(&mut self) {
         let sessions = std::mem::take(&mut self.cache.sessions);
-        let groups = std::mem::take(&mut self.cache.groups);
+        let groups = std::mem::take(&mut self.cache.empty_groups);
         let collapsed_session_groups = self.cache.collapsed_session_groups.take();
         let quick_commands = std::mem::take(&mut self.cache.quick_commands);
-        let quick_groups = std::mem::take(&mut self.cache.quick_groups);
+        let quick_groups = std::mem::take(&mut self.cache.quick_empty_groups);
         let command_history = std::mem::take(&mut self.cache.command_history);
 
         self.cache = fresh_config();
         self.cache.sessions = sessions;
-        self.cache.groups = groups;
+        self.cache.empty_groups = groups;
         self.cache.collapsed_session_groups = collapsed_session_groups;
         self.cache.quick_commands = quick_commands;
-        self.cache.quick_groups = quick_groups;
+        self.cache.quick_empty_groups = quick_groups;
         self.cache.command_history = command_history;
         // Same first-run seed as startup: empty → user's Downloads folder.
         if self.cache.download_dir.is_empty() {
@@ -798,7 +811,7 @@ impl ConfigStore {
                 }
             }
         };
-        for group in &self.cache.groups {
+        for group in &self.cache.empty_groups {
             insert(group);
         }
         for session in &self.cache.sessions {
@@ -1255,9 +1268,9 @@ impl ConfigStore {
         self.cache.quick_panel_dock = dock;
     }
 
-    /// Explicit quick-command groups (#55) — parallels [`groups`](Self::groups).
-    pub fn quick_groups(&self) -> &[String] {
-        &self.cache.quick_groups
+    /// Explicit quick-command groups (#55) — parallels [`empty_groups`](Self::empty_groups).
+    pub fn quick_empty_groups(&self) -> &[String] {
+        &self.cache.quick_empty_groups
     }
 
     /// Create an empty quick-command group. Ignores blank, "default", duplicates.
@@ -1266,15 +1279,15 @@ impl ConfigStore {
         if n.is_empty() || n.eq_ignore_ascii_case("default") {
             return;
         }
-        if !self.cache.quick_groups.iter().any(|g| g == &n) {
-            self.cache.quick_groups.push(n);
+        if !self.cache.quick_empty_groups.iter().any(|g| g == &n) {
+            self.cache.quick_empty_groups.push(n);
         }
     }
 
     /// Delete a quick-command group; any command still in it falls back to
     /// ungrouped (the UI only offers delete on empty groups, but clear defensively).
     pub fn remove_quick_group(&mut self, name: &str) {
-        self.cache.quick_groups.retain(|g| g != name);
+        self.cache.quick_empty_groups.retain(|g| g != name);
         for c in &mut self.cache.quick_commands {
             if c.group == name {
                 c.group.clear();
@@ -1289,7 +1302,7 @@ impl ConfigStore {
         if n.is_empty() || n.eq_ignore_ascii_case("default") || n == old {
             return;
         }
-        for g in &mut self.cache.quick_groups {
+        for g in &mut self.cache.quick_empty_groups {
             if g == old {
                 *g = n.clone();
             }
@@ -1299,13 +1312,13 @@ impl ConfigStore {
                 c.group = n.clone();
             }
         }
-        self.cache.quick_groups.dedup();
+        self.cache.quick_empty_groups.dedup();
     }
 
-    /// Ordered named quick-command groups: explicit `quick_groups` first, then
+    /// Ordered named quick-command groups: explicit `quick_empty_groups` first, then
     /// any group referenced by a command that is not yet listed (first-seen order).
     pub fn materialized_quick_groups(&self) -> Vec<String> {
-        let mut ordered: Vec<String> = self.cache.quick_groups.clone();
+        let mut ordered: Vec<String> = self.cache.quick_empty_groups.clone();
         for c in &self.cache.quick_commands {
             let g = c.group.trim();
             if !g.is_empty() && !ordered.iter().any(|x| x == g) {
@@ -1342,7 +1355,7 @@ impl ConfigStore {
             }
             groups.insert(to_idx, item);
         }
-        self.cache.quick_groups = groups;
+        self.cache.quick_empty_groups = groups;
         true
     }
 
@@ -1602,8 +1615,8 @@ impl ConfigStore {
     // ── Session groups / folders (#41) ────────────────────────────────────
 
     /// Explicit groups (empty folders included). "default" is implicit.
-    pub fn groups(&self) -> &[String] {
-        &self.cache.groups
+    pub fn empty_groups(&self) -> &[String] {
+        &self.cache.empty_groups
     }
 
     pub fn collapsed_session_groups(&self) -> Option<&[String]> {
@@ -1665,7 +1678,7 @@ impl ConfigStore {
     }
 
     fn collect_session_group_paths(&self) -> Vec<String> {
-        let mut groups = self.cache.groups.clone();
+        let mut groups = self.cache.empty_groups.clone();
         groups.extend(
             self.cache
                 .sessions
@@ -1705,7 +1718,7 @@ impl ConfigStore {
             return false;
         }
         self.cache
-            .groups
+            .empty_groups
             .iter()
             .any(|group| group.trim().eq_ignore_ascii_case(target))
             || self.cache.sessions.iter().any(|session| {
@@ -1720,7 +1733,7 @@ impl ConfigStore {
         if n.is_empty() || is_reserved_session_group(&n) || self.session_group_exists(&n) {
             return;
         }
-        self.cache.groups.push(n.clone());
+        self.cache.empty_groups.push(n.clone());
         if let Some(groups) = &mut self.cache.collapsed_session_groups {
             groups.push(n);
             groups.sort();
@@ -1737,7 +1750,7 @@ impl ConfigStore {
         }
         let prefix = format!("{name}/");
         self.cache
-            .groups
+            .empty_groups
             .retain(|g| g != name && !g.starts_with(&prefix));
         if let Some(groups) = &mut self.cache.collapsed_session_groups {
             groups.retain(|g| g != name && !g.starts_with(&prefix));
@@ -1762,7 +1775,7 @@ impl ConfigStore {
         }
         let old_prefix = format!("{old}/");
         let new_prefix = format!("{n}/");
-        for g in &mut self.cache.groups {
+        for g in &mut self.cache.empty_groups {
             if g == old {
                 *g = n.clone();
             } else if g.starts_with(&old_prefix) {
@@ -1790,8 +1803,8 @@ impl ConfigStore {
             groups.sort();
             groups.dedup();
         }
-        self.cache.groups.sort();
-        self.cache.groups.dedup();
+        self.cache.empty_groups.sort();
+        self.cache.empty_groups.dedup();
     }
 
     /// Synchronously write every config file + vault.
@@ -1864,11 +1877,11 @@ impl ConfigStore {
         Ok((serde_json::to_string_pretty(&out)?, count))
     }
 
-    /// Explicit `cache.groups` entries that currently have no session in that
+    /// Explicit `cache.empty_groups` entries that currently have no session in that
     /// folder or any descendant path.
     fn collect_empty_groups(&self) -> Vec<String> {
         self.cache
-            .groups
+            .empty_groups
             .iter()
             .filter(|g| {
                 let g = g.trim();
@@ -1925,9 +1938,9 @@ impl ConfigStore {
         // already has those paths when connections land in sibling groups.
         let mut groups_added = false;
         for group in &file.empty_groups {
-            let before = self.cache.groups.len();
+            let before = self.cache.empty_groups.len();
             self.add_group(group.clone());
-            if self.cache.groups.len() > before {
+            if self.cache.empty_groups.len() > before {
                 groups_added = true;
             }
         }
@@ -2141,7 +2154,7 @@ mod tests {
     #[test]
     fn quick_connect_groups_default_collapsed_and_remember_expansion() {
         let mut store = temp_store();
-        store.cache.groups = vec!["production".into(), "staging".into()];
+        store.cache.empty_groups = vec!["production".into(), "staging".into()];
         store.cache.sessions.push(Session {
             group: "production".into(),
             ..sample_session("server")
@@ -2167,7 +2180,7 @@ mod tests {
     #[test]
     fn expand_collapse_all_and_children_session_groups() {
         let mut store = temp_store();
-        store.cache.groups = vec![
+        store.cache.empty_groups = vec![
             "prod".into(),
             "prod/web".into(),
             "prod/web/edge".into(),
@@ -2208,7 +2221,7 @@ mod tests {
         default_session.group = "Default".into();
         let mut cfg = ConfigFile {
             sessions: vec![system_session, default_session],
-            groups: vec![
+            empty_groups: vec![
                 "system".into(),
                 "System".into(),
                 "default".into(),
@@ -2219,7 +2232,7 @@ mod tests {
         };
 
         assert!(normalize_reserved_session_groups(&mut cfg));
-        assert_eq!(cfg.groups, ["prod"]);
+        assert_eq!(cfg.empty_groups, ["prod"]);
         assert!(cfg.sessions.iter().all(|session| session.group.is_empty()));
         assert!(cfg.sessions[0].password.is_empty());
         // Collapse preferences for legacy reserved labels are display state and
@@ -2234,7 +2247,7 @@ mod tests {
         store.add_group("DEFAULT".into());
         store.add_group("prod".into());
         store.rename_group("prod", "System".into());
-        assert_eq!(store.groups(), ["prod"]);
+        assert_eq!(store.empty_groups(), ["prod"]);
 
         let mut session = sample_session("server");
         session.group = "SYSTEM".into();
@@ -2247,7 +2260,7 @@ mod tests {
         let mut store = temp_store();
         store.add_group("Production".into());
         store.add_group("production".into());
-        assert_eq!(store.groups(), ["Production"]);
+        assert_eq!(store.empty_groups(), ["Production"]);
         assert!(store.session_group_exists(" PRODUCTION "));
 
         let mut session = sample_session("staging-server");
@@ -2256,11 +2269,11 @@ mod tests {
         assert!(store.session_group_exists("staging"));
 
         store.rename_group("Production", "STAGING".into());
-        assert_eq!(store.groups(), ["Production"]);
+        assert_eq!(store.empty_groups(), ["Production"]);
 
         // Changing only the spelling/case of the same group remains valid.
         store.rename_group("Production", "production".into());
-        assert_eq!(store.groups(), ["production"]);
+        assert_eq!(store.empty_groups(), ["production"]);
     }
 
     #[test]
@@ -2392,7 +2405,7 @@ mod tests {
         let mut session = sample_session("keep-me");
         session.password = Secret::new("secret");
         store.upsert(session);
-        store.cache.groups = vec!["lab".into()];
+        store.cache.empty_groups = vec!["lab".into()];
         store.set_quick_commands(vec![crate::config::QuickCommand {
             name: "ll".into(),
             command: "ls -la".into(),
@@ -2413,10 +2426,10 @@ mod tests {
         assert_eq!(store.sessions().len(), 1);
         assert_eq!(store.sessions()[0].name, "keep-me");
         assert_eq!(store.sessions()[0].password.as_str(), "secret");
-        assert_eq!(store.groups(), &["lab".to_string()]);
+        assert_eq!(store.empty_groups(), &["lab".to_string()]);
         assert_eq!(store.quick_commands().len(), 1);
         assert_eq!(store.quick_commands()[0].name, "ll");
-        assert!(store.quick_groups().iter().any(|g| g == "ops"));
+        assert!(store.quick_empty_groups().iter().any(|g| g == "ops"));
         assert_eq!(store.cache.command_history, vec!["echo hi".to_string()]);
         assert_eq!(store.font_size(), 13);
         assert_eq!(store.wallpaper(), "");
@@ -2560,7 +2573,7 @@ mod tests {
     fn split_files_roundtrip_keeps_sessions_and_settings() {
         let mut store = temp_store();
         store.cache.sessions.push(sample_session("alpha"));
-        store.cache.groups = vec!["prod".into()];
+        store.cache.empty_groups = vec!["prod".into()];
         store.set_theme_pref("dark".into());
         store.set_session_group_collapsed("prod", false);
         store.save().unwrap();
@@ -2570,6 +2583,8 @@ mod tests {
         assert!(dir.join("ui-state.json").exists());
         let sessions_raw = std::fs::read_to_string(&store.path).unwrap();
         assert!(sessions_raw.contains("alpha"));
+        assert!(sessions_raw.contains("\"empty_groups\""));
+        assert!(!sessions_raw.contains("\"groups\""));
         assert!(!sessions_raw.contains("\"theme_pref\""));
         let settings_raw = std::fs::read_to_string(dir.join("settings.json")).unwrap();
         assert!(settings_raw.contains("dark"));
@@ -2583,13 +2598,61 @@ mod tests {
             // Re-read using the same helpers as load().
             let settings_path = crate::config::persist::settings_path(&dir);
             let ui_path = crate::config::persist::ui_state_path(&dir);
-            s.cache = ConfigStore::load_split(&store.path, &settings_path, &ui_path).unwrap();
+            let commands_path = crate::config::persist::commands_path(&dir);
+            s.cache =
+                ConfigStore::load_split(&store.path, &commands_path, &settings_path, &ui_path)
+                    .unwrap();
             s
         };
         assert_eq!(reloaded.sessions().len(), 1);
         assert_eq!(reloaded.theme_pref(), "dark");
         let collapsed = reloaded.collapsed_session_groups().unwrap();
         assert!(!collapsed.iter().any(|g| g == "prod"));
+
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn commands_file_roundtrip_keeps_quick_commands_and_history() {
+        let mut store = temp_store();
+        store.set_quick_commands(vec![crate::config::QuickCommand {
+            name: "ll".into(),
+            command: "ls -la".into(),
+            group: "ops".into(),
+            send_enter: true,
+        }]);
+        store.add_quick_group("ops".into());
+        store.cache.command_history = vec!["echo hi".into()];
+        store.save().unwrap();
+
+        let dir = store.path.parent().unwrap().to_path_buf();
+        let commands_path = dir.join("commands.json");
+        assert!(commands_path.exists());
+        let commands_raw = std::fs::read_to_string(&commands_path).unwrap();
+        assert!(commands_raw.contains("ls -la"));
+        assert!(commands_raw.contains("echo hi"));
+        assert!(commands_raw.contains("\"quick_empty_groups\""));
+        assert!(!commands_raw.contains("\"quick_groups\""));
+        let sessions_raw = std::fs::read_to_string(&store.path).unwrap();
+        assert!(!sessions_raw.contains("quick_commands"));
+        assert!(!sessions_raw.contains("command_history"));
+
+        let reloaded = {
+            let settings_path = crate::config::persist::settings_path(&dir);
+            let ui_path = crate::config::persist::ui_state_path(&dir);
+            let mut s = ConfigStore {
+                path: store.path.clone(),
+                cache: ConfigFile::default(),
+            };
+            s.cache =
+                ConfigStore::load_split(&store.path, &commands_path, &settings_path, &ui_path)
+                    .unwrap();
+            s
+        };
+        assert_eq!(reloaded.quick_commands().len(), 1);
+        assert_eq!(reloaded.quick_commands()[0].name, "ll");
+        assert!(reloaded.quick_empty_groups().iter().any(|g| g == "ops"));
+        assert_eq!(reloaded.command_history(), &["echo hi".to_string()]);
 
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -3030,7 +3093,7 @@ mod tests {
     }
 
     #[test]
-    fn quick_groups_keep_user_order_and_reorder() {
+    fn quick_empty_groups_keep_user_order_and_reorder() {
         let mut store = temp_store();
         store.add_quick_group("beta".into());
         store.add_quick_group("alpha".into());

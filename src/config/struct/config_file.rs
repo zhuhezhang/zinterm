@@ -107,11 +107,10 @@ pub struct ConfigFile {
     /// filesystem path to a custom image. Drives the wallpaper + tinted theme.
     #[serde(default = "default_wallpaper")]
     pub wallpaper: String,
-    /// Explicit session groups/folders (#41), including empty ones so a folder
-    /// can exist before any session is moved into it. "default" is implicit and
-    /// not stored here.
+    /// Explicit empty session groups/folders (#41) so a folder can exist before
+    /// any session is moved into it. "default" is implicit and not stored here.
     #[serde(default)]
-    pub groups: Vec<String>,
+    pub empty_groups: Vec<String>,
     /// Quick Connect folders that were collapsed when the UI was last used.
     /// `None` is a legacy/new config and starts with every folder collapsed;
     /// `Some([])` means the user explicitly expanded every folder.
@@ -144,10 +143,10 @@ pub struct ConfigFile {
     /// Saved quick commands (#55).
     #[serde(default)]
     pub quick_commands: Vec<QuickCommand>,
-    /// Explicit quick-command group names — mirrors `groups` for sessions so that
-    /// empty quick-command groups survive and can be renamed/deleted (#55).
+    /// Explicit empty quick-command group names — mirrors `empty_groups` for
+    /// sessions so empty quick-command groups survive and can be renamed/deleted (#55).
     #[serde(default)]
-    pub quick_groups: Vec<String>,
+    pub quick_empty_groups: Vec<String>,
     /// Docked quick-command sidebar (#215). Default on for new installs; the
     /// command-bar popup remains available until the user docks it.
     #[serde(default)]

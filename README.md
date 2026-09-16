@@ -83,9 +83,10 @@ open /Applications/zinterm.app
 - [x] 彩色 emoji（支持肤色、旗帜及 ZWJ 组合序列）
 - [x] 多标签页（欢迎页 + 多个会话）
 - [x] 会话管理：新建 / 编辑 / 删除 / 分组，本地 JSON 持久化，导出 / 导入
-  - 配置位置：`%APPDATA%/zinterm/sessions.json`（Windows）
-    / `~/.config/zinterm/sessions.json`（Linux）
-    / `~/Library/Application Support/zinterm/sessions.json`（macOS）
+  - 配置目录：`%APPDATA%/zinterm`（Windows）
+    / `~/.config/zinterm`（Linux）
+    / `~/Library/Application Support/zinterm`（macOS）
+  - `sessions.json`：会话与空分组（`empty_groups`）；`commands.json`：快捷命令、空快捷分组（`quick_empty_groups`）与命令历史
   - 导出文件不含密码 / 私钥；若需导入凭据，见下方 [导入连接与密码字段](#导入连接与密码字段)
 - [x] SSH（`russh`，纯 Rust）：密码 / 私钥 / 加密私钥（密码短语）
 - [x] SFTP 文件浏览 + 上传 / 下载（拖拽）+ 终端内 ZMODEM（`sz`）接收
@@ -116,7 +117,7 @@ open /Applications/zinterm.app
 cargo run --release
 ```
 
-首次启动会在 `%APPDATA%/zinterm/sessions.json` 建立空的会话库。点击右上
+首次启动会在配置目录建立空的 `sessions.json` / `commands.json` 等文件。点击右上
 角 **“＋ 新建会话”** 添加第一台服务器。
 
 ## 导入连接与密码字段

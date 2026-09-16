@@ -25,7 +25,7 @@ struct GroupTreeNode {
 
 fn collect_user_group_paths(store: &ConfigStore) -> BTreeSet<String> {
     let mut paths = BTreeSet::new();
-    for group in store.groups() {
+    for group in store.empty_groups() {
         let group = group.trim();
         if group.is_empty() || is_reserved_session_group(group) {
             continue;

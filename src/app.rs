@@ -4412,7 +4412,7 @@ fn wire_key_input(
                 if let Some(line) = history_line {
                     let mut s = store_rc.borrow_mut();
                     s.push_command_history(line);
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                     if let Some(w) = weak.upgrade() {
                         w.set_command_history(history_model(&s));
                     }
@@ -4438,7 +4438,7 @@ fn wire_key_input(
                 let idx = i as usize;
                 if idx < s.command_history().len() {
                     s.remove_command_history(idx);
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                 }
             }
             if let Some(w) = weak.upgrade() {
@@ -4471,7 +4471,7 @@ fn wire_key_input(
                 let mut s = store_rc.borrow_mut();
                 if let Some(idx) = s.command_history().iter().position(|c| c == cmd.as_str()) {
                     s.remove_command_history(idx);
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                 }
             }
             if let Some(w) = weak.upgrade() {
@@ -4544,7 +4544,7 @@ fn wire_key_input(
                         send_enter: true,
                     });
                     s.set_quick_commands(v);
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                 }
                 if let Some(w) = weak.upgrade() {
                     sync_quick_command_models(
@@ -4573,7 +4573,7 @@ fn wire_key_input(
                     v.remove(i);
                 }
                 s.set_quick_commands(v);
-                s.save_later(SaveKind::SESSIONS);
+                s.save_later(SaveKind::COMMANDS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(
@@ -4655,7 +4655,7 @@ fn wire_key_input(
                             send_enter: true,
                         },
                     );
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                 }
                 if let Some(w) = weak.upgrade() {
                     sync_quick_command_models(
@@ -4690,7 +4690,7 @@ fn wire_key_input(
                     };
                     v.insert(index as usize + 1, dup);
                     s.set_quick_commands(v);
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                 }
             }
             if let Some(w) = weak.upgrade() {
@@ -4728,7 +4728,7 @@ fn wire_key_input(
                     v[i].name = name;
                 }
                 s.set_quick_commands(v);
-                s.save_later(SaveKind::SESSIONS);
+                s.save_later(SaveKind::COMMANDS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(
@@ -4782,7 +4782,7 @@ fn wire_key_input(
                     );
                     if changed {
                         s.set_quick_commands(commands);
-                        s.save_later(SaveKind::SESSIONS);
+                        s.save_later(SaveKind::COMMANDS);
                     }
                     changed
                 };
@@ -4812,7 +4812,7 @@ fn wire_key_input(
                 let mut s = store_rc.borrow_mut();
                 let changed = s.reorder_quick_group(&from.to_string(), &before.to_string());
                 if changed {
-                    s.save_later(SaveKind::SESSIONS);
+                    s.save_later(SaveKind::COMMANDS);
                 }
                 changed
             };
@@ -4844,7 +4844,7 @@ fn wire_key_input(
                 } else {
                     s.rename_quick_group(&orig.to_string(), name.to_string());
                 }
-                s.save_later(SaveKind::SESSIONS);
+                s.save_later(SaveKind::COMMANDS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(
@@ -4868,7 +4868,7 @@ fn wire_key_input(
             {
                 let mut s = store_rc.borrow_mut();
                 s.remove_quick_group(&name.to_string());
-                s.save_later(SaveKind::SESSIONS);
+                s.save_later(SaveKind::COMMANDS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(

@@ -58,7 +58,7 @@ pub(super) fn all_quick_group_names(store: &ConfigStore) -> std::collections::Ha
     if cmds.iter().any(|c| c.group.trim().is_empty()) {
         set.insert("default".to_string());
     }
-    for g in store.quick_groups() {
+    for g in store.quick_empty_groups() {
         set.insert(g.clone());
     }
     for c in cmds {
