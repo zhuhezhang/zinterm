@@ -403,7 +403,7 @@ pub(super) fn persist_credentials(
                 }
                 if changed {
                     st.upsert(sess);
-                    let _ = st.save();
+                    st.save_later(crate::config::SaveKind::sessions_and_vault());
                 }
             }
         }

@@ -133,7 +133,7 @@ use tokio::runtime::Runtime;
 
 use crate::config::{
     group_join, group_parent_path, group_path_segment, is_reserved_session_group,
-    is_valid_group_segment, AuthMethod, ConfigStore, OutputHighlightRule, Secret, Session,
+    is_valid_group_segment, AuthMethod, ConfigStore, OutputHighlightRule, SaveKind, Secret, Session,
     SessionKind,
 };
 use crate::i18n::t;
@@ -815,9 +815,7 @@ pub fn run() -> Result<()> {
         window.on_clear_saved_passwords(move || {
             let mut s = store.borrow_mut();
             s.clear_saved_passwords_and_keys();
-            if let Err(err) = s.save() {
-                tracing::warn!("failed to save config after clearing passwords: {err:#}");
-            }
+            s.save_later(SaveKind::sessions_and_vault());
         });
     }
 
@@ -901,7 +899,7 @@ pub fn run() -> Result<()> {
         window.on_persist_welcome_sidebar_width(move |w| {
             let mut s = store.borrow_mut();
             s.set_welcome_sidebar_width(w);
-            let _ = s.save();
+            s.save_later(SaveKind::UI);
         });
     }
     {
@@ -909,7 +907,7 @@ pub fn run() -> Result<()> {
         window.on_persist_welcome_sidebar_dock(move |dock| {
             let mut s = store.borrow_mut();
             s.set_welcome_sidebar_dock(dock.to_string());
-            let _ = s.save();
+            s.save_later(SaveKind::UI);
         });
     }
     {
@@ -917,7 +915,7 @@ pub fn run() -> Result<()> {
         window.on_set_welcome_collapsed(move |v| {
             let mut s = store.borrow_mut();
             s.set_welcome_collapsed(v);
-            let _ = s.save();
+            s.save_later(SaveKind::UI);
         });
     }
     {
@@ -1178,7 +1176,7 @@ pub fn run() -> Result<()> {
         window.on_persist_sftp_tree_width(move |width| {
             let mut s = store.borrow_mut();
             s.set_sftp_tree_width(width);
-            let _ = s.save();
+            s.save_later(SaveKind::UI);
         });
     }
     {
@@ -1187,7 +1185,7 @@ pub fn run() -> Result<()> {
             let mut s = store.borrow_mut();
             s.set_welcome_session_col_name(name);
             s.set_welcome_session_col_host(host);
-            let _ = s.save();
+            s.save_later(SaveKind::UI);
         });
     }
     {
@@ -1318,9 +1316,7 @@ pub fn run() -> Result<()> {
             {
                 let mut s = store.borrow_mut();
                 s.clear_sessions_and_groups();
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config after clearing sessions: {err:#}");
-                }
+                s.save_later(SaveKind::SESSIONS | SaveKind::UI | SaveKind::VAULT);
             }
             sync_welcome_sessions(
                 &store.borrow(),
@@ -1604,9 +1600,7 @@ pub fn run() -> Result<()> {
         let settings_snapshot = settings_snapshot.clone();
         window.on_save_settings(move || {
             let s = store.borrow();
-            if let Err(err) = s.save() {
-                tracing::warn!("failed to save settings: {err:#}");
-            }
+            s.save_later(SaveKind::settings_and_vault());
             *settings_snapshot.borrow_mut() = Some(s.snapshot_settings_prefs());
         });
     }
@@ -1674,7 +1668,7 @@ pub fn run() -> Result<()> {
             let pref = if next_dark { "dark" } else { "light" };
             let mut s = store.borrow_mut();
             s.set_theme_pref(pref.to_string());
-            let _ = s.save();
+            s.save_later(SaveKind::SETTINGS);
         });
     }
 
@@ -1758,7 +1752,7 @@ pub fn run() -> Result<()> {
         {
             let mut s = store.borrow_mut();
             s.set_download_dir(dl);
-            let _ = s.save();
+            s.save_later(SaveKind::SETTINGS);
         }
     }
     window.set_download_dir(store.borrow().download_dir().to_string().into());
@@ -1771,7 +1765,7 @@ pub fn run() -> Result<()> {
                 {
                     let mut s = store.borrow_mut();
                     s.set_download_dir(dir.clone());
-                    let _ = s.save();
+                    s.save_later(SaveKind::SETTINGS);
                 }
                 if let Some(w) = weak.upgrade() {
                     w.set_download_dir(dir.into());
@@ -2946,9 +2940,7 @@ fn wire_session_callbacks(
             {
                 let mut s = store.borrow_mut();
                 s.remove(&id.to_string());
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config: {err:#}");
-                }
+                s.save_later(SaveKind::sessions_and_vault());
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
@@ -2983,9 +2975,7 @@ fn wire_session_callbacks(
                     ) {
                         tracing::warn!("failed to duplicate vault secrets: {e:#}");
                     }
-                    if let Err(err) = s.save() {
-                        tracing::warn!("failed to save config: {err:#}");
-                    }
+                    s.save_later(SaveKind::sessions_and_vault());
                 }
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
@@ -2995,9 +2985,8 @@ fn wire_session_callbacks(
         });
     }
 
-    // Collapse / expand a group in the welcome list (#41). Toggling flips the
-    // `collapsed` flag on every row of that group in place — no full re-sync —
-    // so the open/closed state stays put until the list is actually rebuilt.
+    // Collapse / expand a group in the welcome list (#41). Persists fold state
+    // to ui-state.json on the background thread (not the full sessions file).
     {
         let weak = window.as_weak();
         let store = store.clone();
@@ -3016,9 +3005,7 @@ fn wire_session_callbacks(
             {
                 let mut store = store.borrow_mut();
                 store.set_session_group_collapsed(&target, new_state);
-                if let Err(err) = store.save() {
-                    tracing::warn!("failed to save Quick Connect folder state: {err:#}");
-                }
+                store.save_later(SaveKind::UI);
                 sync_welcome_sessions(&store, &sessions_model, &welcome_session_query.borrow());
             }
             if let Some(w) = weak.upgrade() {
@@ -3183,9 +3170,7 @@ fn wire_session_callbacks(
                 } else {
                     s.rename_group(orig.as_str(), new_full);
                 }
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config: {err:#}");
-                }
+                s.save_later(SaveKind::SESSIONS | SaveKind::UI);
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
@@ -3204,9 +3189,7 @@ fn wire_session_callbacks(
             {
                 let mut s = store.borrow_mut();
                 s.remove_group(&name.to_string());
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config: {err:#}");
-                }
+                s.save_later(SaveKind::SESSIONS | SaveKind::UI);
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
@@ -3227,9 +3210,7 @@ fn wire_session_callbacks(
                 if !s.move_session_to_group(id.as_str(), target_group.as_str()) {
                     return;
                 }
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config: {err:#}");
-                }
+                s.save_later(SaveKind::SESSIONS);
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
@@ -3249,9 +3230,7 @@ fn wire_session_callbacks(
                 if !s.move_group_to_parent(path.as_str(), target_parent.as_str()) {
                     return;
                 }
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save config: {err:#}");
-                }
+                s.save_later(SaveKind::SESSIONS | SaveKind::UI);
             }
             sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
             if let Some(w) = weak.upgrade() {
@@ -3316,9 +3295,7 @@ fn wire_session_callbacks(
                     let mut s = store.borrow_mut();
                     let id = s.upsert(to_save);
                     clear_session_ephemeral(&id);
-                    if let Err(err) = s.save() {
-                        tracing::warn!("failed to save config: {err:#}");
-                    }
+                    s.save_later(SaveKind::sessions_and_vault());
                     // Pick up disambiguated name / id / saved_at from the store,
                     // but keep the in-memory secrets / key path for connect.
                     if let Some(saved) = s.get(&id) {
@@ -3607,9 +3584,7 @@ fn wire_session_callbacks(
                 };
                 session.backspace_mode = mode.clone();
                 s.upsert(session);
-                if let Err(err) = s.save() {
-                    tracing::warn!("failed to save backspace mode: {err:#}");
-                }
+                s.save_later(SaveKind::SESSIONS);
             }
             if let Some(w) = weak.upgrade() {
                 // Keep every open tab of this session's checkmark in sync.
@@ -4009,9 +3984,7 @@ fn apply_session_group_collapse(
     {
         let mut store = store.borrow_mut();
         mutate(&mut store);
-        if let Err(err) = store.save() {
-            tracing::warn!("failed to save Quick Connect folder state: {err:#}");
-        }
+        store.save_later(SaveKind::UI);
         sync_welcome_sessions(&store, sessions_model, search_query);
     }
     if let Some(w) = weak.upgrade() {
@@ -4050,7 +4023,8 @@ fn save_layout(win: &AppWindow, store: &Rc<RefCell<ConfigStore>>) {
         // do not issue a new native resize while the window is shutting down.
         s.set_window_size(w, h);
     }
-    let _ = s.save();
+    let _ = s.save_parts(SaveKind::UI);
+    let _ = ConfigStore::flush_persist();
 }
 
 /// Every quick-command group name (used to start with all groups collapsed, #55):
@@ -4431,7 +4405,7 @@ fn wire_key_input(
                 if let Some(line) = history_line {
                     let mut s = store_rc.borrow_mut();
                     s.push_command_history(line);
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                     if let Some(w) = weak.upgrade() {
                         w.set_command_history(history_model(&s));
                     }
@@ -4457,7 +4431,7 @@ fn wire_key_input(
                 let idx = i as usize;
                 if idx < s.command_history().len() {
                     s.remove_command_history(idx);
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                 }
             }
             if let Some(w) = weak.upgrade() {
@@ -4490,7 +4464,7 @@ fn wire_key_input(
                 let mut s = store_rc.borrow_mut();
                 if let Some(idx) = s.command_history().iter().position(|c| c == cmd.as_str()) {
                     s.remove_command_history(idx);
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                 }
             }
             if let Some(w) = weak.upgrade() {
@@ -4563,7 +4537,7 @@ fn wire_key_input(
                         send_enter: true,
                     });
                     s.set_quick_commands(v);
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                 }
                 if let Some(w) = weak.upgrade() {
                     sync_quick_command_models(
@@ -4592,7 +4566,7 @@ fn wire_key_input(
                     v.remove(i);
                 }
                 s.set_quick_commands(v);
-                let _ = s.save();
+                s.save_later(SaveKind::SESSIONS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(
@@ -4674,7 +4648,7 @@ fn wire_key_input(
                             send_enter: true,
                         },
                     );
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                 }
                 if let Some(w) = weak.upgrade() {
                     sync_quick_command_models(
@@ -4709,7 +4683,7 @@ fn wire_key_input(
                     };
                     v.insert(index as usize + 1, dup);
                     s.set_quick_commands(v);
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                 }
             }
             if let Some(w) = weak.upgrade() {
@@ -4747,7 +4721,7 @@ fn wire_key_input(
                     v[i].name = name;
                 }
                 s.set_quick_commands(v);
-                let _ = s.save();
+                s.save_later(SaveKind::SESSIONS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(
@@ -4801,7 +4775,7 @@ fn wire_key_input(
                     );
                     if changed {
                         s.set_quick_commands(commands);
-                        let _ = s.save();
+                        s.save_later(SaveKind::SESSIONS);
                     }
                     changed
                 };
@@ -4831,7 +4805,7 @@ fn wire_key_input(
                 let mut s = store_rc.borrow_mut();
                 let changed = s.reorder_quick_group(&from.to_string(), &before.to_string());
                 if changed {
-                    let _ = s.save();
+                    s.save_later(SaveKind::SESSIONS);
                 }
                 changed
             };
@@ -4863,7 +4837,7 @@ fn wire_key_input(
                 } else {
                     s.rename_quick_group(&orig.to_string(), name.to_string());
                 }
-                let _ = s.save();
+                s.save_later(SaveKind::SESSIONS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(
@@ -4887,7 +4861,7 @@ fn wire_key_input(
             {
                 let mut s = store_rc.borrow_mut();
                 s.remove_quick_group(&name.to_string());
-                let _ = s.save();
+                s.save_later(SaveKind::SESSIONS);
             }
             if let Some(w) = weak.upgrade() {
                 sync_quick_command_models(

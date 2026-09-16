@@ -1,8 +1,14 @@
 //! Session / application configuration.
 //!
-//! Persists a simple JSON file in the app's **per-user OS config directory**
+//! Persists split JSON files in the app's **per-user OS config directory**
 //! (e.g. `%APPDATA%/zinterm`, `~/.config/zinterm`,
 //! `~/Library/Application Support/zinterm`). See [`data_dir`].
+//!
+//! | File | Contents |
+//! |------|----------|
+//! | `sessions.json` | sessions, groups, quick commands, command history |
+//! | `settings.json` | Settings-panel preferences |
+//! | `ui-state.json` | layout chrome + Quick Connect fold state |
 //!
 //! ## Password / key storage
 //!
@@ -10,6 +16,10 @@
 //! to `sessions.json`. When Settings › Data › save passwords is on, they go
 //! into `zinterm-credentials-vault.json` as ChaCha20-Poly1305 ciphertext, with
 //! the master key held by the OS keyring (`keyring` crate). See [`crate::config::vault`].
+//!
+//! UI code should prefer [`ConfigStore::save_later`] so disk I/O runs on the
+//! background persist thread. [`ConfigStore::save`] / [`ConfigStore::save_parts`]
+//! write synchronously (tests, migration, shutdown).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -413,46 +423,14 @@ impl ConfigStore {
         }
     }
 
-    /// Persist in-memory secrets for every session into the vault.
-    ///
-    /// When Settings › Data › "保存密码/私钥" is on, every session's secrets are
-    /// written (empty fields clear that vault slot). When the switch is off,
-    /// non-empty secrets are left untouched in the vault — except an all-empty
-    /// in-memory secret still removes the vault entry so clearing a password /
-    /// passphrase / key field in the session editor sticks.
-    fn sync_all_secrets_to_vault(&self) -> Result<()> {
-        let config_dir = self.data_dir_path()?;
-        if !crate::config::vault::is_encryption_available() {
-            let any_secrets = self.cache.sessions.iter().any(|s| {
-                !s.password.is_empty() || !s.key_passphrase.is_empty() || !s.private_key.is_empty()
-            });
-            if any_secrets {
-                tracing::warn!(
-                    "credentials vault unavailable (OS keyring); secrets kept in memory only"
-                );
-            }
-            return Ok(());
-        }
-        let save_passwords = self.save_passwords();
-        for session in &self.cache.sessions {
-            let secrets = crate::config::vault::PlainSecrets::from_session_fields(
-                &session.password,
-                &session.private_key,
-                &session.key_passphrase,
-            );
-            if save_passwords || secrets.is_empty() {
-                crate::config::vault::sync_secrets(&config_dir, &session.id, &secrets)
-                    .with_context(|| format!("failed to sync vault for session {}", session.id))?;
-            }
-        }
-        Ok(())
-    }
-
     // ── Public API ────────────────────────────────────────────────────────
 
-    /// Load (or initialise) the config file. On any parse error we back up the
+    /// Load (or initialise) the config files. On any parse error we back up the
     /// broken file and start fresh — losing saved sessions is better than
     /// crashing at launch.
+    ///
+    /// Supports the legacy monolithic `sessions.json` (everything in one file)
+    /// and migrates to the split layout on the next save.
     pub fn load() -> Result<Self> {
         let path = Self::config_path()?;
         let config_dir = path
@@ -463,76 +441,156 @@ impl ConfigStore {
         fs::create_dir_all(&config_dir)
             .with_context(|| format!("failed to create config dir {}", config_dir.display()))?;
 
+        let settings_path = crate::config::persist::settings_path(&config_dir);
+        let ui_path = crate::config::persist::ui_state_path(&config_dir);
+        let split_layout = settings_path.exists() || ui_path.exists();
+
         let mut migrated = false;
-        let cache = if path.exists() {
-            let raw = fs::read_to_string(&path)
-                .with_context(|| format!("failed to read {}", path.display()))?;
-            match serde_json::from_str::<ConfigFile>(&raw) {
-                Ok(mut cfg) => {
-                    if cfg.save_passwords && !crate::config::vault::is_encryption_available() {
-                        tracing::warn!(
-                            "save_passwords was on but credentials vault is unavailable; disabling"
-                        );
-                        cfg.save_passwords = false;
-                    }
-                    Self::hydrate_secrets_from_vault(&config_dir, &mut cfg.sessions);
-                    for session in &mut cfg.sessions {
-                        if session.sanitize_for_kind() {
-                            migrated = true;
-                        }
-                    }
-                    // Clean up any duplicate history accumulated before #113,
-                    // keeping the last (most recent) occurrence of each command.
-                    // Also expand zsh `fc -ln` `\n` escapes left in older entries.
-                    for cmd in &mut cfg.command_history {
-                        *cmd = repair_history_newlines(std::mem::take(cmd));
-                    }
-                    dedup_keep_last(&mut cfg.command_history);
-                    // `system` and `default` are display-only group names. Older
-                    // builds allowed moving saved servers into `system`, creating
-                    // a duplicate empty-menu folder (#316, #324).
-                    migrated |= normalize_reserved_session_groups(&mut cfg);
-                    // One-time push of the new default layout to existing users
-                    // (only for items they never changed). (#new-user-defaults)
-                    migrated |= migrate_defaults(&mut cfg);
-                    migrated |= migrate_output_highlight_rules(&mut cfg);
-                    let sanitized = crate::ssh::sanitize_algorithm_preferences(&cfg.algorithm_preferences);
-                    if sanitized != cfg.algorithm_preferences {
-                        cfg.algorithm_preferences = sanitized;
+        let cache = if split_layout || path.exists() {
+            let mut cfg = if split_layout {
+                Self::load_split(&path, &settings_path, &ui_path)?
+            } else {
+                match Self::load_legacy_monolithic(&path)? {
+                    Some(cfg) => {
                         migrated = true;
+                        cfg
                     }
-                    cfg
+                    None => fresh_config(),
                 }
-                Err(err) => {
-                    let backup = path.with_extension("json.broken");
-                    let _ = fs::rename(&path, &backup);
-                    tracing::warn!(
-                        "config file was corrupt ({err}); backed up to {}",
-                        backup.display()
-                    );
-                    fresh_config()
+            };
+
+            if cfg.save_passwords && !crate::config::vault::is_encryption_available() {
+                tracing::warn!(
+                    "save_passwords was on but credentials vault is unavailable; disabling"
+                );
+                cfg.save_passwords = false;
+            }
+            Self::hydrate_secrets_from_vault(&config_dir, &mut cfg.sessions);
+            for session in &mut cfg.sessions {
+                if session.sanitize_for_kind() {
+                    migrated = true;
                 }
             }
+            for cmd in &mut cfg.command_history {
+                *cmd = repair_history_newlines(std::mem::take(cmd));
+            }
+            dedup_keep_last(&mut cfg.command_history);
+            migrated |= normalize_reserved_session_groups(&mut cfg);
+            migrated |= migrate_defaults(&mut cfg);
+            migrated |= migrate_output_highlight_rules(&mut cfg);
+            let sanitized = crate::ssh::sanitize_algorithm_preferences(&cfg.algorithm_preferences);
+            if sanitized != cfg.algorithm_preferences {
+                cfg.algorithm_preferences = sanitized;
+                migrated = true;
+            }
+            cfg
         } else {
             fresh_config()
         };
 
-        let store = Self {
-            path,
-            cache,
-        };
-        // Persist the migration so it runs exactly once (and so a later opt-out —
-        // e.g. turning the welcome sidebar back off — isn't reverted next launch).
+        let store = Self { path, cache };
         if migrated {
-            if let Err(e) = store.save() {
-                tracing::warn!("failed to persist default-layout migration: {e:#}");
+            if let Err(e) = store.save_parts(SaveKind::ALL) {
+                tracing::warn!("failed to persist config migration: {e:#}");
             }
         }
         Ok(store)
     }
 
+    fn load_split(sessions_path: &Path, settings_path: &Path, ui_path: &Path) -> Result<ConfigFile> {
+        let mut cfg = ConfigFile::default();
+
+        if sessions_path.exists() {
+            let raw = fs::read_to_string(sessions_path)
+                .with_context(|| format!("failed to read {}", sessions_path.display()))?;
+            match serde_json::from_str::<SessionsFile>(&raw) {
+                Ok(sessions) => sessions.apply_to(&mut cfg),
+                Err(_) => match serde_json::from_str::<ConfigFile>(&raw) {
+                    Ok(full) => cfg = full,
+                    Err(err) => {
+                        let backup = sessions_path.with_extension("json.broken");
+                        let _ = fs::rename(sessions_path, &backup);
+                        tracing::warn!(
+                            "sessions file was corrupt ({err}); backed up to {}",
+                            backup.display()
+                        );
+                    }
+                },
+            }
+        }
+
+        match crate::config::persist::read_json_file::<SettingsFile>(settings_path) {
+            Ok(Some(settings)) => settings.apply_to(&mut cfg),
+            Ok(None) => {}
+            Err(err) => {
+                tracing::warn!("settings file unreadable ({err:#}); keeping defaults");
+            }
+        }
+
+        match crate::config::persist::read_json_file::<UiStateFile>(ui_path) {
+            Ok(Some(ui)) => ui.apply_to(&mut cfg),
+            Ok(None) => {}
+            Err(err) => {
+                tracing::warn!("ui-state file unreadable ({err:#}); keeping defaults");
+            }
+        }
+
+        Ok(cfg)
+    }
+
+    fn load_legacy_monolithic(path: &Path) -> Result<Option<ConfigFile>> {
+        let raw = fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        match serde_json::from_str::<ConfigFile>(&raw) {
+            Ok(cfg) => Ok(Some(cfg)),
+            Err(err) => {
+                let backup = path.with_extension("json.broken");
+                let _ = fs::rename(path, &backup);
+                tracing::warn!(
+                    "config file was corrupt ({err}); backed up to {}",
+                    backup.display()
+                );
+                Ok(None)
+            }
+        }
+    }
+
     fn config_path() -> Result<PathBuf> {
         Ok(data_dir().join("sessions.json"))
+    }
+
+    fn persist_snapshot(&self, kind: SaveKind) -> Result<crate::config::persist::PersistSnapshot> {
+        let data_dir = self.data_dir_path()?;
+        Ok(crate::config::persist::build_snapshot(
+            data_dir,
+            self.path.clone(),
+            &self.cache,
+            kind,
+        ))
+    }
+
+    /// Synchronously write the selected parts (and optional vault). Used by
+    /// tests, first-run migration, and shutdown flushes.
+    pub fn save_parts(&self, kind: SaveKind) -> Result<()> {
+        let snap = self.persist_snapshot(kind)?;
+        crate::config::persist::write_snapshot(&snap)
+    }
+
+    /// Queue a background persist so the UI thread is not blocked on disk I/O.
+    pub fn save_later(&self, kind: SaveKind) {
+        match self.persist_snapshot(kind) {
+            Ok(snap) => {
+                if let Err(e) = crate::config::persist::schedule(snap) {
+                    tracing::warn!("failed to schedule config persist: {e:#}");
+                }
+            }
+            Err(e) => tracing::warn!("failed to build config persist snapshot: {e:#}"),
+        }
+    }
+
+    /// Block until the background persist worker has finished pending writes.
+    pub fn flush_persist() -> Result<()> {
+        crate::config::persist::flush()
     }
 
     pub fn sessions(&self) -> &[Session] {
@@ -1731,35 +1789,9 @@ impl ConfigStore {
         self.cache.groups.dedup();
     }
 
+    /// Synchronously write every config file + vault.
     pub fn save(&self) -> Result<()> {
-        // Metadata only in sessions.json — strip secrets before write (Serialize
-        // already omits them; clear for defence in depth / older test helpers).
-        let mut disk = self.cache.clone();
-        for session in &mut disk.sessions {
-            session.sanitize_for_kind();
-            session.password = Secret::default();
-            session.key_passphrase = Secret::default();
-            session.private_key = Secret::default();
-        }
-        let raw = serde_json::to_string_pretty(&disk)?;
-        // Write to a sibling temp file then rename — cheap atomicity.
-        let tmp = self.path.with_extension("json.tmp");
-        fs::write(&tmp, &raw).with_context(|| format!("failed to write {}", tmp.display()))?;
-        // Restrict to owner-only before publishing (#34).
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))
-                .with_context(|| format!("failed to set permissions on {}", tmp.display()))?;
-        }
-        fs::rename(&tmp, &self.path)
-            .with_context(|| format!("failed to finalise {}", self.path.display()))?;
-        // Sync in-memory secrets to the OS-keyring vault. apply_password_save_policy
-        // already decided what may sit in memory; empty entries remove vault slots.
-        if let Err(e) = self.sync_all_secrets_to_vault() {
-            tracing::warn!("failed to sync credentials vault: {e:#}");
-        }
-        Ok(())
+        self.save_parts(SaveKind::ALL)
     }
 
     // ── Portable export / import (issue #46) ──────────────────────────────
@@ -1966,9 +1998,10 @@ mod tests {
     use uuid::Uuid;
 
     fn temp_store() -> ConfigStore {
-        let path = std::env::temp_dir().join(format!("ms-test-{}.json", Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("ms-test-{}", Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&dir);
         ConfigStore {
-            path,
+            path: dir.join("sessions.json"),
             cache: ConfigFile::default(),
         }
     }
@@ -2516,6 +2549,44 @@ mod tests {
         assert_eq!(custom.output_highlight_rules.len(), 1);
         assert_eq!(custom.output_highlight_rules[0].name, "mine");
         assert_eq!(custom.defaults_rev, DEFAULTS_REV);
+    }
+
+    #[test]
+    fn split_files_roundtrip_keeps_sessions_and_settings() {
+        let mut store = temp_store();
+        store.cache.sessions.push(sample_session("alpha"));
+        store.cache.groups = vec!["prod".into()];
+        store.set_theme_pref("dark".into());
+        store.set_session_group_collapsed("prod", false);
+        store.save().unwrap();
+
+        let dir = store.path.parent().unwrap().to_path_buf();
+        assert!(dir.join("settings.json").exists());
+        assert!(dir.join("ui-state.json").exists());
+        let sessions_raw = std::fs::read_to_string(&store.path).unwrap();
+        assert!(sessions_raw.contains("alpha"));
+        assert!(!sessions_raw.contains("\"theme_pref\""));
+        let settings_raw = std::fs::read_to_string(dir.join("settings.json")).unwrap();
+        assert!(settings_raw.contains("dark"));
+
+        // Simulate split load into a fresh store path under the same dir.
+        let reloaded = {
+            let mut s = ConfigStore {
+                path: store.path.clone(),
+                cache: ConfigFile::default(),
+            };
+            // Re-read using the same helpers as load().
+            let settings_path = crate::config::persist::settings_path(&dir);
+            let ui_path = crate::config::persist::ui_state_path(&dir);
+            s.cache = ConfigStore::load_split(&store.path, &settings_path, &ui_path).unwrap();
+            s
+        };
+        assert_eq!(reloaded.sessions().len(), 1);
+        assert_eq!(reloaded.theme_pref(), "dark");
+        let collapsed = reloaded.collapsed_session_groups().unwrap();
+        assert!(!collapsed.iter().any(|g| g == "prod"));
+
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

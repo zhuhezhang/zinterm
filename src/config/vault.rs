@@ -224,45 +224,72 @@ pub(crate) fn get_secrets(app_data: &Path, session_id: &str) -> Result<Option<Pl
     }))
 }
 
-/// Encrypt and persist secrets for `session_id`. Empty fields remove that key;
-/// all-empty removes the entry.
-pub(crate) fn sync_secrets(app_data: &Path, session_id: &str, secrets: &PlainSecrets) -> Result<()> {
-    if session_id.is_empty() {
-        anyhow::bail!("invalid session id for vault sync");
-    }
+/// Apply many session secret updates with a **single** vault read/write.
+///
+/// When `save_passwords` is false, non-empty secrets are left untouched in the
+/// vault; empty secrets still remove that entry so clearing a field sticks.
+pub(crate) fn sync_secrets_batch(
+    app_data: &Path,
+    save_passwords: bool,
+    entries: &[(String, PlainSecrets)],
+) -> Result<()> {
     if !is_encryption_available() {
-        anyhow::bail!("credentials vault encryption unavailable (OS keyring)");
+        let any = entries.iter().any(|(_, s)| !s.is_empty());
+        if any {
+            anyhow::bail!("credentials vault encryption unavailable (OS keyring)");
+        }
+        return Ok(());
     }
 
     let mut vault = read_vault(app_data);
-    if secrets.is_empty() {
-        vault.entries.remove(session_id);
-        return write_vault(app_data, &vault);
+    let mut changed = false;
+
+    for (session_id, secrets) in entries {
+        if session_id.is_empty() {
+            continue;
+        }
+        if !save_passwords && !secrets.is_empty() {
+            continue;
+        }
+
+        if secrets.is_empty() {
+            if vault.entries.remove(session_id).is_some() {
+                changed = true;
+            }
+            continue;
+        }
+
+        let mut cur = VaultEntry::default();
+        cur.password = if secrets.password.is_empty() {
+            None
+        } else {
+            Some(encrypt_field(&secrets.password)?)
+        };
+        cur.private_key = if secrets.private_key.is_empty() {
+            None
+        } else {
+            Some(encrypt_field(&secrets.private_key)?)
+        };
+        cur.passphrase = if secrets.passphrase.is_empty() {
+            None
+        } else {
+            Some(encrypt_field(&secrets.passphrase)?)
+        };
+
+        if cur.password.is_none() && cur.private_key.is_none() && cur.passphrase.is_none() {
+            if vault.entries.remove(session_id).is_some() {
+                changed = true;
+            }
+        } else {
+            vault.entries.insert(session_id.clone(), cur);
+            changed = true;
+        }
     }
 
-    let mut cur = vault.entries.get(session_id).cloned().unwrap_or_default();
-    cur.password = if secrets.password.is_empty() {
-        None
-    } else {
-        Some(encrypt_field(&secrets.password)?)
-    };
-    cur.private_key = if secrets.private_key.is_empty() {
-        None
-    } else {
-        Some(encrypt_field(&secrets.private_key)?)
-    };
-    cur.passphrase = if secrets.passphrase.is_empty() {
-        None
-    } else {
-        Some(encrypt_field(&secrets.passphrase)?)
-    };
-
-    if cur.password.is_none() && cur.private_key.is_none() && cur.passphrase.is_none() {
-        vault.entries.remove(session_id);
-    } else {
-        vault.entries.insert(session_id.to_string(), cur);
+    if changed {
+        write_vault(app_data, &vault)?;
     }
-    write_vault(app_data, &vault)
+    Ok(())
 }
 
 pub(crate) fn remove_secrets(app_data: &Path, session_id: &str) -> Result<()> {
@@ -369,14 +396,17 @@ pub(crate) mod tests {
         let _guard = with_test_master_key();
         let dir = unique_temp_dir("round");
 
-        sync_secrets(
+        sync_secrets_batch(
             &dir,
-            "sess-1",
-            &PlainSecrets {
-                password: "p@ss".into(),
-                private_key: "-----BEGIN KEY-----\nA\n-----END KEY-----".into(),
-                passphrase: "ph".into(),
-            },
+            true,
+            &[(
+                "sess-1".into(),
+                PlainSecrets {
+                    password: "p@ss".into(),
+                    private_key: "-----BEGIN KEY-----\nA\n-----END KEY-----".into(),
+                    passphrase: "ph".into(),
+                },
+            )],
         )
         .unwrap();
 
@@ -407,16 +437,19 @@ pub(crate) mod tests {
     fn clearing_all_fields_removes_entry() {
         let _guard = with_test_master_key();
         let dir = unique_temp_dir("clear-fields");
-        sync_secrets(
+        sync_secrets_batch(
             &dir,
-            "a",
-            &PlainSecrets {
-                password: "x".into(),
-                ..PlainSecrets::default()
-            },
+            true,
+            &[(
+                "a".into(),
+                PlainSecrets {
+                    password: "x".into(),
+                    ..PlainSecrets::default()
+                },
+            )],
         )
         .unwrap();
-        sync_secrets(&dir, "a", &PlainSecrets::default()).unwrap();
+        sync_secrets_batch(&dir, true, &[("a".into(), PlainSecrets::default())]).unwrap();
         assert!(get_secrets(&dir, "a").unwrap().is_none());
         let _ = fs::remove_dir_all(&dir);
     }

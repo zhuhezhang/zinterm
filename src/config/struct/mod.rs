@@ -1,6 +1,7 @@
 mod algorithm_preferences;
 mod config_file;
 mod config_store;
+mod persist_parts;
 mod quick_command;
 mod secret;
 mod session;
@@ -8,6 +9,7 @@ mod session;
 pub(crate) use algorithm_preferences::*;
 pub(crate) use config_file::*;
 pub(crate) use config_store::*;
+pub(crate) use persist_parts::*;
 pub(crate) use quick_command::*;
 pub(crate) use secret::*;
 pub(crate) use session::*;

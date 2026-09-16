@@ -6,7 +6,7 @@ use super::{OutputHighlightRule, QuickCommand, Session};
 /// *existing* config that predates the field stays on tech — `migrate_defaults`
 /// then advances default-following users through the migration chain. Brand-new
 /// installs get the current default (none) straight from `fresh_config`.
-fn default_wallpaper() -> String {
+pub(crate) fn default_wallpaper() -> String {
     "builtin:tech".to_string()
 }
 

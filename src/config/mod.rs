@@ -1,5 +1,6 @@
 #[path = "impls/config.rs"]
 mod config;
+pub(crate) mod persist;
 #[path = "struct/mod.rs"]
 mod structs;
 pub(crate) mod vault;

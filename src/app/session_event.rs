@@ -444,7 +444,7 @@ pub(super) fn apply_session_event_to_window(
                     {
                         let mut st = store.borrow_mut();
                         st.push_command_history(cmd);
-                        let _ = st.save();
+                        st.save_later(crate::config::SaveKind::SESSIONS);
                     }
                     win.set_command_history(history_model(&store.borrow()));
                 }

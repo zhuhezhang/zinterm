@@ -1,4 +1,4 @@
-//! Global SSH/SFTP algorithm preference lists (persisted in sessions.json).
+//! Global SSH/SFTP algorithm preference lists (persisted in settings.json).
 
 use serde::{Deserialize, Serialize};
 
