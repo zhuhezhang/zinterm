@@ -276,12 +276,11 @@ async fn run_sftp(
         session.port,
         Uuid::new_v4()
     ));
-    let (mut handle, _) =
-        crate::ssh::connect_transport(&addr, keepalive_secs, &algorithms, || {
-            sftp_handler(&session, &events)
-        })
-        .await
-        .with_context(|| format!("sftp connect {} failed", addr))?;
+    let (mut handle, _) = crate::ssh::connect_transport(&addr, keepalive_secs, &algorithms, || {
+        sftp_handler(&session, &events)
+    })
+    .await
+    .with_context(|| format!("sftp connect {} failed", addr))?;
 
     // Resolve missing username/secret/key (shares the shell's prompt; the UI
     // de-dupes by tab id so SFTP on the same tab doesn't prompt a second time) (#110).
@@ -303,7 +302,8 @@ async fn run_sftp(
             if !creds.private_key.trim().is_empty() {
                 key_session.private_key = crate::config::Secret::new(creds.private_key.clone());
             }
-            let keypair = crate::ssh::load_session_private_key(&key_session, creds.secret.as_str())?;
+            let keypair =
+                crate::ssh::load_session_private_key(&key_session, creds.secret.as_str())?;
             // RSA keys need an explicit SHA-2 hash; other key types don't.
             let hash = keypair.algorithm().is_rsa().then_some(HashAlg::Sha256);
             let key_with_hash = PrivateKeyWithHashAlg::new(Arc::new(keypair), hash);
@@ -1569,8 +1569,7 @@ async fn stage_remote_for_copy(
     remote: &str,
     events: &UnboundedSender<SessionEvent>,
 ) -> Result<(PathBuf, PathBuf)> {
-    let cleanup_root =
-        std::env::temp_dir().join(format!("zinterm-remote-copy-{}", Uuid::new_v4()));
+    let cleanup_root = std::env::temp_dir().join(format!("zinterm-remote-copy-{}", Uuid::new_v4()));
     tokio::fs::create_dir_all(&cleanup_root)
         .await
         .with_context(|| format!("failed to create temp dir {}", cleanup_root.display()))?;

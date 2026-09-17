@@ -8,9 +8,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 
-use super::structs::{
-    CommandsFile, SaveKind, SessionsFile, SettingsFile, UiStateFile,
-};
+use super::structs::{CommandsFile, SaveKind, SessionsFile, SettingsFile, UiStateFile};
 use super::vault::{self, PlainSecrets};
 
 const SETTINGS_FILE: &str = "settings.json";
@@ -140,10 +138,7 @@ fn merge_snapshot(dst: &mut PersistSnapshot, src: PersistSnapshot) {
 
 /// Schedule a non-blocking persist. Errors only if the worker channel is gone.
 pub(crate) fn schedule(snap: PersistSnapshot) -> Result<()> {
-    let tx = channel()
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .clone();
+    let tx = channel().lock().unwrap_or_else(|p| p.into_inner()).clone();
     tx.send(PersistMsg::Save(snap))
         .context("persist worker channel closed")?;
     Ok(())
@@ -152,10 +147,7 @@ pub(crate) fn schedule(snap: PersistSnapshot) -> Result<()> {
 /// Block until the worker has drained pending saves (and any coalesced writes).
 pub(crate) fn flush() -> Result<()> {
     let (ack_tx, ack_rx) = mpsc::sync_channel(1);
-    let tx = channel()
-        .lock()
-        .unwrap_or_else(|p| p.into_inner())
-        .clone();
+    let tx = channel().lock().unwrap_or_else(|p| p.into_inner()).clone();
     tx.send(PersistMsg::Flush(ack_tx))
         .context("persist worker channel closed")?;
     ack_rx
@@ -197,11 +189,9 @@ pub(crate) fn write_snapshot(snap: &PersistSnapshot) -> Result<()> {
         atomic_write_json(&ui_state_path(&snap.data_dir), ui)?;
     }
     if let Some(vault) = &snap.vault {
-        if let Err(e) = vault::sync_secrets_batch(
-            &snap.data_dir,
-            vault.save_passwords,
-            &vault.entries,
-        ) {
+        if let Err(e) =
+            vault::sync_secrets_batch(&snap.data_dir, vault.save_passwords, &vault.entries)
+        {
             tracing::warn!("failed to sync credentials vault: {e:#}");
         }
     }
@@ -279,8 +269,7 @@ pub(crate) fn atomic_write_json<T: serde::Serialize>(path: &Path, value: &T) -> 
 }
 
 fn fs_create_dir_all(dir: &Path) -> Result<()> {
-    std::fs::create_dir_all(dir)
-        .with_context(|| format!("failed to create {}", dir.display()))
+    std::fs::create_dir_all(dir).with_context(|| format!("failed to create {}", dir.display()))
 }
 
 pub(crate) fn read_json_file<T: serde::de::DeserializeOwned>(path: &Path) -> Result<Option<T>> {

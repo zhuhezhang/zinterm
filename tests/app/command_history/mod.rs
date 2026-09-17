@@ -57,14 +57,8 @@ fn expired_app_command_capture_is_not_suppressed() {
 #[test]
 fn summary_collapses_multiline_commands() {
     assert_eq!(history_summary("git status"), "git status");
-    assert_eq!(
-        history_summary("echo first\nsecond line"),
-        "echo first…"
-    );
-    assert_eq!(
-        history_summary("echo first\r\nsecond line"),
-        "echo first…"
-    );
+    assert_eq!(history_summary("echo first\nsecond line"), "echo first…");
+    assert_eq!(history_summary("echo first\r\nsecond line"), "echo first…");
     assert_eq!(history_summary("\n\nonly later"), "only later…");
     assert_eq!(history_summary("\n"), "…");
 }

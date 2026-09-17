@@ -190,7 +190,11 @@ fn write_vault(app_data: &Path, vault: &Vault) -> Result<()> {
 
 fn try_decrypt_entry(enc: &VaultEntry) -> Result<VaultEntry> {
     Ok(VaultEntry {
-        password: enc.password.as_ref().map(|s| decrypt_field(s)).transpose()?,
+        password: enc
+            .password
+            .as_ref()
+            .map(|s| decrypt_field(s))
+            .transpose()?,
         private_key: enc
             .private_key
             .as_ref()
@@ -314,8 +318,7 @@ pub(crate) fn duplicate_secrets(app_data: &Path, from_id: &str, to_id: &str) -> 
 pub(crate) fn clear_all(app_data: &Path) -> Result<()> {
     let path = vault_path(app_data);
     if path.exists() {
-        fs::remove_file(&path)
-            .with_context(|| format!("failed to remove {}", path.display()))?;
+        fs::remove_file(&path).with_context(|| format!("failed to remove {}", path.display()))?;
     }
     Ok(())
 }

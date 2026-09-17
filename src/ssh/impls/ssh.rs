@@ -531,7 +531,10 @@ async fn connect_ssh_handshake(
     algorithms: &AlgorithmPreferences,
 ) -> Result<(Handle<ClientHandler>, Arc<client::Config>)> {
     let addr = format!("{}:{}", session.host, session.port);
-    connect_transport(&addr, keepalive_secs, algorithms, || client_handler(session, events)).await
+    connect_transport(&addr, keepalive_secs, algorithms, || {
+        client_handler(session, events)
+    })
+    .await
 }
 
 fn client_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> ClientHandler {
@@ -849,8 +852,7 @@ async fn run_session(
     // speaks a single CLI session and disconnects (or returns
     // AdministrativelyProhibited) when a second CHANNEL_OPEN arrives — then we
     // reconnect without probing.
-    let skip_exec_probe =
-        !session.enable_prompt_setup || is_compact_legacy_config(&config);
+    let skip_exec_probe = !session.enable_prompt_setup || is_compact_legacy_config(&config);
     let mut prompt_setup_supported =
         !skip_exec_probe && remote_supports_prompt_setup(&handle).await;
 
@@ -912,9 +914,7 @@ async fn run_session(
     );
 
     let _ = events.send(SessionEvent::Connected);
-    let _ = events.send(SessionEvent::Status(
-        t("已连接！", "Connected!").into(),
-    ));
+    let _ = events.send(SessionEvent::Status(t("已连接！", "Connected!").into()));
 
     // Whether we have already injected the PROMPT_COMMAND setup.
     // We wait for the first non-empty data chunk (the initial shell prompt)
@@ -1479,10 +1479,7 @@ mod osc_command_tests {
 
     #[test]
     fn repairs_two_line_command_without_heredoc() {
-        assert_eq!(
-            repair_fc_newlines("echo a\\necho b"),
-            "echo a\necho b"
-        );
+        assert_eq!(repair_fc_newlines("echo a\\necho b"), "echo a\necho b");
     }
 
     #[test]
@@ -1650,7 +1647,9 @@ pub(crate) mod legacy_ssh_compat_tests {
         // Huawei VRP often tears the session down instead of sending
         // CHANNEL_OPEN_FAILURE — russh reports SendError ("Channel send error").
         assert!(should_retry_shell_without_probe(&russh::Error::SendError));
-        assert!(should_retry_shell_without_probe(&russh::Error::RequestDenied));
+        assert!(should_retry_shell_without_probe(
+            &russh::Error::RequestDenied
+        ));
         assert!(!should_retry_shell_without_probe(
             &russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::UnknownChannelType)
         ));

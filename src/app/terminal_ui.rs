@@ -51,11 +51,7 @@ fn capture_disposition(state: &mut AppCommandCapture, captured: &str) -> bool {
         state.pending_lines.clear();
         return true;
     }
-    if let Some(pos) = state
-        .pending_lines
-        .iter()
-        .position(|line| line == captured)
-    {
+    if let Some(pos) = state.pending_lines.iter().position(|line| line == captured) {
         state.pending_lines.remove(pos);
         return true;
     }
@@ -150,9 +146,8 @@ pub(super) fn output_highlight_rule_model(store: &ConfigStore) -> ModelRc<Output
         .iter()
         .map(|rule| {
             let color = crate::config::normalize_highlight_color(&rule.color);
-            let swatch = parse_hex_color(&color).unwrap_or_else(|| {
-                slint::Color::from_rgb_u8(0xf1, 0x4c, 0x4c)
-            });
+            let swatch = parse_hex_color(&color)
+                .unwrap_or_else(|| slint::Color::from_rgb_u8(0xf1, 0x4c, 0x4c));
             OutputRuleItem {
                 name: rule.name.clone().into(),
                 pattern: rule.pattern.clone().into(),
@@ -346,11 +341,7 @@ pub(super) fn rebuild_tab_display(win: &AppWindow, bufs: &TermBuffers, tab_id: &
     let data = with_term_buf(bufs, tab_id, |buf| {
         let cols = buf.parser.screen().size().1;
         let b = buf.render(); // also refreshes buf.displayed_text
-        let matches = compute_find_matches(
-            &buf.displayed_text,
-            &buf.find_query,
-            &buf.find_options,
-        );
+        let matches = compute_find_matches(&buf.displayed_text, &buf.find_query, &buf.find_options);
         let sel = buf.selection_rects_visible(cols);
         (b, matches, sel)
     });

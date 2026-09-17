@@ -160,10 +160,7 @@ pub(super) fn apply_session_event_to_window(
             clear_accept_once_for_tab(tab_id, statuses);
             // Print disconnect info + reconnect hint into the terminal
             // (FinalShell-style), via synthetic Output (#79).
-            let hint = crate::i18n::t(
-                "按 R 重新连接",
-                "Press R to reconnect",
-            );
+            let hint = crate::i18n::t("按 R 重新连接", "Press R to reconnect");
             let body = if reason.trim().is_empty() {
                 hint.to_string()
             } else {

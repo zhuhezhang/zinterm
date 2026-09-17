@@ -203,11 +203,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_nanos())
             .unwrap_or(0);
-        let dir = std::env::temp_dir().join(format!(
-            "zinterm-kh-{}-{}",
-            std::process::id(),
-            nanos
-        ));
+        let dir = std::env::temp_dir().join(format!("zinterm-kh-{}-{}", std::process::id(), nanos));
         fs::create_dir_all(&dir).unwrap();
         let file = dir.join(KNOWN_HOSTS_FILE);
         *PATH_OVERRIDE.lock().unwrap_or_else(|p| p.into_inner()) = Some(file);
@@ -236,9 +232,15 @@ mod tests {
         let _g = with_temp_store();
         let key = test_key();
 
-        assert!(matches!(verify("host.example", 22, &key), HostKeyStatus::Unknown));
+        assert!(matches!(
+            verify("host.example", 22, &key),
+            HostKeyStatus::Unknown
+        ));
         remember("Host.Example", 22, &key).unwrap();
-        assert!(matches!(verify("host.example", 22, &key), HostKeyStatus::Match));
+        assert!(matches!(
+            verify("host.example", 22, &key),
+            HostKeyStatus::Match
+        ));
 
         let other = test_key();
         assert!(matches!(
@@ -254,7 +256,10 @@ mod tests {
         assert_eq!(path().file_name().unwrap(), KNOWN_HOSTS_FILE);
 
         clear().unwrap();
-        assert!(matches!(verify("host.example", 22, &key), HostKeyStatus::Unknown));
+        assert!(matches!(
+            verify("host.example", 22, &key),
+            HostKeyStatus::Unknown
+        ));
         assert!(!path().exists());
     }
 }

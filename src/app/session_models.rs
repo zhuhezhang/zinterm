@@ -170,10 +170,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
         let depth = group_depth(group);
         let label = group_path_segment(group);
 
-        let mut direct: Vec<&Session> = sessions
-            .iter()
-            .filter(|s| s.group == group)
-            .collect();
+        let mut direct: Vec<&Session> = sessions.iter().filter(|s| s.group == group).collect();
         direct.sort_by(|a, b| {
             a.name
                 .to_lowercase()
@@ -209,13 +206,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
     }
 
     for root in user_tree.values() {
-        emit_group_branch(
-            sessions,
-            root,
-            &mut rows,
-            &group_is_collapsed,
-            &blank,
-        );
+        emit_group_branch(sessions, root, &mut rows, &group_is_collapsed, &blank);
     }
 
     // Ungrouped sessions sit at the root of the tree (no folder header), below groups.

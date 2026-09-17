@@ -12,9 +12,10 @@ fn name_used_in_group(
     name: &str,
     exclude: Option<usize>,
 ) -> bool {
-    commands.iter().enumerate().any(|(i, c)| {
-        exclude != Some(i) && groups_match(&c.group, group) && c.name == name
-    })
+    commands
+        .iter()
+        .enumerate()
+        .any(|(i, c)| exclude != Some(i) && groups_match(&c.group, group) && c.name == name)
 }
 
 /// Pick `name(1)`, `name(2)`, … first suffix not used in `group`.
@@ -151,7 +152,10 @@ pub(super) fn quick_cmd_model(
     store: &ConfigStore,
     collapsed_groups: &std::collections::HashSet<String>,
 ) -> ModelRc<QuickCmd> {
-    ModelRc::from(Rc::new(VecModel::from(quick_cmd_rows(store, collapsed_groups))))
+    ModelRc::from(Rc::new(VecModel::from(quick_cmd_rows(
+        store,
+        collapsed_groups,
+    ))))
 }
 
 fn quick_cmd_matches(cmd: &QuickCmd, q: &str) -> bool {

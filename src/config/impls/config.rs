@@ -442,8 +442,7 @@ impl ConfigStore {
         let settings_path = crate::config::persist::settings_path(&config_dir);
         let ui_path = crate::config::persist::ui_state_path(&config_dir);
         let commands_path = crate::config::persist::commands_path(&config_dir);
-        let split_layout =
-            settings_path.exists() || ui_path.exists() || commands_path.exists();
+        let split_layout = settings_path.exists() || ui_path.exists() || commands_path.exists();
 
         let mut migrated = false;
         let cache = if split_layout || path.exists() {
@@ -627,11 +626,8 @@ impl ConfigStore {
             session.group.clear();
         }
         let exclude = Some(session.id.as_str());
-        session.name = self.disambiguate_session_name(
-            session.group.trim(),
-            session.name.trim(),
-            exclude,
-        );
+        session.name =
+            self.disambiguate_session_name(session.group.trim(), session.name.trim(), exclude);
         let id = session.id.clone();
         if let Some(existing) = self.cache.sessions.iter_mut().find(|s| s.id == session.id) {
             *existing = session;
@@ -1786,7 +1782,10 @@ impl ConfigStore {
             if s.group == old {
                 s.group = n.clone();
             } else if s.group.starts_with(&old_prefix) {
-                s.group = format!("{new_prefix}{}", s.group.strip_prefix(&old_prefix).unwrap_or(&s.group));
+                s.group = format!(
+                    "{new_prefix}{}",
+                    s.group.strip_prefix(&old_prefix).unwrap_or(&s.group)
+                );
             }
         }
         if let Some(groups) = &mut self.cache.collapsed_session_groups {
@@ -1928,10 +1927,7 @@ impl ConfigStore {
             );
         }
         if file.version != 1 {
-            anyhow::bail!(
-                "unsupported export version {} (expected 1)",
-                file.version
-            );
+            anyhow::bail!("unsupported export version {} (expected 1)", file.version);
         }
 
         // Restore empty folders before sessions so the Quick Connect tree
@@ -1949,8 +1945,8 @@ impl ConfigStore {
         let mut added = 0usize;
         let mut skipped = 0usize;
         for (i, raw_session) in file.sessions.iter().enumerate() {
-            let mut s = Session::from_import_value(raw_session)
-                .with_context(|| format!("session[{i}]"))?;
+            let mut s =
+                Session::from_import_value(raw_session).with_context(|| format!("session[{i}]"))?;
             // Recover plaintext secrets for in-memory use / vault sync.
             // Accept an older export blob or hand-edited plaintext.
             if let Some(plain) = Self::decrypt_export(s.password.as_str()) {
@@ -2475,7 +2471,10 @@ mod tests {
         assert_eq!(fresh.output_highlight_rules[1].name, "success");
         assert_eq!(fresh.output_highlight_rules[2].name, "warning");
         assert_eq!(fresh.output_highlight_rules[3].name, "IP");
-        assert!(fresh.output_highlight_rules.iter().all(|r| r.regex && r.enabled));
+        assert!(fresh
+            .output_highlight_rules
+            .iter()
+            .all(|r| r.regex && r.enabled));
 
         let mut store = temp_store();
         assert!(store.output_highlight_enabled());
@@ -2701,7 +2700,8 @@ mod tests {
         {
             let mut store = temp_store();
             assert!(!store.save_passwords());
-            let key_body = "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n";
+            let key_body =
+                "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n";
             let id = store.upsert(Session {
                 name: "key-prompt".into(),
                 host: "10.0.0.8".into(),
@@ -2752,7 +2752,9 @@ mod tests {
             auth: AuthMethod::Key,
             password: Secret::new("s3cr3t"),
             key_passphrase: Secret::new("kp"),
-            private_key: Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n"),
+            private_key: Secret::new(
+                "-----BEGIN OPENSSH PRIVATE KEY-----\nAAAA\n-----END OPENSSH PRIVATE KEY-----\n",
+            ),
             ..Session::default()
         });
 
@@ -2902,8 +2904,14 @@ mod tests {
 
         assert_eq!(store.import_json(&raw).unwrap(), (1, 1));
         assert_eq!(store.sessions().len(), 2);
-        assert!(store.sessions().iter().any(|s| s.group == "lab" && s.id == "saved-1700000000003-cccc"));
-        assert!(!store.sessions().iter().any(|s| s.id == "saved-1700000000002-bbbb"));
+        assert!(store
+            .sessions()
+            .iter()
+            .any(|s| s.group == "lab" && s.id == "saved-1700000000003-cccc"));
+        assert!(!store
+            .sessions()
+            .iter()
+            .any(|s| s.id == "saved-1700000000002-bbbb"));
     }
 
     #[test]
@@ -3018,7 +3026,10 @@ mod tests {
         assert_eq!(serial.stop_bits, 1);
         assert_eq!(serial.name, "COM3 @9600");
 
-        let local = sessions.iter().find(|s| s.kind == SessionKind::Local).unwrap();
+        let local = sessions
+            .iter()
+            .find(|s| s.kind == SessionKind::Local)
+            .unwrap();
         assert_eq!(local.name, "Local");
         assert!(local.host.is_empty());
     }
@@ -3035,16 +3046,22 @@ mod tests {
             ..Session::default()
         });
 
-        let export_path = std::env::temp_dir().join(format!("ms-exp-groups-{}.json", Uuid::new_v4()));
+        let export_path =
+            std::env::temp_dir().join(format!("ms-exp-groups-{}.json", Uuid::new_v4()));
         assert_eq!(a.export_to(&export_path).unwrap(), 1);
         let raw = std::fs::read_to_string(&export_path).unwrap();
-        assert!(raw.contains("\"empty_groups\": [\n    \"empty-lab\"\n  ]") || raw.contains("\"empty-lab\""));
-        assert!(!raw.contains("\"has-session\"") || {
-            // has-session may appear on the session's group field, but not in empty_groups.
-            let file: ExportFile = serde_json::from_str(&raw).unwrap();
-            !file.empty_groups.iter().any(|g| g == "has-session")
-                && file.empty_groups.iter().any(|g| g == "empty-lab")
-        });
+        assert!(
+            raw.contains("\"empty_groups\": [\n    \"empty-lab\"\n  ]")
+                || raw.contains("\"empty-lab\"")
+        );
+        assert!(
+            !raw.contains("\"has-session\"") || {
+                // has-session may appear on the session's group field, but not in empty_groups.
+                let file: ExportFile = serde_json::from_str(&raw).unwrap();
+                !file.empty_groups.iter().any(|g| g == "has-session")
+                    && file.empty_groups.iter().any(|g| g == "empty-lab")
+            }
+        );
 
         let mut b = temp_store();
         assert_eq!(b.import_from(&export_path).unwrap(), (1, 0));
@@ -3139,10 +3156,7 @@ mod tests {
             store.disambiguate_session_name("dev", "web", Some("2")),
             "web"
         );
-        assert_eq!(
-            store.disambiguate_session_name("other", "web", None),
-            "web"
-        );
+        assert_eq!(store.disambiguate_session_name("other", "web", None), "web");
 
         let mut c = sample_session("web");
         c.id = "3".into();

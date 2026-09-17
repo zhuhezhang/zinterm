@@ -133,8 +133,8 @@ use tokio::runtime::Runtime;
 
 use crate::config::{
     group_join, group_parent_path, group_path_segment, is_reserved_session_group,
-    is_valid_group_segment, AuthMethod, ConfigStore, OutputHighlightRule, SaveKind, Secret, Session,
-    SessionKind,
+    is_valid_group_segment, AuthMethod, ConfigStore, OutputHighlightRule, SaveKind, Secret,
+    Session, SessionKind,
 };
 use crate::i18n::t;
 use crate::layout::{LogicalRect, TerminalWheelHit};
@@ -584,13 +584,7 @@ pub fn run() -> Result<()> {
     // Command bar (#55): seed quick commands + history from the config. Groups
     // start collapsed by default (#55).
     let initial_collapsed = all_quick_group_names(&store.borrow());
-    sync_quick_command_models(
-        &window,
-        &store.borrow(),
-        &initial_collapsed,
-        "",
-        "",
-    );
+    sync_quick_command_models(&window, &store.borrow(), &initial_collapsed, "", "");
     window.set_command_history(history_model(&store.borrow()));
     window.set_history_view(history_view_model(&store.borrow(), "")); // #101
 
@@ -989,7 +983,8 @@ pub fn run() -> Result<()> {
                     w.set_output_highlight_rule_status(message.into());
                     return false;
                 }
-                if let Err(message) = validate_output_highlight_rule(&pattern, is_regex, case_sensitive)
+                if let Err(message) =
+                    validate_output_highlight_rule(&pattern, is_regex, case_sensitive)
                 {
                     w.set_output_highlight_rule_status(message.into());
                     return false;
@@ -1045,16 +1040,15 @@ pub fn run() -> Result<()> {
                     return false;
                 };
                 if store.borrow().output_highlight_rules().get(index).is_none() {
-                    w.set_output_highlight_rule_status(
-                        t("规则不存在", "Rule not found").into(),
-                    );
+                    w.set_output_highlight_rule_status(t("规则不存在", "Rule not found").into());
                     return false;
                 }
                 if let Err(message) = validate_output_highlight_rule_name(&name) {
                     w.set_output_highlight_rule_status(message.into());
                     return false;
                 }
-                if let Err(message) = validate_output_highlight_rule(&pattern, is_regex, case_sensitive)
+                if let Err(message) =
+                    validate_output_highlight_rule(&pattern, is_regex, case_sensitive)
                 {
                     w.set_output_highlight_rule_status(message.into());
                     return false;
@@ -1306,7 +1300,11 @@ pub fn run() -> Result<()> {
     let sessions_model: Rc<VecModel<SessionInfo>> = Rc::new(VecModel::default());
     let welcome_session_query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
     window.set_sessions(ModelRc::from(sessions_model.clone()));
-    sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+    sync_welcome_sessions(
+        &store.borrow(),
+        &sessions_model,
+        &welcome_session_query.borrow(),
+    );
     {
         let weak = window.as_weak();
         let store = store.clone();
@@ -2947,7 +2945,11 @@ fn wire_session_callbacks(
                 s.remove(&id.to_string());
                 s.save_later(SaveKind::sessions_and_vault());
             }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
             if let Some(w) = weak.upgrade() {
                 // Touch a property so the list re-renders reliably.
                 let _ = w.get_sessions();
@@ -2983,7 +2985,11 @@ fn wire_session_callbacks(
                     s.save_later(SaveKind::sessions_and_vault());
                 }
             }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -3136,53 +3142,59 @@ fn wire_session_callbacks(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
-        window.on_submit_group(move |orig: SharedString, segment: SharedString, parent: SharedString| {
-            let segment = segment.trim();
-            let parent = parent.trim();
-            if segment.is_empty() {
-                return SharedString::from(t("请输入分组名称", "Enter a group name"));
-            }
-            let new_full = if orig.is_empty() {
-                group_join(parent, segment)
-            } else {
-                group_join(group_parent_path(orig.as_str()).as_str(), segment)
-            };
-            let error = {
-                let s = store.borrow();
-                if !is_valid_group_segment(segment) {
-                    Some(t(
-                        "分组名称不能包含“/”或为系统保留名",
-                        "Group name cannot contain “/” or be a reserved name",
-                    ))
-                } else if orig.is_empty() && s.session_group_exists(&new_full) {
-                    Some(t("分组已存在", "Group already exists"))
-                } else if !orig.is_empty()
-                    && !new_full.eq_ignore_ascii_case(orig.as_str())
-                    && s.session_group_exists(&new_full)
+        window.on_submit_group(
+            move |orig: SharedString, segment: SharedString, parent: SharedString| {
+                let segment = segment.trim();
+                let parent = parent.trim();
+                if segment.is_empty() {
+                    return SharedString::from(t("请输入分组名称", "Enter a group name"));
+                }
+                let new_full = if orig.is_empty() {
+                    group_join(parent, segment)
+                } else {
+                    group_join(group_parent_path(orig.as_str()).as_str(), segment)
+                };
+                let error = {
+                    let s = store.borrow();
+                    if !is_valid_group_segment(segment) {
+                        Some(t(
+                            "分组名称不能包含“/”或为系统保留名",
+                            "Group name cannot contain “/” or be a reserved name",
+                        ))
+                    } else if orig.is_empty() && s.session_group_exists(&new_full) {
+                        Some(t("分组已存在", "Group already exists"))
+                    } else if !orig.is_empty()
+                        && !new_full.eq_ignore_ascii_case(orig.as_str())
+                        && s.session_group_exists(&new_full)
+                    {
+                        Some(t("分组已存在", "Group already exists"))
+                    } else {
+                        None
+                    }
+                };
+                if let Some(message) = error {
+                    return SharedString::from(message);
+                }
                 {
-                    Some(t("分组已存在", "Group already exists"))
-                } else {
-                    None
+                    let mut s = store.borrow_mut();
+                    if orig.is_empty() {
+                        s.add_group(new_full);
+                    } else {
+                        s.rename_group(orig.as_str(), new_full);
+                    }
+                    s.save_later(SaveKind::SESSIONS | SaveKind::UI);
                 }
-            };
-            if let Some(message) = error {
-                return SharedString::from(message);
-            }
-            {
-                let mut s = store.borrow_mut();
-                if orig.is_empty() {
-                    s.add_group(new_full);
-                } else {
-                    s.rename_group(orig.as_str(), new_full);
+                sync_welcome_sessions(
+                    &store.borrow(),
+                    &sessions_model,
+                    &welcome_session_query.borrow(),
+                );
+                if let Some(w) = weak.upgrade() {
+                    let _ = w.get_sessions();
                 }
-                s.save_later(SaveKind::SESSIONS | SaveKind::UI);
-            }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
-            if let Some(w) = weak.upgrade() {
-                let _ = w.get_sessions();
-            }
-            SharedString::new()
-        });
+                SharedString::new()
+            },
+        );
     }
     // Group delete (#41) — cascades: child groups and sessions inside are removed.
     {
@@ -3196,7 +3208,11 @@ fn wire_session_callbacks(
                 s.remove_group(&name.to_string());
                 s.save_later(SaveKind::SESSIONS | SaveKind::UI);
             }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -3217,7 +3233,11 @@ fn wire_session_callbacks(
                 }
                 s.save_later(SaveKind::SESSIONS);
             }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -3237,7 +3257,11 @@ fn wire_session_callbacks(
                 }
                 s.save_later(SaveKind::SESSIONS | SaveKind::UI);
             }
-            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+            sync_welcome_sessions(
+                &store.borrow(),
+                &sessions_model,
+                &welcome_session_query.borrow(),
+            );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
             }
@@ -3246,7 +3270,10 @@ fn wire_session_callbacks(
     {
         let weak = window.as_weak();
         window.on_welcome_drag_at(
-            move |list_top: f32, pointer_y: f32, _drag_kind: SharedString, _drag_from: SharedString| {
+            move |list_top: f32,
+                  pointer_y: f32,
+                  _drag_kind: SharedString,
+                  _drag_from: SharedString| {
                 let Some(w) = weak.upgrade() else {
                     return;
                 };
@@ -3280,102 +3307,99 @@ fn wire_session_callbacks(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
-        window.on_session_dialog_submit(move |draft: SessionDraft, persist: bool, connect: bool| {
-            let mut new_session = session_from_draft(&draft);
+        window.on_session_dialog_submit(
+            move |draft: SessionDraft, persist: bool, connect: bool| {
+                let mut new_session = session_from_draft(&draft);
 
-            if persist {
-                // Disk copy may strip secrets when save-passwords is off; keep
-                // `new_session` intact so Save-and-connect still authenticates.
-                let mut to_save = new_session.clone();
-                {
-                    let s = store.borrow();
-                    apply_password_save_policy(
-                        &mut to_save,
-                        &draft,
-                        &s,
-                        s.save_passwords(),
+                if persist {
+                    // Disk copy may strip secrets when save-passwords is off; keep
+                    // `new_session` intact so Save-and-connect still authenticates.
+                    let mut to_save = new_session.clone();
+                    {
+                        let s = store.borrow();
+                        apply_password_save_policy(&mut to_save, &draft, &s, s.save_passwords());
+                    }
+                    let saved_id = {
+                        let mut s = store.borrow_mut();
+                        let id = s.upsert(to_save);
+                        clear_session_ephemeral(&id);
+                        s.save_later(SaveKind::sessions_and_vault());
+                        // Pick up disambiguated name / id / saved_at from the store,
+                        // but keep the in-memory secrets / key path for connect.
+                        if let Some(saved) = s.get(&id) {
+                            let password = new_session.password.clone();
+                            let key_passphrase = new_session.key_passphrase.clone();
+                            let private_key = new_session.private_key.clone();
+                            new_session = saved.clone();
+                            new_session.password = password;
+                            new_session.key_passphrase = key_passphrase;
+                            new_session.private_key = private_key;
+                        }
+                        id
+                    };
+                    sync_welcome_sessions(
+                        &store.borrow(),
+                        &sessions_model,
+                        &welcome_session_query.borrow(),
+                    );
+                    if let Some(w) = weak.upgrade() {
+                        let saved_backspace = new_session.backspace_mode.clone();
+                        let affected: Vec<String> = tab_statuses
+                            .lock()
+                            .unwrap()
+                            .iter()
+                            .filter(|(_, st)| st.session_id == saved_id)
+                            .map(|(id, _)| id.clone())
+                            .collect();
+                        for tid in affected {
+                            update_tab_backspace_mode(&w, &tid, &saved_backspace);
+                        }
+                    }
+                } else if new_session.id.trim().is_empty() {
+                    // Connect-without-save still needs a stable in-memory id.
+                    new_session.id = crate::config::Session::new_temp_id();
+                }
+
+                let saved_id = new_session.id.clone();
+
+                if let Some(w) = weak.upgrade() {
+                    w.set_dialog_open(false);
+                }
+
+                if connect {
+                    if !persist {
+                        // "Connect without saving": never write prompt answers back.
+                        mark_session_ephemeral(&saved_id);
+                    }
+                    let ctx = ConnectCtx {
+                        weak: weak.clone(),
+                        runtime: runtime.clone(),
+                        handles: handles.clone(),
+                        sftp_handles: sftp_handles.clone(),
+                        sftp_last_cwd: sftp_last_cwd.clone(),
+                        bufs: bufs.clone(),
+                        render_gates: render_gates.clone(),
+                        tab_statuses: tab_statuses.clone(),
+                        last_term_size: last_term_size.clone(),
+                        sftp_follow_cd: sftp_follow_cd.clone(),
+                        ssh_keepalive_secs: ssh_keepalive_secs.clone(),
+                        ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
+                    };
+                    open_session_in_new_tab(
+                        new_session,
+                        &ctx,
+                        &store,
+                        &tabs_model,
+                        &terminals_model,
+                        &layout,
+                        &content_size,
+                        &panes_model,
+                        &splitters_model,
+                        None,
                     );
                 }
-                let saved_id = {
-                    let mut s = store.borrow_mut();
-                    let id = s.upsert(to_save);
-                    clear_session_ephemeral(&id);
-                    s.save_later(SaveKind::sessions_and_vault());
-                    // Pick up disambiguated name / id / saved_at from the store,
-                    // but keep the in-memory secrets / key path for connect.
-                    if let Some(saved) = s.get(&id) {
-                        let password = new_session.password.clone();
-                        let key_passphrase = new_session.key_passphrase.clone();
-                        let private_key = new_session.private_key.clone();
-                        new_session = saved.clone();
-                        new_session.password = password;
-                        new_session.key_passphrase = key_passphrase;
-                        new_session.private_key = private_key;
-                    }
-                    id
-                };
-                sync_welcome_sessions(
-                    &store.borrow(),
-                    &sessions_model,
-                    &welcome_session_query.borrow(),
-                );
-                if let Some(w) = weak.upgrade() {
-                    let saved_backspace = new_session.backspace_mode.clone();
-                    let affected: Vec<String> = tab_statuses
-                        .lock()
-                        .unwrap()
-                        .iter()
-                        .filter(|(_, st)| st.session_id == saved_id)
-                        .map(|(id, _)| id.clone())
-                        .collect();
-                    for tid in affected {
-                        update_tab_backspace_mode(&w, &tid, &saved_backspace);
-                    }
-                }
-            } else if new_session.id.trim().is_empty() {
-                // Connect-without-save still needs a stable in-memory id.
-                new_session.id = crate::config::Session::new_temp_id();
-            }
-
-            let saved_id = new_session.id.clone();
-
-            if let Some(w) = weak.upgrade() {
-                w.set_dialog_open(false);
-            }
-
-            if connect {
-                if !persist {
-                    // "Connect without saving": never write prompt answers back.
-                    mark_session_ephemeral(&saved_id);
-                }
-                let ctx = ConnectCtx {
-                    weak: weak.clone(),
-                    runtime: runtime.clone(),
-                    handles: handles.clone(),
-                    sftp_handles: sftp_handles.clone(),
-                    sftp_last_cwd: sftp_last_cwd.clone(),
-                    bufs: bufs.clone(),
-                    render_gates: render_gates.clone(),
-                    tab_statuses: tab_statuses.clone(),
-                    last_term_size: last_term_size.clone(),
-                    sftp_follow_cd: sftp_follow_cd.clone(),
-                    ssh_keepalive_secs: ssh_keepalive_secs.clone(),
-                    ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
-                };
-                open_session_in_new_tab(
-                    new_session,
-                    &ctx,
-                    &store,
-                    &tabs_model,
-                    &terminals_model,
-                    &layout,
-                    &content_size,
-                    &panes_model,
-                    &splitters_model,
-                    None,
-                );
-            }
-        });
+            },
+        );
     }
 
     // Cancel dialog.
@@ -3620,10 +3644,7 @@ fn session_from_draft(draft: &SessionDraft) -> Session {
             Secret::default(),
             Secret::new(draft.key_passphrase.to_string()),
         ),
-        _ => (
-            Secret::new(draft.password.to_string()),
-            Secret::default(),
-        ),
+        _ => (Secret::new(draft.password.to_string()), Secret::default()),
     };
 
     // Unified private_key: path or pasted body (classified by content).
@@ -3752,9 +3773,7 @@ fn apply_password_save_policy(
         }
         _ => {
             if !draft.password.is_empty() {
-                session.password = existing
-                    .map(|s| s.password.clone())
-                    .unwrap_or_default();
+                session.password = existing.map(|s| s.password.clone()).unwrap_or_default();
             }
         }
     }
@@ -3778,9 +3797,7 @@ fn apply_password_save_policy(
     // Newly entered key material stays out of the on-disk session; an empty
     // field clears. Non-empty typed values fall back to whatever was stored.
     if !key_raw.is_empty() {
-        session.private_key = existing
-            .map(|s| s.private_key.clone())
-            .unwrap_or_default();
+        session.private_key = existing.map(|s| s.private_key.clone()).unwrap_or_default();
     }
 }
 
@@ -3887,7 +3904,11 @@ fn open_session_in_new_tab(
     // Create vt100 parser for this tab (default 24×80; resized on first
     // terminal-resize callback). 5000-line scrollback is stored for
     // future scroll-navigation support.
-    let is_dark_now = ctx.weak.upgrade().map(|w| w.get_dark_mode()).unwrap_or(true);
+    let is_dark_now = ctx
+        .weak
+        .upgrade()
+        .map(|w| w.get_dark_mode())
+        .unwrap_or(true);
     let (output_highlight, custom_highlight_rules) = {
         let settings = store.borrow();
         (
@@ -4101,15 +4122,9 @@ fn apply_settings_prefs_to_window(
     w.set_term_cursor_style(s.terminal_cursor_style().into());
     let dark = theme_pref_is_dark(s);
     let (hex, color) = if dark {
-        (
-            "#D4D4D4",
-            slint::Color::from_rgb_u8(0xD4, 0xD4, 0xD4),
-        )
+        ("#D4D4D4", slint::Color::from_rgb_u8(0xD4, 0xD4, 0xD4))
     } else {
-        (
-            "#2D2D2F",
-            slint::Color::from_rgb_u8(0x2D, 0x2D, 0x2F),
-        )
+        ("#2D2D2F", slint::Color::from_rgb_u8(0x2D, 0x2D, 0x2F))
     };
     if let Some(custom) = parse_hex_color(s.terminal_cursor_color()) {
         w.set_term_cursor_color_hex(s.terminal_cursor_color().into());
@@ -4645,7 +4660,8 @@ fn wire_key_input(
                 {
                     let mut s = store_rc.borrow_mut();
                     let cmds = s.quick_commands();
-                    let name = disambiguate_quick_command_name(cmds, &group, &name, Some(index as usize));
+                    let name =
+                        disambiguate_quick_command_name(cmds, &group, &name, Some(index as usize));
                     s.update_quick_command(
                         index as usize,
                         crate::config::QuickCommand {
@@ -5509,8 +5525,7 @@ fn wire_key_input(
                 let (matches, jumped) = with_term_buf(&bufs_find, &tid, |buf| {
                     buf.find_query = q.clone();
                     buf.find_options = opts;
-                    let mut matches =
-                        compute_find_matches(&buf.displayed_text, &q, &opts);
+                    let mut matches = compute_find_matches(&buf.displayed_text, &q, &opts);
                     let jumped = matches.is_empty() && buf.scroll_to_first_find_match(&q);
                     if jumped {
                         buf.render();

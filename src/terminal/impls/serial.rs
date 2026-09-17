@@ -159,9 +159,7 @@ async fn run_serial(
     let encoder = Arc::new(Mutex::new(TerminalEncoding::new(&session.encoding)));
 
     let _ = events.send(SessionEvent::Connected);
-    let _ = events.send(SessionEvent::Status(
-        t("已连接！", "Connected!").into(),
-    ));
+    let _ = events.send(SessionEvent::Status(t("已连接！", "Connected!").into()));
 
     // --- Reader thread ------------------------------------------------------
     let running = Arc::new(AtomicBool::new(true));

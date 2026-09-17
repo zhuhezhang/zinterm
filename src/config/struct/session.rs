@@ -79,7 +79,11 @@ fn default_feature_enabled_compat() -> bool {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum AuthMethod {
-    #[serde(alias = "keyboard-interactive", alias = "keyboard", alias = "interactive")]
+    #[serde(
+        alias = "keyboard-interactive",
+        alias = "keyboard",
+        alias = "interactive"
+    )]
     #[default]
     Password,
     Key,
@@ -258,8 +262,7 @@ impl Session {
     /// `saved-<13-digit-ms>-<4 alphanumerics>` — assigned on first persist.
     pub fn new_saved_id() -> String {
         let ms = Self::now_saved_at();
-        const CHARSET: &[u8] =
-            b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         let mut rng = rand::thread_rng();
         let suffix: String = (0..4)
             .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
@@ -270,8 +273,7 @@ impl Session {
     /// Ephemeral id for connect-without-save (not written to disk).
     pub fn new_temp_id() -> String {
         let ms = Self::now_saved_at();
-        const CHARSET: &[u8] =
-            b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         let mut rng = rand::thread_rng();
         let suffix: String = (0..4)
             .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
@@ -287,9 +289,7 @@ impl Session {
     /// new-session dialog (empty user, port 22/23, baud 9600, SFTP/command
     /// panel off, …).
     pub fn from_import_value(value: &Value) -> Result<Self> {
-        let obj = value
-            .as_object()
-            .context("session must be a JSON object")?;
+        let obj = value.as_object().context("session must be a JSON object")?;
 
         let kind = match obj.get("kind") {
             None => bail!("kind is required"),
@@ -424,7 +424,12 @@ impl Session {
             }
         }
         before
-            .map(|b| serde_json::to_string(self).ok().map(|a| a != b).unwrap_or(true))
+            .map(|b| {
+                serde_json::to_string(self)
+                    .ok()
+                    .map(|a| a != b)
+                    .unwrap_or(true)
+            })
             .unwrap_or(true)
     }
 

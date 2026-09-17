@@ -364,8 +364,11 @@ pub(super) fn wire_tab_callbacks(
         {
             let close_ctx = close_ctx.clone();
             window.on_pane_tab_close_others(move |pane_id: i32, tab_id: SharedString| {
-                let to_close =
-                    tabs_to_close_others(&close_ctx.layout.borrow(), pane_id as u64, tab_id.as_str());
+                let to_close = tabs_to_close_others(
+                    &close_ctx.layout.borrow(),
+                    pane_id as u64,
+                    tab_id.as_str(),
+                );
                 let any = !to_close.is_empty();
                 for id in to_close {
                     close_tab_id(&close_ctx, &id);
@@ -392,8 +395,11 @@ pub(super) fn wire_tab_callbacks(
         {
             let close_ctx = close_ctx.clone();
             window.on_pane_tab_close_right(move |pane_id: i32, tab_id: SharedString| {
-                let to_close =
-                    tabs_to_close_right(&close_ctx.layout.borrow(), pane_id as u64, tab_id.as_str());
+                let to_close = tabs_to_close_right(
+                    &close_ctx.layout.borrow(),
+                    pane_id as u64,
+                    tab_id.as_str(),
+                );
                 let any = !to_close.is_empty();
                 for id in to_close {
                     close_tab_id(&close_ctx, &id);

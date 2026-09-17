@@ -124,9 +124,7 @@ async fn run_telnet(
     let _ = stream.set_nodelay(true);
 
     let _ = events.send(SessionEvent::Connected);
-    let _ = events.send(SessionEvent::Status(
-        t("已连接！", "Connected!").into(),
-    ));
+    let _ = events.send(SessionEvent::Status(t("已连接！", "Connected!").into()));
 
     let (mut rd, mut wr) = tokio::io::split(stream);
     let encoder = TerminalEncoding::new(&session.encoding);

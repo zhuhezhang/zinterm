@@ -61,8 +61,8 @@ fn main() -> anyhow::Result<()> {
 /// `error-YYYY-MM.log` files at WARN and above so users can send diagnostics —
 /// e.g. a bastion disconnect reason — without setting RUST_LOG (#86).
 fn init_tracing() {
-    use tracing_subscriber::prelude::*;
     use tracing_subscriber::fmt::time::ChronoLocal;
+    use tracing_subscriber::prelude::*;
     use tracing_subscriber::{fmt, EnvFilter};
 
     // Wall-clock timestamps in the machine's local timezone (not UTC).

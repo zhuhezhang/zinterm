@@ -322,8 +322,7 @@ pub(super) fn resolve_front_cred(win: &AppWindow, accept: bool) {
             // A cancel must not poison later reconnects with "login cancelled".
             if let Some(ref accepted) = reply {
                 CRED_DECIDED.with(|d| {
-                    d.borrow_mut()
-                        .insert(p.tab_id.clone(), accepted.clone());
+                    d.borrow_mut().insert(p.tab_id.clone(), accepted.clone());
                 });
                 // Skip write-back for "Connect without saving".
                 if !is_ephemeral_session(&p.session_id) {

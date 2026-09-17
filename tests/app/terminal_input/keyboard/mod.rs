@@ -125,7 +125,10 @@ fn alt_letter_still_sends_esc_prefix() {
 
 #[test]
 fn backspace_key_defaults_to_del() {
-    assert_eq!(key_to_pty_bytes("\u{0008}", false, false, false), vec![0x7f]);
+    assert_eq!(
+        key_to_pty_bytes("\u{0008}", false, false, false),
+        vec![0x7f]
+    );
 }
 
 #[test]

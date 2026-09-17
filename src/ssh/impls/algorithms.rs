@@ -227,11 +227,7 @@ pub fn sanitize_algorithm_preferences(prefs: &AlgorithmPreferences) -> Algorithm
     out
 }
 
-pub fn toggle_algorithm(
-    prefs: &mut AlgorithmPreferences,
-    category: AlgorithmCategory,
-    name: &str,
-) {
+pub fn toggle_algorithm(prefs: &mut AlgorithmPreferences, category: AlgorithmCategory, name: &str) {
     let pool = option_pool(category);
     if !pool.iter().any(|n| *n == name) {
         return;
@@ -347,12 +343,10 @@ pub fn to_preferred(prefs: &AlgorithmPreferences) -> Preferred {
     }
 
     // Fall back per-category if filtering removed everything (should be rare).
-    let kex = if kex
-        .iter()
-        .any(|n| {
-            n.as_ref() != russh::kex::EXTENSION_SUPPORT_AS_CLIENT.as_ref()
-                && n.as_ref() != russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT.as_ref()
-        }) {
+    let kex = if kex.iter().any(|n| {
+        n.as_ref() != russh::kex::EXTENSION_SUPPORT_AS_CLIENT.as_ref()
+            && n.as_ref() != russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT.as_ref()
+    }) {
         kex
     } else {
         return to_preferred(&AlgorithmPreferences::builtin_default());

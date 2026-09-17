@@ -1,9 +1,7 @@
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::JoinHandle;
 
-use super::{
-    CredentialResponder, HostKeyResponder, RemoteEntry, RemoteTreeNode, SessionCommand,
-};
+use super::{CredentialResponder, HostKeyResponder, RemoteEntry, RemoteTreeNode, SessionCommand};
 
 /// Events emitted back to the UI thread.
 #[derive(Debug, Clone)]

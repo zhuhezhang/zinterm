@@ -19,11 +19,7 @@ pub(crate) fn normalize_backspace_mode(mode: &str) -> &'static str {
 /// Remap DEL (0x7F) / BS (0x08) in outbound PTY bytes according to the
 /// session's backspace mode. Auto: Local keeps DEL; SSH/Telnet/Serial map
 /// DEL→BS for gear that only erase with BS.
-pub(crate) fn apply_backspace_mode(
-    bytes: Vec<u8>,
-    mode: &str,
-    kind: SessionKind,
-) -> Vec<u8> {
+pub(crate) fn apply_backspace_mode(bytes: Vec<u8>, mode: &str, kind: SessionKind) -> Vec<u8> {
     match normalize_backspace_mode(mode) {
         "del" => bytes
             .into_iter()

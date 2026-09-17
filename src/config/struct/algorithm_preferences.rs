@@ -10,7 +10,11 @@ use serde::{Deserialize, Serialize};
 pub struct AlgorithmPreferences {
     #[serde(default = "default_kex")]
     pub kex: Vec<String>,
-    #[serde(default = "default_server_host_key", rename = "serverHostKey", alias = "server_host_key")]
+    #[serde(
+        default = "default_server_host_key",
+        rename = "serverHostKey",
+        alias = "server_host_key"
+    )]
     pub server_host_key: Vec<String>,
     #[serde(default = "default_cipher")]
     pub cipher: Vec<String>,
