@@ -269,7 +269,9 @@ pub fn move_algorithm(
 }
 
 pub fn reset_algorithm_section(prefs: &mut AlgorithmPreferences, category: AlgorithmCategory) {
-    *list_mut(prefs, category) = default_selection_for(category);
+    // Same source as reset_all_algorithms so per-category and full reset agree.
+    let defaults = AlgorithmPreferences::builtin_default();
+    *list_mut(prefs, category) = list_ref(&defaults, category).to_vec();
 }
 
 pub fn reset_all_algorithms(prefs: &mut AlgorithmPreferences) {
@@ -494,11 +496,40 @@ mod tests {
         assert!(default_selection_for(AlgorithmCategory::Hmac)
             .iter()
             .any(|n| n == "hmac-md5"));
+        assert!(AlgorithmPreferences::builtin_default()
+            .hmac
+            .iter()
+            .any(|n| n == "hmac-md5"));
 
         let mut prefs = AlgorithmPreferences::builtin_default();
         prefs.hmac = vec!["hmac-md5".into()];
         let preferred = to_preferred(&prefs);
         let names: Vec<&str> = preferred.mac.iter().map(|n| n.as_ref()).collect();
         assert_eq!(names, vec!["hmac-md5"]);
+    }
+
+    #[test]
+    fn catalog_defaults_match_builtin_and_section_reset() {
+        let builtin = AlgorithmPreferences::builtin_default();
+        for cat in AlgorithmCategory::all() {
+            assert_eq!(
+                default_selection_for(cat),
+                list_ref(&builtin, cat),
+                "catalog is_default diverged from builtin_default for {cat:?}"
+            );
+
+            let mut prefs = AlgorithmPreferences::builtin_default();
+            // Dirty the category, then reset only that section.
+            list_mut(&mut prefs, cat).clear();
+            if cat != AlgorithmCategory::Compress {
+                list_mut(&mut prefs, cat).push("placeholder-will-be-replaced".into());
+            }
+            reset_algorithm_section(&mut prefs, cat);
+            assert_eq!(
+                list_ref(&prefs, cat),
+                list_ref(&builtin, cat),
+                "section reset diverged from builtin_default for {cat:?}"
+            );
+        }
     }
 }

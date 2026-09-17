@@ -103,6 +103,7 @@ fn default_hmac() -> Vec<String> {
         "hmac-sha2-256",
         "hmac-sha1-etm@openssh.com",
         "hmac-sha1",
+        "hmac-md5",
     ]
     .into_iter()
     .map(str::to_string)
