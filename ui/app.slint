@@ -25,7 +25,6 @@ import { TerminalView, TermSpan, TermMatch, QuickCmd, QuickDockPanel, HistoryVie
 } from "terminal_view.slint";
 import { SftpEntry, SftpTreeNode } from "sftp_panel.slint";
 import { InterfacePanel, OutputRuleItem, AlgorithmOptionRow } from "interface_panel.slint";
-import { MockData } from "mock_data.slint";
 import { ComboBox, SpinBox, Button, ScrollView, CheckBox, Palette
 } from "std-widgets.slint";
 
@@ -211,13 +210,6 @@ component ShortcutRow inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    // =============================================================================
-    // TODO(styling): temporary mock data — see mock_data.slint; set false when done
-    property <bool> qcm-use-mock: false;
-    property <bool> welcome-use-mock: false;
-    property <bool> output-rules-use-mock: false;
-    // =============================================================================
-
     title: "ZinTerm";
     icon: @image-url("../assets/icon.png");
     // Frameless when we draw our own title bar (#119); Rust sets custom-titlebar
@@ -325,9 +317,7 @@ export component AppWindow inherits Window {
     in-out property <string> welcome-session-search: "";
     callback search-welcome-sessions(string /* query */); // filter the welcome session list
     in property <[QuickCmd]> qcm-manage-commands;
-    property <[QuickCmd]> qcm-display-commands: root.qcm-use-mock
-        ? MockData.qcm-mock-commands : root.qcm-manage-commands;
-    in-out property <bool> quick-cmd-manage-open: root.qcm-use-mock;  // manage dialog
+    in-out property <bool> quick-cmd-manage-open: false;  // manage dialog
     in-out property <length> qcm-dialog-width: 560px;
     in-out property <length> qcm-dialog-height: 560px;
     property <bool> qcm-dialog-resizing;
@@ -389,8 +379,6 @@ export component AppWindow inherits Window {
     in-out property <bool> json-format-output: true;
     in-out property <string> output-highlight-preset: "log";
     in property <[OutputRuleItem]> output-highlight-rules;
-    property <[OutputRuleItem]> output-highlight-display-rules: root.output-rules-use-mock
-        ? MockData.output-highlight-rules : root.output-highlight-rules;
     in-out property <string> output-highlight-rule-status;
     in-out property <float> ui-scale <=> Theme.ui-scale;   // global UI zoom (#100)
     in-out property <float> panel-font <=> Theme.panel-font;  // settings-panel font scale
@@ -413,7 +401,7 @@ export component AppWindow inherits Window {
     in-out property <float> wallpaper-overlay <=> Theme.panel-alpha;
     callback persist-wallpaper-overlay(float);
     in property <[string]> term-fonts;             // installed monospace families
-    in-out property <bool> interface-open: root.output-rules-use-mock;  // Interface settings overlay
+    in-out property <bool> interface-open: false;  // Interface settings overlay
     // Interface card position (draggable by its title bar, clamped inside the
     // window so it can't leave the parent); init centered.
     // Centred, snapped to whole logical pixels: a half-pixel origin makes the
@@ -485,7 +473,7 @@ export component AppWindow inherits Window {
     in-out property <bool> zen-mode: false;
     callback set-zen-mode(bool);
     // Render the welcome/session list as a left sidebar instead of a tab (v0.5).
-    in-out property <bool> welcome-as-sidebar: root.welcome-use-mock;
+    in-out property <bool> welcome-as-sidebar: false;
     callback set-welcome-as-sidebar(bool);         // apply + persist
     // Welcome list delete confirmations (Interface › Welcome page).
     in-out property <bool> confirm-delete-group-enabled: true;
@@ -691,8 +679,6 @@ export component AppWindow inherits Window {
 
     // --- Session list ------------------------------------------------------
     in property <[SessionInfo]> sessions;
-    property <[SessionInfo]> welcome-display-sessions: root.welcome-use-mock
-        ? MockData.welcome-mock-sessions : root.sessions;
 
     // --- Tabs --------------------------------------------------------------
     in property <[TabInfo]> tabs;
@@ -1179,7 +1165,7 @@ export component AppWindow inherits Window {
                         height: parent.height;
                         compact: true;
                         dock-edge: root.welcome-sidebar-dock;
-                        sessions: root.welcome-display-sessions;
+                        sessions: root.sessions;
                         session-search <=> root.welcome-session-search;
                         search-sessions(q) => { root.search-welcome-sessions(q); }
                         search-focus-seq: root.session-search-focus-seq;
@@ -1457,7 +1443,7 @@ export component AppWindow inherits Window {
                                             if pane.active-id == "welcome": Welcome {
                                                 width: parent.width;
                                                 height: parent.height;
-                                                sessions: root.welcome-display-sessions;
+                                                sessions: root.sessions;
                                                 session-search <=> root.welcome-session-search;
                                                 search-sessions(q) => { root.search-welcome-sessions(q); }
                                                 search-focus-seq: root.session-search-focus-seq;
@@ -3332,13 +3318,13 @@ export component AppWindow inherits Window {
                         qcm-list := VerticalLayout {
                             alignment: start;
                             spacing: 0px;
-                            padding-top: root.qcm-display-commands.length == 0 ? 6px : 0px;
-                            if root.qcm-display-commands.length == 0: Text {
+                            padding-top: root.qcm-manage-commands.length == 0 ? 6px : 0px;
+                            if root.qcm-manage-commands.length == 0: Text {
                                 text: root.qcm-search != "" ? @tr("No match") : @tr("No quick commands yet");
                                 color: Theme.text-muted;
                                 font-size: Theme.fs-xs;
                             }
-                            for q in root.qcm-display-commands: VerticalLayout {
+                            for q in root.qcm-manage-commands: VerticalLayout {
                                 alignment: start;
                                 spacing: 0px;
                                 property <length> row-h: (q.group-header != "" ? 32px : 0px)
@@ -4991,7 +4977,7 @@ export component AppWindow inherits Window {
 
                 InterfacePanel {
                     vertical-stretch: 1;
-                    ifd-start-page: root.output-rules-use-mock ? "output" : "font";
+                    ifd-start-page: "font";
                     lang-en: root.lang-en;
                     language-pref <=> root.language-pref;
                     is-windows: root.is-windows;
@@ -5009,7 +4995,7 @@ export component AppWindow inherits Window {
                     output-highlight-enabled <=> root.output-highlight-enabled;
                     json-format-output <=> root.json-format-output;
                     output-highlight-preset <=> root.output-highlight-preset;
-                    output-highlight-rules: root.output-highlight-display-rules;
+                    output-highlight-rules: root.output-highlight-rules;
                     output-highlight-rule-status <=> root.output-highlight-rule-status;
                     ui-scale: root.ui-scale;
                     sftp-follow-cd <=> root.sftp-follow-cd;
