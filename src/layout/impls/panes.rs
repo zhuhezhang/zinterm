@@ -241,6 +241,7 @@ impl Layout {
 
 // --- tree walks ------------------------------------------------------------
 
+#[allow(clippy::too_many_arguments)]
 fn layout_node(
     node: &Node,
     x: f32,

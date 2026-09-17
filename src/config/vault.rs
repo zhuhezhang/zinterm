@@ -263,21 +263,22 @@ pub(crate) fn sync_secrets_batch(
             continue;
         }
 
-        let mut cur = VaultEntry::default();
-        cur.password = if secrets.password.is_empty() {
-            None
-        } else {
-            Some(encrypt_field(&secrets.password)?)
-        };
-        cur.private_key = if secrets.private_key.is_empty() {
-            None
-        } else {
-            Some(encrypt_field(&secrets.private_key)?)
-        };
-        cur.passphrase = if secrets.passphrase.is_empty() {
-            None
-        } else {
-            Some(encrypt_field(&secrets.passphrase)?)
+        let cur = VaultEntry {
+            password: if secrets.password.is_empty() {
+                None
+            } else {
+                Some(encrypt_field(&secrets.password)?)
+            },
+            private_key: if secrets.private_key.is_empty() {
+                None
+            } else {
+                Some(encrypt_field(&secrets.private_key)?)
+            },
+            passphrase: if secrets.passphrase.is_empty() {
+                None
+            } else {
+                Some(encrypt_field(&secrets.passphrase)?)
+            },
         };
 
         if cur.password.is_none() && cur.private_key.is_none() && cur.passphrase.is_none() {

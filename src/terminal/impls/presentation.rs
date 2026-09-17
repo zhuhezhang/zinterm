@@ -425,8 +425,8 @@ pub(crate) fn render_term_span(span: &HistSpan, row: i32, is_dark: bool) -> Vec<
                 let plain_cjk = contains_cjk(&plain);
                 result.push(TermSpan {
                     text: std::mem::take(&mut plain).into(),
-                    fg: fg.clone(),
-                    bg: bg.clone(),
+                    fg,
+                    bg,
                     bold: span.bold,
                     row,
                     col: plain_col,
@@ -439,8 +439,8 @@ pub(crate) fn render_term_span(span: &HistSpan, row: i32, is_dark: bool) -> Vec<
             }
             result.push(TermSpan {
                 text: "".into(),
-                fg: fg.clone(),
-                bg: bg.clone(),
+                fg,
+                bg,
                 bold: span.bold,
                 row,
                 col,
@@ -476,69 +476,6 @@ pub(crate) fn render_term_span(span: &HistSpan, row: i32, is_dark: bool) -> Vec<
         });
     }
     result
-}
-
-#[cfg(test)]
-mod color_emoji_tests {
-    use super::*;
-
-    fn run(text: &str, cells: i32) -> HistSpan {
-        HistSpan {
-            text: text.to_string(),
-            fg: vt100::Color::Default,
-            bg: vt100::Color::Default,
-            bold: false,
-            inverse: false,
-            col: 4,
-            cells,
-        }
-    }
-
-    #[test]
-    fn replaces_emoji_without_changing_terminal_columns() {
-        let spans = render_term_span(&run("A😀B", 4), 2, true);
-        assert_eq!(spans.len(), 3);
-        assert_eq!((spans[0].col, spans[0].cells), (4, 1));
-        assert!(!spans[0].emoji);
-        assert_eq!((spans[1].col, spans[1].cells), (5, 2));
-        assert!(spans[1].emoji);
-        assert_eq!((spans[2].col, spans[2].cells), (7, 1));
-        assert!(!spans[2].emoji);
-    }
-
-    #[test]
-    fn keeps_zwj_sequence_as_one_color_image() {
-        let spans = render_term_span(&run("👨‍👩‍👧‍👦", 2), 0, true);
-        assert_eq!(spans.len(), 1);
-        assert!(spans[0].emoji);
-        assert_eq!(spans[0].cells, 2);
-    }
-
-    #[test]
-    fn supports_common_composed_emoji_sequences() {
-        for emoji in ["👍🏽", "🇨🇳", "👨‍💻", "❤️"] {
-            let spans = render_term_span(&run(emoji, 2), 0, true);
-            assert_eq!(spans.len(), 1, "unexpected split for {emoji}");
-            assert!(spans[0].emoji, "missing color asset for {emoji}");
-            assert_eq!(spans[0].cells, 2);
-        }
-    }
-
-    #[test]
-    fn respects_explicit_text_presentation_selector() {
-        let spans = render_term_span(&run("♥\u{fe0e}", 1), 0, true);
-        assert_eq!(spans.len(), 1);
-        assert!(!spans[0].emoji);
-        assert_eq!(spans[0].text.as_str(), "♥\u{fe0e}");
-    }
-
-    #[test]
-    fn keeps_plain_text_grouped() {
-        let spans = render_term_span(&run("plain text", 10), 0, true);
-        assert_eq!(spans.len(), 1);
-        assert!(!spans[0].emoji);
-        assert_eq!(spans[0].text.as_str(), "plain text");
-    }
 }
 
 /// True if a terminal span contains any CJK character — ideograph, kana, or
@@ -855,4 +792,67 @@ fn idx_to_rgb_bg(i: u8, is_dark: bool) -> (u8, u8, u8) {
         return ANSI16_LIGHT_BG[i as usize];
     }
     idx_to_rgb(i, false, is_dark)
+}
+
+#[cfg(test)]
+mod color_emoji_tests {
+    use super::*;
+
+    fn run(text: &str, cells: i32) -> HistSpan {
+        HistSpan {
+            text: text.to_string(),
+            fg: vt100::Color::Default,
+            bg: vt100::Color::Default,
+            bold: false,
+            inverse: false,
+            col: 4,
+            cells,
+        }
+    }
+
+    #[test]
+    fn replaces_emoji_without_changing_terminal_columns() {
+        let spans = render_term_span(&run("A😀B", 4), 2, true);
+        assert_eq!(spans.len(), 3);
+        assert_eq!((spans[0].col, spans[0].cells), (4, 1));
+        assert!(!spans[0].emoji);
+        assert_eq!((spans[1].col, spans[1].cells), (5, 2));
+        assert!(spans[1].emoji);
+        assert_eq!((spans[2].col, spans[2].cells), (7, 1));
+        assert!(!spans[2].emoji);
+    }
+
+    #[test]
+    fn keeps_zwj_sequence_as_one_color_image() {
+        let spans = render_term_span(&run("👨‍👩‍👧‍👦", 2), 0, true);
+        assert_eq!(spans.len(), 1);
+        assert!(spans[0].emoji);
+        assert_eq!(spans[0].cells, 2);
+    }
+
+    #[test]
+    fn supports_common_composed_emoji_sequences() {
+        for emoji in ["👍🏽", "🇨🇳", "👨‍💻", "❤️"] {
+            let spans = render_term_span(&run(emoji, 2), 0, true);
+            assert_eq!(spans.len(), 1, "unexpected split for {emoji}");
+            assert!(spans[0].emoji, "missing color asset for {emoji}");
+            assert_eq!(spans[0].cells, 2);
+        }
+    }
+
+    #[test]
+    fn respects_explicit_text_presentation_selector() {
+        let spans = render_term_span(&run("♥\u{fe0e}", 1), 0, true);
+        assert_eq!(spans.len(), 1);
+        assert!(!spans[0].emoji);
+        assert_eq!(spans[0].text.as_str(), "♥\u{fe0e}");
+    }
+
+    #[test]
+    fn keeps_plain_text_grouped() {
+        let spans = render_term_span(&run("plain text", 10), 0, true);
+        assert_eq!(spans.len(), 1);
+        assert!(!spans[0].emoji);
+        assert_eq!(spans[0].text.as_str(), "plain text");
+    }
 }

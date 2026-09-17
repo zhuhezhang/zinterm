@@ -607,6 +607,7 @@ fn should_retry_legacy(err: &russh::Error) -> bool {
 /// - Huawei VRP (S5720): often tears the writer down → `SendError`
 /// - Maipu / some VRP: `ConnectFailed` / `AdministrativelyProhibited` /
 ///   `ResourceShortage`
+///
 /// Reconnect without the probe (and skip prompt injection) so the interactive
 /// shell can use the single session channel.
 fn should_retry_shell_without_probe(err: &russh::Error) -> bool {
@@ -1030,7 +1031,7 @@ async fn run_session(
                                     let _ = events.send(SessionEvent::Output(format!(
                                         "\r\n[zinterm] {}: {e}\r\n",
                                         t("ZMODEM 接收失败,已取消", "ZMODEM receive failed; cancelled")
-                                    ).into()));
+                                    )));
                                 }
                             }
                             continue;
@@ -1606,7 +1607,7 @@ pub(crate) mod legacy_ssh_compat_tests {
             !names.iter().any(|n| n.contains("kex-strict-s")),
             "{names:?}"
         );
-        assert!(names.iter().any(|n| *n == "ext-info-c"));
+        assert!(names.contains(&"ext-info-c"));
     }
 
     #[test]

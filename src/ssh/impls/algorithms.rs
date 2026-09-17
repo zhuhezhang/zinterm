@@ -229,7 +229,7 @@ pub fn sanitize_algorithm_preferences(prefs: &AlgorithmPreferences) -> Algorithm
 
 pub fn toggle_algorithm(prefs: &mut AlgorithmPreferences, category: AlgorithmCategory, name: &str) {
     let pool = option_pool(category);
-    if !pool.iter().any(|n| *n == name) {
+    if !pool.contains(&name) {
         return;
     }
     let list = list_mut(prefs, category);
@@ -291,7 +291,7 @@ fn parse_compress(name: &str) -> Option<russh::compression::Name> {
 }
 
 fn parse_host_key(name: &str) -> Option<Algorithm> {
-    Algorithm::from_str(name).ok().or_else(|| match name {
+    Algorithm::from_str(name).ok().or(match name {
         "ssh-rsa" => Some(Algorithm::Rsa { hash: None }),
         "rsa-sha2-256" => Some(Algorithm::Rsa {
             hash: Some(HashAlg::Sha256),

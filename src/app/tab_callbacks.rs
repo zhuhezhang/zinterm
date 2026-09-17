@@ -135,6 +135,7 @@ fn tabs_to_close_all(lay: &crate::layout::Layout, pane_id: u64) -> Vec<String> {
         .unwrap_or_default()
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn wire_tab_callbacks(
     window: &AppWindow,
     tabs_model: Rc<VecModel<TabInfo>>,
@@ -357,7 +358,7 @@ pub(super) fn wire_tab_callbacks(
         {
             let close_ctx = close_ctx.clone();
             window.on_pane_tab_closed(move |_pane_id: i32, id: SharedString| {
-                close_tab_id(&close_ctx, &id.to_string());
+                close_tab_id(&close_ctx, id.as_ref());
                 refresh_after_tab_close(&close_ctx);
             });
         }

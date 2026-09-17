@@ -1337,9 +1337,7 @@ impl ConfigStore {
         if before.is_empty() {
             let item = groups.remove(from_idx);
             groups.push(item);
-        } else if before.eq_ignore_ascii_case("default") {
-            return false;
-        } else if from == before {
+        } else if before.eq_ignore_ascii_case("default") || from == before {
             return false;
         } else {
             let Some(mut to_idx) = groups.iter().position(|g| g == before) else {
@@ -2097,10 +2095,12 @@ mod tests {
         store.set_save_passwords(false);
         assert!(!store.save_passwords());
 
-        let mut session = Session::default();
-        session.password = Secret::new("secret");
-        session.key_passphrase = Secret::new("kp");
-        session.private_key = Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n");
+        let session = Session {
+            password: Secret::new("secret"),
+            key_passphrase: Secret::new("kp"),
+            private_key: Secret::new("-----BEGIN OPENSSH PRIVATE KEY-----\n"),
+            ..Default::default()
+        };
         store.upsert(session);
 
         store.clear_saved_passwords_and_keys();

@@ -464,7 +464,8 @@ thread_local! {
 thread_local! {
     /// Prompts awaiting a decision; the front one is shown. Lives on the Slint
     /// event-loop thread (all access is from there).
-    pub(super) static HOSTKEY_QUEUE: RefCell<VecDeque<PendingHostKey>> = RefCell::new(VecDeque::new());
+    pub(super) static HOSTKEY_QUEUE: RefCell<VecDeque<PendingHostKey>> =
+        const { RefCell::new(VecDeque::new()) };
     /// host:port → accept decision for this run so a duplicate prompt (e.g. the
     /// follow-up SFTP SSH handshake) is answered without a new dialog.
     /// `AcceptRemember` lasts for the run; `AcceptOnce` is cleared after SFTP

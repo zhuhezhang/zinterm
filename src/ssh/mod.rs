@@ -5,6 +5,7 @@ pub(crate) mod known_hosts;
 #[path = "impls/ppk.rs"]
 pub(crate) mod ppk;
 #[path = "impls/ssh.rs"]
+#[allow(clippy::module_inception)]
 mod ssh;
 #[path = "struct/mod.rs"]
 mod structs;

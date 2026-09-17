@@ -333,7 +333,7 @@ impl TermBuffer {
                         self.csi_pending.push(byte);
                         self.csi_state = CsiState::Csi;
                     } else {
-                        display.extend(self.csi_pending.drain(..));
+                        display.append(&mut self.csi_pending);
                         if byte == 0x1b {
                             self.csi_pending.push(byte);
                         } else {
@@ -373,14 +373,14 @@ impl TermBuffer {
                                     *final_byte = b'H';
                                 }
                             }
-                            display.extend(self.csi_pending.drain(..));
+                            display.append(&mut self.csi_pending);
                         }
                         self.csi_pending.clear();
                         self.csi_state = CsiState::Normal;
                     } else if self.csi_pending.len() > 64 {
                         // Malformed/unbounded CSI: stop buffering and let vt100
                         // handle the bytes as ordinary terminal input.
-                        display.extend(self.csi_pending.drain(..));
+                        display.append(&mut self.csi_pending);
                         self.csi_state = CsiState::Normal;
                     }
                 }

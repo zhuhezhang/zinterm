@@ -825,10 +825,12 @@ pub fn run() -> Result<()> {
         let quick_panel_dock = s.quick_panel_dock();
         let welcome_sidebar_dock = s.welcome_sidebar_dock();
         let mut welcome_collapsed = s.welcome_collapsed().unwrap_or(false);
-        if quick_panel_open && !quick_panel_collapsed {
-            if welcome_as_sidebar && welcome_sidebar_dock == quick_panel_dock {
-                welcome_collapsed = true;
-            }
+        if quick_panel_open
+            && !quick_panel_collapsed
+            && welcome_as_sidebar
+            && welcome_sidebar_dock == quick_panel_dock
+        {
+            welcome_collapsed = true;
         }
         window.set_collapse_sftp_default(collapse_sftp);
         // Restore the persisted panel docking layout (#dock).
@@ -2129,7 +2131,7 @@ pub fn run() -> Result<()> {
                             // verifies the native window actually reached the target.
                             if !ev_window_size_tracking_ready.get() {
                                 if let Some(win) = weak.upgrade() {
-                                    if is_wayland_window(&win.window()) {
+                                    if is_wayland_window(win.window()) {
                                         ev_pending_window_size_restore.set(None);
                                         ev_window_size_tracking_ready.set(true);
                                         tracing::info!(
@@ -2139,7 +2141,7 @@ pub fn run() -> Result<()> {
                                         ev_pending_window_size_restore.get()
                                     {
                                         if let Some(target) = clamp_window_size_to_monitor(
-                                            &win.window(),
+                                            win.window(),
                                             Some(preferred),
                                         ) {
                                             tracing::info!(
@@ -2184,7 +2186,7 @@ pub fn run() -> Result<()> {
                                 .unwrap_or(false);
                             win.set_window_maximized(maxed);
                             if !ev_window_size_tracking_ready.get()
-                                && is_wayland_window(&win.window())
+                                && is_wayland_window(win.window())
                             {
                                 // The configure size in this event is authoritative
                                 // on Wayland. Accept and persist that actual size;
@@ -2203,7 +2205,7 @@ pub fn run() -> Result<()> {
                                     let actual =
                                         (size.width as f32 / scale, size.height as f32 / scale);
                                     if let Some(target) =
-                                        clamp_window_size_to_monitor(&win.window(), Some(preferred))
+                                        clamp_window_size_to_monitor(win.window(), Some(preferred))
                                     {
                                         tracing::info!(
                                             "[WINDOW_SIZE] restore requested saved={:.0}x{:.0} \
@@ -2548,7 +2550,7 @@ fn contains_logical(rect: LogicalRect, x: f32, y: f32) -> bool {
 
 fn app_content_area(win: &AppWindow) -> LogicalRect {
     let size = win.window().size();
-    let scale = win.window().scale_factor().max(0.01) as f32;
+    let scale = win.window().scale_factor().max(0.01);
     let mut area = LogicalRect {
         x: 0.0,
         y: if win.get_custom_titlebar() {
@@ -2756,6 +2758,7 @@ fn handle_file_drop(_win: &AppWindow, _sftp_handles: &SftpHandles, _path: std::p
 // Model helpers
 // ---------------------------------------------------------------------------
 
+#[allow(clippy::too_many_arguments)]
 fn wire_session_callbacks(
     window: &AppWindow,
     store: Rc<RefCell<ConfigStore>>,
@@ -2942,7 +2945,7 @@ fn wire_session_callbacks(
         window.on_remove_session(move |id: SharedString| {
             {
                 let mut s = store.borrow_mut();
-                s.remove(&id.to_string());
+                s.remove(id.as_ref());
                 s.save_later(SaveKind::sessions_and_vault());
             }
             sync_welcome_sessions(
@@ -2966,7 +2969,7 @@ fn wire_session_callbacks(
         window.on_duplicate_session(move |id: SharedString| {
             {
                 let mut s = store.borrow_mut();
-                if let Some(orig) = s.get(&id.to_string()).cloned() {
+                if let Some(orig) = s.get(id.as_ref()).cloned() {
                     let from_id = orig.id.clone();
                     let mut copy = orig;
                     copy.id = crate::config::Session::new_saved_id();
@@ -3161,11 +3164,8 @@ fn wire_session_callbacks(
                             "分组名称不能包含“/”或为系统保留名",
                             "Group name cannot contain “/” or be a reserved name",
                         ))
-                    } else if orig.is_empty() && s.session_group_exists(&new_full) {
-                        Some(t("分组已存在", "Group already exists"))
-                    } else if !orig.is_empty()
-                        && !new_full.eq_ignore_ascii_case(orig.as_str())
-                        && s.session_group_exists(&new_full)
+                    } else if s.session_group_exists(&new_full)
+                        && (orig.is_empty() || !new_full.eq_ignore_ascii_case(orig.as_str()))
                     {
                         Some(t("分组已存在", "Group already exists"))
                     } else {
@@ -3205,7 +3205,7 @@ fn wire_session_callbacks(
         window.on_delete_group(move |name: SharedString| {
             {
                 let mut s = store.borrow_mut();
-                s.remove_group(&name.to_string());
+                s.remove_group(name.as_ref());
                 s.save_later(SaveKind::SESSIONS | SaveKind::UI);
             }
             sync_welcome_sessions(
@@ -3634,7 +3634,7 @@ fn wire_session_callbacks(
 
 fn session_from_draft(draft: &SessionDraft) -> Session {
     let id = draft.id.to_string();
-    let auth = AuthMethod::from_str(&draft.auth.to_string());
+    let auth = AuthMethod::from_str(draft.auth.as_ref());
 
     // Login password and key passphrase are separate fields. The editor echoes
     // stored values when opening a session; an empty field means clear (same as
@@ -3671,7 +3671,7 @@ fn session_from_draft(draft: &SessionDraft) -> Session {
     } else {
         Secret::default()
     };
-    let kind = crate::config::SessionKind::from_str(&draft.kind.to_string());
+    let kind = crate::config::SessionKind::from_str(draft.kind.as_ref());
     // Auto-name: serial → port label; local → shell/Local; otherwise
     // user@host, or just the host when no username was given (#110).
     let auto_name = match kind {
@@ -3761,7 +3761,7 @@ fn apply_password_save_policy(
         return;
     }
     let existing = store.get(&session.id);
-    let auth = AuthMethod::from_str(&draft.auth.to_string());
+    let auth = AuthMethod::from_str(draft.auth.as_ref());
     match auth {
         AuthMethod::Key => {
             // Non-empty typed passphrase stays out of disk; empty means clear.
@@ -3806,6 +3806,7 @@ fn apply_password_save_policy(
 /// When `cred_source_tab` is set (Duplicate connection), copy that tab's
 /// in-memory credential cache onto the new tab and prefer it over any
 /// disk-saved password.
+#[allow(clippy::too_many_arguments)]
 fn open_session_in_new_tab(
     mut session: Session,
     ctx: &ConnectCtx,
@@ -4353,12 +4354,14 @@ fn refresh_panes(
 /// "tabstrip"/"left"/"right"/"up"/"down"/"center"; `None` when the point is
 /// outside every pane. The 30% edge bands trigger a split; the tab strip and
 /// middle drop into the pane's tab group.
+type DragTarget = (u64, &'static str, (f32, f32, f32, f32));
+
 fn drag_target(
     layout: &crate::layout::Layout,
     content: (f32, f32),
     x: f32,
     y: f32,
-) -> Option<(u64, &'static str, (f32, f32, f32, f32))> {
+) -> Option<DragTarget> {
     const STRIP: f32 = 36.0;
     const EDGE: f32 = 0.30;
     let (cw, ch) = (content.0.max(1.0), content.1.max(1.0));
@@ -4793,7 +4796,7 @@ fn wire_key_input(
                     let changed = drop_quick_command(
                         &mut commands,
                         from as usize,
-                        &target_group.to_string(),
+                        &target_group,
                         before_orig,
                     );
                     if changed {
@@ -4826,7 +4829,7 @@ fn wire_key_input(
         window.on_drop_quick_group(move |from: SharedString, before: SharedString| {
             let changed = {
                 let mut s = store_rc.borrow_mut();
-                let changed = s.reorder_quick_group(&from.to_string(), &before.to_string());
+                let changed = s.reorder_quick_group(from.as_ref(), before.as_ref());
                 if changed {
                     s.save_later(SaveKind::COMMANDS);
                 }
@@ -4858,7 +4861,7 @@ fn wire_key_input(
                 if orig.is_empty() {
                     s.add_quick_group(name.to_string());
                 } else {
-                    s.rename_quick_group(&orig.to_string(), name.to_string());
+                    s.rename_quick_group(orig.as_ref(), name.to_string());
                 }
                 s.save_later(SaveKind::COMMANDS);
             }
@@ -4883,7 +4886,7 @@ fn wire_key_input(
         window.on_delete_quick_group(move |name: SharedString| {
             {
                 let mut s = store_rc.borrow_mut();
-                s.remove_quick_group(&name.to_string());
+                s.remove_quick_group(name.as_ref());
                 s.save_later(SaveKind::COMMANDS);
             }
             if let Some(w) = weak.upgrade() {

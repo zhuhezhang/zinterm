@@ -152,7 +152,7 @@ pub(super) fn resolve_front_hostkey(win: &AppWindow, decision: crate::ssh::HostK
 // ---------------------------------------------------------------------------
 
 thread_local! {
-    static CRED_QUEUE: RefCell<VecDeque<PendingCred>> = RefCell::new(VecDeque::new());
+    static CRED_QUEUE: RefCell<VecDeque<PendingCred>> = const { RefCell::new(VecDeque::new()) };
     /// tab id → accepted credentials for that tab. Shared by shell + SFTP on the
     /// same tab; survives disconnect so R-reconnect can reuse it; copied (not
     /// shared) when duplicating a tab. Cleared only when the tab is closed.
@@ -241,6 +241,7 @@ pub(super) fn apply_cached_credentials_for_reconnect(
 /// Queue a credential prompt: answer immediately if this tab already accepted
 /// credentials, merge into an existing pending entry for the same tab
 /// (shell + SFTP), otherwise enqueue (and show it now if nothing else is up).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn enqueue_cred_prompt(
     win: &AppWindow,
     tab_id: String,

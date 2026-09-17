@@ -1,4 +1,5 @@
 #[path = "impls/config.rs"]
+#[allow(clippy::module_inception)]
 mod config;
 pub(crate) mod persist;
 #[path = "struct/mod.rs"]

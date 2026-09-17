@@ -396,7 +396,7 @@ fn session_row(
         group: group.into(),
         group_header: if header { group.into() } else { "".into() },
         group_label: if header { label.into() } else { "".into() },
-        group_depth: if header { depth } else { depth },
+        group_depth: depth,
         collapsed,
         builtin: false,
         conn_kind: s.kind.as_str().into(),
@@ -458,18 +458,24 @@ mod tests {
 
     #[test]
     fn session_search_matches_name_host_serial_and_shell() {
-        let mut ssh = Session::default();
-        ssh.name = "Prod Web".into();
-        ssh.host = "192.168.1.10".into();
-        ssh.port = 22;
+        let ssh = Session {
+            name: "Prod Web".into(),
+            host: "192.168.1.10".into(),
+            port: 22,
+            ..Default::default()
+        };
 
-        let mut serial = Session::default();
-        serial.kind = SessionKind::Serial;
-        serial.serial_port = "COM3".into();
+        let serial = Session {
+            kind: SessionKind::Serial,
+            serial_port: "COM3".into(),
+            ..Default::default()
+        };
 
-        let mut local = Session::default();
-        local.kind = SessionKind::Local;
-        local.shell = "/bin/zsh".into();
+        let local = Session {
+            kind: SessionKind::Local,
+            shell: "/bin/zsh".into(),
+            ..Default::default()
+        };
 
         assert!(session_matches_query(&ssh, "prod"));
         assert!(session_matches_query(&ssh, "192.168"));

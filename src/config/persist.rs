@@ -32,7 +32,7 @@ pub(crate) struct VaultSnapshot {
 }
 
 enum PersistMsg {
-    Save(PersistSnapshot),
+    Save(Box<PersistSnapshot>),
     /// Drain pending work then ack.
     Flush(SyncSender<Result<()>>),
 }
@@ -64,14 +64,14 @@ fn persist_loop(rx: Receiver<PersistMsg>) {
                 // Coalesce a short burst of saves into one write.
                 match rx.recv_timeout(Duration::from_millis(20)) {
                     Ok(PersistMsg::Save(more)) => {
-                        let mut merged = snap;
-                        merge_snapshot(&mut merged, more);
+                        let mut merged = *snap;
+                        merge_snapshot(&mut merged, *more);
                         if let Err(e) = drain_and_write(&rx, Some(merged)) {
                             tracing::warn!("background config persist failed: {e:#}");
                         }
                     }
                     Ok(PersistMsg::Flush(ack)) => {
-                        let result = drain_and_write(&rx, Some(snap));
+                        let result = drain_and_write(&rx, Some(*snap));
                         let _ = ack.send(result);
                     }
                     Err(RecvTimeoutError::Timeout) => {
@@ -96,8 +96,8 @@ fn drain_and_write(rx: &Receiver<PersistMsg>, initial: Option<PersistSnapshot>) 
     while let Ok(msg) = rx.try_recv() {
         match msg {
             PersistMsg::Save(more) => match &mut snap {
-                Some(existing) => merge_snapshot(existing, more),
-                None => snap = Some(more),
+                Some(existing) => merge_snapshot(existing, *more),
+                None => snap = Some(*more),
             },
             PersistMsg::Flush(ack) => extra_acks.push(ack),
         }
@@ -139,7 +139,7 @@ fn merge_snapshot(dst: &mut PersistSnapshot, src: PersistSnapshot) {
 /// Schedule a non-blocking persist. Errors only if the worker channel is gone.
 pub(crate) fn schedule(snap: PersistSnapshot) -> Result<()> {
     let tx = channel().lock().unwrap_or_else(|p| p.into_inner()).clone();
-    tx.send(PersistMsg::Save(snap))
+    tx.send(PersistMsg::Save(Box::new(snap)))
         .context("persist worker channel closed")?;
     Ok(())
 }
