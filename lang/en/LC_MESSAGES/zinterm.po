@@ -54,8 +54,8 @@ msgstr "About"
 msgid "About ZinTerm"
 msgstr "About ZinTerm"
 
-msgid "A lightweight Rust + Slint SSH terminal client."
-msgstr "A lightweight Rust + Slint SSH terminal client."
+msgid "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
+msgstr "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
 
 msgid "Open-source libraries used"
 msgstr "Open-source libraries used"
@@ -455,9 +455,6 @@ msgstr "Use GBK for servers configured for GB2312 or GBK output."
 
 msgid "Add"
 msgstr "Add"
-
-msgid "ZinTerm — a lightweight Rust + Slint SSH client"
-msgstr "ZinTerm — a lightweight Rust + Slint SSH client"
 
 msgid "Quick connect"
 msgstr "Quick connect"

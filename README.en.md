@@ -2,11 +2,7 @@
 
 [简体中文](./README.md) | **English**
 
-A lightweight, low-memory SSH / terminal client inspired by FinalShell, but
-written entirely in **Rust + [Slint](https://slint.dev)**. The goal is to keep
-FinalShell's core experience (session management, tabbed terminals) while
-cutting memory use from the 400 MB+ of a JVM app down to the tens-of-MB range of
-a native binary.
+ZinTerm is a lightweight, low-memory cross-platform terminal emulator built with **Rust + [Slint](https://slint.dev)**. It supports SSH, SFTP, Telnet, serial connections and local shell. It cuts memory consumption from 200+ MB on Electron down to tens of MB at native performance level.
 
 ## Screenshots
 

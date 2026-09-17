@@ -24,7 +24,7 @@
 
         <Package Id="*"
             Keywords="Installer"
-            Description="ZinTerm - lightweight Rust + Slint SSH/terminal client"
+            Description="ZinTerm - A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
             Manufacturer="ZinTerm contributors"
             InstallerVersion="450"
             Languages="1033"
@@ -99,7 +99,7 @@
                 <Component Id="ApplicationShortcut" Guid="*">
                     <Shortcut Id="StartMenuShortcut"
                         Name="ZinTerm"
-                        Description="Lightweight SSH/terminal client"
+                        Description="A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
                         Target="[APPLICATIONFOLDER]zinterm.exe"
                         WorkingDirectory="APPLICATIONFOLDER"
                         Icon="ProductICO"/>
@@ -117,7 +117,7 @@
                            Guid="{A034B952-E060-47C3-8D04-FCA147FBE3E5}">
                     <Shortcut Id="DesktopShortcutLink"
                         Name="ZinTerm"
-                        Description="Lightweight SSH/terminal client"
+                        Description="A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
                         Target="[APPLICATIONFOLDER]zinterm.exe"
                         WorkingDirectory="APPLICATIONFOLDER"
                         Icon="ProductICO"/>

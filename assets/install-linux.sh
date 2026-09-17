@@ -56,8 +56,8 @@ cat > "$APP_DIR/zinterm.desktop" <<EOF
 Type=Application
 Name=ZinTerm
 GenericName=SSH Client
-Comment=Lightweight Rust + Slint SSH/SFTP client
-Comment[zh_CN]=轻量级 Rust + Slint SSH/SFTP 客户端
+Comment=A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint
+Comment[zh_CN]=轻量级、低内存的 Rust + Slint 终端模拟器
 Exec=$BIN
 Icon=zinterm
 Terminal=false

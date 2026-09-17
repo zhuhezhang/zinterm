@@ -2,10 +2,7 @@
 
 **简体中文** | [English](./README.en.md)
 
-一个轻量级、低内存占用的 SSH / 终端客户端，灵感来自 FinalShell，但完全由
-**Rust + [Slint](https://slint.dev)** 实现。目标是保留 FinalShell 的核心体验
-（会话管理、多标签页终端）的同时，把内存占用从 400 MB+ 的
-JVM 压到几十 MB 原生级别。
+ZinTerm 是一款基于 Rust + Slint 开发的轻量级、低内存跨平台终端模拟器，支持 SSH、SFTP、Telnet 协议、串口连接（Serial）、本地 Shell。它把内存占用从 electron 的 200 MB+  压到几十 MB 的原生级别。
 
 ## 截图
 
