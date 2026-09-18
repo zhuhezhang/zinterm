@@ -4,8 +4,9 @@ import { TabInfo } from "../tabs.slint";
 import { ToolStrip } from "../widgets.slint";
 
 export component SftpHost inherits Rectangle {
-    width: 100%;
-    height: 100%;
+    // Geometry is set by the parent (dock-region). Do not use width/height: 100%
+    // here — inside a free-positioned Rectangle those percentages can resolve to 0
+    // before layout settles, which hides the SFTP panel after the UI split.
     in property <length> sf-w;
     in property <length> sf-h;
     callback persist-sftp-dock(string);
@@ -27,11 +28,12 @@ export component SftpHost inherits Rectangle {
     callback sftp-download-selected();
     in-out property <float> sftp-drag-nx;
     in-out property <float> sftp-drag-ny;
-    in-out property <bool> sftp-dragging:     false;
+    in-out property <bool> sftp-dragging: false;
     callback sftp-edit(string);
     callback sftp-edit-external(string);
     in property <[SftpEntry]> sftp-entries;
-    in-out property <bool> sftp-horizontal;
+    // Derived in TerminalView from sftp-dock — one-way only (not <=>).
+    in property <bool> sftp-horizontal;
     in property <bool> sftp-loading: false;
     callback sftp-navigate(string);
     callback sftp-new-file(string);
@@ -43,7 +45,8 @@ export component SftpHost inherits Rectangle {
     callback sftp-refresh(string);
     callback sftp-rename-request(string, string);
     in property <int> sftp-selected-count;          // checked-entry count (#100);
-    in-out property <bool> sftp-shut;
+    // Derived in TerminalView from ready/collapsed — one-way only (not <=>).
+    in property <bool> sftp-shut;
     in property <int> sftp-sort-dir: 0;
     in property <string> sftp-sort-key: "";
     callback sftp-sort-request(string);

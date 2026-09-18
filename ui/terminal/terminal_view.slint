@@ -1022,6 +1022,12 @@ export component TerminalView inherits Rectangle {
             }
 
             SftpHost {
+                // Bind to dock-region's laid-out size (not 100%) so the overlay
+                // keeps a real size after the SFTP host was extracted.
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
                 sf-w: parent.sf-w;
                 sf-h: parent.sf-h;
                 persist-sftp-dock(a0) => { root.persist-sftp-dock(a0); }
@@ -1047,7 +1053,7 @@ export component TerminalView inherits Rectangle {
                 sftp-edit(a0) => { root.sftp-edit(a0); }
                 sftp-edit-external(a0) => { root.sftp-edit-external(a0); }
                 sftp-entries: root.sftp-entries;
-                sftp-horizontal <=> root.sftp-horizontal;
+                sftp-horizontal: root.sftp-horizontal;
                 sftp-loading: root.sftp-loading;
                 sftp-navigate(a0) => { root.sftp-navigate(a0); }
                 sftp-new-file(a0) => { root.sftp-new-file(a0); }
@@ -1059,7 +1065,7 @@ export component TerminalView inherits Rectangle {
                 sftp-refresh(a0) => { root.sftp-refresh(a0); }
                 sftp-rename-request(a0, a1) => { root.sftp-rename-request(a0, a1); }
                 sftp-selected-count: root.sftp-selected-count;
-                sftp-shut <=> root.sftp-shut;
+                sftp-shut: root.sftp-shut;
                 sftp-sort-dir: root.sftp-sort-dir;
                 sftp-sort-key: root.sftp-sort-key;
                 sftp-sort-request(a0) => { root.sftp-sort-request(a0); }

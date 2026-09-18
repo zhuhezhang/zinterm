@@ -10,9 +10,10 @@ import { TerminalState, PaneInfo, SplitterInfo } from "../types/app_state.slint"
 
 export component DockArea inherits Rectangle {
     callback focus-session-search();
+    // Fill leftover space below the title bar. Do NOT set height: 100% —
+    // inside AppWindow's VerticalLayout that overflows by the title-bar height
+    // and clips the bottom (command bar + SFTP panel).
     vertical-stretch: 1;
-    width: 100%;
-    height: 100%;
     in-out property <string> active-tab-id: "welcome";
     callback begin-child-group(string /* ref path */);
     callback begin-rename-group(string /* path */, string /* label */);
