@@ -496,7 +496,7 @@ msgid "Replace all"
 msgstr "全部替换"
 
 msgid "Unsaved"
-msgstr "已修改"
+msgstr "未保存"
 
 msgid "Change permissions"
 msgstr "修改文件权限"
