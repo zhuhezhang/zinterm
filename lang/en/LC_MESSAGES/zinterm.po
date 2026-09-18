@@ -6,15 +6,6 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Not connected"
-msgstr "Not connected"
-
-msgid "Local resources"
-msgstr "Local resources"
-
-msgid "Server resources"
-msgstr "Server resources"
-
 msgid "Download settings"
 msgstr "Download settings"
 
@@ -23,9 +14,6 @@ msgstr "Save downloads to:"
 
 msgid "(ask every time)"
 msgstr "(ask every time)"
-
-msgid "Choose folder"
-msgstr "Choose folder"
 
 msgid "Choose save path"
 msgstr "Choose save path"
@@ -51,14 +39,8 @@ msgstr "No transfers yet"
 msgid "About"
 msgstr "About"
 
-msgid "About ZinTerm"
-msgstr "About ZinTerm"
-
 msgid "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
 msgstr "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
-
-msgid "Open-source libraries used"
-msgstr "Open-source libraries used"
 
 msgid "MIT Open Source License"
 msgstr "MIT Open Source License"
@@ -71,9 +53,6 @@ msgstr "Edit session"
 
 msgid "Name"
 msgstr "Name"
-
-msgid "e.g. Production / Database"
-msgstr "e.g. Production / Database"
 
 msgid "optional, add number when repeated"
 msgstr "optional, add number when repeated"
@@ -92,9 +71,6 @@ msgstr "Shell"
 
 msgid "Working directory"
 msgstr "Working directory"
-
-msgid "Root"
-msgstr "Root"
 
 msgid "Host / IP / Serial Port"
 msgstr "Host / IP / Serial Port"
@@ -126,9 +102,6 @@ msgstr "Password"
 msgid "Private key"
 msgstr "Private key"
 
-msgid "Leave blank to keep the current password"
-msgstr "Leave blank to keep the current password"
-
 msgid "Key passphrase"
 msgstr "Key passphrase"
 
@@ -138,35 +111,14 @@ msgstr "/path/to/private_key_file or \nprivate_key_content"
 msgid "Leave blank if the key isn't encrypted"
 msgstr "Leave blank if the key isn't encrypted"
 
-msgid "Leave blank to keep the current passphrase"
-msgstr "Leave blank to keep the current passphrase"
-
-msgid "Leave blank to keep the current key"
-msgstr "Leave blank to keep the current key"
-
-msgid "Private key file"
-msgstr "Private key file"
-
-msgid "Paste private key"
-msgstr "Paste private key"
-
-msgid "Private key content is encrypted before saving."
-msgstr "Private key content is encrypted before saving."
-
 msgid "Enter a key file path or paste the private key. Pasted keys are encrypted before saving."
 msgstr "Enter a key file path or paste the private key. Pasted keys are encrypted before saving."
 
 msgid "Browse…"
 msgstr "Browse…"
 
-msgid "Pick the private key itself (not the .pub public key)"
-msgstr "Pick the private key itself (not the .pub public key)"
-
 msgid "Login"
 msgstr "Login"
-
-msgid "Remember for this session"
-msgstr "Remember for this session"
 
 msgid "Please enter a host / IP address."
 msgstr "Please enter a host / IP address."
@@ -270,9 +222,6 @@ msgstr "Octal mode, e.g. 755"
 msgid "Read-only"
 msgstr "Read-only"
 
-msgid "Modified"
-msgstr "Modified"
-
 msgid "View"
 msgstr "View"
 
@@ -315,26 +264,8 @@ msgstr "Collapse all children"
 msgid "Group name"
 msgstr "Group name"
 
-msgid "Move to"
-msgstr "Move to"
-
-msgid "Status"
-msgstr "Status"
-
-msgid "Memory"
-msgstr "Memory"
-
-msgid "Swap"
-msgstr "Swap"
-
 msgid "Local"
 msgstr "Local"
-
-msgid "Path"
-msgstr "Path"
-
-msgid "Free/Total"
-msgstr "Free/Total"
 
 msgid "Copy"
 msgstr "Copy"
@@ -348,17 +279,11 @@ msgstr "Clear buffer"
 msgid "Find"
 msgstr "Find"
 
-msgid "Processes"
-msgstr "Processes"
-
 msgid "User"
 msgstr "User"
 
 msgid "Command"
 msgstr "Command"
-
-msgid "No processes"
-msgstr "No processes"
 
 msgid "Quick"
 msgstr "Quick"
@@ -390,9 +315,6 @@ msgstr "No quick commands yet"
 msgid "Group"
 msgstr "Group"
 
-msgid "Rename group"
-msgstr "Rename group"
-
 msgid "leave empty → default"
 msgstr "leave empty → default"
 
@@ -414,9 +336,6 @@ msgstr "Search commands"
 msgid "Search sessions"
 msgstr "Search sessions"
 
-msgid "History command"
-msgstr "History command"
-
 msgid "Execute"
 msgstr "Execute"
 
@@ -425,12 +344,6 @@ msgstr "Save and execute"
 
 msgid "Add and execute"
 msgstr "Add and execute"
-
-msgid "Run"
-msgstr "Run"
-
-msgid "View and edit"
-msgstr "View and edit"
 
 msgid "Terminal encoding"
 msgstr "Terminal encoding"
@@ -449,12 +362,6 @@ msgstr "DEL (0x7F)"
 
 msgid "BS (0x08)"
 msgstr "BS (0x08)"
-
-msgid "Use GBK for servers configured for GB2312 or GBK output."
-msgstr "Use GBK for servers configured for GB2312 or GBK output."
-
-msgid "Add"
-msgstr "Add"
 
 msgid "Quick connect"
 msgstr "Quick connect"
@@ -491,9 +398,6 @@ msgstr "Parity"
 
 msgid "Flow control"
 msgstr "Flow control"
-
-msgid "None"
-msgstr "None"
 
 msgid "Confirm delete"
 msgstr "Confirm delete"
@@ -579,32 +483,17 @@ msgstr "Save terminal output"
 msgid "Duplicate connection"
 msgstr "Duplicate connection"
 
-msgid "Copied"
-msgstr "Copied"
-
 msgid "Clear sort"
 msgstr "Clear sort"
 
-msgid "Terminate process"
-msgstr "Terminate process"
+msgid "SFTP not connected"
+msgstr "SFTP not connected"
 
-msgid "PID copied"
-msgstr "PID copied"
+msgid "Replace"
+msgstr "Replace"
 
-msgid "Terminate this process? It may lose unsaved data."
-msgstr "Terminate this process? It may lose unsaved data."
+msgid "Replace all"
+msgstr "Replace all"
 
-msgid "This process belongs to root or another user. Enter your administrator (sudo) password to continue."
-msgstr "This process belongs to root or another user. Enter your administrator (sudo) password to continue."
-
-msgid "Administrator password"
-msgstr "Administrator password"
-
-msgid "Enter sudo password"
-msgstr "Enter sudo password"
-
-msgid "Terminating process..."
-msgstr "Terminating process..."
-
-msgid "Terminate"
-msgstr "Terminate"
+msgid "Unsaved"
+msgstr "Unsaved"

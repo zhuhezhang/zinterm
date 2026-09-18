@@ -120,7 +120,7 @@ export component FileEditorOverlay inherits Rectangle {
                                     text: root.editor-name
                                         + (root.editor-readonly
                                         ? "  ·  " + @tr("Read-only")
-                                        : (root.editor-dirty ? "  ·  " + @tr("Modified") : ""));
+                                        : (root.editor-dirty ? "  ·  " + @tr("Unsaved") : ""));
                                     color: Theme.text-primary;
                                     font-size: Theme.fs-md;
                                     font-weight: 600;
