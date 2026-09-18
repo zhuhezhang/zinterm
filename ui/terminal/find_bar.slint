@@ -1,0 +1,148 @@
+import { Theme } from "../theme.slint";
+import { BorderedLineInput, IconButton } from "../widgets.slint";
+import { FindToggle } from "helpers.slint";
+import { TermMatch } from "../types/terminal.slint";
+
+export component FindBar inherits Rectangle {
+    // Floating find bar — positioned by the parent terminal area.
+    callback emit-find-query(string);
+    callback close-find();
+    callback find-next();
+    callback find-prev();
+    in-out property <bool> find-active: false;
+    in-out property <bool> find-case-sensitive: false;
+    in-out property <bool> find-focus-pending: false;
+    in-out property <int> find-match-index: 0; // 1-based; 0 when no selection yet;
+    in property <[TermMatch]> find-matches; // search-highlight rectangles;
+    in-out property <bool> find-regex: false;
+    in-out property <bool> find-whole-word: false;
+
+    background: Theme.popup-bg;
+    border-width: 1px;
+    border-color: Theme.border-strong;
+    border-radius: Theme.radius-sm;
+
+    // Let the popup click and the conditional component's first
+    // layout pass finish before asking the platform for focus.
+    find-focus-timer := Timer {
+        interval: 0ms;
+        running: root.find-focus-pending;
+        triggered => {
+            root.find-focus-pending = false;
+            if (root.find-active) { find-input.focus-input(); }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 6px;
+        padding-right: 4px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        spacing: 4px;
+        // Vertically center the 24px toggles/buttons next to the
+        // 32px input (Slint 1.17+: cross-axis, not `alignment`).
+        cross-axis-alignment: center;
+
+        find-input := BorderedLineInput {
+            horizontal-stretch: 1;
+            min-width: 96px;
+            // Keep the widget's default 32px height — do not use
+            // parent.height, which includes layout padding and
+            // pushes the field below the find-bar chrome.
+            pad-x: 6px;
+            font-size: Theme.fs-md;
+            leading-icon: "\u{E8B6}";
+            // Defer focus until popup event dispatch and layout
+            // have completed; synchronous focus crashes on
+            // Windows when opened from right-click (#343).
+            init => { root.find-focus-pending = true; }
+            edited => {
+                root.find-match-index = 0;
+                root.emit-find-query(self.text);
+            }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {       // Esc closes find
+                    find-input.text = "";
+                    root.close-find();
+                    accept
+                } else if (e.text == Key.Return) {
+                    if (e.modifiers.shift) {
+                        root.find-prev();
+                    } else {
+                        root.find-next();
+                    }
+                    accept
+                } else {
+                    reject
+                }
+            }
+        }
+
+        Text {
+            min-width: 40px;
+            text: find-input.text == "" ? ""
+                : (root.find-match-index > 0
+                ? root.find-match-index + "/" + root.find-matches.length
+                : "" + root.find-matches.length);
+            color: Theme.text-muted;
+            font-size: Theme.fs-sm;
+            vertical-alignment: center;
+            horizontal-alignment: center;
+        }
+
+        FindToggle {
+            label: "Aa";
+            tip: @tr("Match case");
+            on <=> root.find-case-sensitive;
+            toggled(_) => {
+                root.find-match-index = 0;
+                root.emit-find-query(find-input.text);
+            }
+        }
+
+        FindToggle {
+            label: "W";
+            tip: @tr("Match whole word");
+            on <=> root.find-whole-word;
+            toggled(_) => {
+                root.find-match-index = 0;
+                root.emit-find-query(find-input.text);
+            }
+        }
+
+        FindToggle {
+            label: ".*";
+            tip: @tr("Use regular expression");
+            on <=> root.find-regex;
+            toggled(_) => {
+                root.find-match-index = 0;
+                root.emit-find-query(find-input.text);
+            }
+        }
+
+        IconButton {
+            size: 24px;
+            glyph: "↑";
+            tooltip: @tr("Previous match");
+            clicked => { root.find-prev(); }
+        }
+
+        IconButton {
+            size: 24px;
+            glyph: "↓";
+            tooltip: @tr("Next match");
+            clicked => { root.find-next(); }
+        }
+
+        IconButton {
+            size: 24px;
+            glyph: "\u{E5CD}";
+            font-family: "Material Icons";
+            tooltip: @tr("Close");
+            clicked => {
+                find-input.text = "";
+                root.close-find();
+            }
+        }
+    }
+}

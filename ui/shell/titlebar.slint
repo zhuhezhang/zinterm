@@ -1,0 +1,164 @@
+import { Theme } from "../theme.slint";
+import { WinBtn, IconBtn } from "chrome.slint";
+
+export component TitleBar inherits VerticalLayout {
+    spacing: 0;
+    in-out property <bool> custom-titlebar: true;
+    in-out property <bool> download-open: false;  // download manager popup;
+    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
+    in-out property <bool> settings-open: false;  // settings menu popup;
+    in-out property <length> titlebar-inset;
+    callback toggle-theme();
+    in-out property <length> toolbar-btn-spacing: 8px;
+    callback win-close();
+    callback win-drag();
+    callback win-maximize-toggle();
+    callback win-minimize();
+    in-out property <bool> window-maximized: false;
+
+    // macOS immersive bar: a strip under the native traffic-light buttons.
+    // Frosted like the other panels (bg-panel) so it matches in both themes —
+    // a plain transparent strip would show the raw wallpaper here and look dark
+    // in light mode. Left as a plain reserve (no TouchArea) so macOS's own title
+    // bar keeps handling the window drag in this region. App toolbar icons sit
+    // on the far right (macOS has no caption buttons there).
+    if root.titlebar-inset > 0px: Rectangle {
+        height: root.titlebar-inset;
+        background: Theme.bg-panel;
+        HorizontalLayout {
+            padding-right: 3px;
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    spacing: root.toolbar-btn-spacing;
+                    IconBtn {
+                        icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
+                        icon-color: Theme.dark ? #f5c542 : #5856d6;
+                        tooltip: root.lang-en ? "Toggle theme" : "切换主题";
+                        clicked => { root.toggle-theme(); }
+                    }
+
+                    IconBtn {
+                        icon: "\u{E2C4}";
+                        tooltip: root.lang-en ? "Download" : "下载";
+                        active: root.download-open;
+                        clicked => { root.download-open = !root.download-open; root.settings-open = false; }
+                    }
+
+                    IconBtn {
+                        icon: "\u{E8B8}";
+                        tooltip: root.lang-en ? "Settings" : "设置";
+                        active: root.settings-open;
+                        clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
+                    }
+                }
+            }
+        }
+    }
+
+    // Immersive custom title bar (#119) — only on frameless platforms
+    // (Windows/Linux). App icon + name on the left, a draggable middle
+    // (move window / double-click to maximize), then the toolbar icons and
+    // window controls on the right.
+    if root.custom-titlebar: Rectangle {
+        height: 38px;
+        background: Theme.bg-panel;
+        tb-drag := TouchArea {
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                    root.win-drag();
+                }
+            }
+            double-clicked => { root.win-maximize-toggle(); }
+        }
+
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 4px;
+            spacing: 8px;
+            // Vertical-centering wrappers so the icon and name line up (#119).
+            VerticalLayout {
+                alignment: center;
+                // Vector mark — same layout as meatshell (18×18), but SVG avoids
+                // the soft PNG alpha fringe that looks blurry on HiDPI title bars.
+                Image {
+                    source: @image-url("../../assets/icon.svg");
+                    width: 18px;
+                    height: 18px;
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    text: "ZinTerm";
+                    color: Theme.text-secondary;
+                    font-size: Theme.fs-sm;
+                }
+            }
+            // Draggable spacer (no TouchArea → clicks fall to tb-drag).
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+            // App toolbar (theme / download / settings) — own spacing via
+            // toolbar-btn-spacing; outer layout spacing keeps caption gaps at 8px.
+            // Icon code points: https://fonts.google.com/icons?icon.set=Material+Icons
+            // local file: fonts/MaterialIcons-Regular.ttf
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    spacing: root.toolbar-btn-spacing;
+                    IconBtn {
+                        icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
+                        icon-color: Theme.dark ? #f5c542 : #5856d6;
+                        tooltip: root.lang-en ? "Toggle theme" : "切换主题";
+                        clicked => { root.toggle-theme(); }
+                    }
+
+                    IconBtn {
+                        icon: "\u{E2C4}";
+                        tooltip: root.lang-en ? "Download" : "下载";
+                        active: root.download-open;
+                        clicked => { root.download-open = !root.download-open; root.settings-open = false; }
+                    }
+
+                    IconBtn {
+                        icon: "\u{E8B8}";
+                        tooltip: root.lang-en ? "Settings" : "设置";
+                        active: root.settings-open;
+                        clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
+                    }
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+                WinBtn {
+                    icon: "\u{E15B}";
+                    clicked => { root.win-minimize(); }
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+                WinBtn {
+                    icon: root.window-maximized ? "\u{E3E0}" : "\u{E835}";
+                    clicked => { root.win-maximize-toggle(); }
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+                WinBtn {
+                    icon: "\u{E5CD}";
+                    danger: true;
+                    clicked => { root.win-close(); }
+                }
+            }
+        }
+    }
+}

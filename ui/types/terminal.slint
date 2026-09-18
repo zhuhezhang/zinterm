@@ -1,0 +1,45 @@
+// One coloured run of text on the terminal grid.  The Rust side groups
+// consecutive vt100 cells that share fg + bg + bold into a single span and
+// tags it with its grid position (row, col) and width in cells, so the UI can
+// place both a background fill and the text with absolute monospace coordinates.
+// `bg` is transparent (alpha 0) when the cell uses the default background.
+export struct TermSpan {
+    text: string,
+    fg: color,
+    bg: color,
+    bold: bool,
+    row: int,
+    col: int,
+    cells: int,
+    cjk: bool,   // contains CJK chars → render with the CJK-capable font (#54)
+    emoji: bool,
+    emoji-image: image,
+}
+
+// A find-match highlight rectangle on the terminal grid.
+export struct TermMatch {
+    row: int,
+    col: int,
+    len: int,
+}
+
+// One saved quick command (#55): a name shown on the chip + the text to send.
+// Grouped like the welcome session list: group-header is non-empty on the first
+// row of each group; collapsed hides the group's rows in the popup; orig-index
+// points back to the entry's position in the stored list (delete target).
+// One row in the history dropdown (#101): full command text plus a single-line
+// summary (first line + " …" when the stored command spans multiple lines).
+export struct HistoryViewItem {
+    command: string,
+    summary: string,
+}
+
+export struct QuickCmd {
+    name: string,
+    command: string,
+    summary: string,
+    group: string,
+    group-header: string,
+    collapsed: bool,
+    orig-index: int,
+}

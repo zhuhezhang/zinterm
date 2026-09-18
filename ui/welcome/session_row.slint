@@ -1,0 +1,405 @@
+import { Theme } from "../theme.slint";
+import { TooltipArea } from "../widgets.slint";
+import { SessionInfo } from "../types/session.slint";
+import { SessionColLayout } from "col_layout.slint";
+
+export component SessionRow inherits Rectangle {
+    in property <SessionInfo> session;
+    in property <bool> compact;
+    in property <bool> single-click-connect: false;
+    in property <length> col-name-width: 180px;
+    in property <length> col-host-width: 180px;
+    callback connect();
+    callback edit();
+    callback duplicate();
+    callback remove();
+    // Drag-to-reparent: press-move past a small threshold, then drop on a group.
+    in property <bool> is-drag-source: false;
+    in property <bool> is-drop-highlight: false;
+    // Keyboard highlight from the session search box (↑/↓), same look as hover.
+    in property <bool> kb-highlight: false;
+    // Fired when the pointer enters this row — welcome clears kb-selected.
+    callback hover-entered();
+    callback begin-drag();
+    callback update-drag(length /* pointer-abs-y */);
+    callback finish-drag(bool /* did-move */);
+    property <bool> system-row: root.session.builtin;
+    property <string> conn-icon:
+        session.conn-kind == "serial" ? "\u{E1E0}" // usb
+        : session.conn-kind == "telnet" ? "\u{E328}" // router
+        : session.conn-kind == "local" ? "\u{E30A}"  // desktop_windows
+        : "\u{E0DA}";                             // vpn_key (ssh)
+    property <string> conn-label:
+        session.conn-kind == "serial" ? @tr("Serial")
+        : session.conn-kind == "telnet" ? "Telnet"
+        : session.conn-kind == "local" ? @tr("Local")
+        : "SSH";
+    // e.g. "SSH 192.168.1.1 · 主机1"
+    property <string> tip-text:
+        session.endpoint == ""
+        ? (conn-label + " · " + session.name)
+        : (conn-label + " " + session.endpoint + " · " + session.name);
+    property <string> detail-host:
+        session.conn-kind == "serial" || session.conn-kind == "local" ? session.endpoint
+        : (session.port > 0 ? session.host + ":" + session.port : session.host);
+    property <string> detail-user:
+        session.conn-kind == "serial" || session.conn-kind == "local" ? "" : session.user;
+    // Nest under the owning group: one indent step past the group's own depth.
+    property <length> group-indent:
+        session.group == "" ? 0px : (session.group-depth + 1) * 16px;
+
+    border-radius: Theme.radius-sm;
+    background: root.is-drag-source ? Theme.bg-active
+        : (root.is-drop-highlight ? Theme.accent.with-alpha(0.12)
+        : (touch.has-hover || root.kb-highlight || ctx-menu.is-open ? Theme.bg-hover : transparent));
+    clip: true;
+    animate background { duration: 120ms; }
+
+    // Remember where the right-click landed so the popup can appear there.
+    property <length> ctx-x;
+    property <length> ctx-y;
+    property <bool> press-dragging: false;
+    property <bool> did-drag: false;
+    property <length> grab-x;
+    property <length> grab-y;
+
+    touch := TooltipArea {
+        mouse-cursor: root.press-dragging && root.did-drag ? grabbing : pointer;
+        tooltip-text: root.tip-text;
+        tip-from-cursor: true;
+        anchor-width: root.width;
+        anchor-height: root.height;
+        // Default: double-click connects; optional setting flips to single-click.
+        activate => {
+            if (!root.did-drag && root.single-click-connect) {
+                root.connect();
+            }
+        }
+        double-clicked => {
+            if (!root.did-drag && !root.single-click-connect) {
+                root.connect();
+            }
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                root.press-dragging = true;
+                root.did-drag = false;
+                root.grab-x = self.mouse-x;
+                root.grab-y = self.mouse-y;
+            } else if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                ctx-x = self.mouse-x;
+                ctx-y = self.mouse-y;
+                ctx-menu.show();
+            } else if (e.kind == PointerEventKind.up && e.button == PointerEventButton.left) {
+                if (root.press-dragging) {
+                    root.finish-drag(root.did-drag);
+                }
+                root.press-dragging = false;
+                root.did-drag = false;
+            }
+        }
+        moved => {
+            if (root.press-dragging) {
+                if (!root.did-drag
+                    && (abs(self.mouse-x - root.grab-x) > 5px
+                    || abs(self.mouse-y - root.grab-y) > 5px)) {
+                    root.did-drag = true;
+                    root.begin-drag();
+                }
+                if (root.did-drag) {
+                    root.update-drag(self.absolute-position.y + self.mouse-y);
+                }
+            }
+        }
+    }
+
+    property <bool> row-hovered: touch.has-hover;
+    changed row-hovered => {
+        if (root.row-hovered) {
+            root.hover-entered();
+        }
+    }
+
+    // Right-click context menu -----------------------------------------------
+    ctx-menu := PopupWindow {
+        x: ctx-x;
+        y: ctx-y;
+        // Hug content so short labels don't leave empty space on the right.
+        width: menu-vl.preferred-width;
+        height: menu-vl.preferred-height;
+
+        Rectangle {
+            background: Theme.popup-bg;
+            border-radius: Theme.radius-sm;
+            border-width: 1px;
+            border-color: Theme.border-strong;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: #00000050;
+
+            menu-vl := VerticalLayout {
+                padding: 4px;
+                spacing: 2px;
+
+                // Connect — available for every row, including built-ins.
+                Rectangle {
+                    height: 28px;
+                    border-radius: Theme.radius-sm;
+                    background: conn-ta.has-hover ? Theme.bg-hover : transparent;
+                    conn-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.connect(); }
+                    }
+
+                    HorizontalLayout {
+                        alignment: start;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 8px;
+                        Text {
+                            text: "\u{E037}";
+                            font-family: "Material Icons";
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: @tr("Connect");
+                            color: Theme.text-primary;
+                            font-size: Theme.fs-md;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Edit
+                if !root.system-row: Rectangle {
+                    height: 28px;
+                    border-radius: Theme.radius-sm;
+                    background: edit-ta.has-hover ? Theme.bg-hover : transparent;
+                    edit-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.edit(); }
+                    }
+
+                    HorizontalLayout {
+                        alignment: start;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 8px;
+                        Text {
+                            text: "\u{E3C9}";
+                            font-family: "Material Icons";
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: @tr("Edit");
+                            color: Theme.text-primary;
+                            font-size: Theme.fs-md;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Duplicate — clone this session as a starting point (#41).
+                if !root.system-row: Rectangle {
+                    height: 28px;
+                    border-radius: Theme.radius-sm;
+                    background: dup-ta.has-hover ? Theme.bg-hover : transparent;
+                    dup-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.duplicate(); }
+                    }
+
+                    HorizontalLayout {
+                        alignment: start;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 8px;
+                        Text {
+                            text: "\u{E14D}";
+                            font-family: "Material Icons";
+                            color: Theme.text-secondary;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: @tr("Duplicate");
+                            color: Theme.text-primary;
+                            font-size: Theme.fs-md;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Delete (red tint)
+                if !root.system-row: Rectangle {
+                    height: 28px;
+                    border-radius: Theme.radius-sm;
+                    background: del-ta.has-hover ? #cc333320 : transparent;
+                    del-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.remove(); }
+                    }
+
+                    HorizontalLayout {
+                        alignment: start;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 8px;
+                        Text {
+                            text: "\u{E872}";
+                            font-family: "Material Icons";
+                            color: #cc3333;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: @tr("Delete");
+                            color: #cc3333;
+                            font-size: Theme.fs-md;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Row content ------------------------------------------------------------
+    // Non-compact columns must match SessionListHeader:
+    //   pad | icon | gap | name | split | host | split | user
+    // Group indent lives only inside the (icon+gap+name) cell so Host / User
+    // stay aligned with the headers. Compact keeps a full-row indent.
+    row-layout := HorizontalLayout {
+        width: 100%;
+        padding-left: SessionColLayout.pad-left + (root.compact ? root.group-indent : 0px);
+        padding-right: SessionColLayout.pad-right;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        spacing: 0;
+        // Slint 1.17+: `alignment` is the main axis (horizontal). Keep stretch so
+        // column stretch factors work; trailing compact spacer eats leftover width.
+        // Do NOT use cross-axis-alignment: center — it sizes cells to a short
+        // preferred-height and SessionRow's clip cuts off the top of the glyphs.
+        alignment: stretch;
+
+        if root.compact: Rectangle {
+            width: SessionColLayout.icon-w;
+            height: SessionColLayout.icon-w;
+            y: (parent.height - self.height) / 2;
+            border-radius: 3px;
+            background: Theme.bg-elevated;
+            Text {
+                text: root.conn-icon;
+                font-family: "Material Icons";
+                color: Theme.text-secondary;
+                font-size: Theme.fs-sm;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        if root.compact: Rectangle {
+            width: 8px;
+        }
+
+        // Natural-width label at the start of the row; trailing spacer absorbs
+        // leftover width so the text cannot appear centered in the sidebar.
+        if root.compact: Text {
+            text: session.name;
+            color: Theme.text-primary;
+            font-size: Theme.fs-sm;
+            wrap: no-wrap;
+            vertical-alignment: center;
+            horizontal-alignment: left;
+        }
+        if root.compact: Rectangle {
+            horizontal-stretch: 1;
+        }
+
+        // Fixed-width clipped cell so indent cannot push Host / User columns.
+        if !root.compact: Rectangle {
+            width: SessionColLayout.icon-w + SessionColLayout.icon-gap + root.col-name-width;
+            clip: true;
+            HorizontalLayout {
+                width: parent.width;
+                height: 100%;
+                padding-left: root.group-indent;
+                spacing: 0;
+                alignment: stretch;
+
+                Rectangle {
+                    width: SessionColLayout.icon-w;
+                    height: SessionColLayout.icon-w;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 3px;
+                    background: Theme.bg-elevated;
+                    Text {
+                        text: root.conn-icon;
+                        font-family: "Material Icons";
+                        color: Theme.text-secondary;
+                        font-size: Theme.fs-sm;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: SessionColLayout.icon-gap;
+                }
+
+                Text {
+                    text: session.name;
+                    color: Theme.text-primary;
+                    font-size: Theme.fs-md;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
+            }
+        }
+        if !root.compact: Rectangle {
+            width: SessionColLayout.split-w;
+        }
+        if !root.compact: Rectangle {
+            width: root.col-host-width;
+            clip: true;
+            Text {
+                text: root.detail-host;
+                color: Theme.text-secondary;
+                font-size: Theme.fs-sm;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                width: parent.width;
+                height: 100%;
+                overflow: elide;
+            }
+        }
+        if !root.compact: Rectangle {
+            width: SessionColLayout.split-w;
+        }
+        if !root.compact: Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+            Text {
+                text: root.detail-user;
+                color: Theme.text-secondary;
+                font-size: Theme.fs-sm;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                width: parent.width;
+                height: 100%;
+                overflow: elide;
+            }
+        }
+    }
+
+    height: row-layout.preferred-height;
+}

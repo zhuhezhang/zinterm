@@ -1,0 +1,505 @@
+import { Theme } from "../theme.slint";
+import { SessionDialog, SessionDraft } from "../session_dialog.slint";
+import { ConfirmDialog } from "../confirm_dialog.slint";
+import { MessageDialog } from "../widgets.slint";
+import { OutputRuleItem, AlgorithmOptionRow } from "../types/settings.slint";
+import { CredentialPrompt } from "credential_prompt.slint";
+import { InterfaceOverlay } from "../shell/interface_overlay.slint";
+
+export component ConfirmStack inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
+    callback cancel-settings();
+    callback clear-all-sessions(bool);
+    callback clear-known-hosts();
+    callback clear-saved-passwords();
+    in-out property <bool> collapse-sftp-default: true;
+    in-out property <bool> confirm-close-open: false;
+    in-out property <bool> confirm-delete-batch: false;   // delete checked entries (#100);
+    in-out property <bool> confirm-delete-group-enabled: true;
+    in-out property <bool> confirm-delete-open: false;
+    in-out property <string> confirm-delete-path;
+    in-out property <bool> confirm-delete-session-enabled: false;
+    in-out property <string> confirm-delete-tab;
+    callback cred-accept();
+    in-out property <string> cred-auth: "password";
+    in-out property <string> cred-host;            // host shown in the dialog title;
+    in-out property <string> cred-key-inline;      // private key path or pasted body;
+    in-out property <string> cred-password;        // login password or key passphrase;
+    callback cred-pick-key();
+    in-out property <bool> cred-prompt-open: false;
+    callback cred-reject();
+    in-out property <string> cred-user;            // username field value;
+    in-out property <bool> credentials-vault-available: true;
+    in-out property <string> current-wallpaper: "";
+    in-out property <string> custom-wallpaper-name: "";
+    in-out property <bool> data-clear-also-passwords: false;
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings";
+    in-out property <bool> data-clear-open: false;
+    callback delete-group(string /* name */);
+    in-out property <string> dialog-auth: "password";
+    in-out property <string> dialog-backspace-mode: "auto";
+    in-out property <string> dialog-baud: "9600";
+    in-out property <string> dialog-data-bits: "8";
+    in-out property <bool> dialog-editing: false;
+    in-out property <bool> dialog-enable-command-panel: false;
+    in-out property <bool> dialog-enable-prompt-setup: false;
+    in-out property <bool> dialog-enable-sftp: false;
+    in-out property <string> dialog-encoding: "UTF-8";
+    in-out property <string> dialog-flow: "None";
+    in-out property <bool> dialog-focus-host: false;
+    in-out property <string> dialog-group;
+    in-out property <string> dialog-host;
+    in-out property <string> dialog-id;
+    in-out property <string> dialog-key-inline;
+    in-out property <bool> dialog-key-inline-mode: false;
+    in-out property <string> dialog-key-passphrase;
+    in-out property <string> dialog-key-path;
+    in-out property <bool> dialog-key-saved-inline: false;
+    in-out property <string> dialog-kind: "ssh";
+    in-out property <string> dialog-name;
+    in-out property <bool> dialog-open: false;
+    in-out property <string> dialog-parity: "None";
+    in-out property <string> dialog-password;
+    in-out property <string> dialog-port: "22";
+    in-out property <string> dialog-serial-port;
+    in-out property <string> dialog-shell;
+    in-out property <string> dialog-stop-bits: "1";
+    in-out property <string> dialog-user;
+    in-out property <string> dialog-working-directory;
+    in-out property <bool> download-always-ask: false;
+    in-out property <bool> extra-paste-shortcuts-enabled: true;
+    in-out property <string> highlight-draft-color-hex: "#F14C4C";
+    in-out property <color> highlight-draft-swatch: #F14C4C;
+    callback hostkey-accept();
+    callback hostkey-accept-once();
+    in-out property <string> hostkey-confirm-label; // trust-button text (from Rust, bilingual);
+    in-out property <string> hostkey-detail;       // host:port + type + fingerprint;
+    in-out property <string> hostkey-message;
+    in-out property <string> hostkey-once-label;    // "Trust once" (from Rust, bilingual);
+    in-out property <bool> hostkey-prompt-open: false;
+    callback hostkey-reject();
+    in-out property <string> hostkey-title;
+    in-out property <length> ifd-base-h;
+    in-out property <length> ifd-base-w;
+    in-out property <length> ifd-base-x;
+    in-out property <length> ifd-base-y;
+    in-out property <bool> ifd-dragging;
+    in-out property <length> ifd-grab-x;
+    in-out property <length> ifd-grab-y;
+    in-out property <length> ifd-h;
+    in-out property <bool> ifd-resizing;
+    in-out property <length> ifd-w;
+    in-out property <length> ifd-x;
+    in-out property <length> ifd-y;
+    in-out property <bool> interface-open: false;  // Interface settings overlay;
+    in property <bool> is-windows: false;
+    in-out property <bool> json-format-output: true;
+    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
+    in-out property <string> language-pref: "auto";
+    callback move-ssh-algorithm(string, int);
+    in-out property <bool> output-highlight-enabled: true;
+    in-out property <string> output-highlight-preset: "log";
+    in-out property <string> output-highlight-rule-status;
+    in property <[OutputRuleItem]> output-highlight-rules;
+    callback paste-confirm-cancelled();
+    in-out property <bool> paste-confirm-enabled: true;
+    in-out property <bool> paste-confirm-large: false;
+    in-out property <bool> paste-confirm-open: false;
+    in-out property <string> paste-confirm-preview;
+    in-out property <string> paste-confirm-tab;
+    callback paste-confirmed(string /* tab-id */);
+    callback persist-wallpaper-overlay(float);
+    callback pick-wallpaper-file();
+    in-out property <bool> quick-commands-as-sidebar: true;
+    in-out property <bool> quick-panel-collapsed: false;
+    in-out property <bool> quick-panel-open: false;
+    callback remove-output-highlight-rule(int);
+    callback remove-session(string /* session-id */);
+    in-out property <string> renderer-mode: "software";
+    callback reset-ssh-algorithm-section();
+    callback reset-ssh-algorithms();
+    callback restore-settings-defaults();
+    in-out property <bool> save-passwords: false;
+    callback save-settings();
+    in-out property <bool> select-copy-right-paste-enabled: true;
+    in property <[string]> serial-ports;
+    callback session-dialog-cancel();
+    callback session-dialog-pick-key();
+    callback session-dialog-refresh-serial-ports();
+    callback session-dialog-submit(SessionDraft, bool /* persist */, bool /* connect */);
+    in property <[string]> session-groups;
+    callback set-collapse-sftp-default(bool);
+    callback set-confirm-delete-group-enabled(bool);
+    callback set-confirm-delete-session-enabled(bool);
+    callback set-download-always-ask(bool);
+    callback set-extra-paste-shortcuts-enabled(bool);
+    callback set-highlight-draft-color(string) -> bool;
+    callback set-json-format-output(bool);
+    callback set-language(string);
+    callback set-output-highlight(bool, string);
+    callback set-output-highlight-rule-enabled(int, bool);
+    callback set-panel-font(int);
+    callback set-paste-confirm-enabled(bool);
+    callback set-quick-commands-as-sidebar(bool);
+    callback set-renderer-mode(string);
+    callback set-save-passwords(bool);
+    callback set-select-copy-right-paste-enabled(bool);
+    callback set-sftp-follow-cd(bool);
+    callback set-ssh-algorithm-category(string);
+    callback set-ssh-keepalive-secs(int);
+    callback set-term-cursor-color(string) -> bool;
+    callback set-term-cursor-style(string);
+    callback set-term-font(string);
+    callback set-term-font-bold(bool);
+    callback set-term-font-size(int);
+    callback set-terminal-line-spacing(float);
+    callback set-ui-scale(int);
+    callback set-update-check-enabled(bool);
+    callback set-wallpaper(string);
+    callback set-welcome-as-sidebar(bool);
+    callback set-welcome-single-click-connect(bool);
+    callback set-zen-mode(bool);
+    callback sftp-delete(string /* tab-id */, string /* path */);
+    callback sftp-delete-selected(string /* tab-id */);
+    in-out property <bool> sftp-follow-cd: true;
+    in-out property <string> ssh-algorithm-category: "kex";
+    in property <[AlgorithmOptionRow]> ssh-algorithm-rows;
+    in-out property <string> ssh-import-hint;  // import/export/save-output result; shown via MessageDialog;
+    in-out property <int> ssh-keepalive-secs: 0;
+    in-out property <color> term-cursor-color: Theme.term-fg;
+    in-out property <string> term-cursor-color-hex;
+    in-out property <string> term-cursor-style: "bar";
+    in-out property <bool> term-font-bold <=> Theme.term-font-bold;
+    in-out property <string> term-font-family <=> Theme.term-font-family;
+    in-out property <length> term-font-size <=> Theme.term-font-size;
+    in property <[string]> term-fonts;             // installed monospace families;
+    in-out property <int> terminal-focus-seq: 0;
+    in-out property <float> terminal-line-spacing: 1.0;
+    callback toggle-ssh-algorithm(string);
+    in-out property <float> ui-scale <=> Theme.ui-scale;   // global UI zoom (#100);
+    in-out property <bool> update-check-enabled: false;   // startup new-version check (#184);
+    callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
+    in-out property <float> wallpaper-overlay <=> Theme.panel-alpha;
+    in-out property <bool> welcome-as-sidebar: false;
+    in-out property <string> welcome-delete-detail; // display label in the dialog;
+    in-out property <string> welcome-delete-kind;   // "group" | "session";
+    in-out property <bool> welcome-delete-open: false;
+    in-out property <string> welcome-delete-target; // group path or session id;
+    in-out property <bool> welcome-single-click-connect: true;
+    in-out property <bool> zen-mode: false;
+
+    // --- Modal dialog -----------------------------------------------------
+    SessionDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.dialog-open;
+        is-editing <=> root.dialog-editing;
+        focus-host-on-open <=> root.dialog-focus-host;
+        draft-id <=> root.dialog-id;
+        draft-name <=> root.dialog-name;
+        draft-host <=> root.dialog-host;
+        draft-port <=> root.dialog-port;
+        draft-user <=> root.dialog-user;
+        draft-auth <=> root.dialog-auth;
+        draft-password <=> root.dialog-password;
+        draft-key-passphrase <=> root.dialog-key-passphrase;
+        draft-key-path <=> root.dialog-key-path;
+        draft-key-inline <=> root.dialog-key-inline;
+        draft-key-inline-mode <=> root.dialog-key-inline-mode;
+        draft-key-saved-inline <=> root.dialog-key-saved-inline;
+        draft-group <=> root.dialog-group;
+        session-groups: root.session-groups;
+        draft-kind <=> root.dialog-kind;
+        draft-serial-port <=> root.dialog-serial-port;
+        serial-ports: root.serial-ports;
+        draft-baud <=> root.dialog-baud;
+        draft-data-bits <=> root.dialog-data-bits;
+        draft-stop-bits <=> root.dialog-stop-bits;
+        draft-parity <=> root.dialog-parity;
+        draft-flow <=> root.dialog-flow;
+        draft-encoding <=> root.dialog-encoding;
+        draft-backspace-mode <=> root.dialog-backspace-mode;
+        draft-shell <=> root.dialog-shell;
+        draft-working-directory <=> root.dialog-working-directory;
+        draft-enable-sftp <=> root.dialog-enable-sftp;
+        draft-enable-prompt-setup <=> root.dialog-enable-prompt-setup;
+        draft-enable-command-panel <=> root.dialog-enable-command-panel;
+        submit(draft, persist, connect) => { root.session-dialog-submit(draft, persist, connect); }
+        cancel => { root.session-dialog-cancel(); }
+        pick-key-file => { root.session-dialog-pick-key(); }
+        refresh-serial-ports => { root.session-dialog-refresh-serial-ports(); }
+    }
+
+    // --- Delete confirmation (#28) ----------------------------------------
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.confirm-delete-open;
+        title: @tr("Confirm delete");
+        message: root.confirm-delete-batch
+            ? (root.lang-en ? "Delete the checked items? This cannot be undone."
+            : "删除选中的多个项目?此操作不可撤销。")
+            : @tr("Delete this item? This cannot be undone.");
+        detail: root.confirm-delete-path;
+        confirm-label: @tr("Delete");
+        confirm => {
+            if (root.confirm-delete-batch) {
+                root.sftp-delete-selected(root.confirm-delete-tab);
+                root.confirm-delete-batch = false;
+            } else {
+                root.sftp-delete(root.confirm-delete-tab, root.confirm-delete-path);
+            }
+            root.confirm-delete-open = false;
+        }
+        cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
+    }
+
+    // Import / export / save-terminal-output result notice (#46).
+    MessageDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open: root.ssh-import-hint != "";
+        title: @tr("Notice");
+        message: root.ssh-import-hint;
+        dismissed => { root.ssh-import-hint = ""; }
+    }
+
+    // Welcome list: optional confirm before deleting a group or session.
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.welcome-delete-open;
+        covered: root.confirm-close-open;
+        title: @tr("Confirm delete");
+        message: root.welcome-delete-kind == "group"
+            ? (root.lang-en
+            ? "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."
+            : "确定删除该分组？其下的子分组和会话也会一并删除，此操作不可撤销。")
+            : (root.lang-en
+            ? "Delete this session? This cannot be undone."
+            : "确定删除该会话？此操作不可撤销。");
+        detail: root.welcome-delete-detail;
+        confirm-label: @tr("Delete");
+        confirm => {
+            if (root.welcome-delete-kind == "group") {
+                root.delete-group(root.welcome-delete-target);
+            } else {
+                root.remove-session(root.welcome-delete-target);
+            }
+            root.welcome-delete-open = false;
+        }
+        cancel => { root.welcome-delete-open = false; }
+    }
+
+    // Multi-line paste can execute several shell commands at once. Keep the
+    // prompt explicit and require a button click; clicking the backdrop never
+    // accepts the paste (#262).
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.paste-confirm-open;
+        covered: root.confirm-close-open;
+        dismiss-on-backdrop: false;
+        title: root.lang-en ? "Confirm multi-line paste" : "确认多行粘贴";
+        message: root.lang-en
+            ? "The clipboard contains line breaks and may execute multiple commands. Review it before pasting."
+            : "剪贴板内容包含换行，粘贴后可能连续执行多个命令，请确认内容后再继续。";
+        detail: root.paste-confirm-preview;
+        large-detail: root.paste-confirm-large;
+        confirm-label: root.lang-en ? "Paste" : "粘贴";
+        confirm => {
+            root.paste-confirmed(root.paste-confirm-tab);
+            root.paste-confirm-open = false;
+        }
+        cancel => {
+            root.paste-confirm-cancelled();
+            root.paste-confirm-open = false;
+        }
+    }
+
+    // Host-key confirmation (#109-5). Reuses the confirm-dialog card. The backdrop
+    // is NOT a dismiss here (#152): clicking outside the card used to count as a
+    // reject and — worse — poison the host for the whole run. The user must pick
+    // Trust & connect / Trust once / Cancel. Enter = default permanent trust.
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.hostkey-prompt-open;
+        dismiss-on-backdrop: false;
+        enter-confirms: true;
+        title: root.hostkey-title;
+        message: root.hostkey-message;
+        detail: root.hostkey-detail;
+        confirm-label: root.hostkey-confirm-label;
+        secondary-label: root.hostkey-once-label;
+        confirm => { root.hostkey-accept(); }
+        secondary => { root.hostkey-accept-once(); }
+        cancel => { root.hostkey-reject(); }
+    }
+    // (extracted) CredentialPrompt
+    CredentialPrompt {
+        cred-accept => { root.cred-accept(); }
+        cred-auth <=> root.cred-auth;
+        cred-host <=> root.cred-host;
+        cred-key-inline <=> root.cred-key-inline;
+        cred-password <=> root.cred-password;
+        cred-pick-key => { root.cred-pick-key(); }
+        cred-prompt-open <=> root.cred-prompt-open;
+        cred-reject => { root.cred-reject(); }
+        cred-user <=> root.cred-user;
+        terminal-focus-seq <=> root.terminal-focus-seq;
+    }
+    // (extracted) InterfaceOverlay
+    InterfaceOverlay {
+        add-output-highlight-rule(a0, a1, a2, a3, a4, a5) => { return root.add-output-highlight-rule(a0, a1, a2, a3, a4, a5); }
+        cancel-settings => { root.cancel-settings(); }
+        collapse-sftp-default <=> root.collapse-sftp-default;
+        confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
+        confirm-delete-session-enabled <=> root.confirm-delete-session-enabled;
+        credentials-vault-available <=> root.credentials-vault-available;
+        current-wallpaper <=> root.current-wallpaper;
+        custom-wallpaper-name <=> root.custom-wallpaper-name;
+        data-clear-also-passwords <=> root.data-clear-also-passwords;
+        data-clear-kind <=> root.data-clear-kind;
+        data-clear-open <=> root.data-clear-open;
+        download-always-ask <=> root.download-always-ask;
+        extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
+        highlight-draft-color-hex <=> root.highlight-draft-color-hex;
+        highlight-draft-swatch <=> root.highlight-draft-swatch;
+        ifd-base-h <=> root.ifd-base-h;
+        ifd-base-w <=> root.ifd-base-w;
+        ifd-base-x <=> root.ifd-base-x;
+        ifd-base-y <=> root.ifd-base-y;
+        ifd-dragging <=> root.ifd-dragging;
+        ifd-grab-x <=> root.ifd-grab-x;
+        ifd-grab-y <=> root.ifd-grab-y;
+        ifd-h <=> root.ifd-h;
+        ifd-resizing <=> root.ifd-resizing;
+        ifd-w <=> root.ifd-w;
+        ifd-x <=> root.ifd-x;
+        ifd-y <=> root.ifd-y;
+        interface-open <=> root.interface-open;
+        is-windows: root.is-windows;
+        json-format-output <=> root.json-format-output;
+        lang-en <=> root.lang-en;
+        language-pref <=> root.language-pref;
+        move-ssh-algorithm(a0, a1) => { root.move-ssh-algorithm(a0, a1); }
+        output-highlight-enabled <=> root.output-highlight-enabled;
+        output-highlight-preset <=> root.output-highlight-preset;
+        output-highlight-rule-status <=> root.output-highlight-rule-status;
+        output-highlight-rules: root.output-highlight-rules;
+        paste-confirm-enabled <=> root.paste-confirm-enabled;
+        persist-wallpaper-overlay(a0) => { root.persist-wallpaper-overlay(a0); }
+        pick-wallpaper-file => { root.pick-wallpaper-file(); }
+        quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
+        quick-panel-collapsed <=> root.quick-panel-collapsed;
+        quick-panel-open <=> root.quick-panel-open;
+        remove-output-highlight-rule(a0) => { root.remove-output-highlight-rule(a0); }
+        renderer-mode <=> root.renderer-mode;
+        reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
+        reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
+        save-passwords <=> root.save-passwords;
+        save-settings => { root.save-settings(); }
+        select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
+        set-collapse-sftp-default(a0) => { root.set-collapse-sftp-default(a0); }
+        set-confirm-delete-group-enabled(a0) => { root.set-confirm-delete-group-enabled(a0); }
+        set-confirm-delete-session-enabled(a0) => { root.set-confirm-delete-session-enabled(a0); }
+        set-download-always-ask(a0) => { root.set-download-always-ask(a0); }
+        set-extra-paste-shortcuts-enabled(a0) => { root.set-extra-paste-shortcuts-enabled(a0); }
+        set-highlight-draft-color(a0) => { return root.set-highlight-draft-color(a0); }
+        set-json-format-output(a0) => { root.set-json-format-output(a0); }
+        set-language(a0) => { root.set-language(a0); }
+        set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
+        set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
+        set-panel-font(a0) => { root.set-panel-font(a0); }
+        set-paste-confirm-enabled(a0) => { root.set-paste-confirm-enabled(a0); }
+        set-quick-commands-as-sidebar(a0) => { root.set-quick-commands-as-sidebar(a0); }
+        set-renderer-mode(a0) => { root.set-renderer-mode(a0); }
+        set-save-passwords(a0) => { root.set-save-passwords(a0); }
+        set-select-copy-right-paste-enabled(a0) => { root.set-select-copy-right-paste-enabled(a0); }
+        set-sftp-follow-cd(a0) => { root.set-sftp-follow-cd(a0); }
+        set-ssh-algorithm-category(a0) => { root.set-ssh-algorithm-category(a0); }
+        set-ssh-keepalive-secs(a0) => { root.set-ssh-keepalive-secs(a0); }
+        set-term-cursor-color(a0) => { return root.set-term-cursor-color(a0); }
+        set-term-cursor-style(a0) => { root.set-term-cursor-style(a0); }
+        set-term-font(a0) => { root.set-term-font(a0); }
+        set-term-font-bold(a0) => { root.set-term-font-bold(a0); }
+        set-term-font-size(a0) => { root.set-term-font-size(a0); }
+        set-terminal-line-spacing(a0) => { root.set-terminal-line-spacing(a0); }
+        set-ui-scale(a0) => { root.set-ui-scale(a0); }
+        set-update-check-enabled(a0) => { root.set-update-check-enabled(a0); }
+        set-wallpaper(a0) => { root.set-wallpaper(a0); }
+        set-welcome-as-sidebar(a0) => { root.set-welcome-as-sidebar(a0); }
+        set-welcome-single-click-connect(a0) => { root.set-welcome-single-click-connect(a0); }
+        set-zen-mode(a0) => { root.set-zen-mode(a0); }
+        sftp-follow-cd <=> root.sftp-follow-cd;
+        ssh-algorithm-category <=> root.ssh-algorithm-category;
+        ssh-algorithm-rows: root.ssh-algorithm-rows;
+        ssh-keepalive-secs <=> root.ssh-keepalive-secs;
+        term-cursor-color <=> root.term-cursor-color;
+        term-cursor-color-hex <=> root.term-cursor-color-hex;
+        term-cursor-style <=> root.term-cursor-style;
+        term-font-bold <=> root.term-font-bold;
+        term-font-family <=> root.term-font-family;
+        term-font-size <=> root.term-font-size;
+        term-fonts: root.term-fonts;
+        terminal-line-spacing <=> root.terminal-line-spacing;
+        toggle-ssh-algorithm(a0) => { root.toggle-ssh-algorithm(a0); }
+        ui-scale <=> root.ui-scale;
+        update-check-enabled <=> root.update-check-enabled;
+        update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6) => { return root.update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6); }
+        wallpaper-overlay <=> root.wallpaper-overlay;
+        welcome-as-sidebar <=> root.welcome-as-sidebar;
+        welcome-single-click-connect <=> root.welcome-single-click-connect;
+        zen-mode <=> root.zen-mode;
+    }
+    // Settings › Data destructive clears / restore — stacked above the settings overlay.
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.data-clear-open;
+        covered: root.confirm-close-open;
+        title: root.data-clear-kind == "restore-settings"
+            ? (root.lang-en ? "Restore defaults" : "恢复默认设置")
+            : @tr("Confirm delete");
+        message: root.data-clear-kind == "known-hosts"
+            ? (root.lang-en
+            ? "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
+            : "确定清除所有已记住的 SSH 主机公钥？下次连接各主机时会再次要求确认信任。")
+            : root.data-clear-kind == "passwords"
+            ? (root.lang-en
+            ? "Clear every saved password, private-keys? This cannot be undone."
+            : "确定清除所有已保存的密码、私钥？此操作不可撤销。")
+            : root.data-clear-kind == "restore-settings"
+            ? (root.lang-en
+            ? "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."
+            : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码、私钥和 SSH 已知主机公钥会保留。")
+            : (root.lang-en
+            ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
+            : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");
+        option-label: root.data-clear-kind == "sessions"
+            ? (root.lang-en
+            ? "Also clear saved passwords / private keys"
+            : "同时清除已保存的密码/私钥")
+            : "";
+        option-checked <=> root.data-clear-also-passwords;
+        confirm-label: root.data-clear-kind == "restore-settings"
+            ? (root.lang-en ? "Restore" : "恢复")
+            : (root.lang-en ? "Clear" : "清除");
+        confirm => {
+            if (root.data-clear-kind == "known-hosts") {
+                root.clear-known-hosts();
+            } else if (root.data-clear-kind == "passwords") {
+                root.clear-saved-passwords();
+            } else if (root.data-clear-kind == "restore-settings") {
+                root.restore-settings-defaults();
+            } else {
+                root.clear-all-sessions(root.data-clear-also-passwords);
+            }
+            root.data-clear-open = false;
+        }
+        cancel => { root.data-clear-open = false; }
+    }
+}

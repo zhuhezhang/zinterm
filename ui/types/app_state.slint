@@ -1,0 +1,81 @@
+import { TabInfo } from "../tabs.slint";
+import { TermSpan, TermMatch } from "terminal.slint";
+import { SftpEntry, SftpTreeNode } from "../sftp_panel.slint";
+
+// --- TerminalState ---------------------------------------------------------
+// Per-terminal view-model exposed to Rust. A TabInfo has the metadata; the
+// TerminalState carries the streaming log (+ SFTP UI state). Kept as a parallel
+// model so opening/closing tabs doesn't churn the log strings.
+// One file-transfer record shown in the download manager.
+export struct TransferInfo {
+    id: string,
+    name: string,
+    detail: string,   // "2.3 MB/5.0 MB" | "已完成" | "失败"
+    percent: float,   // 0.0..1.0
+    state: int,       // 0 active / 1 done / 2 error
+    is-upload: bool,
+}
+
+export struct TerminalState {
+    id: string,
+    status: string,
+    spans: [TermSpan],     // coloured runs of the visible terminal screen
+    cursor-row: int,       // cursor cell on the grid
+    cursor-col: int,
+    rows-used: int,        // content rows, for content sizing
+    scroll-max: int,       // scrollback depth (max offset) — terminal scrollbar (#103)
+    scroll-offset: int,    // current scrollback offset (0 = live bottom)
+    is-alt-screen: bool,
+    find-matches: [TermMatch], // search-highlight rectangles
+    selection: [TermMatch],    // drag-selection highlight rectangles
+
+    // SFTP panel state
+    sftp-path: string,
+    sftp-entries: [SftpEntry],
+    sftp-status: string,
+    sftp-loading: bool,
+    sftp-tree-nodes: [SftpTreeNode],
+    sftp-selected-count: int,   // checked entries in the SFTP panel (#100)
+    sftp-sort-key: string,      // ""|"name"|"size"|"modified" (#248)
+    sftp-sort-dir: int,         // 0 default / 1 asc / -1 desc (#248)
+    sftp-available: bool,       // false for local/serial/telnet sessions
+    sftp-ready: bool,           // true after the first successful listing
+    sftp-collapsed: bool,       // SFTP panel minimised — per session (#v0.5)
+    sftp-panel-height: length,  // SFTP panel extent (bottom dock) — per session
+    sftp-panel-width: length,   // SFTP panel extent (side dock) — per session
+    sftp-saved-height: length,  // height to restore on un-collapse — per session
+    command-panel-available: bool, // session opted into the bottom command panel
+}
+
+// One leaf pane of the split layout (v0.5). Geometry (x/y/w/h) is computed in Rust
+// from the split tree; `tabs` is the pane's own tab group and `active-id` the tab
+// it currently shows. `reserve-right` is kept for layout compatibility (toolbar
+// icons live in the title bar now, so it is always 0).
+export struct PaneInfo {
+    id: int,
+    x: length,
+    y: length,
+    w: length,
+    h: length,
+    active-id: string,
+    focused: bool,
+    reserve-right: length,
+    tabs: [TabInfo],
+}
+
+export struct EditorFindResult {
+    start: int,
+    end: int,
+    count: int,
+    index: int,   // 1-based match number (0 = none selected yet)
+}
+
+// A draggable splitter between two regions of the split layout (v0.5).
+export struct SplitterInfo {
+    split-id: int,
+    x: length,
+    y: length,
+    w: length,
+    h: length,
+    vertical: bool,   // true = vertical handle (drag left/right)
+}

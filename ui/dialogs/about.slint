@@ -1,0 +1,151 @@
+import { Theme } from "../theme.slint";
+
+export component AboutDialog inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    in-out property <bool> about-open: false;     // centered About dialog;
+    in property <string> app-version;
+    callback open-repo();
+
+    // --- About dialog (centered on the window, with dim backdrop) ---------
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        visible: root.about-open;
+        background: #00000080;            // dim backdrop
+        TouchArea {
+            clicked => { root.about-open = false; }
+        }
+        // Esc closes when the dialog is shown (#140-3).
+        if root.about-open: FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.about-open = false;
+                    accept
+                } else {
+                    accept
+                }
+            }
+            key-released(e) => { accept }
+        }
+
+        // Landscape card: logo on the left, a short intro + repo link on the right.
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: 500px;
+            height: 155px;
+            background: Theme.popup-bg;
+            border-radius: Theme.radius-lg;
+            border-width: 1px;
+            border-color: Theme.border-strong;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: #000000a0;
+
+            // Swallow clicks so the backdrop doesn't close when clicking inside.
+            TouchArea { }
+
+            // Close (×) in the top-right corner.
+            Rectangle {
+                x: parent.width - 30px;
+                y: 8px;
+                width: 22px;
+                height: 22px;
+                border-radius: Theme.radius-sm;
+                background: ab-close-ta.has-hover ? Theme.bg-hover : transparent;
+                ab-close-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.about-open = false; }
+                }
+
+                Text {
+                    text: "\u{E5CD}";
+                    font-family: "Material Icons";
+                    color: Theme.text-secondary;
+                    font-size: Theme.fs-sm;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            HorizontalLayout {
+                padding: 24px;
+                spacing: 20px;
+
+                VerticalLayout {
+                    alignment: center;
+                    Image {
+                        source: @image-url("../../assets/icon.png");
+                        width: 76px;
+                        height: 76px;
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 7px;
+                    horizontal-stretch: 1;
+
+                    HorizontalLayout {
+                        alignment: start;
+                        spacing: 8px;
+                        Text {
+                            text: "ZinTerm";
+                            color: Theme.text-primary;
+                            font-size: 22px;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: "v" + root.app-version;
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: @tr("A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint");
+                        color: Theme.text-secondary;
+                        font-size: Theme.fs-sm;
+                        wrap: word-wrap;
+                    }
+
+                    // Clickable open-source link → opens the GitHub page.
+                    HorizontalLayout {
+                        alignment: start;
+                        spacing: 6px;
+                        Text {
+                            text: @tr("MIT Open Source License");
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+
+                        Rectangle {
+                            border-radius: Theme.radius-sm;
+                            background: repo-ta.has-hover ? Theme.bg-hover : transparent;
+                            HorizontalLayout {
+                                padding-left: 4px;
+                                padding-right: 4px;
+                                Text {
+                                    text: "github.com/zhuhezhang/zinterm";
+                                    color: Theme.accent;
+                                    font-size: Theme.fs-sm;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            repo-ta := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.open-repo(); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

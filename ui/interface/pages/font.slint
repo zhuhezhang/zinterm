@@ -1,0 +1,201 @@
+import { Theme } from "../../theme.slint";
+import { ComboBox } from "std-widgets.slint";
+import {
+    SectionHeader,
+    SettingRow,
+    Switch,
+    Stepper,
+    CursorStyleButton,
+    CursorColorInput,
+} from "../widgets.slint";
+
+export component FontSettingsPage inherits Rectangle {
+    width: 100%;
+    height: self.preferred-height;
+    in property <bool> lang-en;
+    callback set-panel-font(int);
+    callback set-term-cursor-color(string) -> bool;
+    callback set-term-cursor-style(string);
+    callback set-term-font(string);
+    callback set-term-font-bold(bool);
+    callback set-term-font-size(int);
+    callback set-terminal-line-spacing(float);
+    callback set-ui-scale(int);
+    in property <color> term-cursor-color: #D4D4D4;
+    in-out property <string> term-cursor-color-hex: "#D4D4D4";
+    in-out property <string> term-cursor-style: "bar";
+    in-out property <bool> term-font-bold;
+    in property <string> term-font-family;
+    in property <length> term-font-size;
+    in property <[string]> term-fonts;
+    in-out property <float> terminal-line-spacing: 1.0;
+    in property <float> ui-scale;
+
+    VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+
+        SectionHeader {
+            text: root.lang-en ? "FONT" : "字体";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Terminal font" : "终端字体";
+            ComboBox {
+                width: 150px;
+                height: 30px;
+                model: root.term-fonts;
+                current-value: root.term-font-family;
+                selected(v) => { root.set-term-font(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Terminal font size" : "终端字体大小";
+            Stepper {
+                value: root.term-font-size / 1px;
+                minimum: 8;
+                maximum: 32;
+                step: 1;
+                unit: "px";
+                changed(v) => { root.set-term-font-size(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Terminal line spacing" : "终端行距";
+            desc: root.lang-en ? "Adjust terminal row height from compact to loose."
+                : "调整终端行高，可设置得更紧凑或更宽松。";
+            Stepper {
+                value: round(root.terminal-line-spacing * 100);
+                minimum: 80;
+                maximum: 150;
+                step: 5;
+                unit: "%";
+                changed(v) => { root.terminal-line-spacing = v / 100; root.set-terminal-line-spacing(root.terminal-line-spacing); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Installed fonts" : "已安装字体";
+            desc: root.lang-en
+                ? "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list."
+                : "在 Windows 中安装 TTF/OTF 字体后，重启 ZinTerm 即可刷新字体列表。";
+            show-divider: false;
+            Rectangle {
+                width: 1px;
+                height: 1px;
+                background: transparent;
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Bold terminal text" : "终端字体加粗";
+            desc: root.lang-en ? "Makes regular terminal output use a bold face."
+                : "让普通终端输出使用加粗字重。";
+            Switch {
+                on: root.term-font-bold;
+                toggled(v) => { root.term-font-bold = v; root.set-term-font-bold(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Cursor shape" : "光标类型";
+            desc: root.lang-en ? "Choose the terminal insertion cursor shape."
+                : "选择终端输入光标的形状。";
+            HorizontalLayout {
+                spacing: 5px;
+                CursorStyleButton {
+                    label: root.lang-en ? "Block" : "块状";
+                    cursor-kind: "block";
+                    selected: root.term-cursor-style == "block";
+                    clicked => { root.term-cursor-style = "block"; root.set-term-cursor-style("block"); }
+                }
+
+                CursorStyleButton {
+                    label: root.lang-en ? "Bar" : "竖线";
+                    cursor-kind: "bar";
+                    selected: root.term-cursor-style == "bar";
+                    clicked => { root.term-cursor-style = "bar"; root.set-term-cursor-style("bar"); }
+                }
+
+                CursorStyleButton {
+                    label: root.lang-en ? "Line" : "下划线";
+                    cursor-kind: "underline";
+                    selected: root.term-cursor-style == "underline";
+                    clicked => { root.term-cursor-style = "underline"; root.set-term-cursor-style("underline"); }
+                }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Cursor color" : "光标颜色";
+            desc: root.lang-en ? "Enter a hexadecimal RGB color."
+                : "输入十六进制 RGB 颜色。";
+            CursorColorInput {
+                width: 100px;
+                value <=> root.term-cursor-color-hex;
+                preview-color: root.term-cursor-color;
+                apply-color(v) => { return root.set-term-cursor-color(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "UI scale" : "界面缩放";
+            desc: root.lang-en ? "Zooms the whole interface (not this panel)."
+                : "缩放整个界面(不影响本面板)。";
+            Stepper {
+                value: round(root.ui-scale * 100);
+                minimum: 80;
+                maximum: 200;
+                step: 10;
+                unit: "%";
+                changed(v) => { root.set-ui-scale(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Settings font size" : "界面字体大小";
+            desc: root.lang-en ? "Enlarges this settings panel (font + window)."
+                : "放大本设置面板的字体和窗口。";
+            show-divider: false;
+            Stepper {
+                value: round(Theme.panel-font * 100);
+                minimum: 80;
+                maximum: 160;
+                step: 10;
+                unit: "%";
+                changed(v) => { root.set-panel-font(v); }
+            }
+        }
+
+        Rectangle {
+            height: 14px;
+        }
+
+        SectionHeader {
+            text: root.lang-en ? "PREVIEW" : "预览";
+        }
+
+        Rectangle {
+            height: 52px;
+            background: Theme.term-bg;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            Text {
+                x: 12px;
+                text: "ZinTerm ~$ echo preview 0123";
+                font-family: Theme.term-font-family;
+                font-size: Theme.term-font-size;
+                font-weight: Theme.term-font-bold ? 700 : 400;
+                color: Theme.term-fg;
+                vertical-alignment: center;
+                height: parent.height;
+            }
+        }
+    }
+}

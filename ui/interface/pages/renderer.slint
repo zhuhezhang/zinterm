@@ -1,0 +1,110 @@
+import { Theme } from "../../theme.slint";
+import { ComboBox } from "std-widgets.slint";
+import { SectionHeader, SettingHint, SettingRow } from "../widgets.slint";
+
+export component RendererSettingsPage inherits Rectangle {
+    width: 100%;
+    height: self.preferred-height;
+    in property <bool> is-windows;
+    in property <bool> lang-en;
+    in-out property <string> renderer-mode: "software";
+    in-out property <bool> renderer-restart-required;
+    callback set-renderer-mode(string);
+
+    VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+
+        SectionHeader {
+            text: root.lang-en ? "RENDERING" : "渲染";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Renderer" : "渲染器";
+            desc: Theme.is-mac
+                ? (root.lang-en
+                ? "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
+                : "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。")
+                : (root.lang-en
+                ? "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
+                : "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。");
+            show-divider: false;
+            ComboBox {
+                width: 150px;
+                height: 30px;
+                model: Theme.is-mac
+                    ? ["CPU", "FemtoVG", "Skia"]
+                    : (root.lang-en
+                    ? ["Automatic", "GPU", "Software"]
+                    : ["自动", "GPU", "软件"]);
+                current-value: Theme.is-mac
+                    ? (root.renderer-mode == "skia"
+                    ? "Skia"
+                    : root.renderer-mode == "femtovg" ? "FemtoVG" : "CPU")
+                    : (root.renderer-mode == "auto"
+                    ? (root.lang-en ? "Automatic" : "自动")
+                    : root.renderer-mode == "gpu"
+                    ? "GPU"
+                    : (root.lang-en ? "Software" : "软件"));
+                selected(v) => {
+                    if (Theme.is-mac && v == "CPU"
+                        && root.renderer-mode != "software") {
+                        root.renderer-mode = "software";
+                        root.set-renderer-mode("software");
+                        root.renderer-restart-required = true;
+                    } else if (Theme.is-mac && v == "FemtoVG"
+                        && root.renderer-mode != "femtovg") {
+                        root.renderer-mode = "femtovg";
+                        root.set-renderer-mode("femtovg");
+                        root.renderer-restart-required = true;
+                    } else if (Theme.is-mac && v == "Skia"
+                        && root.renderer-mode != "skia") {
+                        root.renderer-mode = "skia";
+                        root.set-renderer-mode("skia");
+                        root.renderer-restart-required = true;
+                    } else if (!Theme.is-mac && (v == "Automatic" || v == "自动")
+                        && root.renderer-mode != "auto") {
+                        root.renderer-mode = "auto";
+                        root.set-renderer-mode("auto");
+                        root.renderer-restart-required = true;
+                    } else if (!Theme.is-mac && v == "GPU" && root.renderer-mode != "gpu") {
+                        root.renderer-mode = "gpu";
+                        root.set-renderer-mode("gpu");
+                        root.renderer-restart-required = true;
+                    } else if (!Theme.is-mac && (v == "Software" || v == "软件")
+                        && root.renderer-mode != "software") {
+                        root.renderer-mode = "software";
+                        root.set-renderer-mode("software");
+                        root.renderer-restart-required = true;
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 10px;
+        }
+
+        SettingHint {
+            text: root.renderer-restart-required
+                ? (root.lang-en
+                ? "Restart ZinTerm to apply the renderer change."
+                : "重启 ZinTerm 后渲染器设置才会生效。")
+                : (root.lang-en
+                ? (Theme.is-mac
+                ? "CPU is the default renderer on macOS."
+                : (root.is-windows
+                ? "Software remains the compatibility default for existing installations."
+                : "Automatic remains the default renderer on Linux."))
+                : (Theme.is-mac
+                ? "macOS 默认使用 CPU 渲染器。"
+                : (root.is-windows
+                ? "现有安装继续默认使用兼容性更好的软件渲染。"
+                : "Linux 默认继续使用自动渲染器。")));
+            color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
+        }
+    }
+}

@@ -1,0 +1,60 @@
+import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
+
+export component InputSettingsPage inherits Rectangle {
+    width: 100%;
+    height: self.preferred-height;
+    in-out property <bool> extra-paste-shortcuts-enabled: true;
+    in property <bool> lang-en;
+    in-out property <bool> paste-confirm-enabled: true;
+    in-out property <bool> select-copy-right-paste-enabled: true;
+    callback set-extra-paste-shortcuts-enabled(bool);
+    callback set-paste-confirm-enabled(bool);
+    callback set-select-copy-right-paste-enabled(bool);
+
+    VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+
+        SectionHeader {
+            text: root.lang-en ? "INPUT" : "输入";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Confirm multiline paste" : "确认多行粘贴";
+            desc: root.lang-en ? "Show a review dialog before sending multiline content."
+                : "发送多行内容前显示预览确认窗口。";
+            Switch {
+                on: root.paste-confirm-enabled;
+                toggled(v) => { root.paste-confirm-enabled = v; root.set-paste-confirm-enabled(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Select to copy / right-click paste" : "选中复制/右键粘贴";
+            desc: root.lang-en
+                ? "Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead."
+                : "选中文字自动复制到剪贴板；右键粘贴。关闭后恢复右键上下文菜单。";
+            Switch {
+                on: root.select-copy-right-paste-enabled;
+                toggled(v) => {
+                    root.select-copy-right-paste-enabled = v;
+                    root.set-select-copy-right-paste-enabled(v);
+                }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Additional paste shortcuts" : "额外粘贴快捷键";
+            desc: root.lang-en ? "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste."
+                : "启用 Ctrl+Alt+V、Shift+Insert 和鼠标中键粘贴。";
+            show-divider: false;
+            Switch {
+                on: root.extra-paste-shortcuts-enabled;
+                toggled(v) => { root.extra-paste-shortcuts-enabled = v; root.set-extra-paste-shortcuts-enabled(v); }
+            }
+        }
+    }
+}

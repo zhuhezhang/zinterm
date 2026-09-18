@@ -1,6 +1,14 @@
 import { Theme } from "theme.slint";
-import { ComboBox, HorizontalBox } from "std-widgets.slint";
-import { LabeledInput, PrimaryButton, GhostButton, EditableCombo, LabeledCombo, TooltipArea, BorderedTextArea } from "widgets.slint";
+import { ComboBox } from "std-widgets.slint";
+import {
+    LabeledInput,
+    PrimaryButton,
+    GhostButton,
+    EditableCombo,
+    LabeledCombo,
+    TooltipArea,
+    BorderedTextArea,
+} from "widgets.slint";
 
 export struct SessionDraft {
     id: string,
@@ -247,21 +255,80 @@ export component SessionDialog inherits Rectangle {
             height: 0px;
             clip: true;
             VerticalLayout {
-                m-conn := Text { text: @tr("Session type"); font-size: Theme.fs-sm; }
-                m-name := Text { text: @tr("Name"); font-size: Theme.fs-sm; }
-                m-group := Text { text: @tr("Group"); font-size: Theme.fs-sm; }
-                m-shell := Text { text: @tr("Shell"); font-size: Theme.fs-sm; }
-                m-cwd := Text { text: @tr("Working directory"); font-size: Theme.fs-sm; }
-                m-enc := Text { text: @tr("Terminal encoding"); font-size: Theme.fs-sm; }
-                m-host := Text { text: @tr("Host / IP"); font-size: Theme.fs-sm; }
-                m-user := Text { text: @tr("Username"); font-size: Theme.fs-sm; }
-                m-auth := Text { text: @tr("Authentication"); font-size: Theme.fs-sm; }
-                m-pass := Text { text: @tr("Password"); font-size: Theme.fs-sm; }
-                m-pkey := Text { text: @tr("Private key"); font-size: Theme.fs-sm; }
-                m-passphrase := Text { text: @tr("Key passphrase"); font-size: Theme.fs-sm; }
-                m-sport := Text { text: @tr("Serial port"); font-size: Theme.fs-sm; }
-                m-baud := Text { text: @tr("Baud rate"); font-size: Theme.fs-sm; }
-                m-bs := Text { text: @tr("Backspace mode"); font-size: Theme.fs-sm; }
+                m-conn := Text {
+                    text: @tr("Session type");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-name := Text {
+                    text: @tr("Name");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-group := Text {
+                    text: @tr("Group");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-shell := Text {
+                    text: @tr("Shell");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-cwd := Text {
+                    text: @tr("Working directory");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-enc := Text {
+                    text: @tr("Terminal encoding");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-host := Text {
+                    text: @tr("Host / IP");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-user := Text {
+                    text: @tr("Username");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-auth := Text {
+                    text: @tr("Authentication");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-pass := Text {
+                    text: @tr("Password");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-pkey := Text {
+                    text: @tr("Private key");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-passphrase := Text {
+                    text: @tr("Key passphrase");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-sport := Text {
+                    text: @tr("Serial port");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-baud := Text {
+                    text: @tr("Baud rate");
+                    font-size: Theme.fs-sm;
+                }
+
+                m-bs := Text {
+                    text: @tr("Backspace mode");
+                    font-size: Theme.fs-sm;
+                }
             }
         }
 
@@ -483,7 +550,10 @@ export component SessionDialog inherits Rectangle {
                         // Inline error when a host-less SSH/Telnet session is submitted (#110).
                         if root.host-missing && root.draft-host == "" && root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
                             spacing: 10px;
-                            Text { width: root.form-label-width; }
+                            Text {
+                                width: root.form-label-width;
+                            }
+
                             Text {
                                 text: @tr("Please enter a host / IP address.");
                                 color: Theme.danger;
@@ -559,6 +629,7 @@ export component SessionDialog inherits Rectangle {
                                     font-size: Theme.fs-sm;
                                     horizontal-alignment: right;
                                 }
+
                                 TooltipArea {
                                     width: parent.width;
                                     height: parent.height;
@@ -684,7 +755,10 @@ export component SessionDialog inherits Rectangle {
                         // Inline error when a serial session is submitted without a port.
                         if root.serial-port-missing && root.draft-serial-port == "" && root.draft-kind == "serial": HorizontalLayout {
                             spacing: 10px;
-                            Text { width: root.form-label-width; }
+                            Text {
+                                width: root.form-label-width;
+                            }
+
                             Text {
                                 text: @tr("Please enter a serial port.");
                                 color: Theme.danger;
@@ -698,9 +772,24 @@ export component SessionDialog inherits Rectangle {
                             placeholder: "9600";
                             value <=> root.draft-baud;
                             items: [
-                                "110", "300", "600", "1200", "2400", "4800", "9600",
-                                "14400", "19200", "38400", "56000", "57600", "115200",
-                                "128000", "230400", "256000", "460800", "921600"
+                                "110",
+                                "300",
+                                "600",
+                                "1200",
+                                "2400",
+                                "4800",
+                                "9600",
+                                "14400",
+                                "19200",
+                                "38400",
+                                "56000",
+                                "57600",
+                                "115200",
+                                "128000",
+                                "230400",
+                                "256000",
+                                "460800",
+                                "921600"
                             ];
                             canceled => { root.cancel(); }
                         }
@@ -762,6 +851,7 @@ export component SessionDialog inherits Rectangle {
                                         width: 100%;
                                         height: 100%;
                                     }
+
                                     TooltipArea {
                                         width: parent.width;
                                         height: parent.height;
@@ -779,8 +869,8 @@ export component SessionDialog inherits Rectangle {
                                     current-value: root.draft-backspace-mode == "del"
                                         ? @tr("DEL (0x7F)")
                                         : (root.draft-backspace-mode == "bs"
-                                            ? @tr("BS (0x08)")
-                                            : @tr("Auto"));
+                                        ? @tr("BS (0x08)")
+                                        : @tr("Auto"));
                                     selected(value) => {
                                         if (value == @tr("DEL (0x7F)")) {
                                             root.draft-backspace-mode = "del";
@@ -848,6 +938,7 @@ export component SessionDialog inherits Rectangle {
                                         vertical-alignment: center;
                                         height: 100%;
                                     }
+
                                     TooltipArea {
                                         width: parent.width;
                                         height: parent.height;
@@ -899,6 +990,7 @@ export component SessionDialog inherits Rectangle {
                                         vertical-alignment: center;
                                         height: 100%;
                                     }
+
                                     TooltipArea {
                                         width: parent.width;
                                         height: parent.height;
@@ -951,6 +1043,7 @@ export component SessionDialog inherits Rectangle {
                                         vertical-alignment: center;
                                         height: 100%;
                                     }
+
                                     TooltipArea {
                                         width: parent.width;
                                         height: parent.height;

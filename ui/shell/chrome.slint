@@ -1,0 +1,59 @@
+import { Theme } from "../theme.slint";
+import { TooltipArea } from "../widgets.slint";
+
+export component WinBtn inherits Rectangle {
+    in property <string> icon;
+    in property <bool> danger: false;
+    callback clicked();
+    width: 30px;
+    height: 30px;
+    border-radius: Theme.radius-sm;
+    background: ta.has-hover ? (root.danger ? #e81123 : Theme.bg-hover) : transparent;
+    animate background { duration: 90ms; }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.icon;
+        font-family: "Material Icons";
+        color: (root.danger && ta.has-hover) ? white : Theme.text-secondary;
+        font-size: 17px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// A 30×30 top-bar icon button with a hover tooltip. `active` keeps the hover
+// background lit (e.g. while its popup is open).
+export component IconBtn inherits Rectangle {
+    in property <string> icon;
+    in property <brush> icon-color: Theme.text-secondary;
+    in property <string> tooltip;
+    in property <bool> active;
+    callback clicked();
+    width: 30px;
+    height: 30px;
+    border-radius: Theme.radius-sm;
+    background: touch.has-hover || root.active ? Theme.bg-hover : transparent;
+
+    Text {
+        text: root.icon;
+        font-family: "Material Icons";
+        color: root.icon-color;
+        font-size: 17px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TooltipArea {
+        width: parent.width;
+        height: parent.height;
+        mouse-cursor: pointer;
+        tooltip-text: root.tooltip;
+        anchor-width: root.width;
+        anchor-height: root.height;
+        activate => { root.clicked(); }
+    }
+}

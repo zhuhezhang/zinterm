@@ -1,0 +1,434 @@
+import { Theme } from "../theme.slint";
+import { InterfacePanel } from "../interface/interface_panel.slint";
+import { PrimaryButton, GhostButton } from "../widgets.slint";
+import { OutputRuleItem, AlgorithmOptionRow } from "../types/settings.slint";
+
+export component InterfaceOverlay inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    callback add-output-highlight-rule(string, string, bool, bool, bool, string)-> bool;
+    callback cancel-settings();
+    in-out property <bool> collapse-sftp-default: true;
+    in-out property <bool> confirm-delete-group-enabled: true;
+    in-out property <bool> confirm-delete-session-enabled: false;
+    in-out property <bool> credentials-vault-available: true;
+    in-out property <string> current-wallpaper: "";
+    in-out property <string> custom-wallpaper-name: "";
+    in-out property <bool> data-clear-also-passwords: false;
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings";
+    in-out property <bool> data-clear-open: false;
+    in-out property <bool> download-always-ask: false;
+    in-out property <bool> extra-paste-shortcuts-enabled: true;
+    in-out property <string> highlight-draft-color-hex: "#F14C4C";
+    in-out property <color> highlight-draft-swatch: #F14C4C;
+    in-out property <length> ifd-base-h;
+    in-out property <length> ifd-base-w;
+    in-out property <length> ifd-base-x;
+    in-out property <length> ifd-base-y;
+    in-out property <bool> ifd-dragging;
+    in-out property <length> ifd-grab-x;
+    in-out property <length> ifd-grab-y;
+    in-out property <length> ifd-h;
+    in-out property <bool> ifd-resizing;
+    in-out property <length> ifd-w;
+    in-out property <length> ifd-x;
+    in-out property <length> ifd-y;
+    in-out property <bool> interface-open: false;  // Interface settings overlay;
+    in-out property <bool> is-windows: false;
+    in-out property <bool> json-format-output: true;
+    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
+    in-out property <string> language-pref: "auto";
+    callback move-ssh-algorithm(string, int);
+    in-out property <bool> output-highlight-enabled: true;
+    in-out property <string> output-highlight-preset: "log";
+    in-out property <string> output-highlight-rule-status;
+    in-out property <[OutputRuleItem]> output-highlight-rules;
+    in-out property <bool> paste-confirm-enabled: true;
+    callback persist-wallpaper-overlay(float);
+    callback pick-wallpaper-file();
+    in-out property <bool> quick-commands-as-sidebar: true;
+    in-out property <bool> quick-panel-collapsed: false;
+    in-out property <bool> quick-panel-open: false;
+    callback remove-output-highlight-rule(int);
+    in-out property <string> renderer-mode: "software";
+    callback reset-ssh-algorithm-section();
+    callback reset-ssh-algorithms();
+    in-out property <bool> save-passwords: false;
+    callback save-settings();
+    in-out property <bool> select-copy-right-paste-enabled: true;
+    callback set-collapse-sftp-default(bool);
+    callback set-confirm-delete-group-enabled(bool);
+    callback set-confirm-delete-session-enabled(bool);
+    callback set-download-always-ask(bool);
+    callback set-extra-paste-shortcuts-enabled(bool);
+    callback set-highlight-draft-color(string)-> bool;
+    callback set-json-format-output(bool);
+    callback set-language(string);
+    callback set-output-highlight(bool, string);
+    callback set-output-highlight-rule-enabled(int, bool);
+    callback set-panel-font(int);
+    callback set-paste-confirm-enabled(bool);
+    callback set-quick-commands-as-sidebar(bool);
+    callback set-renderer-mode(string);
+    callback set-save-passwords(bool);
+    callback set-select-copy-right-paste-enabled(bool);
+    callback set-sftp-follow-cd(bool);
+    callback set-ssh-algorithm-category(string);
+    callback set-ssh-keepalive-secs(int);
+    callback set-term-cursor-color(string)-> bool;
+    callback set-term-cursor-style(string);
+    callback set-term-font(string);
+    callback set-term-font-bold(bool);
+    callback set-term-font-size(int);
+    callback set-terminal-line-spacing(float);
+    callback set-ui-scale(int);
+    callback set-update-check-enabled(bool);
+    callback set-wallpaper(string);
+    callback set-welcome-as-sidebar(bool);
+    callback set-welcome-single-click-connect(bool);
+    callback set-zen-mode(bool);
+    in-out property <bool> sftp-follow-cd: true;
+    in-out property <string> ssh-algorithm-category: "kex";
+    in-out property <[AlgorithmOptionRow]> ssh-algorithm-rows;
+    in-out property <int> ssh-keepalive-secs: 0;
+    in-out property <color> term-cursor-color: Theme.term-fg;
+    in-out property <string> term-cursor-color-hex;
+    in-out property <string> term-cursor-style: "bar";
+    in-out property <bool> term-font-bold <=> Theme.term-font-bold;
+    in-out property <string> term-font-family <=> Theme.term-font-family;
+    in-out property <length> term-font-size <=> Theme.term-font-size;
+    in-out property <[string]> term-fonts;             // installed monospace families;
+    in-out property <float> terminal-line-spacing: 1.0;
+    callback toggle-ssh-algorithm(string);
+    in-out property <float> ui-scale <=> Theme.ui-scale;   // global UI zoom (#100);
+    in-out property <bool> update-check-enabled: false;   // startup new-version check (#184);
+    callback update-output-highlight-rule(int, string, string, bool, bool, bool, string)-> bool;
+    in-out property <float> wallpaper-overlay <=> Theme.panel-alpha;
+    in-out property <bool> welcome-as-sidebar: false;
+    in-out property <bool> welcome-single-click-connect: true;
+    in-out property <bool> zen-mode: false;
+
+    // --- Interface settings (modal overlay) -------------------------------
+    // Embedded in the main window (not a detached window), so it can't be
+    // dragged outside the parent. The dim backdrop + a focus-grabbing scope make
+    // it modal: no mouse or keyboard input reaches the app while it's open. The
+    // card itself is draggable by its title bar but clamped inside the window.
+    if root.interface-open: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #00000080;            // dim backdrop
+        // Grab focus and swallow keys so nothing leaks to the terminal beneath;
+        // Esc closes the panel (#140-3).
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if (e.text == Key.Escape) {
+                    root.cancel-settings();
+                    root.interface-open = false;
+                }
+                accept
+            }
+            key-released(e) => { accept }
+        }
+        // Modal: clicking the backdrop does nothing (only the ✕ closes it).
+        TouchArea {
+            scroll-event(e) => { accept }
+        }
+
+        Rectangle {
+            x: root.ifd-x;
+            y: root.ifd-y;
+            // Bigger base, and scales with the settings font size (#v0.5).
+            width: root.ifd-w;
+            height: root.ifd-h;
+            // 20% less transparent than the welcome panel so the dense
+            // grey settings labels stay readable at a low overlay (user request).
+            background: Theme.bg-panel-strong;
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.border-strong;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: #000000a0;
+            clip: true;
+            TouchArea { }   // swallow inside clicks so they don't hit the backdrop
+
+            VerticalLayout {
+                // Title bar — drag to move (clamped inside the window).
+                Rectangle {
+                    height: 44px;
+                    // Transparent so the card's single frosted layer shows through
+                    // — no extra stacked opacity, matching the welcome
+                    // panel and following the wallpaper slider (#new-user-defaults
+                    // items 6/7). The 1px divider below still separates it.
+                    background: transparent;
+                    title-drag := TouchArea {
+                        mouse-cursor: move;
+                        pointer-event(e) => {
+                            if (e.kind == PointerEventKind.down) {
+                                root.ifd-dragging = true;
+                                root.ifd-base-x = root.ifd-x;
+                                root.ifd-base-y = root.ifd-y;
+                                root.ifd-grab-x = self.absolute-position.x + self.mouse-x;
+                                root.ifd-grab-y = self.absolute-position.y + self.mouse-y;
+                            } else if (e.kind == PointerEventKind.up) {
+                                root.ifd-dragging = false;
+                            }
+                        }
+                        moved => {
+                            if (root.ifd-dragging) {
+                                root.ifd-x = clamp(
+                                    round((root.ifd-base-x + (self.absolute-position.x + self.mouse-x - root.ifd-grab-x)) / 1px) * 1px,
+                                    0px, max(0px, root.width - root.ifd-w));
+                                root.ifd-y = clamp(
+                                    round((root.ifd-base-y + (self.absolute-position.y + self.mouse-y - root.ifd-grab-y)) / 1px) * 1px,
+                                    0px, max(0px, root.height - root.ifd-h));
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 16px;
+                        padding-right: 10px;
+                        Text {
+                            text: root.lang-en ? "Settings" : "设置";
+                            color: Theme.text-primary;
+                            font-size: 14px;
+                            font-weight: 700;
+                            horizontal-stretch: 1;
+                            vertical-alignment: center;
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 24px;
+                                height: 24px;
+                                border-radius: Theme.radius-sm;
+                                background: if-close-ta.has-hover ? Theme.bg-hover : transparent;
+                                if-close-ta := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        root.cancel-settings();
+                                        root.interface-open = false;
+                                    }
+                                }
+
+                                Text {
+                                    text: "\u{E5CD}";
+                                    font-family: "Material Icons";
+                                    color: Theme.text-secondary;
+                                    font-size: 15px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
+                InterfacePanel {
+                    vertical-stretch: 1;
+                    ifd-start-page: "font";
+                    lang-en: root.lang-en;
+                    language-pref <=> root.language-pref;
+                    is-windows: root.is-windows;
+                    renderer-mode <=> root.renderer-mode;
+                    term-fonts: root.term-fonts;
+                    term-font-family: root.term-font-family;
+                    term-font-size: root.term-font-size;
+                    terminal-line-spacing <=> root.terminal-line-spacing;
+                    term-font-bold: root.term-font-bold;
+                    term-cursor-style <=> root.term-cursor-style;
+                    term-cursor-color-hex <=> root.term-cursor-color-hex;
+                    term-cursor-color: root.term-cursor-color;
+                    highlight-draft-color-hex <=> root.highlight-draft-color-hex;
+                    highlight-draft-swatch <=> root.highlight-draft-swatch;
+                    output-highlight-enabled <=> root.output-highlight-enabled;
+                    json-format-output <=> root.json-format-output;
+                    output-highlight-preset <=> root.output-highlight-preset;
+                    output-highlight-rules: root.output-highlight-rules;
+                    output-highlight-rule-status <=> root.output-highlight-rule-status;
+                    ui-scale: root.ui-scale;
+                    sftp-follow-cd <=> root.sftp-follow-cd;
+                    collapse-sftp-default <=> root.collapse-sftp-default;
+                    download-always-ask <=> root.download-always-ask;
+                    paste-confirm-enabled <=> root.paste-confirm-enabled;
+                    extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
+                    select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
+                    zen-mode <=> root.zen-mode;
+                    welcome-as-sidebar <=> root.welcome-as-sidebar;
+                    confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
+                    confirm-delete-session-enabled <=> root.confirm-delete-session-enabled;
+                    welcome-single-click-connect <=> root.welcome-single-click-connect;
+                    quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
+                    update-check-enabled <=> root.update-check-enabled;
+                    ssh-keepalive-secs <=> root.ssh-keepalive-secs;
+                    ssh-algorithm-category <=> root.ssh-algorithm-category;
+                    ssh-algorithm-rows: root.ssh-algorithm-rows;
+                    save-passwords <=> root.save-passwords;
+                    credentials-vault-available <=> root.credentials-vault-available;
+                    wallpaper-overlay <=> root.wallpaper-overlay;
+                    current-wallpaper: root.current-wallpaper;
+                    custom-wallpaper-name: root.custom-wallpaper-name;
+                    set-wallpaper(v) => { root.set-wallpaper(v); }
+                    pick-wallpaper-file() => { root.pick-wallpaper-file(); }
+                    set-term-font(v) => { root.set-term-font(v); }
+                    set-term-font-size(v) => { root.set-term-font-size(v); }
+                    set-terminal-line-spacing(v) => { root.set-terminal-line-spacing(v); }
+                    set-term-font-bold(v) => { root.set-term-font-bold(v); }
+                    set-term-cursor-style(v) => { root.set-term-cursor-style(v); }
+                    set-term-cursor-color(v) => { root.set-term-cursor-color(v) }
+                    set-output-highlight(enabled, preset) => {
+                        root.set-output-highlight(enabled, preset);
+                    }
+                    set-json-format-output(enabled) => { root.set-json-format-output(enabled); }
+                    set-highlight-draft-color(v) => { root.set-highlight-draft-color(v) }
+                    add-output-highlight-rule(name, pattern, regex, case-sensitive, whole-line, color) => {
+                        root.add-output-highlight-rule(
+                            name, pattern, regex, case-sensitive, whole-line, color)
+                    }
+                    update-output-highlight-rule(index, name, pattern, regex, case-sensitive, whole-line, color) => {
+                        root.update-output-highlight-rule(
+                            index, name, pattern, regex, case-sensitive, whole-line, color)
+                    }
+                    remove-output-highlight-rule(index) => {
+                        root.remove-output-highlight-rule(index);
+                    }
+                    set-output-highlight-rule-enabled(index, enabled) => {
+                        root.set-output-highlight-rule-enabled(index, enabled);
+                    }
+                    set-ui-scale(v) => { root.set-ui-scale(v); }
+                    set-panel-font(v) => { root.set-panel-font(v); }
+                    set-renderer-mode(v) => { root.set-renderer-mode(v); }
+                    set-sftp-follow-cd(v) => { root.set-sftp-follow-cd(v); }
+                    set-collapse-sftp-default(v) => { root.set-collapse-sftp-default(v); }
+                    set-download-always-ask(v) => { root.set-download-always-ask(v); }
+                    set-paste-confirm-enabled(v) => { root.set-paste-confirm-enabled(v); }
+                    set-extra-paste-shortcuts-enabled(v) => { root.set-extra-paste-shortcuts-enabled(v); }
+                    set-select-copy-right-paste-enabled(v) => { root.set-select-copy-right-paste-enabled(v); }
+                    set-zen-mode(v) => { root.set-zen-mode(v); }
+                    set-welcome-as-sidebar(v) => { root.set-welcome-as-sidebar(v); }
+                    set-confirm-delete-group-enabled(v) => { root.set-confirm-delete-group-enabled(v); }
+                    set-confirm-delete-session-enabled(v) => { root.set-confirm-delete-session-enabled(v); }
+                    set-welcome-single-click-connect(v) => { root.set-welcome-single-click-connect(v); }
+                    set-quick-commands-as-sidebar(v) => {
+                        root.quick-commands-as-sidebar = v;
+                        if (!v) {
+                            root.quick-panel-open = false;
+                            root.quick-panel-collapsed = false;
+                        }
+                        root.set-quick-commands-as-sidebar(v);
+                    }
+                    set-update-check-enabled(v) => { root.set-update-check-enabled(v); }
+                    set-ssh-keepalive-secs(v) => { root.set-ssh-keepalive-secs(v); }
+                    set-ssh-algorithm-category(v) => { root.set-ssh-algorithm-category(v); }
+                    toggle-ssh-algorithm(v) => { root.toggle-ssh-algorithm(v); }
+                    move-ssh-algorithm(name, delta) => { root.move-ssh-algorithm(name, delta); }
+                    reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
+                    reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
+                    set-save-passwords(v) => { root.set-save-passwords(v); }
+                    set-language(v) => { root.set-language(v); }
+                    persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
+                    request-clear-known-hosts => {
+                        root.data-clear-kind = "known-hosts";
+                        root.data-clear-open = true;
+                    }
+                    request-clear-sessions => {
+                        root.data-clear-kind = "sessions";
+                        // Opt-in: keep saved passwords/keys unless the user checks the box.
+                        root.data-clear-also-passwords = false;
+                        root.data-clear-open = true;
+                    }
+                    request-clear-passwords => {
+                        root.data-clear-kind = "passwords";
+                        root.data-clear-open = true;
+                    }
+                    request-restore-settings => {
+                        root.data-clear-kind = "restore-settings";
+                        root.data-clear-open = true;
+                    }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+
+                // Cancel / Save / Save and close — edits preview live; disk write
+                // waits for Save (no more auto-persist on every toggle).
+                HorizontalLayout {
+                    padding-right: 15px; // clear the resize grip
+                    padding-top: 10px;
+                    padding-bottom: 10px;
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    GhostButton {
+                        text: root.lang-en ? "Cancel" : "取消";
+                        clicked => {
+                            root.cancel-settings();
+                            root.interface-open = false;
+                        }
+                    }
+                    GhostButton {
+                        text: root.lang-en ? "Save" : "保存";
+                        clicked => { root.save-settings(); }
+                    }
+                    PrimaryButton {
+                        text: root.lang-en ? "Save and close" : "保存并关闭";
+                        clicked => {
+                            root.save-settings();
+                            root.interface-open = false;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                x: parent.width - 18px;
+                y: parent.height - 18px;
+                width: 18px;
+                height: 18px;
+                background: resize-ta.has-hover || root.ifd-resizing ? Theme.bg-hover : transparent;
+                Text {
+                    text: "\u{E3C2}";
+                    font-family: "Material Icons";
+                    color: Theme.text-muted;
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                resize-ta := TouchArea {
+                    mouse-cursor: nwse-resize;
+                    pointer-event(e) => {
+                        if (e.kind == PointerEventKind.down) {
+                            root.ifd-resizing = true;
+                            root.ifd-base-w = root.ifd-w;
+                            root.ifd-base-h = root.ifd-h;
+                            root.ifd-grab-x = self.absolute-position.x + self.mouse-x;
+                            root.ifd-grab-y = self.absolute-position.y + self.mouse-y;
+                        } else if (e.kind == PointerEventKind.up) {
+                            root.ifd-resizing = false;
+                        }
+                    }
+                    moved => {
+                        if (root.ifd-resizing) {
+                            root.ifd-w = clamp(
+                                round((root.ifd-base-w + (self.absolute-position.x + self.mouse-x - root.ifd-grab-x)) / 1px) * 1px,
+                                700px, max(700px, root.width - root.ifd-x));
+                            root.ifd-h = clamp(
+                                round((root.ifd-base-h + (self.absolute-position.y + self.mouse-y - root.ifd-grab-y)) / 1px) * 1px,
+                                420px, max(420px, root.height - root.ifd-y));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+}

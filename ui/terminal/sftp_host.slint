@@ -1,0 +1,260 @@
+import { Theme } from "../theme.slint";
+import { SftpPanel, SftpEntry, SftpTreeNode } from "../sftp_panel.slint";
+import { TabInfo } from "../tabs.slint";
+import { ToolStrip } from "../widgets.slint";
+
+export component SftpHost inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    in property <length> sf-w;
+    in property <length> sf-h;
+    callback persist-sftp-dock(string);
+    callback persist-sftp-tree-width(length);
+    callback set-sftp-collapsed(bool);
+    callback set-sftp-panel-height(length);
+    callback set-sftp-panel-width(length);
+    in property <bool> sftp-available: true;
+    callback sftp-chmod-request(string, string, int);
+    callback sftp-clear-sort();
+    callback sftp-copy-path(string);
+    callback sftp-copy-selected-to-target(string);
+    callback sftp-copy-to-target(string, string);
+    callback sftp-delete(string);
+    callback sftp-delete-selected();
+    in-out property <string> sftp-dock: "bottom";
+    in property <string> sftp-dock-target;
+    callback sftp-download(string);
+    callback sftp-download-selected();
+    in-out property <float> sftp-drag-nx;
+    in-out property <float> sftp-drag-ny;
+    in-out property <bool> sftp-dragging:     false;
+    callback sftp-edit(string);
+    callback sftp-edit-external(string);
+    in property <[SftpEntry]> sftp-entries;
+    in-out property <bool> sftp-horizontal;
+    in property <bool> sftp-loading: false;
+    callback sftp-navigate(string);
+    callback sftp-new-file(string);
+    callback sftp-new-folder(string);
+    callback sftp-open-external(string);
+    in-out property <bool> sftp-panel-dragging;
+    in property <string> sftp-path: "/";
+    in property <bool> sftp-ready: false;   // false until first successful listing;
+    callback sftp-refresh(string);
+    callback sftp-rename-request(string, string);
+    in property <int> sftp-selected-count;          // checked-entry count (#100);
+    in-out property <bool> sftp-shut;
+    in property <int> sftp-sort-dir: 0;
+    in property <string> sftp-sort-key: "";
+    callback sftp-sort-request(string);
+    in property <string> sftp-status: "";
+    callback sftp-toggle-select(int);
+    in property <[TabInfo]> sftp-transfer-targets: [];
+    callback sftp-tree-expand(string);
+    in property <[SftpTreeNode]> sftp-tree-nodes: [];
+    in property <length> sftp-tree-width: 160px;
+    callback sftp-upload-clicked(string, bool);
+    callback sftp-view(string);
+    in property <string> tab-id;
+
+    // --- SFTP resize splitter (orientation follows the dock edge) -------
+    Rectangle {
+        visible: root.sftp-available && !root.sftp-shut;
+        x: root.sftp-dock == "left" ? root.sf-w
+            : root.sftp-dock == "right" ? parent.width - root.sf-w - 4px
+            : 0px;
+        y: root.sftp-dock == "top" ? root.sf-h
+            : root.sftp-dock == "bottom" ? parent.height - root.sf-h - 4px
+            : 0px;
+        width: root.sftp-horizontal ? 4px : parent.width;
+        height: root.sftp-horizontal ? parent.height : 4px;
+        background: divider-ta.has-hover || root.sftp-dragging
+            ? Theme.accent : Theme.border-subtle;
+        divider-ta := TouchArea {
+            // Hit area extends a few px past the thin visual bar so it's easy
+            // to grab without landing on the terminal / SFTP edge.
+            x: root.sftp-horizontal ? -4px : 0px;
+            y: root.sftp-horizontal ? 0px : -4px;
+            width: root.sftp-horizontal ? 12px : parent.width;
+            height: root.sftp-horizontal ? parent.height : 12px;
+            mouse-cursor: root.sftp-horizontal ? ew-resize : ns-resize;
+            pointer-event(ev) => {
+                if (ev.kind == PointerEventKind.down) {
+                    if (!root.sftp-ready) { return; }
+                    root.sftp-dragging = true;
+                    root.set-sftp-collapsed(false);
+                } else if (ev.kind == PointerEventKind.up) {
+                    root.sftp-dragging = false;
+                }
+            }
+            // Direct tracking: the panel's docked edge follows the cursor's
+            // position within the (stable) dock-region — no deltas, so no
+            // moving-frame / accumulation issues. NOTE: `parent` here is the
+            // thin splitter Rectangle, so refer to `dock-region` explicitly
+            // for the region's size/origin (#dock).
+            moved => {
+                if (root.sftp-dragging) {
+                    if (root.sftp-horizontal) {
+                        // Floor matches SftpPanel's compact two-row toolbar;
+                        // narrower widths make the path field and actions unusable.
+                        root.set-sftp-panel-width(clamp(
+                                        root.sftp-dock == "right"
+                            ? root.width - ((self.absolute-position.x + self.mouse-x) - root.absolute-position.x)
+                            : (self.absolute-position.x + self.mouse-x) - root.absolute-position.x,
+                                        300px, max(310px, root.width - 200px)));
+                    } else {
+                        root.set-sftp-panel-height(clamp(
+                                        root.sftp-dock == "bottom"
+                            ? root.height - ((self.absolute-position.y + self.mouse-y) - root.absolute-position.y)
+                            : (self.absolute-position.y + self.mouse-y) - root.absolute-position.y,
+                                        60px, max(80px, root.height - 80px)));
+                    }
+                }
+            }
+        }
+    }
+
+    // --- SFTP panel — positioned on the docked edge ---------------------
+    if root.sftp-available: SftpPanel {
+        x: root.sftp-dock == "right" ? parent.width - root.sf-w : 0px;
+        y: root.sftp-dock == "bottom" ? parent.height - root.sf-h : 0px;
+        width: root.sftp-horizontal ? root.sf-w : parent.width;
+        height: root.sftp-horizontal ? parent.height : root.sf-h;
+        dock-width: root.sftp-horizontal ? root.sf-w : parent.width;
+        dock-edge: root.sftp-dock;
+        show-tree: !root.sftp-horizontal;   // hide the tree when narrow (vertical)
+                tree-width: root.sftp-tree-width;
+        persist-tree-width(width) => { root.persist-sftp-tree-width(width); }
+        compact: root.sftp-shut && root.sftp-horizontal;  // clean strip when side+collapsed
+                dock-drag-move(ax, ay) => {
+            if (!root.sftp-ready) { return; }
+            root.sftp-panel-dragging = true;
+            root.sftp-drag-nx = (ax - root.absolute-position.x) / root.width;
+            root.sftp-drag-ny = (ay - root.absolute-position.y) / root.height;
+        }
+        dock-drag-end() => {
+            if (root.sftp-dock-target != "") {
+                root.sftp-dock = root.sftp-dock-target;
+                root.persist-sftp-dock(root.sftp-dock);
+            }
+            root.sftp-panel-dragging = false;
+        }
+        collapsed: root.sftp-shut;
+        ready: root.sftp-ready;
+        current-tab-id: root.tab-id;
+        current-path: root.sftp-path;
+        entries: root.sftp-entries;
+        status: root.sftp-status;
+        loading: root.sftp-loading;
+        tree-nodes: root.sftp-tree-nodes;
+        transfer-targets: root.sftp-transfer-targets;
+        selected-count: root.sftp-selected-count;
+        sort-key: root.sftp-sort-key;
+        sort-dir: root.sftp-sort-dir;
+        toggle-collapsed => {
+            if (root.sftp-shut) {
+                // Re-expand only once SFTP is actually connected.
+                if (root.sftp-ready) {
+                    root.set-sftp-collapsed(false);
+                }
+            } else {
+                // Minimise: just collapse. Top/bottom → toolbar-row-height bar;
+                // side → 36px ToolStrip. Panel height is preserved separately (M5).
+                root.set-sftp-collapsed(true);
+            }
+        }
+        navigate(path) => { root.sftp-navigate(path); }
+        download(path) => { root.sftp-download(path); }
+        upload-clicked(dir, folder) => { root.sftp-upload-clicked(dir, folder); }
+        refresh(path) => { root.sftp-refresh(path); }
+        tree-expand(path) => { root.sftp-tree-expand(path); }
+        delete(path) => { root.sftp-delete(path); }
+        toggle-select(i) => { root.sftp-toggle-select(i); }
+        download-selected() => { root.sftp-download-selected(); }
+        delete-selected() => { root.sftp-delete-selected(); }
+        copy-to-target(path, target) => { root.sftp-copy-to-target(path, target); }
+        copy-selected-to-target(target) => { root.sftp-copy-selected-to-target(target); }
+        view(path) => { root.sftp-view(path); }
+        edit(path) => { root.sftp-edit(path); }
+        open-external(path) => { root.sftp-open-external(path); }
+        edit-external(path) => { root.sftp-edit-external(path); }
+        sort-request(key) => { root.sftp-sort-request(key); }
+        clear-sort() => { root.sftp-clear-sort(); }
+        rename-request(path, name) => { root.sftp-rename-request(path, name); }
+        chmod-request(path, name, mode) => { root.sftp-chmod-request(path, name, mode); }
+        copy-path(path) => { root.sftp-copy-path(path); }
+        new-folder(dir) => { root.sftp-new-folder(dir); }
+        new-file(dir) => { root.sftp-new-file(dir); }
+    }
+
+    // Drag-to-dock snap overlay — four edge zones; the one under the cursor
+    // (sftp-dock-target) lights up. Purely visual (#dock).
+    if root.sftp-panel-dragging: Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: parent.width * 0.22;
+            height: parent.height;
+            background: root.sftp-dock-target == "left" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
+            border-width: root.sftp-dock-target == "left" ? 2px : 0px;
+            border-color: Theme.accent;
+        }
+
+        Rectangle {
+            x: parent.width * 0.78;
+            y: 0;
+            width: parent.width * 0.22;
+            height: parent.height;
+            background: root.sftp-dock-target == "right" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
+            border-width: root.sftp-dock-target == "right" ? 2px : 0px;
+            border-color: Theme.accent;
+        }
+
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height * 0.22;
+            background: root.sftp-dock-target == "top" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
+            border-width: root.sftp-dock-target == "top" ? 2px : 0px;
+            border-color: Theme.accent;
+        }
+
+        Rectangle {
+            x: 0;
+            y: parent.height * 0.78;
+            width: parent.width;
+            height: parent.height * 0.22;
+            background: root.sftp-dock-target == "bottom" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
+            border-width: root.sftp-dock-target == "bottom" ? 2px : 0px;
+            border-color: Theme.accent;
+        }
+    }
+
+    // Collapsed → a ToolStrip icon bar at the docked edge (M5), filling the
+    // 36px slot the panel shrank to; click the icon to re-expand.
+    // Hidden entirely when this session has SFTP disabled.
+    if root.sftp-available && root.sftp-shut: ToolStrip {
+        x: root.sftp-dock == "right" ? parent.width - root.sf-w : 0px;
+        y: root.sftp-dock == "bottom" ? parent.height - root.sf-h : 0px;
+        // Top/bottom keep the SFTP path bar; only cover the folder icon so
+        // the path field stays visible with a 4px gap (icon is 30px at x=4).
+        width: root.sftp-horizontal ? root.sf-w : 34px;
+        height: root.sftp-horizontal ? parent.height : root.sf-h;
+        dock-edge: root.sftp-dock;
+        icon-only: !root.sftp-horizontal;
+        glyph: "\u{E2C7}";   // folder — SFTP
+                tooltip: !root.sftp-available ? @tr("SFTP not available")
+            : root.sftp-ready ? @tr("Expand SFTP panel") : root.sftp-status;
+        enabled: root.sftp-available && root.sftp-ready;
+        expand => {
+            if (root.sftp-available && root.sftp-ready) {
+                root.set-sftp-collapsed(false);
+            }
+        }
+    }
+}

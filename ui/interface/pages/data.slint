@@ -1,0 +1,87 @@
+import { PrimaryButton, DangerButton } from "../../widgets.slint";
+import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
+
+export component DataSettingsPage inherits Rectangle {
+    width: 100%;
+    height: self.preferred-height;
+    in-out property <bool> credentials-vault-available: true;
+    in property <bool> lang-en;
+    callback request-clear-known-hosts();
+    callback request-clear-passwords();
+    callback request-clear-sessions();
+    callback request-restore-settings();
+    in-out property <bool> save-passwords: false;
+    callback set-save-passwords(bool);
+
+    VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+        SectionHeader {
+            text: root.lang-en ? "DATA" : "数据";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Save passwords / private-keys" : "保存密码/私钥";
+            desc: !root.credentials-vault-available
+                ? (root.lang-en
+                ? "Unavailable: OS keyring cannot store the vault master key."
+                : "不可用：系统钥匙串无法保存凭证库主密钥。")
+                : (root.lang-en
+                ? "When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved."
+                : "开启后密码与私钥写入加密凭证库(主密钥在系统钥匙串)。关闭此选项不会清除已保存的内容。");
+            Switch {
+                enabled: root.credentials-vault-available;
+                on: root.save-passwords;
+                toggled(v) => { root.save-passwords = v; root.set-save-passwords(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Clear saved passwords / private-keys" : "清除所有保存的密码/私钥";
+            desc: root.lang-en
+                ? "Remove every stored password, private-keys from saved sessions."
+                : "清除所有已保存会话中的密码、私钥。";
+            DangerButton {
+                text: root.lang-en ? "Clear" : "清除";
+                clicked => { root.request-clear-passwords(); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Clear SSH known hosts" : "清除 SSH 已知主机公钥";
+            desc: root.lang-en
+                ? "Forget remembered server host keys. The next connection to each host will ask you to trust the key again."
+                : "清除已记住的服务器主机公钥。下次连接各主机时会再次要求确认信任。";
+            DangerButton {
+                text: root.lang-en ? "Clear" : "清除";
+                clicked => { root.request-clear-known-hosts(); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Clear all groups and sessions" : "清除所有分组和会话";
+            desc: root.lang-en
+                ? "Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys."
+                : "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。可选择是否同时清除已保存的密码/私钥。";
+            DangerButton {
+                text: root.lang-en ? "Clear" : "清除";
+                clicked => { root.request-clear-sessions(); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Restore default settings" : "恢复默认设置";
+            desc: root.lang-en
+                ? "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
+                : "将设置相关偏好恢复为默认值（含 SSH/SFTP 算法）。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除。";
+            show-divider: false;
+            PrimaryButton {
+                text: root.lang-en ? "Restore" : "恢复";
+                clicked => { root.request-restore-settings(); }
+            }
+        }
+    }
+}

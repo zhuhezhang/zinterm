@@ -1,0 +1,139 @@
+import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
+
+export component SidebarSettingsPage inherits Rectangle {
+    width: 100%;
+    height: self.preferred-height;
+    in-out property <bool> collapse-sftp-default;
+    in-out property <bool> confirm-delete-group-enabled: true;
+    in-out property <bool> confirm-delete-session-enabled: false;
+    in-out property <string> ifd-page;
+    in property <bool> lang-en;
+    in-out property <bool> quick-commands-as-sidebar;
+    callback set-collapse-sftp-default(bool);
+    callback set-confirm-delete-group-enabled(bool);
+    callback set-confirm-delete-session-enabled(bool);
+    callback set-quick-commands-as-sidebar(bool);
+    callback set-welcome-as-sidebar(bool);
+    callback set-welcome-single-click-connect(bool);
+    callback set-zen-mode(bool);
+    in-out property <bool> welcome-as-sidebar;
+    in-out property <bool> welcome-single-click-connect: true;
+    in-out property <bool> zen-mode: false;
+
+    if root.ifd-page == "sidebar": VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+        SectionHeader {
+            text: root.lang-en ? "SIDEBARS" : "侧栏";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Zen mode" : "专注模式";
+            desc: root.lang-en
+                ? "Hide side panels and collapsed edge strips so the terminal fills the window."
+                : "隐藏侧栏、底栏和收起图标，让终端填满窗口内容区。";
+            Switch {
+                on: root.zen-mode;
+                toggled(v) => { root.zen-mode = v; root.set-zen-mode(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Collapse the SFTP panel by default" : "默认收起 SFTP 侧栏";
+            desc: root.lang-en
+                ? "Takes effect on next launch; handy on low-spec jump hosts."
+                : "下次启动生效;低配跳板机上可减少常驻面板开销。";
+            Switch {
+                on: root.collapse-sftp-default;
+                toggled(v) => { root.collapse-sftp-default = v; root.set-collapse-sftp-default(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Quick commands as a sidebar" : "快捷命令作为侧栏";
+            desc: root.lang-en
+                ? "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
+                : "允许把快捷命令弹窗拖到窗口边缘；停靠后通过侧栏或收起图标使用。";
+            show-divider: false;
+            Switch {
+                on: root.quick-commands-as-sidebar;
+                toggled(v) => {
+                    root.quick-commands-as-sidebar = v;
+                    root.set-quick-commands-as-sidebar(v);
+                }
+            }
+        }
+    }
+
+    // --- Welcome page ------------------------------------------
+    if root.ifd-page == "welcome": VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+        SectionHeader {
+            text: root.lang-en ? "WELCOME PAGE" : "欢迎页";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Show the welcome page as a sidebar" : "欢迎页设为侧栏";
+            desc: root.lang-en
+                ? "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center."
+                : "把会话列表停靠在左侧,不再用「欢迎页」标签;打开的会话占据中央区域。";
+            Switch {
+                on: root.welcome-as-sidebar;
+                        // Applying this binding destroys/recreates the Welcome
+                        // subtree. Rust defers that work until this Switch
+                        // callback has returned, so do not mutate it here (#323).
+                        toggled(v) => { root.set-welcome-as-sidebar(v); }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Confirm before deleting a group" : "删除分组前确认";
+            desc: root.lang-en
+                ? "Ask before removing a group (also deletes nested groups and sessions inside)."
+                : "删除分组前弹出确认（会一并删除其下的子分组和会话）。";
+            Switch {
+                on: root.confirm-delete-group-enabled;
+                toggled(v) => {
+                    root.confirm-delete-group-enabled = v;
+                    root.set-confirm-delete-group-enabled(v);
+                }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Confirm before deleting a session" : "删除会话前确认";
+            desc: root.lang-en
+                ? "Ask before removing a saved session from the list."
+                : "从列表删除已保存的会话前弹出确认。";
+            Switch {
+                on: root.confirm-delete-session-enabled;
+                toggled(v) => {
+                    root.confirm-delete-session-enabled = v;
+                    root.set-confirm-delete-session-enabled(v);
+                }
+            }
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Single-click to connect" : "单击会话连接";
+            desc: root.lang-en
+                ? "Connect with one click. When off, double-click a session to connect."
+                : "开启后单击会话即可连接；关闭时需双击连接。";
+            show-divider: false;
+            Switch {
+                on: root.welcome-single-click-connect;
+                toggled(v) => {
+                    root.welcome-single-click-connect = v;
+                    root.set-welcome-single-click-connect(v);
+                }
+            }
+        }
+    }
+}

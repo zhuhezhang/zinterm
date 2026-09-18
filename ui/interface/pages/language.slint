@@ -1,0 +1,53 @@
+import { ComboBox } from "std-widgets.slint";
+import { SectionHeader, SettingRow } from "../widgets.slint";
+
+export component LanguageSettingsPage inherits Rectangle {
+    width: 100%;
+    height: self.preferred-height;
+    in property <bool> lang-en;
+    in-out property <string> language-pref: "auto";
+    callback set-language(string);
+
+    VerticalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 15px;
+        spacing: 0;
+        alignment: start;
+        SectionHeader {
+            text: root.lang-en ? "LANGUAGE" : "语言";
+        }
+
+        SettingRow {
+            label: root.lang-en ? "Interface language" : "界面语言";
+            desc: root.lang-en
+                ? "Auto follows the system language. Systems that are neither Chinese nor English use English."
+                : "自动跟随系统语言。系统既非中文也非英文时使用英文。";
+            show-divider: false;
+            ComboBox {
+                width: 150px;
+                height: 30px;
+                model: root.lang-en
+                    ? ["Auto", "Chinese", "English"]
+                    : ["自动", "中文", "英文"];
+                current-value: root.language-pref == "zh"
+                    ? (root.lang-en ? "Chinese" : "中文")
+                    : root.language-pref == "en"
+                    ? (root.lang-en ? "English" : "英文")
+                    : (root.lang-en ? "Auto" : "自动");
+                selected(v) => {
+                    if (v == "Chinese" || v == "中文") {
+                        root.language-pref = "zh";
+                        root.set-language("zh");
+                    } else if (v == "English" || v == "英文") {
+                        root.language-pref = "en";
+                        root.set-language("en");
+                    } else {
+                        root.language-pref = "auto";
+                        root.set-language("auto");
+                    }
+                }
+            }
+        }
+    }
+}

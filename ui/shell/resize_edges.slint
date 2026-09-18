@@ -1,0 +1,85 @@
+export component ResizeEdges inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    in-out property <bool> custom-titlebar;
+    callback win-resize(int);
+    in-out property <bool> window-maximized;
+
+    // Frameless resize edges (#119): thin hit-zones that start an OS-level
+    // resize via winit. Hidden when maximized.
+    if root.custom-titlebar && !root.window-maximized: Rectangle {
+        width: 100%;
+        height: 100%;
+        TouchArea {  // top
+            x: 8px;
+            y: 0;
+            width: parent.width - 16px;
+            height: 5px;
+            mouse-cursor: ns-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(0); } }
+        }
+
+        TouchArea {  // bottom
+            x: 8px;
+            y: parent.height - 5px;
+            width: parent.width - 16px;
+            height: 5px;
+            mouse-cursor: ns-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(1); } }
+        }
+
+        TouchArea {  // left
+            x: 0;
+            y: 8px;
+            width: 5px;
+            height: parent.height - 16px;
+            mouse-cursor: ew-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(3); } }
+        }
+
+        TouchArea {  // right
+            x: parent.width - 5px;
+            y: 8px;
+            width: 5px;
+            height: parent.height - 16px;
+            mouse-cursor: ew-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(2); } }
+        }
+
+        TouchArea {  // top-left
+            x: 0;
+            y: 0;
+            width: 8px;
+            height: 8px;
+            mouse-cursor: nwse-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(5); } }
+        }
+
+        TouchArea {  // top-right
+            x: parent.width - 8px;
+            y: 0;
+            width: 8px;
+            height: 8px;
+            mouse-cursor: nesw-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(4); } }
+        }
+
+        TouchArea {  // bottom-left
+            x: 0;
+            y: parent.height - 8px;
+            width: 8px;
+            height: 8px;
+            mouse-cursor: nesw-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(7); } }
+        }
+
+        TouchArea {  // bottom-right
+            x: parent.width - 8px;
+            y: parent.height - 8px;
+            width: 8px;
+            height: 8px;
+            mouse-cursor: nwse-resize;
+            pointer-event(e) => { if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.win-resize(6); } }
+        }
+    }
+}

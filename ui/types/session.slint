@@ -1,0 +1,18 @@
+export struct SessionInfo {
+    id: string,
+    name: string,
+    host: string,
+    port: int,
+    user: string,
+    auth: string,      // "password" | "key"
+    last-used: string, // ISO timestamp or "never"
+    group: string,        // folder/group path ("" = root / ungrouped; "a/b" = nested)
+    group-header: string, // set on the first row of each group → render a header
+    group-label: string,  // last path segment shown in the header
+    group-depth: int,     // nesting depth (0 = top-level)
+    collapsed: bool,      // group is collapsed → this session row is hidden
+    builtin: bool,        // legacy; always false (built-in system shells removed)
+    conn-kind: string,    // "" | "ssh" | "serial" | "telnet" | "local"
+    // Host / IP for ssh|telnet|local, serial port name for serial.
+    endpoint: string,
+}

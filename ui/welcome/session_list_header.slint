@@ -1,0 +1,144 @@
+import { Theme } from "../theme.slint";
+import { SessionColLayout } from "col_layout.slint";
+
+export component SessionListHeader inherits Rectangle {
+    in-out property <length> col-name;
+    in-out property <length> col-host;
+    callback persist-cols();
+
+    property <bool> resizing-name: false;
+    property <bool> resizing-host: false;
+
+    // Match SessionRow / group-header: padding 4+4 + icon-w.
+    height: 4px + SessionColLayout.icon-w + 4px;
+    border-radius: Theme.radius-sm;
+    background: Theme.bg-root;
+    clip: true;
+
+    HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        padding-left: SessionColLayout.pad-left;
+        padding-right: SessionColLayout.pad-right;
+        spacing: 0;
+
+        Rectangle {
+            width: SessionColLayout.icon-w;
+        }
+
+        Rectangle {
+            width: SessionColLayout.icon-gap;
+        }
+
+        Rectangle {
+            width: root.col-name;
+            clip: true;
+            Text {
+                text: @tr("Name");
+                color: Theme.text-muted;
+                font-size: Theme.fs-md;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                width: parent.width;
+                height: 100%;
+                overflow: elide;
+            }
+        }
+
+        Rectangle {
+            width: SessionColLayout.split-w;
+            background: name-split.pressed || root.resizing-name ? Theme.accent : Theme.border-subtle;
+            name-split := TouchArea {
+                x: -3px;
+                width: parent.width + 6px;
+                mouse-cursor: ew-resize;
+                pointer-event(ev) => {
+                    if (ev.kind == PointerEventKind.down) {
+                        root.resizing-name = true;
+                    } else if (ev.kind == PointerEventKind.up) {
+                        root.resizing-name = false;
+                        root.persist-cols();
+                    }
+                }
+                moved => {
+                    if (root.resizing-name) {
+                        root.col-name = clamp(
+                            self.absolute-position.x + self.mouse-x - root.absolute-position.x
+                            - SessionColLayout.pad-left - SessionColLayout.icon-w
+                            - SessionColLayout.icon-gap,
+                            SessionColLayout.col-min,
+                            root.width - SessionColLayout.pad-left - SessionColLayout.pad-right
+                            - SessionColLayout.icon-w - SessionColLayout.icon-gap
+                            - 2 * SessionColLayout.split-w
+                            - root.col-host - SessionColLayout.col-min);
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            width: root.col-host;
+            clip: true;
+            Text {
+                text: " " + @tr("Host / IP / Serial Port");
+                color: Theme.text-muted;
+                font-size: Theme.fs-md;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                width: parent.width;
+                height: 100%;
+                overflow: elide;
+            }
+        }
+
+        Rectangle {
+            width: SessionColLayout.split-w;
+            background: host-split.pressed || root.resizing-host ? Theme.accent : Theme.border-subtle;
+            host-split := TouchArea {
+                x: -3px;
+                width: parent.width + 6px;
+                mouse-cursor: ew-resize;
+                pointer-event(ev) => {
+                    if (ev.kind == PointerEventKind.down) {
+                        root.resizing-host = true;
+                    } else if (ev.kind == PointerEventKind.up) {
+                        root.resizing-host = false;
+                        root.persist-cols();
+                    }
+                }
+                moved => {
+                    if (root.resizing-host) {
+                        root.col-host = clamp(
+                            self.absolute-position.x + self.mouse-x - root.absolute-position.x
+                            - SessionColLayout.pad-left - SessionColLayout.icon-w
+                            - SessionColLayout.icon-gap
+                            - root.col-name - SessionColLayout.split-w,
+                            SessionColLayout.col-min,
+                            root.width - SessionColLayout.pad-left - SessionColLayout.pad-right
+                            - SessionColLayout.icon-w - SessionColLayout.icon-gap
+                            - 2 * SessionColLayout.split-w
+                            - root.col-name - SessionColLayout.col-min);
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+            Text {
+                text: " " + @tr("User");
+                color: Theme.text-muted;
+                font-size: Theme.fs-md;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                width: parent.width;
+                height: 100%;
+                overflow: elide;
+            }
+        }
+    }
+}
