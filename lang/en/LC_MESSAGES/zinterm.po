@@ -497,3 +497,570 @@ msgstr "Replace all"
 
 msgid "Unsaved"
 msgstr "Unsaved"
+
+msgid "Change permissions"
+msgstr "Change permissions"
+
+msgid "Owner"
+msgstr "Owner"
+
+msgid "Grp"
+msgstr "Grp"
+
+msgid "Other"
+msgstr "Other"
+
+msgid "Read"
+msgstr "Read"
+
+msgid "Write"
+msgstr "Write"
+
+msgid "Close ZinTerm?"
+msgstr "Close ZinTerm?"
+
+msgid "There are active sessions. Closing will disconnect them."
+msgstr "There are active sessions. Closing will disconnect them."
+
+msgid "Delete the checked items? This cannot be undone."
+msgstr "Delete the checked items? This cannot be undone."
+
+msgid "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."
+msgstr "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."
+
+msgid "Delete this session? This cannot be undone."
+msgstr "Delete this session? This cannot be undone."
+
+msgid "Confirm multi-line paste"
+msgstr "Confirm multi-line paste"
+
+msgid "The clipboard contains line breaks and may execute multiple commands. Review it before pasting."
+msgstr "The clipboard contains line breaks and may execute multiple commands. Review it before pasting."
+
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+msgid "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
+msgstr "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
+
+msgid "Clear every saved password, private-keys? This cannot be undone."
+msgstr "Clear every saved password, private-keys? This cannot be undone."
+
+msgid "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."
+msgstr "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."
+
+msgid "Delete every saved group and session? This cannot be undone. Open tabs stay open."
+msgstr "Delete every saved group and session? This cannot be undone. Open tabs stay open."
+
+msgid "Also clear saved passwords / private keys"
+msgstr "Also clear saved passwords / private keys"
+
+msgid "Restore"
+msgstr "Restore"
+
+msgid "+ New group"
+msgstr "+ New group"
+
+msgid "Add"
+msgstr "Add"
+
+msgid "Keyboard shortcuts"
+msgstr "Keyboard shortcuts"
+
+msgid "Tabs"
+msgstr "Tabs"
+
+msgid "Next tab"
+msgstr "Next tab"
+
+msgid "Previous tab"
+msgstr "Previous tab"
+
+msgid "Session search box"
+msgstr "Session search box"
+
+msgid "Focus session search box"
+msgstr "Focus session search box"
+
+msgid "Terminal"
+msgstr "Terminal"
+
+msgid "Copy selection"
+msgstr "Copy selection"
+
+msgid "Jump to command history search"
+msgstr "Jump to command history search"
+
+msgid "Open find bar"
+msgstr "Open find bar"
+
+msgid "Drag"
+msgstr "Drag"
+
+msgid "Select text"
+msgstr "Select text"
+
+msgid "Wheel / Scrollbar"
+msgstr "Wheel / Scrollbar"
+
+msgid "Scroll history"
+msgstr "Scroll history"
+
+msgid "Find in terminal input"
+msgstr "Find in terminal input"
+
+msgid "Close find bar"
+msgstr "Close find bar"
+
+msgid "Command box"
+msgstr "Command box"
+
+msgid "Search command history"
+msgstr "Search command history"
+
+msgid "Move to start of line"
+msgstr "Move to start of line"
+
+msgid "Move to end of line"
+msgstr "Move to end of line"
+
+msgid "Delete to end of line"
+msgstr "Delete to end of line"
+
+msgid "Delete to start of line"
+msgstr "Delete to start of line"
+
+msgid "Close history / focus terminal"
+msgstr "Close history / focus terminal"
+
+msgid "Rule name"
+msgstr "Rule name"
+
+msgid "Keyword or regular expression"
+msgstr "Keyword or regular expression"
+
+msgid "Font"
+msgstr "Font"
+
+msgid "Input"
+msgstr "Input"
+
+msgid "Rendering"
+msgstr "Rendering"
+
+msgid "Output"
+msgstr "Output"
+
+msgid "Wallpaper"
+msgstr "Wallpaper"
+
+msgid "Sidebars"
+msgstr "Sidebars"
+
+msgid "Welcome page"
+msgstr "Welcome page"
+
+msgid "Data"
+msgstr "Data"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Update check"
+msgstr "Update check"
+
+msgid "DATA"
+msgstr "DATA"
+
+msgid "Save passwords / private-keys"
+msgstr "Save passwords / private-keys"
+
+msgid "Unavailable: OS keyring cannot store the vault master key."
+msgstr "Unavailable: OS keyring cannot store the vault master key."
+
+msgid "When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved."
+msgstr "When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved."
+
+msgid "Clear saved passwords / private-keys"
+msgstr "Clear saved passwords / private-keys"
+
+msgid "Remove every stored password, private-keys from saved sessions."
+msgstr "Remove every stored password, private-keys from saved sessions."
+
+msgid "Clear SSH known hosts"
+msgstr "Clear SSH known hosts"
+
+msgid "Forget remembered server host keys. The next connection to each host will ask you to trust the key again."
+msgstr "Forget remembered server host keys. The next connection to each host will ask you to trust the key again."
+
+msgid "Clear all groups and sessions"
+msgstr "Clear all groups and sessions"
+
+msgid "Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys."
+msgstr "Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys."
+
+msgid "Restore default settings"
+msgstr "Restore default settings"
+
+msgid "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
+msgstr "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
+
+msgid "FONT"
+msgstr "FONT"
+
+msgid "Terminal font"
+msgstr "Terminal font"
+
+msgid "Terminal font size"
+msgstr "Terminal font size"
+
+msgid "Terminal line spacing"
+msgstr "Terminal line spacing"
+
+msgid "Adjust terminal row height from compact to loose."
+msgstr "Adjust terminal row height from compact to loose."
+
+msgid "Installed fonts"
+msgstr "Installed fonts"
+
+msgid "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list."
+msgstr "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list."
+
+msgid "Bold terminal text"
+msgstr "Bold terminal text"
+
+msgid "Makes regular terminal output use a bold face."
+msgstr "Makes regular terminal output use a bold face."
+
+msgid "Cursor shape"
+msgstr "Cursor shape"
+
+msgid "Choose the terminal insertion cursor shape."
+msgstr "Choose the terminal insertion cursor shape."
+
+msgid "Block"
+msgstr "Block"
+
+msgid "Bar"
+msgstr "Bar"
+
+msgid "Line"
+msgstr "Line"
+
+msgid "Cursor color"
+msgstr "Cursor color"
+
+msgid "Enter a hexadecimal RGB color."
+msgstr "Enter a hexadecimal RGB color."
+
+msgid "UI scale"
+msgstr "UI scale"
+
+msgid "Zooms the whole interface (not this panel)."
+msgstr "Zooms the whole interface (not this panel)."
+
+msgid "Settings font size"
+msgstr "Settings font size"
+
+msgid "Enlarges this settings panel (font + window)."
+msgstr "Enlarges this settings panel (font + window)."
+
+msgid "PREVIEW"
+msgstr "PREVIEW"
+
+msgid "INPUT"
+msgstr "INPUT"
+
+msgid "Confirm multiline paste"
+msgstr "Confirm multiline paste"
+
+msgid "Show a review dialog before sending multiline content."
+msgstr "Show a review dialog before sending multiline content."
+
+msgid "Select to copy / right-click paste"
+msgstr "Select to copy / right-click paste"
+
+msgid "Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead."
+msgstr "Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead."
+
+msgid "Additional paste shortcuts"
+msgstr "Additional paste shortcuts"
+
+msgid "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste."
+msgstr "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste."
+
+msgid "LANGUAGE"
+msgstr "LANGUAGE"
+
+msgid "Interface language"
+msgstr "Interface language"
+
+msgid "Auto follows the system language. Systems that are neither Chinese nor English use English."
+msgstr "Auto follows the system language. Systems that are neither Chinese nor English use English."
+
+msgid "Chinese"
+msgstr "Chinese"
+
+msgid "English"
+msgstr "English"
+
+msgid "OUTPUT HIGHLIGHTING"
+msgstr "OUTPUT HIGHLIGHTING"
+
+msgid "Highlight plain terminal output"
+msgstr "Highlight plain terminal output"
+
+msgid "Adds client-side colours only when the program did not provide ANSI styling."
+msgstr "Adds client-side colours only when the program did not provide ANSI styling."
+
+msgid "Built-in rule set"
+msgstr "Built-in rule set"
+
+msgid "Log levels is conservative; DevOps also recognises deployment and health states."
+msgstr "Log levels is conservative; DevOps also recognises deployment and health states."
+
+msgid "Log levels"
+msgstr "Log levels"
+
+msgid "Format and colour JSON lines"
+msgstr "Format and colour JSON lines"
+
+msgid "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged."
+msgstr "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged."
+
+msgid "CUSTOM RULES"
+msgstr "CUSTOM RULES"
+
+msgid "Custom rules run before the built-in preset and never overwrite ANSI colours."
+msgstr "Custom rules run before the built-in preset and never overwrite ANSI colours."
+
+msgid "Timeout errors"
+msgstr "Timeout errors"
+
+msgid "Regex"
+msgstr "Regex"
+
+msgid "Case sensitive"
+msgstr "Case sensitive"
+
+msgid "Whole line"
+msgstr "Whole line"
+
+msgid "Add rule"
+msgstr "Add rule"
+
+msgid "No custom rules yet."
+msgstr "No custom rules yet."
+
+msgid "Keyword"
+msgstr "Keyword"
+
+msgid " · whole line"
+msgstr " · whole line"
+
+msgid "RENDERING"
+msgstr "RENDERING"
+
+msgid "Renderer"
+msgstr "Renderer"
+
+msgid "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
+msgstr "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
+
+msgid "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
+msgstr "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
+
+msgid "Automatic"
+msgstr "Automatic"
+
+msgid "Software"
+msgstr "Software"
+
+msgid "Restart ZinTerm to apply the renderer change."
+msgstr "Restart ZinTerm to apply the renderer change."
+
+msgid "SIDEBARS"
+msgstr "SIDEBARS"
+
+msgid "Zen mode"
+msgstr "Zen mode"
+
+msgid "Hide side panels and collapsed edge strips so the terminal fills the window."
+msgstr "Hide side panels and collapsed edge strips so the terminal fills the window."
+
+msgid "Collapse the SFTP panel by default"
+msgstr "Collapse the SFTP panel by default"
+
+msgid "Takes effect on next launch; handy on low-spec jump hosts."
+msgstr "Takes effect on next launch; handy on low-spec jump hosts."
+
+msgid "Quick commands as a sidebar"
+msgstr "Quick commands as a sidebar"
+
+msgid "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
+msgstr "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
+
+msgid "WELCOME PAGE"
+msgstr "WELCOME PAGE"
+
+msgid "Show the welcome page as a sidebar"
+msgstr "Show the welcome page as a sidebar"
+
+msgid "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center."
+msgstr "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center."
+
+msgid "Confirm before deleting a group"
+msgstr "Confirm before deleting a group"
+
+msgid "Ask before removing a group (also deletes nested groups and sessions inside)."
+msgstr "Ask before removing a group (also deletes nested groups and sessions inside)."
+
+msgid "Confirm before deleting a session"
+msgstr "Confirm before deleting a session"
+
+msgid "Ask before removing a saved session from the list."
+msgstr "Ask before removing a saved session from the list."
+
+msgid "Single-click to connect"
+msgstr "Single-click to connect"
+
+msgid "Connect with one click. When off, double-click a session to connect."
+msgstr "Connect with one click. When off, double-click a session to connect."
+
+msgid "Keepalive interval"
+msgstr "Keepalive interval"
+
+msgid "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
+msgstr "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
+
+msgid "SSH ALGORITHMS"
+msgstr "SSH ALGORITHMS"
+
+msgid "Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections."
+msgstr "Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections."
+
+msgid "Category"
+msgstr "Category"
+
+msgid "Key exchange, host key, cipher, MAC, or compression."
+msgstr "Key exchange, host key, cipher, MAC, or compression."
+
+msgid "Reset"
+msgstr "Reset"
+
+msgid "Restore this category or every algorithm list to the built-in defaults."
+msgstr "Restore this category or every algorithm list to the built-in defaults."
+
+msgid "This category"
+msgstr "This category"
+
+msgid "All defaults"
+msgstr "All defaults"
+
+msgid "weak"
+msgstr "weak"
+
+msgid "SFTP follows terminal cd"
+msgstr "SFTP follows terminal cd"
+
+msgid "A cd in the terminal switches the SFTP panel to the same directory."
+msgstr "A cd in the terminal switches the SFTP panel to the same directory."
+
+msgid "Always ask where to save"
+msgstr "Always ask where to save"
+
+msgid "Every SFTP download prompts for a location instead of using the preset folder."
+msgstr "Every SFTP download prompts for a location instead of using the preset folder."
+
+msgid "UPDATE CHECK"
+msgstr "UPDATE CHECK"
+
+msgid "Check for new versions on startup"
+msgstr "Check for new versions on startup"
+
+msgid "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
+msgstr "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
+
+msgid "WALLPAPER"
+msgstr "WALLPAPER"
+
+msgid "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
+msgstr "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
+
+msgid "None"
+msgstr "None"
+
+msgid "Meat Light"
+msgstr "Meat Light"
+
+msgid "Meat Dark"
+msgstr "Meat Dark"
+
+msgid "Fantasy 3048"
+msgstr "Fantasy 3048"
+
+msgid "CUSTOM"
+msgstr "CUSTOM"
+
+msgid "Choose file…"
+msgstr "Choose file…"
+
+msgid "OVERLAY"
+msgstr "OVERLAY"
+
+msgid "Wallpaper transparency"
+msgstr "Wallpaper transparency"
+
+msgid "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)."
+msgstr "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)."
+
+msgid "Pick a session on the left to begin"
+msgstr "Pick a session on the left to begin"
+
+msgid "the selected items"
+msgstr "the selected items"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Save and close"
+msgstr "Save and close"
+
+msgid "Interface"
+msgstr "Interface"
+
+msgid "Export sessions"
+msgstr "Export sessions"
+
+msgid "Import sessions"
+msgstr "Import sessions"
+
+msgid "Shortcuts"
+msgstr "Shortcuts"
+
+msgid "Toggle theme"
+msgstr "Toggle theme"
+
+msgid "CPU is the default renderer on macOS."
+msgstr "CPU is the default renderer on macOS."
+
+msgid "Software remains the compatibility default for existing installations."
+msgstr "Software remains the compatibility default for existing installations."
+
+msgid "Automatic remains the default renderer on Linux."
+msgstr "Automatic remains the default renderer on Linux."
+
+msgid "Key exchange"
+msgstr "Key exchange"
+
+msgid "Host key"
+msgstr "Host key"
+
+msgid "Cipher"
+msgstr "Cipher"
+
+msgid "MAC"
+msgstr "MAC"
+
+msgid "Compression"
+msgstr "Compression"

@@ -45,7 +45,6 @@ export component ShortcutsDialog inherits Rectangle {
     width: 100%;
     height: 100%;
     in-out property <bool> is-mac <=> Theme.is-mac;
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103);
 
     // --- Keyboard shortcuts dialog (#103) ---------------------------------
@@ -90,7 +89,7 @@ export component ShortcutsDialog inherits Rectangle {
 
                 HorizontalLayout {
                     Text {
-                        text: root.lang-en ? "Keyboard shortcuts" : "快捷键";
+                        text: @tr("Keyboard shortcuts");
                         color: Theme.text-primary;
                         font-size: Theme.fs-lg;
                         font-weight: 700;
@@ -126,35 +125,35 @@ export component ShortcutsDialog inherits Rectangle {
                         spacing: 5px;
 
                         Text {
-                            text: root.lang-en ? "Tabs" : "标签页";
+                            text: @tr("Tabs");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌃Tab" : "Ctrl+Tab";
-                            desc: root.lang-en ? "Next tab" : "下一个标签页";
+                            desc: @tr("Next tab");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌃⇧Tab" : "Ctrl+Shift+Tab";
-                            desc: root.lang-en ? "Previous tab" : "上一个标签页";
+                            desc: @tr("Previous tab");
                         }
 
                         Text {
-                            text: root.lang-en ? "Session search box" : "会话搜索框";
+                            text: @tr("Session search box");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘F" : "Ctrl+F";
-                            desc: root.lang-en ? "Focus session search box" : "聚焦会话搜索框";
+                            desc: @tr("Focus session search box");
                         }
 
                         ShortcutRow {
                             keys: "Enter";
-                            desc: root.lang-en ? "New session" : "新建会话";
+                            desc: @tr("New session");
                         }
 
                         Rectangle {
@@ -162,39 +161,39 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Text {
-                            text: root.lang-en ? "Terminal" : "终端";
+                            text: @tr("Terminal");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘C" : "Ctrl+Shift+C";
-                            desc: root.lang-en ? "Copy selection" : "复制选中内容";
+                            desc: @tr("Copy selection");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘V" : "Ctrl+V";
-                            desc: root.lang-en ? "Paste" : "粘贴";
+                            desc: @tr("Paste");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘⇧R" : "Ctrl+Shift+R";
-                            desc: root.lang-en ? "Jump to command history search" : "跳到命令历史搜索";
+                            desc: @tr("Jump to command history search");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
-                            desc: root.lang-en ? "Open find bar" : "打开查找框";
+                            desc: @tr("Open find bar");
                         }
 
                         ShortcutRow {
-                            keys: root.lang-en ? "Drag" : "鼠标拖动";
-                            desc: root.lang-en ? "Select text" : "选择文本";
+                            keys: @tr("Drag");
+                            desc: @tr("Select text");
                         }
 
                         ShortcutRow {
-                            keys: root.lang-en ? "Wheel / Scrollbar" : "滚轮 / 滚动条";
-                            desc: root.lang-en ? "Scroll history" : "滚动历史";
+                            keys: @tr("Wheel / Scrollbar");
+                            desc: @tr("Scroll history");
                         }
 
                         Rectangle {
@@ -202,24 +201,24 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Text {
-                            text: root.lang-en ? "Find in terminal input" : "终端内容查找输入框";
+                            text: @tr("Find in terminal input");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                         }
 
                         ShortcutRow {
                             keys: "Enter";
-                            desc: root.lang-en ? "Next match" : "下一个匹配";
+                            desc: @tr("Next match");
                         }
 
                         ShortcutRow {
                             keys: "Shift+Enter";
-                            desc: root.lang-en ? "Previous match" : "上一个匹配";
+                            desc: @tr("Previous match");
                         }
 
                         ShortcutRow {
                             keys: "Esc";
-                            desc: root.lang-en ? "Close find bar" : "关闭查找框";
+                            desc: @tr("Close find bar");
                         }
 
                         Rectangle {
@@ -227,39 +226,39 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Text {
-                            text: root.lang-en ? "Command box" : "命令输入框";
+                            text: @tr("Command box");
                             color: Theme.text-muted;
                             font-size: Theme.fs-xs;
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘R" : "Ctrl+R";
-                            desc: root.lang-en ? "Search history" : "搜索命令历史";
+                            desc: @tr("Search command history");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘S" : "Ctrl+S";
-                            desc: root.lang-en ? "Move to start of line" : "移到行首";
+                            desc: @tr("Move to start of line");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘E" : "Ctrl+E";
-                            desc: root.lang-en ? "Move to end of line" : "移到行尾";
+                            desc: @tr("Move to end of line");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘K" : "Ctrl+K";
-                            desc: root.lang-en ? "Delete to end of line" : "删除到行尾";
+                            desc: @tr("Delete to end of line");
                         }
 
                         ShortcutRow {
                             keys: root.is-mac ? "⌘U" : "Ctrl+U";
-                            desc: root.lang-en ? "Delete to start of line" : "删除到行首";
+                            desc: @tr("Delete to start of line");
                         }
 
                         ShortcutRow {
                             keys: "Esc";
-                            desc: root.lang-en ? "Close history / focus terminal" : "关闭历史（快捷）命令 / 聚焦终端";
+                            desc: @tr("Close history / focus terminal");
                         }
 
                         Rectangle {

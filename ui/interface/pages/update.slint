@@ -3,7 +3,6 @@ import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 export component UpdateSettingsPage inherits Rectangle {
     width: 100%;
     height: self.preferred-height;
-    in property <bool> lang-en;
     callback set-update-check-enabled(bool);
     in-out property <bool> update-check-enabled: false;
 
@@ -14,14 +13,12 @@ export component UpdateSettingsPage inherits Rectangle {
         spacing: 0;
         alignment: start;
         SectionHeader {
-            text: root.lang-en ? "UPDATE CHECK" : "新版本提示";
+            text: @tr("UPDATE CHECK");
         }
 
         SettingRow {
-            label: root.lang-en ? "Check for new versions on startup" : "启动时检查新版本";
-            desc: root.lang-en
-                ? "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
-                : "关闭后:不再向 GitHub 查询新版本,也不会弹出更新提示(下次启动生效)。";
+            label: @tr("Check for new versions on startup");
+            desc: @tr("Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch).");
             show-divider: false;
             Switch {
                 on: root.update-check-enabled;

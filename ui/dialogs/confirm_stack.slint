@@ -96,7 +96,6 @@ export component ConfirmStack inherits Rectangle {
     in-out property <bool> interface-open: false;  // Interface settings overlay;
     in property <bool> is-windows: false;
     in-out property <bool> json-format-output: true;
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     in-out property <string> language-pref: "auto";
     callback move-ssh-algorithm(string, int);
     in-out property <bool> output-highlight-enabled: true;
@@ -239,8 +238,7 @@ export component ConfirmStack inherits Rectangle {
         is-open <=> root.confirm-delete-open;
         title: @tr("Confirm delete");
         message: root.confirm-delete-batch
-            ? (root.lang-en ? "Delete the checked items? This cannot be undone."
-            : "删除选中的多个项目?此操作不可撤销。")
+            ? (@tr("Delete the checked items? This cannot be undone."))
             : @tr("Delete this item? This cannot be undone.");
         detail: root.confirm-delete-path;
         confirm-label: @tr("Delete");
@@ -274,12 +272,8 @@ export component ConfirmStack inherits Rectangle {
         covered: root.confirm-close-open;
         title: @tr("Confirm delete");
         message: root.welcome-delete-kind == "group"
-            ? (root.lang-en
-            ? "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."
-            : "确定删除该分组？其下的子分组和会话也会一并删除，此操作不可撤销。")
-            : (root.lang-en
-            ? "Delete this session? This cannot be undone."
-            : "确定删除该会话？此操作不可撤销。");
+            ? (@tr("Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."))
+            : (@tr("Delete this session? This cannot be undone."));
         detail: root.welcome-delete-detail;
         confirm-label: @tr("Delete");
         confirm => {
@@ -302,13 +296,11 @@ export component ConfirmStack inherits Rectangle {
         is-open <=> root.paste-confirm-open;
         covered: root.confirm-close-open;
         dismiss-on-backdrop: false;
-        title: root.lang-en ? "Confirm multi-line paste" : "确认多行粘贴";
-        message: root.lang-en
-            ? "The clipboard contains line breaks and may execute multiple commands. Review it before pasting."
-            : "剪贴板内容包含换行，粘贴后可能连续执行多个命令，请确认内容后再继续。";
+        title: @tr("Confirm multi-line paste");
+        message: @tr("The clipboard contains line breaks and may execute multiple commands. Review it before pasting.");
         detail: root.paste-confirm-preview;
         large-detail: root.paste-confirm-large;
-        confirm-label: root.lang-en ? "Paste" : "粘贴";
+        confirm-label: @tr("Paste");
         confirm => {
             root.paste-confirmed(root.paste-confirm-tab);
             root.paste-confirm-open = false;
@@ -383,7 +375,6 @@ export component ConfirmStack inherits Rectangle {
         interface-open <=> root.interface-open;
         is-windows: root.is-windows;
         json-format-output <=> root.json-format-output;
-        lang-en <=> root.lang-en;
         language-pref <=> root.language-pref;
         move-ssh-algorithm(a0, a1) => { root.move-ssh-algorithm(a0, a1); }
         output-highlight-enabled <=> root.output-highlight-enabled;
@@ -462,32 +453,22 @@ export component ConfirmStack inherits Rectangle {
         is-open <=> root.data-clear-open;
         covered: root.confirm-close-open;
         title: root.data-clear-kind == "restore-settings"
-            ? (root.lang-en ? "Restore defaults" : "恢复默认设置")
+            ? (@tr("Restore defaults"))
             : @tr("Confirm delete");
         message: root.data-clear-kind == "known-hosts"
-            ? (root.lang-en
-            ? "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
-            : "确定清除所有已记住的 SSH 主机公钥？下次连接各主机时会再次要求确认信任。")
+            ? (@tr("Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."))
             : root.data-clear-kind == "passwords"
-            ? (root.lang-en
-            ? "Clear every saved password, private-keys? This cannot be undone."
-            : "确定清除所有已保存的密码、私钥？此操作不可撤销。")
+            ? (@tr("Clear every saved password, private-keys? This cannot be undone."))
             : root.data-clear-kind == "restore-settings"
-            ? (root.lang-en
-            ? "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."
-            : "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码、私钥和 SSH 已知主机公钥会保留。")
-            : (root.lang-en
-            ? "Delete every saved group and session? This cannot be undone. Open tabs stay open."
-            : "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。");
+            ? (@tr("Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."))
+            : (@tr("Delete every saved group and session? This cannot be undone. Open tabs stay open."));
         option-label: root.data-clear-kind == "sessions"
-            ? (root.lang-en
-            ? "Also clear saved passwords / private keys"
-            : "同时清除已保存的密码/私钥")
+            ? (@tr("Also clear saved passwords / private keys"))
             : "";
         option-checked <=> root.data-clear-also-passwords;
         confirm-label: root.data-clear-kind == "restore-settings"
-            ? (root.lang-en ? "Restore" : "恢复")
-            : (root.lang-en ? "Clear" : "清除");
+            ? (@tr("Restore"))
+            : (@tr("Clear"));
         confirm => {
             if (root.data-clear-kind == "known-hosts") {
                 root.clear-known-hosts();

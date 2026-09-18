@@ -36,7 +36,6 @@ export component InterfaceOverlay inherits Rectangle {
     in-out property <bool> interface-open: false;  // Interface settings overlay;
     in-out property <bool> is-windows: false;
     in-out property <bool> json-format-output: true;
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     in-out property <string> language-pref: "auto";
     callback move-ssh-algorithm(string, int);
     in-out property <bool> output-highlight-enabled: true;
@@ -190,7 +189,7 @@ export component InterfaceOverlay inherits Rectangle {
                         padding-left: 16px;
                         padding-right: 10px;
                         Text {
-                            text: root.lang-en ? "Settings" : "设置";
+                            text: @tr("Settings");
                             color: Theme.text-primary;
                             font-size: 14px;
                             font-weight: 700;
@@ -234,7 +233,6 @@ export component InterfaceOverlay inherits Rectangle {
                 InterfacePanel {
                     vertical-stretch: 1;
                     ifd-start-page: "font";
-                    lang-en: root.lang-en;
                     language-pref <=> root.language-pref;
                     is-windows: root.is-windows;
                     renderer-mode <=> root.renderer-mode;
@@ -368,18 +366,18 @@ export component InterfaceOverlay inherits Rectangle {
                     spacing: 8px;
                     Rectangle { horizontal-stretch: 1; }
                     GhostButton {
-                        text: root.lang-en ? "Cancel" : "取消";
+                        text: @tr("Cancel");
                         clicked => {
                             root.cancel-settings();
                             root.interface-open = false;
                         }
                     }
                     GhostButton {
-                        text: root.lang-en ? "Save" : "保存";
+                        text: @tr("Save");
                         clicked => { root.save-settings(); }
                     }
                     PrimaryButton {
-                        text: root.lang-en ? "Save and close" : "保存并关闭";
+                        text: @tr("Save and close");
                         clicked => {
                             root.save-settings();
                             root.interface-open = false;

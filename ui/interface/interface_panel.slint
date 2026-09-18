@@ -14,7 +14,6 @@ import { LanguageSettingsPage } from "pages/language.slint";
 import { UpdateSettingsPage } from "pages/update.slint";
 
 export component InterfacePanel inherits Rectangle {
-    in property <bool> lang-en;
     // Language preference: "auto" | "zh" | "en".
     in-out property <string> language-pref: "auto";
     in property <bool> is-windows;
@@ -74,9 +73,8 @@ export component InterfacePanel inherits Rectangle {
         && root.current-wallpaper != "builtin:miku" && root.current-wallpaper != "builtin:ms";
 
     // Shared left-column width for the custom-rule form (locale-aware).
-    property <string> rule-name-label: root.lang-en ? "Rule name" : "规则名称";
-    property <string> rule-pattern-label: root.lang-en
-        ? "Keyword or regular expression" : "关键词或正则表达式";
+    property <string> rule-name-label: @tr("Rule name");
+    property <string> rule-pattern-label: @tr("Keyword or regular expression");
     property <length> rule-form-label-width:
         max(m-rule-name.preferred-width, m-rule-pattern.preferred-width);
 
@@ -219,35 +217,35 @@ export component InterfacePanel inherits Rectangle {
                     alignment: start;
                     NavItem {
                         icon: "\u{E167}";
-                        label: root.lang-en ? "Font" : "字体";
+                        label: @tr("Font");
                         active: root.ifd-page == "font";
                         clicked => { root.ifd-page = "font"; }
                     }
 
                     NavItem {
                         icon: "\u{E312}";
-                        label: root.lang-en ? "Input" : "输入";
+                        label: @tr("Input");
                         active: root.ifd-page == "input";
                         clicked => { root.ifd-page = "input"; }
                     }
 
                     NavItem {
                         icon: "\u{E1B1}";
-                        label: root.lang-en ? "Rendering" : "渲染";
+                        label: @tr("Rendering");
                         active: root.ifd-page == "renderer";
                         clicked => { root.ifd-page = "renderer"; }
                     }
 
                     NavItem {
                         icon: "\u{E8D4}";
-                        label: root.lang-en ? "Output" : "输出高亮";
+                        label: @tr("Output");
                         active: root.ifd-page == "output";
                         clicked => { root.ifd-page = "output"; }
                     }
 
                     NavItem {
                         icon: "\u{E1BC}";
-                        label: root.lang-en ? "Wallpaper" : "壁纸";
+                        label: @tr("Wallpaper");
                         active: root.ifd-page == "wallpaper";
                         clicked => { root.ifd-page = "wallpaper"; }
                     }
@@ -261,35 +259,35 @@ export component InterfacePanel inherits Rectangle {
 
                     NavItem {
                         icon: "\u{E314}";
-                        label: root.lang-en ? "Sidebars" : "侧栏";
+                        label: @tr("Sidebars");
                         active: root.ifd-page == "sidebar";
                         clicked => { root.ifd-page = "sidebar"; }
                     }
 
                     NavItem {
                         icon: "\u{E88A}";
-                        label: root.lang-en ? "Welcome page" : "欢迎页";
+                        label: @tr("Welcome page");
                         active: root.ifd-page == "welcome";
                         clicked => { root.ifd-page = "welcome"; }
                     }
 
                     NavItem {
                         icon: "\u{E1DB}";
-                        label: root.lang-en ? "Data" : "数据";
+                        label: @tr("Data");
                         active: root.ifd-page == "data";
                         clicked => { root.ifd-page = "data"; }
                     }
 
                     NavItem {
                         icon: "\u{E894}";
-                        label: root.lang-en ? "Language" : "语言";
+                        label: @tr("Language");
                         active: root.ifd-page == "language";
                         clicked => { root.ifd-page = "language"; }
                     }
 
                     NavItem {
                         icon: "\u{E923}";
-                        label: root.lang-en ? "Update check" : "新版本提示";
+                        label: @tr("Update check");
                         active: root.ifd-page == "update";
                         clicked => { root.ifd-page = "update"; }
                     }
@@ -316,7 +314,6 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Font page ---------------------------------------------
                     if root.ifd-page == "font": FontSettingsPage {
-                        lang-en: root.lang-en;
                         term-cursor-color: root.term-cursor-color;
                         term-cursor-color-hex <=> root.term-cursor-color-hex;
                         term-cursor-style <=> root.term-cursor-style;
@@ -337,7 +334,6 @@ export component InterfacePanel inherits Rectangle {
                     }
                     if root.ifd-page == "input": InputSettingsPage {
                         extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
-                        lang-en: root.lang-en;
                         paste-confirm-enabled <=> root.paste-confirm-enabled;
                         select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
                         set-extra-paste-shortcuts-enabled(a0) => { root.set-extra-paste-shortcuts-enabled(a0); }
@@ -346,7 +342,6 @@ export component InterfacePanel inherits Rectangle {
                     }
                     if root.ifd-page == "renderer": RendererSettingsPage {
                         is-windows: root.is-windows;
-                        lang-en: root.lang-en;
                         renderer-mode <=> root.renderer-mode;
                         renderer-restart-required <=> root.renderer-restart-required;
                         set-renderer-mode(a0) => { root.set-renderer-mode(a0); }
@@ -358,7 +353,6 @@ export component InterfacePanel inherits Rectangle {
                         highlight-draft-color-hex <=> root.highlight-draft-color-hex;
                         highlight-draft-swatch <=> root.highlight-draft-swatch;
                         json-format-output <=> root.json-format-output;
-                        lang-en: root.lang-en;
                         new-rule-case-sensitive <=> root.new-rule-case-sensitive;
                         new-rule-name <=> root.new-rule-name;
                         new-rule-pattern <=> root.new-rule-pattern;
@@ -377,7 +371,6 @@ export component InterfacePanel inherits Rectangle {
                     if root.ifd-page == "wallpaper": WallpaperSettingsPage {
                         current-wallpaper: root.current-wallpaper;
                         custom-wallpaper-name: root.custom-wallpaper-name;
-                        lang-en: root.lang-en;
                         wallpaper-overlay <=> root.wallpaper-overlay;
                         persist-wallpaper-overlay(a0) => { root.persist-wallpaper-overlay(a0); }
                         pick-wallpaper-file => { root.pick-wallpaper-file(); }
@@ -385,7 +378,6 @@ export component InterfacePanel inherits Rectangle {
                     }
                     if root.ifd-page == "ssh": SshSettingsPage {
                         download-always-ask <=> root.download-always-ask;
-                        lang-en: root.lang-en;
                         sftp-follow-cd <=> root.sftp-follow-cd;
                         ssh-algorithm-category <=> root.ssh-algorithm-category;
                         ssh-algorithm-rows: root.ssh-algorithm-rows;
@@ -404,7 +396,6 @@ export component InterfacePanel inherits Rectangle {
                         collapse-sftp-default <=> root.collapse-sftp-default;
                         confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
                         confirm-delete-session-enabled <=> root.confirm-delete-session-enabled;
-                        lang-en: root.lang-en;
                         quick-commands-as-sidebar <=> root.quick-commands-as-sidebar;
                         welcome-as-sidebar <=> root.welcome-as-sidebar;
                         welcome-single-click-connect <=> root.welcome-single-click-connect;
@@ -419,7 +410,6 @@ export component InterfacePanel inherits Rectangle {
                     }
                     if root.ifd-page == "data": DataSettingsPage {
                         credentials-vault-available <=> root.credentials-vault-available;
-                        lang-en: root.lang-en;
                         save-passwords <=> root.save-passwords;
                         request-clear-known-hosts => { root.request-clear-known-hosts(); }
                         request-clear-passwords => { root.request-clear-passwords(); }
@@ -428,12 +418,10 @@ export component InterfacePanel inherits Rectangle {
                         set-save-passwords(a0) => { root.set-save-passwords(a0); }
                     }
                     if root.ifd-page == "language": LanguageSettingsPage {
-                        lang-en: root.lang-en;
                         language-pref <=> root.language-pref;
                         set-language(a0) => { root.set-language(a0); }
                     }
                     if root.ifd-page == "update": UpdateSettingsPage {
-                        lang-en: root.lang-en;
                         update-check-enabled <=> root.update-check-enabled;
                         set-update-check-enabled(a0) => { root.set-update-check-enabled(a0); }
                     }

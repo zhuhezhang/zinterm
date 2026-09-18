@@ -5,7 +5,6 @@ import { Button } from "std-widgets.slint";
 export component QuickCmdGroupDialog inherits Rectangle {
     width: 100%;
     height: 100%;
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     in-out property <string> qcg-name;
     in-out property <bool> qcg-open: false;           // group name dialog open;
     in-out property <string> qcg-orig;
@@ -38,8 +37,8 @@ export component QuickCmdGroupDialog inherits Rectangle {
                 spacing: 8px;
                 Text {
                     text: root.qcg-orig == ""
-                        ? (root.lang-en ? "New group" : "新建分组")
-                        : (root.lang-en ? "Rename group" : "重命名分组");
+                        ? (@tr("New group"))
+                        : (@tr("Rename group"));
                     color: Theme.text-primary;
                     font-size: Theme.fs-lg;
                     font-weight: 700;
@@ -67,12 +66,12 @@ export component QuickCmdGroupDialog inherits Rectangle {
                     alignment: end;
                     spacing: 8px;
                     Button {
-                        text: root.lang-en ? "Cancel" : "取消";
+                        text: @tr("Cancel");
                         clicked => { root.qcg-open = false; }
                     }
 
                     Button {
-                        text: root.lang-en ? "OK" : "确定";
+                        text: @tr("OK");
                         primary: true;
                         enabled: root.qcg-name != "";
                         clicked => {

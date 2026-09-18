@@ -60,7 +60,6 @@ export component DockArea inherits Rectangle {
     in-out property <int> find-request-seq;
     in-out property <string> find-request-tab;
     in property <[HistoryViewItem]> history-view;    // filtered dropdown, newest first (#101, #331);
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     callback move-quick-command(int /* index */, string /* group */);
     callback new-session-clicked(string /* host */);
     callback new-session-in-group(string /* group */);
@@ -546,9 +545,7 @@ export component DockArea inherits Rectangle {
                                         }
                                     }
                                     if !root.welcome-as-sidebar: Text {
-                                        text: root.lang-en
-                                            ? "Pick a session on the left to begin"
-                                            : "从左侧选择一个会话开始";
+                                        text: @tr("Pick a session on the left to begin");
                                         color: Theme.text-muted;
                                         font-size: Theme.fs-sm;
                                         horizontal-alignment: center;
@@ -753,7 +750,7 @@ export component DockArea inherits Rectangle {
                                     sftp-delete-selected() => {
                                         root.confirm-delete-tab = term.id;
                                         root.confirm-delete-batch = true;
-                                        root.confirm-delete-path = root.lang-en ? "the selected items" : "选中的项目";
+                                        root.confirm-delete-path = @tr("the selected items");
                                         root.confirm-delete-open = true;
                                     }
                                     // Gate delete behind an in-app confirmation (#28): stash the

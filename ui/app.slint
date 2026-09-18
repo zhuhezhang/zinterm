@@ -778,7 +778,6 @@ export component AppWindow inherits Window {
             TitleBar {
                 custom-titlebar <=> root.custom-titlebar;
                 download-open <=> root.download-open;
-                lang-en <=> root.lang-en;
                 settings-open <=> root.settings-open;
                 titlebar-inset <=> root.titlebar-inset;
                 toolbar-btn-spacing <=> root.toolbar-btn-spacing;
@@ -838,7 +837,6 @@ export component AppWindow inherits Window {
                 find-request-seq <=> root.find-request-seq;
                 find-request-tab <=> root.find-request-tab;
                 history-view: root.history-view;
-                lang-en <=> root.lang-en;
                 move-quick-command(index, group) => { root.move-quick-command(index, group); }
                 new-session-clicked(host) => { root.new-session-clicked(host); }
                 new-session-in-group(group) => { root.new-session-in-group(group); }
@@ -1025,10 +1023,10 @@ export component AppWindow inherits Window {
     // (extracted) SettingsMenu
     SettingsMenu {
         about-open <=> root.about-open;
+        lang-en <=> root.lang-en;
         export-sessions => { root.export-sessions(); }
         import-sessions => { root.import-sessions(); }
         interface-open <=> root.interface-open;
-        lang-en <=> root.lang-en;
         set-language(a0) => { root.set-language(a0); }
         settings-open <=> root.settings-open;
         shortcuts-open <=> root.shortcuts-open;
@@ -1042,7 +1040,6 @@ export component AppWindow inherits Window {
         group-dialog-open <=> root.group-dialog-open;
         group-dialog-orig <=> root.group-dialog-orig;
         group-dialog-parent <=> root.group-dialog-parent;
-        lang-en <=> root.lang-en;
         submit-group(orig, segment, parent) => { root.submit-group(orig, segment, parent); }
     }
     // (extracted) QuickCmdManageDialog
@@ -1055,7 +1052,6 @@ export component AppWindow inherits Window {
         drop-quick-group(from, before-group) => { root.drop-quick-group(from, before-group); }
         duplicate-quick-command(index) => { root.duplicate-quick-command(index); }
         edit-quick-command(index) => { root.edit-quick-command(index); }
-        lang-en <=> root.lang-en;
         qcg-name <=> root.qcg-name;
         qcg-open <=> root.qcg-open;
         qcg-orig <=> root.qcg-orig;
@@ -1088,7 +1084,6 @@ export component AppWindow inherits Window {
     }
     // (extracted) QuickCmdGroupDialog
     QuickCmdGroupDialog {
-        lang-en <=> root.lang-en;
         qcg-name <=> root.qcg-name;
         qcg-open <=> root.qcg-open;
         qcg-orig <=> root.qcg-orig;
@@ -1096,7 +1091,6 @@ export component AppWindow inherits Window {
     }
     // (extracted) SftpPromptDialog
     SftpPromptDialog {
-        lang-en <=> root.lang-en;
         sftp-prompt-kind <=> root.sftp-prompt-kind;
         sftp-prompt-open <=> root.sftp-prompt-open;
         sftp-prompt-submit(tab, kind, target, value) => { root.sftp-prompt-submit(tab, kind, target, value); }
@@ -1108,7 +1102,6 @@ export component AppWindow inherits Window {
     ConfirmCloseDialog {
         confirm-close-open <=> root.confirm-close-open;
         confirm-close-yes => { root.confirm-close-yes(); }
-        lang-en <=> root.lang-en;
     }
     // (extracted) ChmodDialog
     ChmodDialog {
@@ -1122,13 +1115,11 @@ export component AppWindow inherits Window {
         chmod-tr <=> root.chmod-tr;
         chmod-tw <=> root.chmod-tw;
         chmod-tx <=> root.chmod-tx;
-        lang-en <=> root.lang-en;
         sftp-chmod-apply => { root.sftp-chmod-apply(); }
     }
     // (extracted) ShortcutsDialog
     ShortcutsDialog {
         is-mac <=> root.is-mac;
-        lang-en <=> root.lang-en;
         shortcuts-open <=> root.shortcuts-open;
     }
     // (extracted) AboutDialog
@@ -1226,7 +1217,6 @@ export component AppWindow inherits Window {
         interface-open <=> root.interface-open;
         is-windows: root.is-windows;
         json-format-output <=> root.json-format-output;
-        lang-en <=> root.lang-en;
         language-pref <=> root.language-pref;
         move-ssh-algorithm(a0, a1) => { root.move-ssh-algorithm(a0, a1); }
         output-highlight-enabled <=> root.output-highlight-enabled;

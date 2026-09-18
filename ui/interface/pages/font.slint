@@ -12,7 +12,6 @@ import {
 export component FontSettingsPage inherits Rectangle {
     width: 100%;
     height: self.preferred-height;
-    in property <bool> lang-en;
     callback set-panel-font(int);
     callback set-term-cursor-color(string) -> bool;
     callback set-term-cursor-style(string);
@@ -39,11 +38,11 @@ export component FontSettingsPage inherits Rectangle {
         alignment: start;
 
         SectionHeader {
-            text: root.lang-en ? "FONT" : "字体";
+            text: @tr("FONT");
         }
 
         SettingRow {
-            label: root.lang-en ? "Terminal font" : "终端字体";
+            label: @tr("Terminal font");
             ComboBox {
                 width: 150px;
                 height: 30px;
@@ -54,7 +53,7 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Terminal font size" : "终端字体大小";
+            label: @tr("Terminal font size");
             Stepper {
                 value: root.term-font-size / 1px;
                 minimum: 8;
@@ -66,9 +65,8 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Terminal line spacing" : "终端行距";
-            desc: root.lang-en ? "Adjust terminal row height from compact to loose."
-                : "调整终端行高，可设置得更紧凑或更宽松。";
+            label: @tr("Terminal line spacing");
+            desc: @tr("Adjust terminal row height from compact to loose.");
             Stepper {
                 value: round(root.terminal-line-spacing * 100);
                 minimum: 80;
@@ -80,10 +78,8 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Installed fonts" : "已安装字体";
-            desc: root.lang-en
-                ? "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list."
-                : "在 Windows 中安装 TTF/OTF 字体后，重启 ZinTerm 即可刷新字体列表。";
+            label: @tr("Installed fonts");
+            desc: @tr("Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list.");
             show-divider: false;
             Rectangle {
                 width: 1px;
@@ -93,9 +89,8 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Bold terminal text" : "终端字体加粗";
-            desc: root.lang-en ? "Makes regular terminal output use a bold face."
-                : "让普通终端输出使用加粗字重。";
+            label: @tr("Bold terminal text");
+            desc: @tr("Makes regular terminal output use a bold face.");
             Switch {
                 on: root.term-font-bold;
                 toggled(v) => { root.term-font-bold = v; root.set-term-font-bold(v); }
@@ -103,27 +98,26 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Cursor shape" : "光标类型";
-            desc: root.lang-en ? "Choose the terminal insertion cursor shape."
-                : "选择终端输入光标的形状。";
+            label: @tr("Cursor shape");
+            desc: @tr("Choose the terminal insertion cursor shape.");
             HorizontalLayout {
                 spacing: 5px;
                 CursorStyleButton {
-                    label: root.lang-en ? "Block" : "块状";
+                    label: @tr("Block");
                     cursor-kind: "block";
                     selected: root.term-cursor-style == "block";
                     clicked => { root.term-cursor-style = "block"; root.set-term-cursor-style("block"); }
                 }
 
                 CursorStyleButton {
-                    label: root.lang-en ? "Bar" : "竖线";
+                    label: @tr("Bar");
                     cursor-kind: "bar";
                     selected: root.term-cursor-style == "bar";
                     clicked => { root.term-cursor-style = "bar"; root.set-term-cursor-style("bar"); }
                 }
 
                 CursorStyleButton {
-                    label: root.lang-en ? "Line" : "下划线";
+                    label: @tr("Line");
                     cursor-kind: "underline";
                     selected: root.term-cursor-style == "underline";
                     clicked => { root.term-cursor-style = "underline"; root.set-term-cursor-style("underline"); }
@@ -132,9 +126,8 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Cursor color" : "光标颜色";
-            desc: root.lang-en ? "Enter a hexadecimal RGB color."
-                : "输入十六进制 RGB 颜色。";
+            label: @tr("Cursor color");
+            desc: @tr("Enter a hexadecimal RGB color.");
             CursorColorInput {
                 width: 100px;
                 value <=> root.term-cursor-color-hex;
@@ -144,9 +137,8 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "UI scale" : "界面缩放";
-            desc: root.lang-en ? "Zooms the whole interface (not this panel)."
-                : "缩放整个界面(不影响本面板)。";
+            label: @tr("UI scale");
+            desc: @tr("Zooms the whole interface (not this panel).");
             Stepper {
                 value: round(root.ui-scale * 100);
                 minimum: 80;
@@ -158,9 +150,8 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Settings font size" : "界面字体大小";
-            desc: root.lang-en ? "Enlarges this settings panel (font + window)."
-                : "放大本设置面板的字体和窗口。";
+            label: @tr("Settings font size");
+            desc: @tr("Enlarges this settings panel (font + window).");
             show-divider: false;
             Stepper {
                 value: round(Theme.panel-font * 100);
@@ -177,7 +168,7 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         SectionHeader {
-            text: root.lang-en ? "PREVIEW" : "预览";
+            text: @tr("PREVIEW");
         }
 
         Rectangle {

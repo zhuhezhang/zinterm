@@ -6,7 +6,6 @@ export component RendererSettingsPage inherits Rectangle {
     width: 100%;
     height: self.preferred-height;
     in property <bool> is-windows;
-    in property <bool> lang-en;
     in-out property <string> renderer-mode: "software";
     in-out property <bool> renderer-restart-required;
     callback set-renderer-mode(string);
@@ -19,36 +18,30 @@ export component RendererSettingsPage inherits Rectangle {
         alignment: start;
 
         SectionHeader {
-            text: root.lang-en ? "RENDERING" : "渲染";
+            text: @tr("RENDERING");
         }
 
         SettingRow {
-            label: root.lang-en ? "Renderer" : "渲染器";
+            label: @tr("Renderer");
             desc: Theme.is-mac
-                ? (root.lang-en
-                ? "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
-                : "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。")
-                : (root.lang-en
-                ? "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
-                : "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。");
+                ? (@tr("CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."))
+                : (@tr("Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."));
             show-divider: false;
             ComboBox {
                 width: 150px;
                 height: 30px;
                 model: Theme.is-mac
                     ? ["CPU", "FemtoVG", "Skia"]
-                    : (root.lang-en
-                    ? ["Automatic", "GPU", "Software"]
-                    : ["自动", "GPU", "软件"]);
+                    : [@tr("Automatic"), "GPU", @tr("Software")];
                 current-value: Theme.is-mac
                     ? (root.renderer-mode == "skia"
                     ? "Skia"
                     : root.renderer-mode == "femtovg" ? "FemtoVG" : "CPU")
                     : (root.renderer-mode == "auto"
-                    ? (root.lang-en ? "Automatic" : "自动")
+                    ? @tr("Automatic")
                     : root.renderer-mode == "gpu"
                     ? "GPU"
-                    : (root.lang-en ? "Software" : "软件"));
+                    : @tr("Software"));
                 selected(v) => {
                     if (Theme.is-mac && v == "CPU"
                         && root.renderer-mode != "software") {
@@ -65,7 +58,7 @@ export component RendererSettingsPage inherits Rectangle {
                         root.renderer-mode = "skia";
                         root.set-renderer-mode("skia");
                         root.renderer-restart-required = true;
-                    } else if (!Theme.is-mac && (v == "Automatic" || v == "自动")
+                    } else if (!Theme.is-mac && (v == @tr("Automatic") || v == "Automatic" || v == "自动")
                         && root.renderer-mode != "auto") {
                         root.renderer-mode = "auto";
                         root.set-renderer-mode("auto");
@@ -74,7 +67,7 @@ export component RendererSettingsPage inherits Rectangle {
                         root.renderer-mode = "gpu";
                         root.set-renderer-mode("gpu");
                         root.renderer-restart-required = true;
-                    } else if (!Theme.is-mac && (v == "Software" || v == "软件")
+                    } else if (!Theme.is-mac && (v == @tr("Software") || v == "Software" || v == "软件")
                         && root.renderer-mode != "software") {
                         root.renderer-mode = "software";
                         root.set-renderer-mode("software");
@@ -90,20 +83,12 @@ export component RendererSettingsPage inherits Rectangle {
 
         SettingHint {
             text: root.renderer-restart-required
-                ? (root.lang-en
-                ? "Restart ZinTerm to apply the renderer change."
-                : "重启 ZinTerm 后渲染器设置才会生效。")
-                : (root.lang-en
-                ? (Theme.is-mac
-                ? "CPU is the default renderer on macOS."
-                : (root.is-windows
-                ? "Software remains the compatibility default for existing installations."
-                : "Automatic remains the default renderer on Linux."))
+                ? @tr("Restart ZinTerm to apply the renderer change.")
                 : (Theme.is-mac
-                ? "macOS 默认使用 CPU 渲染器。"
+                ? @tr("CPU is the default renderer on macOS.")
                 : (root.is-windows
-                ? "现有安装继续默认使用兼容性更好的软件渲染。"
-                : "Linux 默认继续使用自动渲染器。")));
+                ? @tr("Software remains the compatibility default for existing installations.")
+                : @tr("Automatic remains the default renderer on Linux.")));
             color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
         }
     }

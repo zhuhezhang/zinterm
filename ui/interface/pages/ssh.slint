@@ -14,7 +14,6 @@ export component SshSettingsPage inherits Rectangle {
     width: 100%;
     height: self.preferred-height;
     in-out property <bool> download-always-ask;
-    in property <bool> lang-en;
     callback move-ssh-algorithm(string, int);
     callback reset-ssh-algorithm-section();
     callback reset-ssh-algorithms();
@@ -39,10 +38,8 @@ export component SshSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Keepalive interval" : "保活间隔";
-            desc: root.lang-en
-                ? "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
-                : "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效。";
+            label: @tr("Keepalive interval");
+            desc: @tr("0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections.");
             Stepper {
                 value: root.ssh-keepalive-secs;
                 minimum: 0;
@@ -57,61 +54,53 @@ export component SshSettingsPage inherits Rectangle {
         }
 
         SectionHeader {
-            text: root.lang-en ? "SSH ALGORITHMS" : "SSH 算法";
+            text: @tr("SSH ALGORITHMS");
         }
 
         SettingHint {
-            text: root.lang-en
-                ? "Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections."
-                : "勾选要协商的算法（顺序即优先级）。保持内置默认时，会对极老设备自动尝试精简兼容配置；自定义后严格按所选列表协商。对新连接生效。";
+            text: @tr("Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections.");
         }
 
         SettingRow {
-            label: root.lang-en ? "Category" : "算法类别";
-            desc: root.lang-en
-                ? "Key exchange, host key, cipher, MAC, or compression."
-                : "密钥交换、主机密钥、加密、消息认证码或压缩。";
+            label: @tr("Category");
+            desc: @tr("Key exchange, host key, cipher, MAC, or compression.");
             ComboBox {
                 width: 150px;
                 height: 30px;
-                model: root.lang-en
-                    ? ["Key exchange", "Host key", "Cipher", "MAC", "Compression"]
-                    : [
-                    "密钥交换",
-                    "主机密钥",
-                    "加密算法",
-                    "消息认证码",
-                    "压缩算法"
+                model: [
+                    @tr("Key exchange"),
+                    @tr("Host key"),
+                    @tr("Cipher"),
+                    @tr("MAC"),
+                    @tr("Compression")
                 ];
                 current-index: root.ssh-algorithm-category == "serverHostKey" ? 1
                     : (root.ssh-algorithm-category == "cipher" ? 2
                     : (root.ssh-algorithm-category == "hmac" ? 3
                     : (root.ssh-algorithm-category == "compress" ? 4 : 0)));
                 selected(v) => {
-                    root.ssh-algorithm-category = v == "Host key" || v == "主机密钥" ? "serverHostKey"
-                        : (v == "Cipher" || v == "加密算法" ? "cipher"
-                        : (v == "MAC" || v == "消息认证码" ? "hmac"
-                        : (v == "Compression" || v == "压缩算法" ? "compress" : "kex")));
+                    root.ssh-algorithm-category = v == @tr("Host key") || v == "Host key" || v == "主机密钥" ? "serverHostKey"
+                        : (v == @tr("Cipher") || v == "Cipher" || v == "加密算法" ? "cipher"
+                        : (v == @tr("MAC") || v == "MAC" || v == "消息认证码" ? "hmac"
+                        : (v == @tr("Compression") || v == "Compression" || v == "压缩算法" ? "compress" : "kex")));
                     root.set-ssh-algorithm-category(root.ssh-algorithm-category);
                 }
             }
         }
 
         SettingRow {
-            label: root.lang-en ? "Reset" : "重置";
-            desc: root.lang-en
-                ? "Restore this category or every algorithm list to the built-in defaults."
-                : "将当前类别或全部算法恢复为内置默认。";
+            label: @tr("Reset");
+            desc: @tr("Restore this category or every algorithm list to the built-in defaults.");
             show-divider: false;
             HorizontalLayout {
                 spacing: 8px;
                 GhostButton {
-                    text: root.lang-en ? "This category" : "当前类别";
+                    text: @tr("This category");
                     clicked => { root.reset-ssh-algorithm-section(); }
                 }
 
                 GhostButton {
-                    text: root.lang-en ? "All defaults" : "全部默认";
+                    text: @tr("All defaults");
                     clicked => { root.reset-ssh-algorithms(); }
                 }
             }
@@ -141,7 +130,7 @@ export component SshSettingsPage inherits Rectangle {
                         padding-top: 2px;
                         padding-bottom: 2px;
                         Text {
-                            text: root.lang-en ? "weak" : "不安全";
+                            text: @tr("weak");
                             color: Theme.danger;
                             font-size: 10px * Theme.panel-font;
                             vertical-alignment: center;
@@ -222,10 +211,8 @@ export component SshSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "SFTP follows terminal cd" : "SFTP 跟随 cd 更新";
-            desc: root.lang-en
-                ? "A cd in the terminal switches the SFTP panel to the same directory."
-                : "终端里执行 cd 时,SFTP 面板自动切到相同目录。";
+            label: @tr("SFTP follows terminal cd");
+            desc: @tr("A cd in the terminal switches the SFTP panel to the same directory.");
             Switch {
                 on: root.sftp-follow-cd;
                 toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
@@ -233,10 +220,8 @@ export component SshSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Always ask where to save" : "总是询问保存去何处";
-            desc: root.lang-en
-                ? "Every SFTP download prompts for a location instead of using the preset folder."
-                : "每次 SFTP 下载都询问保存位置,而不是直接存到预设下载目录。";
+            label: @tr("Always ask where to save");
+            desc: @tr("Every SFTP download prompts for a location instead of using the preset folder.");
             show-divider: false;
             Switch {
                 on: root.download-always-ask;

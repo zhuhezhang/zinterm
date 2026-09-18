@@ -7,7 +7,6 @@ export component SidebarSettingsPage inherits Rectangle {
     in-out property <bool> confirm-delete-group-enabled: true;
     in-out property <bool> confirm-delete-session-enabled: false;
     in-out property <string> ifd-page;
-    in property <bool> lang-en;
     in-out property <bool> quick-commands-as-sidebar;
     callback set-collapse-sftp-default(bool);
     callback set-confirm-delete-group-enabled(bool);
@@ -27,14 +26,12 @@ export component SidebarSettingsPage inherits Rectangle {
         spacing: 0;
         alignment: start;
         SectionHeader {
-            text: root.lang-en ? "SIDEBARS" : "侧栏";
+            text: @tr("SIDEBARS");
         }
 
         SettingRow {
-            label: root.lang-en ? "Zen mode" : "专注模式";
-            desc: root.lang-en
-                ? "Hide side panels and collapsed edge strips so the terminal fills the window."
-                : "隐藏侧栏、底栏和收起图标，让终端填满窗口内容区。";
+            label: @tr("Zen mode");
+            desc: @tr("Hide side panels and collapsed edge strips so the terminal fills the window.");
             Switch {
                 on: root.zen-mode;
                 toggled(v) => { root.zen-mode = v; root.set-zen-mode(v); }
@@ -42,10 +39,8 @@ export component SidebarSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Collapse the SFTP panel by default" : "默认收起 SFTP 侧栏";
-            desc: root.lang-en
-                ? "Takes effect on next launch; handy on low-spec jump hosts."
-                : "下次启动生效;低配跳板机上可减少常驻面板开销。";
+            label: @tr("Collapse the SFTP panel by default");
+            desc: @tr("Takes effect on next launch; handy on low-spec jump hosts.");
             Switch {
                 on: root.collapse-sftp-default;
                 toggled(v) => { root.collapse-sftp-default = v; root.set-collapse-sftp-default(v); }
@@ -53,10 +48,8 @@ export component SidebarSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Quick commands as a sidebar" : "快捷命令作为侧栏";
-            desc: root.lang-en
-                ? "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
-                : "允许把快捷命令弹窗拖到窗口边缘；停靠后通过侧栏或收起图标使用。";
+            label: @tr("Quick commands as a sidebar");
+            desc: @tr("Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon.");
             show-divider: false;
             Switch {
                 on: root.quick-commands-as-sidebar;
@@ -76,14 +69,12 @@ export component SidebarSettingsPage inherits Rectangle {
         spacing: 0;
         alignment: start;
         SectionHeader {
-            text: root.lang-en ? "WELCOME PAGE" : "欢迎页";
+            text: @tr("WELCOME PAGE");
         }
 
         SettingRow {
-            label: root.lang-en ? "Show the welcome page as a sidebar" : "欢迎页设为侧栏";
-            desc: root.lang-en
-                ? "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center."
-                : "把会话列表停靠在左侧,不再用「欢迎页」标签;打开的会话占据中央区域。";
+            label: @tr("Show the welcome page as a sidebar");
+            desc: @tr("Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center.");
             Switch {
                 on: root.welcome-as-sidebar;
                         // Applying this binding destroys/recreates the Welcome
@@ -94,10 +85,8 @@ export component SidebarSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Confirm before deleting a group" : "删除分组前确认";
-            desc: root.lang-en
-                ? "Ask before removing a group (also deletes nested groups and sessions inside)."
-                : "删除分组前弹出确认（会一并删除其下的子分组和会话）。";
+            label: @tr("Confirm before deleting a group");
+            desc: @tr("Ask before removing a group (also deletes nested groups and sessions inside).");
             Switch {
                 on: root.confirm-delete-group-enabled;
                 toggled(v) => {
@@ -108,10 +97,8 @@ export component SidebarSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Confirm before deleting a session" : "删除会话前确认";
-            desc: root.lang-en
-                ? "Ask before removing a saved session from the list."
-                : "从列表删除已保存的会话前弹出确认。";
+            label: @tr("Confirm before deleting a session");
+            desc: @tr("Ask before removing a saved session from the list.");
             Switch {
                 on: root.confirm-delete-session-enabled;
                 toggled(v) => {
@@ -122,10 +109,8 @@ export component SidebarSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Single-click to connect" : "单击会话连接";
-            desc: root.lang-en
-                ? "Connect with one click. When off, double-click a session to connect."
-                : "开启后单击会话即可连接；关闭时需双击连接。";
+            label: @tr("Single-click to connect");
+            desc: @tr("Connect with one click. When off, double-click a session to connect.");
             show-divider: false;
             Switch {
                 on: root.welcome-single-click-connect;

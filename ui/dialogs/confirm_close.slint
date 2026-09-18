@@ -6,7 +6,6 @@ export component ConfirmCloseDialog inherits Rectangle {
     height: 100%;
     in-out property <bool> confirm-close-open: false;
     callback confirm-close-yes();
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
 
     // --- Confirm-before-close dialog (#88) --------------------------------
     if root.confirm-close-open: Rectangle {
@@ -51,16 +50,14 @@ export component ConfirmCloseDialog inherits Rectangle {
                 padding: 8px;
                 spacing: 8px;
                 Text {
-                    text: root.lang-en ? "Close ZinTerm?" : "确定关闭 ZinTerm?";
+                    text: @tr("Close ZinTerm?");
                     color: Theme.text-primary;
                     font-size: Theme.fs-lg;
                     font-weight: 700;
                 }
 
                 Text {
-                    text: root.lang-en
-                        ? "There are active sessions. Closing will disconnect them."
-                        : "当前有活动会话,关闭将断开它们。";
+                    text: @tr("There are active sessions. Closing will disconnect them.");
                     color: Theme.text-secondary;
                     font-size: Theme.fs-sm;
                     wrap: word-wrap;
@@ -74,12 +71,12 @@ export component ConfirmCloseDialog inherits Rectangle {
                     alignment: end;
                     spacing: 8px;
                     GhostButton {
-                        text: root.lang-en ? "Cancel" : "取消";
+                        text: @tr("Cancel");
                         clicked => { root.confirm-close-open = false; }
                     }
 
                     PrimaryButton {
-                        text: root.lang-en ? "Close" : "关闭";
+                        text: @tr("Close");
                         clicked => { root.confirm-close-yes(); }
                     }
                 }

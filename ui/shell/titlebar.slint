@@ -5,7 +5,6 @@ export component TitleBar inherits VerticalLayout {
     spacing: 0;
     in-out property <bool> custom-titlebar: true;
     in-out property <bool> download-open: false;  // download manager popup;
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     in-out property <bool> settings-open: false;  // settings menu popup;
     in-out property <length> titlebar-inset;
     callback toggle-theme();
@@ -38,20 +37,20 @@ export component TitleBar inherits VerticalLayout {
                     IconBtn {
                         icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
                         icon-color: Theme.dark ? #f5c542 : #5856d6;
-                        tooltip: root.lang-en ? "Toggle theme" : "切换主题";
+                        tooltip: @tr("Toggle theme");
                         clicked => { root.toggle-theme(); }
                     }
 
                     IconBtn {
                         icon: "\u{E2C4}";
-                        tooltip: root.lang-en ? "Download" : "下载";
+                        tooltip: @tr("Download");
                         active: root.download-open;
                         clicked => { root.download-open = !root.download-open; root.settings-open = false; }
                     }
 
                     IconBtn {
                         icon: "\u{E8B8}";
-                        tooltip: root.lang-en ? "Settings" : "设置";
+                        tooltip: @tr("Settings");
                         active: root.settings-open;
                         clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
                     }
@@ -115,20 +114,20 @@ export component TitleBar inherits VerticalLayout {
                     IconBtn {
                         icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
                         icon-color: Theme.dark ? #f5c542 : #5856d6;
-                        tooltip: root.lang-en ? "Toggle theme" : "切换主题";
+                        tooltip: @tr("Toggle theme");
                         clicked => { root.toggle-theme(); }
                     }
 
                     IconBtn {
                         icon: "\u{E2C4}";
-                        tooltip: root.lang-en ? "Download" : "下载";
+                        tooltip: @tr("Download");
                         active: root.download-open;
                         clicked => { root.download-open = !root.download-open; root.settings-open = false; }
                     }
 
                     IconBtn {
                         icon: "\u{E8B8}";
-                        tooltip: root.lang-en ? "Settings" : "设置";
+                        tooltip: @tr("Settings");
                         active: root.settings-open;
                         clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
                     }

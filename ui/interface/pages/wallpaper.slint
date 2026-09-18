@@ -12,7 +12,6 @@ export component WallpaperSettingsPage inherits Rectangle {
     height: self.preferred-height;
     in-out property <string> current-wallpaper;
     in property <string> custom-wallpaper-name;   // basename for the file row;
-    in property <bool> lang-en;
     callback persist-wallpaper-overlay(float);
     callback pick-wallpaper-file();
     callback set-wallpaper(string);
@@ -30,13 +29,11 @@ export component WallpaperSettingsPage inherits Rectangle {
         alignment: start;
 
         SectionHeader {
-            text: root.lang-en ? "WALLPAPER" : "壁纸";
+            text: @tr("WALLPAPER");
         }
 
         SettingHint {
-            text: root.lang-en
-                ? "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
-                : "选一张壁纸,界面会沉浸式地适配它的颜色(强调色、面板、深浅)。";
+            text: @tr("Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark).");
         }
 
         Rectangle {
@@ -78,7 +75,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: root.lang-en ? "None" : "无";
+                        text: @tr("None");
                         font-size: 11px * Theme.panel-font;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
@@ -108,7 +105,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: root.lang-en ? "Meat Light" : "简约·浅";
+                        text: @tr("Meat Light");
                         font-size: 11px * Theme.panel-font;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
@@ -138,7 +135,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: root.lang-en ? "Meat Dark" : "简约·暗";
+                        text: @tr("Meat Dark");
                         font-size: 11px * Theme.panel-font;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
@@ -177,7 +174,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: root.lang-en ? "Fantasy 3048" : "幻想3048";
+                        text: @tr("Fantasy 3048");
                         font-size: 11px * Theme.panel-font;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
@@ -235,7 +232,7 @@ export component WallpaperSettingsPage inherits Rectangle {
         }
 
         SectionHeader {
-            text: root.lang-en ? "CUSTOM" : "自定义";
+            text: @tr("CUSTOM");
         }
 
         HorizontalLayout {
@@ -283,7 +280,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: root.lang-en ? "Choose file…" : "选择文件…";
+                        text: @tr("Choose file…");
                         color: white;
                         font-size: 12px * Theme.panel-font;
                         width: 100%;
@@ -308,14 +305,12 @@ export component WallpaperSettingsPage inherits Rectangle {
         }
 
         SectionHeader {
-            text: root.lang-en ? "OVERLAY" : "遮罩";
+            text: @tr("OVERLAY");
         }
 
         SettingRow {
-            label: root.lang-en ? "Wallpaper transparency" : "壁纸遮罩透明度";
-            desc: root.lang-en
-                ? "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)."
-                : "壁纸透过面板 / 终端背景的程度,越往右越透;没设壁纸时不生效。";
+            label: @tr("Wallpaper transparency");
+            desc: @tr("How much the wallpaper shows through panels and the terminal (no effect without a wallpaper).");
             show-divider: false;
             HorizontalLayout {
                 spacing: 8px;

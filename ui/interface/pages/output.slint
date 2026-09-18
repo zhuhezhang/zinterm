@@ -21,7 +21,6 @@ export component OutputSettingsPage inherits Rectangle {
     in-out property <string> highlight-draft-color-hex: "#F14C4C";
     in-out property <color> highlight-draft-swatch: #F14C4C;
     in-out property <bool> json-format-output: true;
-    in property <bool> lang-en;
     in-out property <bool> new-rule-case-sensitive;
     in-out property <string> new-rule-name;
     in-out property <string> new-rule-pattern;
@@ -35,9 +34,8 @@ export component OutputSettingsPage inherits Rectangle {
     callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
     in-out property <int> rule-edit-index: -1;   // -1 = add, >=0 = edit that rule;
-    property <string> rule-name-label: root.lang-en ? "Rule name" : "规则名称";
-    property <string> rule-pattern-label: root.lang-en
-        ? "Keyword or regular expression" : "关键词或正则表达式";
+    property <string> rule-name-label: @tr("Rule name");
+    property <string> rule-pattern-label: @tr("Keyword or regular expression");
     property <length> rule-form-label-width: 180px;
     callback set-highlight-draft-color(string) -> bool;
     callback set-json-format-output(bool);
@@ -99,14 +97,12 @@ export component OutputSettingsPage inherits Rectangle {
         alignment: start;
 
         SectionHeader {
-            text: root.lang-en ? "OUTPUT HIGHLIGHTING" : "输出高亮";
+            text: @tr("OUTPUT HIGHLIGHTING");
         }
 
         SettingRow {
-            label: root.lang-en ? "Highlight plain terminal output" : "高亮纯文本终端输出";
-            desc: root.lang-en
-                ? "Adds client-side colours only when the program did not provide ANSI styling."
-                : "仅在程序未提供 ANSI 样式时由客户端补充颜色。";
+            label: @tr("Highlight plain terminal output");
+            desc: @tr("Adds client-side colours only when the program did not provide ANSI styling.");
             Switch {
                 on: root.output-highlight-enabled;
                 toggled(v) => {
@@ -117,19 +113,17 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Built-in rule set" : "内置规则集";
-            desc: root.lang-en
-                ? "Log levels is conservative; DevOps also recognises deployment and health states."
-                : "日志级别更保守；DevOps 还识别部署与健康状态。";
+            label: @tr("Built-in rule set");
+            desc: @tr("Log levels is conservative; DevOps also recognises deployment and health states.");
             show-divider: false;
             ComboBox {
                 width: 150px;
                 height: 30px;
                 enabled: root.output-highlight-enabled;
-                model: [root.lang-en ? "Log levels" : "日志级别", "DevOps"];
+                model: [@tr("Log levels"), "DevOps"];
                 current-value: root.output-highlight-preset == "devops"
                     ? "DevOps"
-                    : (root.lang-en ? "Log levels" : "日志级别");
+                    : (@tr("Log levels"));
                 selected(v) => {
                     root.output-highlight-preset = v == "DevOps" ? "devops" : "log";
                     root.set-output-highlight(
@@ -140,10 +134,8 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: root.lang-en ? "Format and colour JSON lines" : "格式化并着色 JSON 行";
-            desc: root.lang-en
-                ? "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged."
-                : "仅美化占据完整一行且可正确解析的 JSON 对象或数组，其他终端输出保持原样。";
+            label: @tr("Format and colour JSON lines");
+            desc: @tr("Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged.");
             show-divider: false;
             Switch {
                 on: root.json-format-output;
@@ -159,7 +151,7 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         SectionHeader {
-            text: root.lang-en ? "PREVIEW" : "预览";
+            text: @tr("PREVIEW");
         }
 
         Rectangle {
@@ -213,13 +205,11 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         SectionHeader {
-            text: root.lang-en ? "CUSTOM RULES" : "自定义规则";
+            text: @tr("CUSTOM RULES");
         }
 
         SettingHint {
-            text: root.lang-en
-                ? "Custom rules run before the built-in preset and never overwrite ANSI colours."
-                : "自定义规则优先于内置规则，且不会覆盖程序输出的 ANSI 颜色。";
+            text: @tr("Custom rules run before the built-in preset and never overwrite ANSI colours.");
         }
 
         Rectangle {
@@ -229,7 +219,7 @@ export component OutputSettingsPage inherits Rectangle {
         LabeledInput {
             label: root.rule-name-label;
             label-width: root.rule-form-label-width;
-            placeholder: root.lang-en ? "Timeout errors" : "超时错误";
+            placeholder: @tr("Timeout errors");
             value <=> root.new-rule-name;
             accepted => {
                 if root.new-rule-name != "" && root.new-rule-pattern != ""
@@ -265,21 +255,21 @@ export component OutputSettingsPage inherits Rectangle {
             cross-axis-alignment: center;
 
             CompactCheckBox {
-                text: root.lang-en ? "Regex" : "正则";
+                text: @tr("Regex");
                 gap: 4px;
                 checked: root.new-rule-regex;
                 toggled => { root.new-rule-regex = self.checked; }
             }
 
             CompactCheckBox {
-                text: root.lang-en ? "Case sensitive" : "区分大小写";
+                text: @tr("Case sensitive");
                 gap: 4px;
                 checked: root.new-rule-case-sensitive;
                 toggled => { root.new-rule-case-sensitive = self.checked; }
             }
 
             CompactCheckBox {
-                text: root.lang-en ? "Whole line" : "高亮整行";
+                text: @tr("Whole line");
                 gap: 4px;
                 checked: root.new-rule-whole-line;
                 toggled => { root.new-rule-whole-line = self.checked; }
@@ -298,14 +288,14 @@ export component OutputSettingsPage inherits Rectangle {
             }
 
             if root.rule-edit-index >= 0: GhostButton {
-                text: root.lang-en ? "Cancel" : "取消";
+                text: @tr("Cancel");
                 clicked => { root.reset-rule-form(); }
             }
 
             PrimaryButton {
                 text: root.rule-edit-index >= 0
-                    ? (root.lang-en ? "Save" : "保存")
-                    : (root.lang-en ? "Add rule" : "添加规则");
+                    ? (@tr("Save"))
+                    : (@tr("Add rule"));
                 disabled: root.new-rule-name == "" || root.new-rule-pattern == "";
                 clicked => {
                     if root.save-rule-form() {
@@ -321,7 +311,7 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         if root.output-highlight-rules.length == 0: SettingHint {
-            text: root.lang-en ? "No custom rules yet." : "暂无自定义规则。";
+            text: @tr("No custom rules yet.");
             height: 34px;
             vertical-alignment: center;
         }
@@ -369,9 +359,9 @@ export component OutputSettingsPage inherits Rectangle {
 
                     Text {
                         text: rule.pattern + " · "
-                            + (rule.regex ? "Regex" : (root.lang-en ? "Keyword" : "关键词"))
+                            + (rule.regex ? "Regex" : (@tr("Keyword")))
                             + (rule.case-sensitive ? " · Aa" : "")
-                            + (rule.whole-line ? (root.lang-en ? " · whole line" : " · 整行") : "");
+                            + (rule.whole-line ? (@tr(" · whole line")) : "");
                         color: Theme.text-muted;
                         font-size: 10px * Theme.panel-font;
                         overflow: elide;

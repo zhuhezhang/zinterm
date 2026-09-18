@@ -14,7 +14,6 @@ export component QuickCmdManageDialog inherits Rectangle {
     callback drop-quick-group(string /* from */, string /* before-group */);
     callback duplicate-quick-command(int /* index */);
     callback edit-quick-command(int /* index */);
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     in-out property <string> qcg-name;
     in-out property <bool> qcg-open: false;           // group name dialog open;
     in-out property <string> qcg-orig;
@@ -199,13 +198,13 @@ export component QuickCmdManageDialog inherits Rectangle {
                     }
 
                     Button {
-                        text: root.lang-en ? "+ New group" : "+ 新建分组";
+                        text: @tr("+ New group");
                         clicked => { root.qcg-orig = ""; root.qcg-name = ""; root.qcg-open = true; }
                     }
 
                     // Cancel only while editing an existing entry.
                     if root.qcm-edit-index >= 0: Button {
-                        text: root.lang-en ? "Cancel" : "取消";
+                        text: @tr("Cancel");
                         clicked => {
                             root.qcm-edit-index = -1;
                             root.qcm-name = "";
@@ -240,8 +239,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                     }
 
                     Button {
-                        text: root.qcm-edit-index >= 0 ? (root.lang-en ? "Save" : "保存")
-                            : (root.lang-en ? "Add" : "添加");
+                        text: root.qcm-edit-index >= 0 ? (@tr("Save"))
+                            : (@tr("Add"));
                         primary: true;
                         enabled: root.qcm-name != "" && root.qcm-command != "";
                         clicked => {
@@ -459,7 +458,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                         }
 
                                                         Text {
-                                                            text: root.lang-en ? "Rename group" : "重命名分组";
+                                                            text: @tr("Rename group");
                                                             color: Theme.text-primary;
                                                             font-size: Theme.fs-md;
                                                             vertical-alignment: center;
@@ -489,7 +488,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                         }
 
                                                         Text {
-                                                            text: root.lang-en ? "Delete group" : "删除分组";
+                                                            text: @tr("Delete group");
                                                             color: #cc3333;
                                                             font-size: Theme.fs-md;
                                                             vertical-alignment: center;
@@ -522,7 +521,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                         }
 
                                                         Text {
-                                                            text: root.lang-en ? "New group" : "新建分组";
+                                                            text: @tr("New group");
                                                             color: Theme.text-primary;
                                                             font-size: Theme.fs-md;
                                                             vertical-alignment: center;

@@ -11,7 +11,6 @@ export component GroupDialog inherits Rectangle {
     in-out property <bool> group-dialog-open: false;
     in-out property <string> group-dialog-orig;
     in-out property <string> group-dialog-parent;
-    in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     callback submit-group(string /* orig */, string /* segment */, string /* parent */) -> string;
 
     // --- Group create / rename dialog (#41) -------------------------------
@@ -54,10 +53,10 @@ export component GroupDialog inherits Rectangle {
                 spacing: 8px;
                 Text {
                     text: root.group-dialog-mode == "rename"
-                        ? (root.lang-en ? "Rename group" : "重命名分组")
+                        ? (@tr("Rename group"))
                         : root.group-dialog-mode == "child"
-                        ? (root.lang-en ? "New child group" : "新建子分组")
-                        : (root.lang-en ? "New sibling group" : "新建同级分组");
+                        ? (@tr("New child group"))
+                        : (@tr("New sibling group"));
                     color: Theme.text-primary;
                     font-size: Theme.fs-lg;
                     font-weight: 700;
@@ -108,12 +107,12 @@ export component GroupDialog inherits Rectangle {
                     alignment: end;
                     spacing: 8px;
                     Button {
-                        text: root.lang-en ? "Cancel" : "取消";
+                        text: @tr("Cancel");
                         clicked => { root.group-dialog-open = false; }
                     }
 
                     Button {
-                        text: root.lang-en ? "OK" : "确定";
+                        text: @tr("OK");
                         primary: true;
                         enabled: root.group-dialog-name != "";
                         clicked => {
