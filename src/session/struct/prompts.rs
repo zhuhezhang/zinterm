@@ -22,6 +22,7 @@ pub(crate) struct TabStatus {
 pub(crate) type TabStatuses = Arc<Mutex<HashMap<String, TabStatus>>>;
 
 /// Shared dependencies for starting or reconnecting a session tab.
+#[derive(Clone)]
 pub(crate) struct ConnectCtx {
     pub(crate) weak: slint::Weak<AppWindow>,
     pub(crate) runtime: Arc<Runtime>,
