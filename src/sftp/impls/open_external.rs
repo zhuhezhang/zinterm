@@ -19,10 +19,10 @@ use super::transfer_download::download_impl;
 /// containing shell metacharacters (`&` `|` `>` `<` `^` …) — e.g. `foo&calc.exe`
 /// — could inject and run arbitrary commands when the user opened it.  We call
 /// `ShellExecuteW` directly instead: it treats the path as one opaque string, so
-/// no shell parsing happens.  (`xdg-open` on Unix already takes a single argv
-/// argument and never invokes a shell.)
+/// no shell parsing happens.  (`open` on macOS and `xdg-open` on other Unix
+/// already take a single argv and never invoke a shell.)
 #[cfg(windows)]
-pub(super) fn open_with_os(path: &str) {
+pub(super) fn open_with_os(path: &str) -> std::io::Result<()> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     #[link(name = "shell32")]
@@ -44,7 +44,7 @@ pub(super) fn open_with_os(path: &str) {
     };
     let op = to_wide("open");
     let file = to_wide(path);
-    unsafe {
+    let code = unsafe {
         ShellExecuteW(
             0,
             op.as_ptr(),
@@ -52,13 +52,31 @@ pub(super) fn open_with_os(path: &str) {
             std::ptr::null(),
             std::ptr::null(),
             1, // SW_SHOWNORMAL
-        );
+        )
+    };
+    // ShellExecuteW：大于 32 才算成功。
+    if code > 32 {
+        Ok(())
+    } else {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("ShellExecuteW failed: {code}"),
+        ))
     }
 }
 
-#[cfg(not(windows))]
-pub(super) fn open_with_os(path: &str) {
-    let _ = std::process::Command::new("xdg-open").arg(path).spawn();
+#[cfg(target_os = "macos")]
+pub(super) fn open_with_os(path: &str) -> std::io::Result<()> {
+    // macOS 没有 xdg-open；用 open，路径作为单独参数，不经过 shell。
+    std::process::Command::new("open").arg(path).spawn().map(|_| ())
+}
+
+#[cfg(all(not(windows), not(target_os = "macos")))]
+pub(super) fn open_with_os(path: &str) -> std::io::Result<()> {
+    std::process::Command::new("xdg-open")
+        .arg(path)
+        .spawn()
+        .map(|_| ())
 }
 
 pub(super) fn external_edit_local_name(host: &str, filename: &str, unique: &str) -> String {
@@ -130,21 +148,28 @@ pub(super) async fn handle_open_temp(ctx: &mut super::ctx::WorkerCtx, remote: St
     )
     .await
     {
-        Ok(_) => {
-            open_with_os(&local_str);
-            let _ = events.send(SessionEvent::SftpStatus(format!(
-                "{}: {}",
+        Ok(_) => match open_with_os(&local_str) {
+            Ok(()) => {
+                let _ = events.send(SessionEvent::SftpStatus(format!(
+                    "{}: {}",
+                    if edit {
+                        t("已打开编辑", "Opened for editing")
+                    } else {
+                        t("已打开", "Opened")
+                    },
+                    filename
+                )));
                 if edit {
-                    t("已打开编辑", "Opened for editing")
-                } else {
-                    t("已打开", "Opened")
-                },
-                filename
-            )));
-            if edit {
-                spawn_edit_watcher(self_tx.clone(), local_str, remote.clone());
+                    spawn_edit_watcher(self_tx.clone(), local_str, remote.clone());
+                }
             }
-        }
+            Err(e) => {
+                let _ = events.send(SessionEvent::SftpStatus(format!(
+                    "{}: {e}",
+                    t("打开失败", "Open failed")
+                )));
+            }
+        },
         Err(e) => {
             let _ = events.send(SessionEvent::SftpStatus(format!(
                 "{}: {e}",

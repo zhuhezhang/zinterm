@@ -905,13 +905,19 @@ export component SftpPanel inherits Rectangle {
                                 SftpMenuItem {
                                     label: @tr("Open externally");
                                     enabled: root.menu-target != "" && !root.menu-target-is-dir;
-                                    clicked => { root.open-external(root.menu-target); }
+                                    clicked => {
+                                        file-menu.close();
+                                        root.open-external(root.menu-target);
+                                    }
                                 }
 
                                 SftpMenuItem {
                                     label: @tr("Edit externally");
                                     enabled: root.menu-target != "" && !root.menu-target-is-dir;
-                                    clicked => { root.edit-external(root.menu-target); }
+                                    clicked => {
+                                        file-menu.close();
+                                        root.edit-external(root.menu-target);
+                                    }
                                 }
 
                                 SftpMenuItem {
