@@ -188,7 +188,7 @@ fn normalize_flow_control(raw: &str) -> String {
     }
 }
 
-/// Dialog combo labels for flow control (must match `session_dialog.slint` items).
+/// Dialog combo labels for flow control (must match `dialogs/session_dialog.slint` items).
 fn flow_control_display(raw: &str) -> String {
     match normalize_flow_control(raw).as_str() {
         "xonxoff" => "Xon/Xoff".to_string(),
@@ -208,7 +208,7 @@ fn normalize_parity(raw: &str) -> String {
     }
 }
 
-/// Dialog combo labels for parity (must match `session_dialog.slint` items).
+/// Dialog combo labels for parity (must match `dialogs/session_dialog.slint` items).
 fn parity_display(raw: &str) -> String {
     match normalize_parity(raw).as_str() {
         "odd" => "Odd".to_string(),

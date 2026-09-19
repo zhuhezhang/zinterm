@@ -198,13 +198,15 @@ zinterm/
 ├── Cargo.toml
 ├── build.rs                 # Slint compiler entry point
 ├── ui/
-│   ├── app.slint            # top-level window
-│   ├── theme.slint          # design tokens
-│   ├── widgets.slint        # reusable buttons / inputs
-│   ├── tabs.slint           # top tab bar
-│   ├── welcome.slint        # welcome page / quick connect
-│   ├── session_dialog.slint # new / edit session dialog
-│   └── terminal_view.slint  # terminal view (v0.1 line-buffered)
+│   ├── app.slint            # top-level window (only root file)
+│   ├── shared/              # theme / widgets
+│   ├── shell/               # title bar, tabs, dock area, etc.
+│   ├── terminal/            # terminal view, SFTP, command bar
+│   ├── welcome/             # welcome page / session list
+│   ├── dialogs/             # dialogs
+│   ├── interface/           # settings panel
+│   ├── types/               # shared data structs
+│   └── fonts/
 └── src/
     ├── main.rs
     ├── app.rs               # UI ↔ backend bridge

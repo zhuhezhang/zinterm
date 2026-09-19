@@ -189,13 +189,15 @@ zinterm/
 ├── Cargo.toml
 ├── build.rs                 # Slint 编译器入口
 ├── ui/
-│   ├── app.slint            # 顶层窗口
-│   ├── theme.slint          # 设计 tokens
-│   ├── widgets.slint        # 可复用按钮 / 输入框
-│   ├── tabs.slint           # 顶部标签栏
-│   ├── welcome.slint        # 欢迎页 / 快速连接
-│   ├── session_dialog.slint # 新建 / 编辑会话弹框
-│   └── terminal_view.slint  # 终端视图（v0.1 行缓冲）
+│   ├── app.slint            # 顶层窗口（唯一根文件）
+│   ├── shared/              # theme / widgets
+│   ├── shell/               # 标题栏、标签栏、停靠区等
+│   ├── terminal/            # 终端视图、SFTP、命令栏
+│   ├── welcome/             # 欢迎页 / 会话列表
+│   ├── dialogs/             # 各类弹框
+│   ├── interface/           # 设置面板
+│   ├── types/               # 共享数据结构
+│   └── fonts/
 └── src/
     ├── main.rs
     ├── app.rs               # UI ↔ 后端桥接

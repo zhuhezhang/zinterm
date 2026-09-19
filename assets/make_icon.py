@@ -19,7 +19,7 @@ SS = 4
 BASE = 256
 S = BASE * SS  # working canvas 1024
 
-# Palette aligned with ui/theme.slint (dark)
+# Palette aligned with ui/shared/theme.slint (dark)
 TILE_TOP = (35, 38, 48)
 TILE_BOT = (22, 24, 30)
 PANEL = (14, 15, 19)

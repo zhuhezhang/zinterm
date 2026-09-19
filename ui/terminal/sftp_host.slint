@@ -1,7 +1,7 @@
-import { Theme } from "../theme.slint";
-import { SftpPanel, SftpEntry, SftpTreeNode } from "../sftp_panel.slint";
-import { TabInfo } from "../tabs.slint";
-import { ToolStrip } from "../widgets.slint";
+import { Theme } from "../shared/theme.slint";
+import { SftpPanel, SftpEntry, SftpTreeNode } from "sftp_panel.slint";
+import { TabInfo } from "../shell/tabs.slint";
+import { ToolStrip } from "../shared/widgets.slint";
 
 export component SftpHost inherits Rectangle {
     // Geometry is set by the parent (dock-region). Do not use width/height: 100%
