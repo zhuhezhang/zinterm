@@ -269,7 +269,6 @@ export component QuickCmdManageDialog inherits Rectangle {
                         height: 30px;
 
                         qcm-search-in := BorderedLineInput {
-                            height: root.height;
                             pad-x: 8px;
                             font-size: Theme.fs-sm;
                             leading-icon: "\u{E8B6}";
@@ -358,8 +357,6 @@ export component QuickCmdManageDialog inherits Rectangle {
                                     }
 
                                     grp-header-ta := TouchArea {
-                                        width: root.width;
-                                        height: root.height;
                                         mouse-cursor: q.group != "default"
                                             ? (root.qcm-grp-dragging && root.qcm-drag-group-from == q.group
                                             ? grabbing : grab)
@@ -554,8 +551,6 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         Rectangle {
                                             horizontal-stretch: 1;
                                             body-ta := TouchArea {
-                                                width: root.width;
-                                                height: root.height;
                                                 mouse-cursor: root.qcm-drag-from == q.orig-index ? grabbing : grab;
                                                 double-clicked => {
                                                     cmd-pressing = false;

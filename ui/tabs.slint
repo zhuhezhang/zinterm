@@ -108,6 +108,8 @@ component SingleTab inherits Rectangle {
     touch := TooltipArea {
         mouse-cursor: pointer;
         tooltip-text: root.dragging ? "" : root.tip-text;
+        // Same as saved-session rows: tip starts at cursor-x and grows rightward.
+        tip-from-cursor: true;
         anchor-width: root.width;
         anchor-height: root.height;
         pointer-event(e) => {
