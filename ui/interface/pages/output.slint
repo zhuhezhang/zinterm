@@ -35,7 +35,9 @@ export component OutputSettingsPage inherits Rectangle {
     in-out property <int> rule-edit-index: -1;   // -1 = add, >=0 = edit that rule;
     property <string> rule-name-label: @tr("Rule name");
     property <string> rule-pattern-label: @tr("Keyword or regular expression");
-    property <length> rule-form-label-width: 180px;
+    // Locale-aware: match the wider of the two form labels.
+    property <length> rule-form-label-width:
+        max(m-rule-name.preferred-width, m-rule-pattern.preferred-width);
     callback set-highlight-draft-color(string) -> bool;
     callback set-json-format-output(bool);
     callback set-output-highlight(bool, string);
@@ -86,6 +88,26 @@ export component OutputSettingsPage inherits Rectangle {
             root.new-rule-case-sensitive,
             root.new-rule-whole-line,
             root.highlight-draft-color-hex);
+    }
+
+    // Off-screen label probes used only to compute `rule-form-label-width`.
+    Rectangle {
+        x: -10000px;
+        y: -10000px;
+        width: 0px;
+        height: 0px;
+        clip: true;
+        VerticalLayout {
+            m-rule-name := Text {
+                text: root.rule-name-label;
+                font-size: Theme.fs-sm;
+            }
+
+            m-rule-pattern := Text {
+                text: root.rule-pattern-label;
+                font-size: Theme.fs-sm;
+            }
+        }
     }
 
     VerticalLayout {

@@ -72,12 +72,6 @@ export component InterfacePanel inherits Rectangle {
         && root.current-wallpaper != "builtin:dark" && root.current-wallpaper != "builtin:tech"
         && root.current-wallpaper != "builtin:miku" && root.current-wallpaper != "builtin:ms";
 
-    // Shared left-column width for the custom-rule form (locale-aware).
-    property <string> rule-name-label: @tr("Rule name");
-    property <string> rule-pattern-label: @tr("Keyword or regular expression");
-    property <length> rule-form-label-width:
-        max(m-rule-name.preferred-width, m-rule-pattern.preferred-width);
-
     callback set-term-font(string);
     callback set-term-font-size(int);
     callback set-terminal-line-spacing(float);
@@ -170,26 +164,6 @@ export component InterfacePanel inherits Rectangle {
     callback request-clear-sessions();
     callback request-clear-passwords();
     callback request-restore-settings();
-
-    // Off-screen label probes used only to compute `rule-form-label-width`.
-    Rectangle {
-        x: -10000px;
-        y: -10000px;
-        width: 0px;
-        height: 0px;
-        clip: true;
-        VerticalLayout {
-            m-rule-name := Text {
-                text: root.rule-name-label;
-                font-size: Theme.fs-sm;
-            }
-
-            m-rule-pattern := Text {
-                text: root.rule-pattern-label;
-                font-size: Theme.fs-sm;
-            }
-        }
-    }
 
     HorizontalLayout {
         // --- Left nav ------------------------------------------------------
