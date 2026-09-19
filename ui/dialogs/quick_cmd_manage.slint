@@ -4,8 +4,6 @@ import { BorderedLineInput, BorderedTextArea } from "../widgets.slint";
 import { ScrollView, Button } from "std-widgets.slint";
 
 export component QuickCmdManageDialog inherits Rectangle {
-    width: 100%;
-    height: 100%;
     in-out property <string> active-tab-id: "welcome";
     callback add-quick-command(string /* name */, string /* command */, string /* group */);
     callback delete-quick-command(int /* index */);

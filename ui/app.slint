@@ -1044,6 +1044,10 @@ export component AppWindow inherits Window {
     }
     // (extracted) QuickCmdManageDialog
     QuickCmdManageDialog {
+        // Fill the window here, not in the component file. A `%` size on an
+        // exported component root has no parent when that file is checked alone.
+        width: 100%;
+        height: 100%;
         active-tab-id <=> root.active-tab-id;
         add-quick-command(name, command, group) => { root.add-quick-command(name, command, group); }
         delete-quick-command(index) => { root.delete-quick-command(index); }
