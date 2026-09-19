@@ -2,7 +2,6 @@ import { PrimaryButton, DangerButton } from "../../widgets.slint";
 import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 
 export component DataSettingsPage inherits Rectangle {
-    width: 100%;
     height: self.preferred-height;
     in-out property <bool> credentials-vault-available: true;
     callback request-clear-known-hosts();

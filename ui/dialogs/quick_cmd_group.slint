@@ -3,8 +3,6 @@ import { BorderedLineInput } from "../widgets.slint";
 import { Button } from "std-widgets.slint";
 
 export component QuickCmdGroupDialog inherits Rectangle {
-    width: 100%;
-    height: 100%;
     in-out property <string> qcg-name;
     in-out property <bool> qcg-open: false;           // group name dialog open;
     in-out property <string> qcg-orig;

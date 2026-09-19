@@ -2,7 +2,6 @@ import { ComboBox } from "std-widgets.slint";
 import { SectionHeader, SettingRow } from "../widgets.slint";
 
 export component LanguageSettingsPage inherits Rectangle {
-    width: 100%;
     height: self.preferred-height;
     in-out property <string> language-pref: "auto";
     callback set-language(string);

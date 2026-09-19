@@ -7,8 +7,6 @@ import { CredentialPrompt } from "credential_prompt.slint";
 import { InterfaceOverlay } from "../shell/interface_overlay.slint";
 
 export component ConfirmStack inherits Rectangle {
-    width: 100%;
-    height: 100%;
     callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
     callback cancel-settings();
     callback clear-all-sessions(bool);
@@ -170,17 +168,17 @@ export component ConfirmStack inherits Rectangle {
     in-out property <color> term-cursor-color: Theme.term-fg;
     in-out property <string> term-cursor-color-hex;
     in-out property <string> term-cursor-style: "bar";
-    in-out property <bool> term-font-bold <=> Theme.term-font-bold;
-    in-out property <string> term-font-family <=> Theme.term-font-family;
-    in-out property <length> term-font-size <=> Theme.term-font-size;
+    in-out property <bool> term-font-bold;
+    in-out property <string> term-font-family;
+    in-out property <length> term-font-size;
     in property <[string]> term-fonts;             // installed monospace families;
     in-out property <int> terminal-focus-seq: 0;
     in-out property <float> terminal-line-spacing: 1.0;
     callback toggle-ssh-algorithm(string);
-    in-out property <float> ui-scale <=> Theme.ui-scale;   // global UI zoom (#100);
+    in-out property <float> ui-scale;   // global UI zoom (#100);
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184);
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
-    in-out property <float> wallpaper-overlay <=> Theme.panel-alpha;
+    in-out property <float> wallpaper-overlay;
     in-out property <bool> welcome-as-sidebar: false;
     in-out property <string> welcome-delete-detail; // display label in the dialog;
     in-out property <string> welcome-delete-kind;   // "group" | "session";
@@ -332,6 +330,8 @@ export component ConfirmStack inherits Rectangle {
     }
     // (extracted) CredentialPrompt
     CredentialPrompt {
+        width: 100%;
+        height: 100%;
         cred-accept => { root.cred-accept(); }
         cred-auth <=> root.cred-auth;
         cred-host <=> root.cred-host;
@@ -345,6 +345,8 @@ export component ConfirmStack inherits Rectangle {
     }
     // (extracted) InterfaceOverlay
     InterfaceOverlay {
+        width: 100%;
+        height: 100%;
         add-output-highlight-rule(a0, a1, a2, a3, a4, a5) => { return root.add-output-highlight-rule(a0, a1, a2, a3, a4, a5); }
         cancel-settings => { root.cancel-settings(); }
         collapse-sftp-default <=> root.collapse-sftp-default;

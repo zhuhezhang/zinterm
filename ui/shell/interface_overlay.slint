@@ -4,8 +4,6 @@ import { PrimaryButton, GhostButton } from "../widgets.slint";
 import { OutputRuleItem, AlgorithmOptionRow } from "../types/settings.slint";
 
 export component InterfaceOverlay inherits Rectangle {
-    width: 100%;
-    height: 100%;
     callback add-output-highlight-rule(string, string, bool, bool, bool, string)-> bool;
     callback cancel-settings();
     in-out property <bool> collapse-sftp-default: true;
@@ -93,16 +91,16 @@ export component InterfaceOverlay inherits Rectangle {
     in-out property <color> term-cursor-color: Theme.term-fg;
     in-out property <string> term-cursor-color-hex;
     in-out property <string> term-cursor-style: "bar";
-    in-out property <bool> term-font-bold <=> Theme.term-font-bold;
-    in-out property <string> term-font-family <=> Theme.term-font-family;
-    in-out property <length> term-font-size <=> Theme.term-font-size;
+    in-out property <bool> term-font-bold;
+    in-out property <string> term-font-family;
+    in-out property <length> term-font-size;
     in-out property <[string]> term-fonts;             // installed monospace families;
     in-out property <float> terminal-line-spacing: 1.0;
     callback toggle-ssh-algorithm(string);
-    in-out property <float> ui-scale <=> Theme.ui-scale;   // global UI zoom (#100);
+    in-out property <float> ui-scale;   // global UI zoom (#100);
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184);
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string)-> bool;
-    in-out property <float> wallpaper-overlay <=> Theme.panel-alpha;
+    in-out property <float> wallpaper-overlay;
     in-out property <bool> welcome-as-sidebar: false;
     in-out property <bool> welcome-single-click-connect: true;
     in-out property <bool> zen-mode: false;

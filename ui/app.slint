@@ -967,18 +967,24 @@ export component AppWindow inherits Window {
     }  // app-keys FocusScope
 
     ResizeEdges {
+        width: 100%;
+        height: 100%;
         custom-titlebar <=> root.custom-titlebar;
         window-maximized <=> root.window-maximized;
         win-resize(a0) => { root.win-resize(a0); }
     }
     // (extracted) UpdateBanner
     UpdateBanner {
+        width: 100%;
+        height: 100%;
         open-update-url => { root.open-update-url(); }
         update-available <=> root.update-available;
         update-version: root.update-version;
     }
     // (extracted) FileEditorOverlay
     FileEditorOverlay {
+        width: 100%;
+        height: 100%;
         close-editor => { root.close-editor(); }
         ed-base-h <=> root.ed-base-h;
         ed-base-w <=> root.ed-base-w;
@@ -1011,6 +1017,8 @@ export component AppWindow inherits Window {
     }
     // (extracted) DownloadPopup
     DownloadPopup {
+        width: 100%;
+        height: 100%;
         cancel-transfer(a0) => { root.cancel-transfer(a0); }
         clear-transfers => { root.clear-transfers(); }
         download-dir: root.download-dir;
@@ -1022,6 +1030,8 @@ export component AppWindow inherits Window {
     }
     // (extracted) SettingsMenu
     SettingsMenu {
+        width: 100%;
+        height: 100%;
         about-open <=> root.about-open;
         lang-en <=> root.lang-en;
         export-sessions => { root.export-sessions(); }
@@ -1034,6 +1044,8 @@ export component AppWindow inherits Window {
     }
     // (extracted) GroupDialog
     GroupDialog {
+        width: 100%;
+        height: 100%;
         group-dialog-error <=> root.group-dialog-error;
         group-dialog-mode <=> root.group-dialog-mode;
         group-dialog-name <=> root.group-dialog-name;
@@ -1044,8 +1056,6 @@ export component AppWindow inherits Window {
     }
     // (extracted) QuickCmdManageDialog
     QuickCmdManageDialog {
-        // Fill the window here, not in the component file. A `%` size on an
-        // exported component root has no parent when that file is checked alone.
         width: 100%;
         height: 100%;
         active-tab-id <=> root.active-tab-id;
@@ -1088,6 +1098,8 @@ export component AppWindow inherits Window {
     }
     // (extracted) QuickCmdGroupDialog
     QuickCmdGroupDialog {
+        width: 100%;
+        height: 100%;
         qcg-name <=> root.qcg-name;
         qcg-open <=> root.qcg-open;
         qcg-orig <=> root.qcg-orig;
@@ -1095,6 +1107,8 @@ export component AppWindow inherits Window {
     }
     // (extracted) SftpPromptDialog
     SftpPromptDialog {
+        width: 100%;
+        height: 100%;
         sftp-prompt-kind <=> root.sftp-prompt-kind;
         sftp-prompt-open <=> root.sftp-prompt-open;
         sftp-prompt-submit(tab, kind, target, value) => { root.sftp-prompt-submit(tab, kind, target, value); }
@@ -1104,11 +1118,15 @@ export component AppWindow inherits Window {
     }
     // (extracted) ConfirmCloseDialog
     ConfirmCloseDialog {
+        width: 100%;
+        height: 100%;
         confirm-close-open <=> root.confirm-close-open;
         confirm-close-yes => { root.confirm-close-yes(); }
     }
     // (extracted) ChmodDialog
     ChmodDialog {
+        width: 100%;
+        height: 100%;
         chmod-gr <=> root.chmod-gr;
         chmod-gw <=> root.chmod-gw;
         chmod-gx <=> root.chmod-gx;
@@ -1123,17 +1141,23 @@ export component AppWindow inherits Window {
     }
     // (extracted) ShortcutsDialog
     ShortcutsDialog {
+        width: 100%;
+        height: 100%;
         is-mac <=> root.is-mac;
         shortcuts-open <=> root.shortcuts-open;
     }
     // (extracted) AboutDialog
     AboutDialog {
+        width: 100%;
+        height: 100%;
         about-open <=> root.about-open;
         app-version: root.app-version;
         open-repo => { root.open-repo(); }
     }
     // (extracted) ConfirmStack
     ConfirmStack {
+        width: 100%;
+        height: 100%;
         add-output-highlight-rule(a0, a1, a2, a3, a4, a5) => { return root.add-output-highlight-rule(a0, a1, a2, a3, a4, a5); }
         cancel-settings => { root.cancel-settings(); }
         clear-all-sessions(a0) => { root.clear-all-sessions(a0); }

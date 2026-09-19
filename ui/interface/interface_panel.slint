@@ -314,6 +314,7 @@ export component InterfacePanel inherits Rectangle {
 
                     // --- Font page ---------------------------------------------
                     if root.ifd-page == "font": FontSettingsPage {
+                        width: 100%;
                         term-cursor-color: root.term-cursor-color;
                         term-cursor-color-hex <=> root.term-cursor-color-hex;
                         term-cursor-style <=> root.term-cursor-style;
@@ -333,6 +334,7 @@ export component InterfacePanel inherits Rectangle {
                         set-ui-scale(a0) => { root.set-ui-scale(a0); }
                     }
                     if root.ifd-page == "input": InputSettingsPage {
+                        width: 100%;
                         extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
                         paste-confirm-enabled <=> root.paste-confirm-enabled;
                         select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
@@ -341,12 +343,14 @@ export component InterfacePanel inherits Rectangle {
                         set-select-copy-right-paste-enabled(a0) => { root.set-select-copy-right-paste-enabled(a0); }
                     }
                     if root.ifd-page == "renderer": RendererSettingsPage {
+                        width: 100%;
                         is-windows: root.is-windows;
                         renderer-mode <=> root.renderer-mode;
                         renderer-restart-required <=> root.renderer-restart-required;
                         set-renderer-mode(a0) => { root.set-renderer-mode(a0); }
                     }
                     if root.ifd-page == "output": OutputSettingsPage {
+                        width: 100%;
                         add-output-highlight-rule(a0, a1, a2, a3, a4, a5) => { return root.add-output-highlight-rule(a0, a1, a2, a3, a4, a5); }
                         update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6) => { return root.update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6); }
                         set-highlight-draft-color(a0) => { return root.set-highlight-draft-color(a0); }
@@ -369,6 +373,7 @@ export component InterfacePanel inherits Rectangle {
                         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
                     }
                     if root.ifd-page == "wallpaper": WallpaperSettingsPage {
+                        width: 100%;
                         current-wallpaper: root.current-wallpaper;
                         custom-wallpaper-name: root.custom-wallpaper-name;
                         wallpaper-overlay <=> root.wallpaper-overlay;
@@ -377,6 +382,7 @@ export component InterfacePanel inherits Rectangle {
                         set-wallpaper(a0) => { root.set-wallpaper(a0); }
                     }
                     if root.ifd-page == "ssh": SshSettingsPage {
+                        width: 100%;
                         download-always-ask <=> root.download-always-ask;
                         sftp-follow-cd <=> root.sftp-follow-cd;
                         ssh-algorithm-category <=> root.ssh-algorithm-category;
@@ -392,6 +398,7 @@ export component InterfacePanel inherits Rectangle {
                         toggle-ssh-algorithm(a0) => { root.toggle-ssh-algorithm(a0); }
                     }
                     if root.ifd-page == "sidebar" || root.ifd-page == "welcome": SidebarSettingsPage {
+                        width: 100%;
                         ifd-page <=> root.ifd-page;
                         collapse-sftp-default <=> root.collapse-sftp-default;
                         confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
@@ -409,6 +416,7 @@ export component InterfacePanel inherits Rectangle {
                         set-zen-mode(a0) => { root.set-zen-mode(a0); }
                     }
                     if root.ifd-page == "data": DataSettingsPage {
+                        width: 100%;
                         credentials-vault-available <=> root.credentials-vault-available;
                         save-passwords <=> root.save-passwords;
                         request-clear-known-hosts => { root.request-clear-known-hosts(); }
@@ -418,10 +426,12 @@ export component InterfacePanel inherits Rectangle {
                         set-save-passwords(a0) => { root.set-save-passwords(a0); }
                     }
                     if root.ifd-page == "language": LanguageSettingsPage {
+                        width: 100%;
                         language-pref <=> root.language-pref;
                         set-language(a0) => { root.set-language(a0); }
                     }
                     if root.ifd-page == "update": UpdateSettingsPage {
+                        width: 100%;
                         update-check-enabled <=> root.update-check-enabled;
                         set-update-check-enabled(a0) => { root.set-update-check-enabled(a0); }
                     }

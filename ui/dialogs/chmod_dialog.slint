@@ -2,8 +2,6 @@ import { Theme } from "../theme.slint";
 import { Button, CheckBox } from "std-widgets.slint";
 
 export component ChmodDialog inherits Rectangle {
-    width: 100%;
-    height: 100%;
     in-out property <bool> chmod-gr;
     in-out property <bool> chmod-gw;
     in-out property <bool> chmod-gx;
@@ -38,11 +36,11 @@ export component ChmodDialog inherits Rectangle {
             key-released(e) => { accept }
         }
 
-        Rectangle {
+        chmod-wrap := Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             width: 300px;
-            height: 200px;
+            height: chmod-card.preferred-height;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -51,7 +49,7 @@ export component ChmodDialog inherits Rectangle {
             drop-shadow-color: #000000a0;
             TouchArea { }
 
-            VerticalLayout {
+            chmod-card := VerticalLayout {
                 padding: 8px;
                 spacing: 8px;
                 Text {

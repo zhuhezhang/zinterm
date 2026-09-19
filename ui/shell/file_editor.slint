@@ -4,8 +4,6 @@ import { BorderedLineInput } from "../widgets.slint";
 import { ScrollView } from "std-widgets.slint";
 
 export component FileEditorOverlay inherits Rectangle {
-    width: 100%;
-    height: 100%;
     callback close-editor();
     in-out property <length> ed-base-h;
     in-out property <length> ed-base-w;

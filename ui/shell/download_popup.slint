@@ -3,8 +3,6 @@ import { ScrollView } from "std-widgets.slint";
 import { TransferInfo } from "../types/app_state.slint";
 
 export component DownloadPopup inherits Rectangle {
-    width: 100%;
-    height: 100%;
     callback cancel-transfer(string);
     callback clear-transfers();
     in-out property <string> download-dir;

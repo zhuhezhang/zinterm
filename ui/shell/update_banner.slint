@@ -1,8 +1,6 @@
 import { Theme } from "../theme.slint";
 
 export component UpdateBanner inherits Rectangle {
-    width: 100%;
-    height: 100%;
     callback open-update-url();
     in-out property <bool> update-available: false;
     in property <string> update-version;

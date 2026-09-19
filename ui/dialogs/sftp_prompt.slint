@@ -3,8 +3,6 @@ import { BorderedLineInput } from "../widgets.slint";
 import { Button } from "std-widgets.slint";
 
 export component SftpPromptDialog inherits Rectangle {
-    width: 100%;
-    height: 100%;
     in-out property <string> sftp-prompt-kind;
     in-out property <bool> sftp-prompt-open: false;
     callback sftp-prompt-submit(string /* tab */, string /* kind */, string /* target */, string /* value */);

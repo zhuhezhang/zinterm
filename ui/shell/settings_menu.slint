@@ -1,8 +1,6 @@
 import { Theme } from "../theme.slint";
 
 export component SettingsMenu inherits Rectangle {
-    width: 100%;
-    height: 100%;
     in-out property <bool> about-open: false;     // centered About dialog;
     callback export-sessions();
     callback import-sessions();

@@ -3,7 +3,6 @@ import { ComboBox } from "std-widgets.slint";
 import { SectionHeader, SettingHint, SettingRow } from "../widgets.slint";
 
 export component RendererSettingsPage inherits Rectangle {
-    width: 100%;
     height: self.preferred-height;
     in property <bool> is-windows;
     in-out property <string> renderer-mode: "software";

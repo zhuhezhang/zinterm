@@ -42,9 +42,7 @@ component ShortcutRow inherits Rectangle {
 }
 
 export component ShortcutsDialog inherits Rectangle {
-    width: 100%;
-    height: 100%;
-    in-out property <bool> is-mac <=> Theme.is-mac;
+    in-out property <bool> is-mac;
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103);
 
     // --- Keyboard shortcuts dialog (#103) ---------------------------------
