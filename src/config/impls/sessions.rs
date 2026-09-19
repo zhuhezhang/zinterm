@@ -26,16 +26,39 @@ impl ConfigStore {
         session.name =
             self.disambiguate_session_name(session.group.trim(), session.name.trim(), exclude);
         let id = session.id.clone();
+        let new_group = session.group.clone();
+        let previous_group = self
+            .cache
+            .sessions
+            .iter()
+            .find(|s| s.id == session.id)
+            .map(|s| s.group.clone());
         if let Some(existing) = self.cache.sessions.iter_mut().find(|s| s.id == session.id) {
             *existing = session;
         } else {
             self.cache.sessions.push(session);
         }
+        if let Some(old) = previous_group {
+            if normalize_session_group(&old) != normalize_session_group(&new_group) {
+                self.retain_vacated_group(&old);
+            }
+        }
+        // Occupied folders must not linger in empty_groups.
+        self.prune_occupied_empty_groups();
         id
     }
 
     pub fn remove(&mut self, id: &str) {
+        let previous_group = self
+            .cache
+            .sessions
+            .iter()
+            .find(|s| s.id == id)
+            .map(|s| s.group.clone());
         self.cache.sessions.retain(|s| s.id != id);
+        if let Some(old) = previous_group {
+            self.retain_vacated_group(&old);
+        }
         if let Ok(dir) = self.data_dir_path() {
             if let Err(e) = crate::config::vault::remove_secrets(&dir, id) {
                 tracing::warn!("failed to remove vault secrets for {id}: {e:#}");
@@ -169,6 +192,8 @@ impl ConfigStore {
         let name = self.disambiguate_session_name(&target, &name, Some(id));
         self.cache.sessions[idx].group = target;
         self.cache.sessions[idx].name = name;
+        self.retain_vacated_group(&current);
+        self.prune_occupied_empty_groups();
         true
     }
 
@@ -275,5 +300,47 @@ mod tests {
         // Cannot move a group into itself or a descendant.
         assert!(!store.move_group_to_parent("dev", "dev/web"));
         assert!(!store.move_group_to_parent("dev", "dev"));
+    }
+
+    #[test]
+    fn vacated_group_survives_when_its_last_session_leaves() {
+        let mut store = temp_store();
+        store.add_group("第2分组".into());
+        let mut only = sample_session("web");
+        only.id = "s1".into();
+        only.group = "第1分组".into();
+        store.upsert(only);
+        // A session inside the folder clears it from empty_groups.
+        assert!(!store.empty_groups().iter().any(|g| g == "第1分组"));
+
+        assert!(store.move_session_to_group("s1", "第2分组"));
+        assert_eq!(store.get("s1").unwrap().group, "第2分组");
+        assert!(store.session_group_exists("第1分组"));
+        assert!(store.empty_groups().iter().any(|g| g == "第1分组"));
+        assert!(!store.empty_groups().iter().any(|g| g == "第2分组"));
+
+        // Editing the group field is the same move.
+        let mut edited = store.get("s1").unwrap().clone();
+        edited.group = "第3分组".into();
+        store.upsert(edited);
+        assert!(store.empty_groups().iter().any(|g| g == "第2分组"));
+        assert!(!store.empty_groups().iter().any(|g| g == "第3分组"));
+
+        // A sibling session keeps the folder; it is not recorded as empty.
+        let mut sibling = sample_session("api");
+        sibling.id = "s2".into();
+        sibling.group = "第3分组".into();
+        store.upsert(sibling);
+        assert!(store.move_session_to_group("s1", ""));
+        assert!(store.session_group_exists("第3分组"));
+        assert!(!store.empty_groups().iter().any(|g| g == "第3分组"));
+
+        store.remove("s2");
+        assert!(store.session_group_exists("第3分组"));
+        assert!(store.empty_groups().iter().any(|g| g == "第3分组"));
+        assert_eq!(
+            store.empty_groups().iter().filter(|g| *g == "第1分组").count(),
+            1
+        );
     }
 }

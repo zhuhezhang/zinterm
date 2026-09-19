@@ -148,6 +148,24 @@ impl ConfigStore {
         }
     }
 
+    /// Keep a folder after its last session leaves. Groups that still contain a
+    /// session are only inferred from `session.group`, so without this the
+    /// folder vanishes as soon as that session is moved or deleted.
+    /// Does not change collapse state (unlike [`Self::add_group`]).
+    pub(super) fn retain_vacated_group(&mut self, group: &str) {
+        let n = normalize_session_group(group);
+        if n.is_empty() || self.session_group_exists(&n) {
+            return;
+        }
+        self.cache.empty_groups.push(n);
+    }
+
+    /// Drop any `empty_groups` entry that now has a session in that folder or a
+    /// descendant. Occupied folders are inferred from `session.group` alone.
+    pub(super) fn prune_occupied_empty_groups(&mut self) {
+        self.cache.empty_groups = self.collect_empty_groups();
+    }
+
     /// Delete a group and cascade: nested child groups and all sessions in this
     /// group or any descendant are removed as well.
     pub fn remove_group(&mut self, name: &str) {

@@ -108,7 +108,9 @@ pub struct ConfigFile {
     #[serde(default = "default_wallpaper")]
     pub wallpaper: String,
     /// Explicit empty session groups/folders (#41) so a folder can exist before
-    /// any session is moved into it. "default" is implicit and not stored here.
+    /// any session is moved into it. Once a saved session lives in the folder
+    /// (or a descendant), the path is dropped from this list. "default" is
+    /// implicit and not stored here.
     #[serde(default)]
     pub empty_groups: Vec<String>,
     /// Quick Connect folders that were collapsed when the UI was last used.
