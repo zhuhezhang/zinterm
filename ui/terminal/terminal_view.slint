@@ -922,14 +922,19 @@ export component TerminalView inherits Rectangle {
                         }
 
                         // --- Find bar (overlay, top) ------------------------------------
-                        // Terminal scrollbar (#103) — a slim overlay on the right edge of the
+                        // Terminal scrollbar (#103) — overlay on the right edge of the
                         // output area, shown only when there's scrollback (and not on the
-                        // alternate screen). Driven by scroll-max/scroll-offset; click or drag
-                        // the track to jump to an absolute position.
+                        // alternate screen). Hit strip + thumb inset from the panel edge;
+                        // idle 2px / hover 6px. Driven by scroll-max/scroll-offset;
+                        // click or drag the track to jump.
                         if root.scroll-max > 0 && !root.is-alt-screen: Rectangle {
-                            x: flickable.x + flickable.width - 10px;
+                            property <bool> expanded: track-ta.has-hover || track-ta.pressed;
+                            // Distance from flickable right edge to the thumb's right edge.
+                            property <length> edge-inset: 12px;
+                            property <length> thumb-w: self.expanded ? 6px : 2px;
+                            width: self.edge-inset + self.thumb-w + 4px;
+                            x: flickable.x + flickable.width - self.width;
                             y: flickable.y + 4px;
-                            width: 8px;
                             height: flickable.height - 8px;
                             track-ta := TouchArea {
                                 moved => {
@@ -946,13 +951,14 @@ export component TerminalView inherits Rectangle {
 
                             Rectangle {
                                 property <float> total: root.scroll-max + root.term-rows;
-                                x: 1px;
-                                width: 6px;
+                                width: parent.thumb-w;
+                                x: parent.width - parent.edge-inset - self.width;
                                 height: max(28px, parent.height * root.term-rows / total);
                                 y: (parent.height - self.height) * (root.scroll-max - root.scroll-offset) / max(1, root.scroll-max);
-                                background: track-ta.has-hover || track-ta.pressed
+                                border-radius: parent.expanded ? 3px : 1px;
+                                background: parent.expanded
                                     ? Theme.text-secondary : Theme.border-strong;
-                                border-radius: 3px;
+                                animate width { duration: 100ms; }
                                 animate background { duration: 100ms; }
                             }
                         }
