@@ -202,6 +202,68 @@ pub(super) fn copy_tab_credentials(from_tab: &str, to_tab: &str) {
     }
 }
 
+/// Remember the username/secret this connection already has, keyed by tab.
+///
+/// The login dialog writes the same cache when the user accepts. A session
+/// that already has a password never shows that dialog, so without this
+/// record R-reconnect treats the tab as having no password, clears it, and
+/// prompts again. An existing cache (for example a password just typed in
+/// the dialog) is left untouched. Missing username, password, or passphrase
+/// for an encrypted key is not cached — the dialog still has to ask.
+pub(super) fn remember_tab_credentials_from_session(
+    tab_id: &str,
+    session: &crate::config::Session,
+) {
+    if tab_id.is_empty() {
+        return;
+    }
+    let exists = CRED_DECIDED.with(|d| d.borrow().contains_key(tab_id));
+    if exists {
+        return;
+    }
+
+    use crate::config::AuthMethod;
+    let is_key = matches!(session.auth, AuthMethod::Key);
+    let user = session.user.trim().to_string();
+    if user.is_empty() {
+        return;
+    }
+    let secret = if is_key {
+        session.key_passphrase.as_str().to_string()
+    } else {
+        session.password.as_str().to_string()
+    };
+    let private_key = if is_key {
+        session.private_key.as_str().to_string()
+    } else {
+        String::new()
+    };
+
+    if is_key {
+        if private_key.trim().is_empty() {
+            return;
+        }
+        // An empty passphrase that cannot open the key (encrypted or invalid)
+        // must still show the login dialog, so do not cache it early.
+        if secret.is_empty() && crate::ssh::load_session_private_key(session, "").is_err() {
+            return;
+        }
+    } else if secret.is_empty() {
+        return;
+    }
+
+    CRED_DECIDED.with(|d| {
+        d.borrow_mut().insert(
+            tab_id.to_string(),
+            crate::ssh::CredentialReply {
+                user,
+                secret,
+                private_key,
+            },
+        );
+    });
+}
+
 /// For reconnect (R) / duplicate: prefer this tab's in-memory credential cache.
 /// If none is cached, clear the session login password / key passphrase so we
 /// do **not** fall back to whatever may be stored on disk — the UI will prompt

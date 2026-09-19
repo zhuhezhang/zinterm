@@ -4,6 +4,9 @@ use super::*;
 /// already-registered tab. Used by the initial connect and by in-place
 /// reconnect (#79); the tab/terminal/parser must already exist.
 pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &ConnectCtx) {
+    // Remember the credentials this connect actually used, so R-reconnect
+    // reuses the tab cache instead of asking for the password again.
+    remember_tab_credentials_from_session(tab_id, &session);
     let has_sftp = session.kind == SessionKind::Ssh && session.enable_sftp;
     if let Some(w) = ctx.weak.upgrade() {
         update_tab_connection(&w, tab_id, 0, false);
