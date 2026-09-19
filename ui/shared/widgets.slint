@@ -514,7 +514,7 @@ export component EditableCombo inherits HorizontalLayout {
 
         // ▼ — opens the suggestion list (no-op when empty).
         drop-ta := TouchArea {
-            x: parent.width - 36px;
+            x: parent.width - 34px;
             width: 36px;
             height: parent.height;
             mouse-cursor: root.items.length > 0 ? pointer : default;
@@ -527,9 +527,10 @@ export component EditableCombo inherits HorizontalLayout {
                 Text {
                     // Plain Unicode caret — CJK UI fonts have this but not
                     // the Material icon range, which would tofu (#179).
-                    text: "▼";
+                    text: "\u{E313}";
+                    font-family: "Material Icons";
                     color: root.items.length > 0 ? Theme.text-secondary : Theme.border-strong;
-                    font-size: Theme.fs-xs;
+                    font-size: Theme.fs-xl;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
