@@ -1,5 +1,6 @@
 use super::super::structs::*;
-use super::defaults_migration::*;
+#[cfg(target_os = "macos")]
+use super::defaults_migration::normalize_macos_renderer_mode;
 
 impl ConfigStore {
     /// UI language preference ("auto" default / "zh" / "en").
