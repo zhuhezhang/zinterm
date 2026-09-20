@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
-use russh::client::{Handle, Handler};
+use russh::client::{Handle, Handler, NegotiatedAlgorithms};
 use russh::keys::{HashAlg, PrivateKeyWithHashAlg, PublicKey};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -69,6 +69,8 @@ pub(crate) struct ClientHandler {
     pub(crate) host: String,
     pub(crate) port: u16,
     pub(crate) events: UnboundedSender<SessionEvent>,
+    /// Filled by [`Handler::algorithms_negotiated`] after the initial KEX.
+    pub(crate) negotiated: Arc<Mutex<Option<NegotiatedAlgorithms>>>,
 }
 
 /// Shared host-key check used by both the shell and SFTP connections: trust a
@@ -194,6 +196,16 @@ impl Handler for ClientHandler {
         server_public_key: &PublicKey,
     ) -> Result<bool, Self::Error> {
         Ok(verify_host_key(&self.host, self.port, server_public_key, &self.events).await)
+    }
+
+    async fn algorithms_negotiated(
+        &mut self,
+        algorithms: &NegotiatedAlgorithms,
+    ) -> Result<(), Self::Error> {
+        if let Ok(mut slot) = self.negotiated.lock() {
+            *slot = Some(algorithms.clone());
+        }
+        Ok(())
     }
 }
 

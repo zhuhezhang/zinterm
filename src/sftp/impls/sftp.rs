@@ -137,9 +137,13 @@ async fn run_sftp(
         session.port,
         Uuid::new_v4()
     ));
-    let (mut handle, _) = crate::ssh::connect_transport(&addr, keepalive_secs, &algorithms, || {
-        ssh_handler::sftp_handler(&session, &events)
-    })
+    let (mut handle, _) = crate::ssh::connect_transport(
+        &addr,
+        keepalive_secs,
+        &algorithms,
+        || ssh_handler::sftp_handler(&session, &events),
+        None,
+    )
     .await
     .with_context(|| format!("sftp connect {} failed", addr))?;
 

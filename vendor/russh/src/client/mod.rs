@@ -1503,6 +1503,9 @@ async fn reply<H: Handler>(
                             }
                         }
 
+                        let negotiated = NegotiatedAlgorithms::from_names(&newkeys.names);
+                        handler.algorithms_negotiated(&negotiated).await?;
+
                         session
                             .common
                             .encrypted(initial_encrypted_state(session), newkeys);
@@ -1626,6 +1629,32 @@ impl Default for GexParams {
     }
 }
 
+/// Algorithms selected during the most recent key exchange.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NegotiatedAlgorithms {
+    pub kex: String,
+    pub host_key: String,
+    pub cipher: String,
+    pub mac: String,
+    pub compression: String,
+}
+
+impl NegotiatedAlgorithms {
+    pub(crate) fn from_names(names: &negotiation::Names) -> Self {
+        Self {
+            kex: names.kex.as_ref().to_string(),
+            host_key: names.key.to_string(),
+            cipher: names.cipher.as_ref().to_string(),
+            mac: names.client_mac.as_ref().to_string(),
+            compression: match names.client_compression {
+                crate::compression::Compression::None => "none".to_string(),
+                #[cfg(feature = "flate2")]
+                crate::compression::Compression::Zlib => "zlib".to_string(),
+            },
+        }
+    }
+}
+
 /// The configuration of clients.
 #[derive(Debug)]
 pub struct Config {
@@ -1709,6 +1738,16 @@ pub trait Handler: Sized + Send {
         server_public_key: &ssh_key::PublicKey,
     ) -> impl Future<Output = Result<bool, Self::Error>> + Send {
         async { Ok(false) }
+    }
+
+    /// Called once after the initial key exchange has finished, with the
+    /// algorithms that were actually negotiated.
+    #[allow(unused_variables)]
+    fn algorithms_negotiated(
+        &mut self,
+        algorithms: &NegotiatedAlgorithms,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        async { Ok(()) }
     }
 
     /// Called when the server confirmed our request to open a

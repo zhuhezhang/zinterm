@@ -1,12 +1,13 @@
 use std::borrow::Cow;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, Context, Result};
-use russh::client::{self, Handle, Handler};
+use russh::client::{self, Handle, Handler, NegotiatedAlgorithms};
 use russh::keys::{Algorithm, EcdsaCurve, HashAlg};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::config::{AlgorithmPreferences, Session};
+use crate::i18n::t;
 
 use super::super::algorithms::{sanitize_algorithm_preferences, to_preferred};
 use super::super::structs::*;
@@ -20,28 +21,73 @@ pub(super) async fn connect_ssh_handshake(
     algorithms: &AlgorithmPreferences,
 ) -> Result<(Handle<ClientHandler>, Arc<client::Config>)> {
     let addr = format!("{}:{}", session.host, session.port);
-    connect_transport(&addr, keepalive_secs, algorithms, || {
-        client_handler(session, events)
-    })
-    .await
+    let negotiated = Arc::new(Mutex::new(None));
+    let negotiated_for_handler = negotiated.clone();
+    let (handle, config) = connect_transport(
+        &addr,
+        keepalive_secs,
+        algorithms,
+        || client_handler(session, events, negotiated_for_handler.clone()),
+        Some(events),
+    )
+    .await?;
+    if is_compact_legacy_config(&config) {
+        report_compact_compat_used(events, &negotiated);
+    }
+    Ok((handle, config))
 }
 
-fn client_handler(session: &Session, events: &UnboundedSender<SessionEvent>) -> ClientHandler {
+fn client_handler(
+    session: &Session,
+    events: &UnboundedSender<SessionEvent>,
+    negotiated: Arc<Mutex<Option<NegotiatedAlgorithms>>>,
+) -> ClientHandler {
     ClientHandler {
         host: session.host.clone(),
         port: session.port,
         events: events.clone(),
+        negotiated,
+    }
+}
+
+fn report_compact_compat_used(
+    events: &UnboundedSender<SessionEvent>,
+    negotiated: &Mutex<Option<NegotiatedAlgorithms>>,
+) {
+    let _ = events.send(SessionEvent::Status(
+        t(
+            "已使用精简兼容配置（首次握手失败后自动降级）",
+            "Using compact compatibility profile (automatic fallback after first handshake failed)",
+        )
+        .into(),
+    ));
+    if let Ok(guard) = negotiated.lock() {
+        if let Some(algos) = guard.as_ref() {
+            let _ = events.send(SessionEvent::Status(format!(
+                "{} kex={}  host_key={}  cipher={}  mac={}  compression={}",
+                t("协商算法:", "Negotiated algorithms:"),
+                algos.kex,
+                algos.host_key,
+                algos.cipher,
+                algos.mac,
+                algos.compression,
+            )));
+        }
     }
 }
 
 /// Connect with the configured algorithm set, then optionally retry once with a
 /// compact RFC-only profile. Legacy retry runs only when preferences are still
 /// the built-in default — custom lists are applied strictly.
+///
+/// When `status` is provided, progress for the compact retry is written to the
+/// terminal (shell path). SFTP passes `None` so the shell is not disturbed.
 pub(crate) async fn connect_transport<H, F>(
     addr: &str,
     keepalive_secs: u32,
     algorithms: &AlgorithmPreferences,
     make_handler: F,
+    status: Option<&UnboundedSender<SessionEvent>>,
 ) -> Result<(Handle<H>, Arc<client::Config>)>
 where
     H: Handler<Error = russh::Error> + Send + 'static,
@@ -56,6 +102,15 @@ where
             tracing::info!(
                 "ssh handshake failed ({err}); retrying {addr} with compact legacy algorithms"
             );
+            if let Some(events) = status {
+                let _ = events.send(SessionEvent::Status(
+                    t(
+                        "首次握手失败，正在自动尝试精简兼容配置…",
+                        "First handshake failed; automatically trying compact compatibility profile…",
+                    )
+                    .into(),
+                ));
+            }
             // Some network gear (Maipu SM3120 and similar) rate-limits or
             // briefly refuses a second TCP handshake if the first KEXINIT
             // made it abort — give the daemon a beat before the compact retry.
