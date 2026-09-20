@@ -17,7 +17,7 @@ export component UpdateSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Check for new versions on startup");
-            desc: @tr("Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch).");
+            desc: @tr("Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)");
             show-divider: false;
             Switch {
                 on: root.update-check-enabled;
