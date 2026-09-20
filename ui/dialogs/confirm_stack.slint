@@ -236,8 +236,8 @@ export component ConfirmStack inherits Rectangle {
         is-open <=> root.confirm-delete-open;
         title: @tr("Confirm delete");
         message: root.confirm-delete-batch
-            ? (@tr("Delete the checked items? This cannot be undone."))
-            : @tr("Delete this item? This cannot be undone.");
+            ? (@tr("Delete the checked items? This cannot be undone"))
+            : @tr("Delete this item? This cannot be undone");
         detail: root.confirm-delete-path;
         confirm-label: @tr("Delete");
         confirm => {
@@ -270,8 +270,8 @@ export component ConfirmStack inherits Rectangle {
         covered: root.confirm-close-open;
         title: @tr("Confirm delete");
         message: root.welcome-delete-kind == "group"
-            ? (@tr("Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."))
-            : (@tr("Delete this session? This cannot be undone."));
+            ? (@tr("Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone"))
+            : (@tr("Delete this session? This cannot be undone"));
         detail: root.welcome-delete-detail;
         confirm-label: @tr("Delete");
         confirm => {
@@ -295,7 +295,7 @@ export component ConfirmStack inherits Rectangle {
         covered: root.confirm-close-open;
         dismiss-on-backdrop: false;
         title: @tr("Confirm multi-line paste");
-        message: @tr("The clipboard contains line breaks and may execute multiple commands. Review it before pasting.");
+        message: @tr("The clipboard contains line breaks and may execute multiple commands. Review it before pasting");
         detail: root.paste-confirm-preview;
         large-detail: root.paste-confirm-large;
         confirm-label: @tr("Paste");
@@ -458,12 +458,12 @@ export component ConfirmStack inherits Rectangle {
             ? (@tr("Restore defaults"))
             : @tr("Confirm delete");
         message: root.data-clear-kind == "known-hosts"
-            ? (@tr("Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."))
+            ? (@tr("Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again"))
             : root.data-clear-kind == "passwords"
-            ? (@tr("Clear every saved password, private-keys? This cannot be undone."))
+            ? (@tr("Clear every saved password, private-keys? This cannot be undone"))
             : root.data-clear-kind == "restore-settings"
-            ? (@tr("Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."))
-            : (@tr("Delete every saved group and session? This cannot be undone. Open tabs stay open."));
+            ? (@tr("Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept"))
+            : (@tr("Delete every saved group and session? This cannot be undone. Open tabs stay open"));
         option-label: root.data-clear-kind == "sessions"
             ? (@tr("Also clear saved passwords / private keys"))
             : "";

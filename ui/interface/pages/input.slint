@@ -22,7 +22,7 @@ export component InputSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Confirm multiline paste");
-            desc: @tr("Show a review dialog before sending multiline content.");
+            desc: @tr("Show a review dialog before sending multiline content");
             Switch {
                 on: root.paste-confirm-enabled;
                 toggled(v) => { root.paste-confirm-enabled = v; root.set-paste-confirm-enabled(v); }
@@ -31,7 +31,7 @@ export component InputSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Select to copy / right-click paste");
-            desc: @tr("Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead.");
+            desc: @tr("Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead");
             Switch {
                 on: root.select-copy-right-paste-enabled;
                 toggled(v) => {
@@ -43,7 +43,7 @@ export component InputSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Additional paste shortcuts");
-            desc: @tr("Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste.");
+            desc: @tr("Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste");
             show-divider: false;
             Switch {
                 on: root.extra-paste-shortcuts-enabled;

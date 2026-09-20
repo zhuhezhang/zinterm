@@ -30,7 +30,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Zen mode");
-            desc: @tr("Hide side panels and collapsed edge strips so the terminal fills the window.");
+            desc: @tr("Hide side panels and collapsed edge strips so the terminal fills the window");
             Switch {
                 on: root.zen-mode;
                 toggled(v) => { root.zen-mode = v; root.set-zen-mode(v); }
@@ -39,7 +39,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Collapse the SFTP panel by default");
-            desc: @tr("Takes effect on next launch; handy on low-spec jump hosts.");
+            desc: @tr("Takes effect on next launch; handy on low-spec jump hosts");
             Switch {
                 on: root.collapse-sftp-default;
                 toggled(v) => { root.collapse-sftp-default = v; root.set-collapse-sftp-default(v); }
@@ -48,7 +48,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Quick commands as a sidebar");
-            desc: @tr("Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon.");
+            desc: @tr("Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon");
             show-divider: false;
             Switch {
                 on: root.quick-commands-as-sidebar;
@@ -73,7 +73,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Show the welcome page as a sidebar");
-            desc: @tr("Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center.");
+            desc: @tr("Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center");
             Switch {
                 on: root.welcome-as-sidebar;
                         // Applying this binding destroys/recreates the Welcome
@@ -85,7 +85,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Confirm before deleting a group");
-            desc: @tr("Ask before removing a group (also deletes nested groups and sessions inside).");
+            desc: @tr("Ask before removing a group (also deletes nested groups and sessions inside)");
             Switch {
                 on: root.confirm-delete-group-enabled;
                 toggled(v) => {
@@ -97,7 +97,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Confirm before deleting a session");
-            desc: @tr("Ask before removing a saved session from the list.");
+            desc: @tr("Ask before removing a saved session from the list");
             Switch {
                 on: root.confirm-delete-session-enabled;
                 toggled(v) => {
@@ -109,7 +109,7 @@ export component SidebarSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Single-click to connect");
-            desc: @tr("Connect with one click. When off, double-click a session to connect.");
+            desc: @tr("Connect with one click. When off, double-click a session to connect");
             show-divider: false;
             Switch {
                 on: root.welcome-single-click-connect;

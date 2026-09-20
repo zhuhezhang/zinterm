@@ -38,7 +38,7 @@ export component SshSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Keepalive interval");
-            desc: @tr("0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections.");
+            desc: @tr("0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections");
             Stepper {
                 value: root.ssh-keepalive-secs;
                 minimum: 0;
@@ -57,12 +57,12 @@ export component SshSettingsPage inherits Rectangle {
         }
 
         SettingHint {
-            text: @tr("Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections.");
+            text: @tr("Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections");
         }
 
         SettingRow {
             label: @tr("Category");
-            desc: @tr("Key exchange, host key, cipher, MAC, or compression.");
+            desc: @tr("Key exchange, host key, cipher, MAC, or compression");
             ComboBox {
                 width: 150px;
                 height: 30px;
@@ -89,7 +89,7 @@ export component SshSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Reset");
-            desc: @tr("Restore this category or every algorithm list to the built-in defaults.");
+            desc: @tr("Restore this category or every algorithm list to the built-in defaults");
             show-divider: false;
             HorizontalLayout {
                 spacing: 8px;
@@ -211,7 +211,7 @@ export component SshSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("SFTP follows terminal cd");
-            desc: @tr("A cd in the terminal switches the SFTP panel to the same directory.");
+            desc: @tr("A cd in the terminal switches the SFTP panel to the same directory");
             Switch {
                 on: root.sftp-follow-cd;
                 toggled(v) => { root.sftp-follow-cd = v; root.set-sftp-follow-cd(v); }
@@ -220,7 +220,7 @@ export component SshSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Always ask where to save");
-            desc: @tr("Every SFTP download prompts for a location instead of using the preset folder.");
+            desc: @tr("Every SFTP download prompts for a location instead of using the preset folder");
             show-divider: false;
             Switch {
                 on: root.download-always-ask;

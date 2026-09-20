@@ -111,8 +111,8 @@ msgstr "私钥文件路径或私钥文件内容"
 msgid "Leave blank if the key isn't encrypted"
 msgstr "若私钥未加密则留空"
 
-msgid "Enter a key file path or paste the private key. Pasted keys are encrypted before saving."
-msgstr "输入私钥文件路径，或直接粘贴私钥内容。粘贴的私钥会加密后保存。"
+msgid "Enter a key file path or paste the private key. Pasted keys are encrypted before saving"
+msgstr "输入私钥文件路径，或直接粘贴私钥内容。粘贴的私钥会加密后保存"
 
 msgid "Browse…"
 msgstr "浏览…"
@@ -120,11 +120,11 @@ msgstr "浏览…"
 msgid "Login"
 msgstr "登录"
 
-msgid "Please enter a host / IP address."
-msgstr "请输入主机 / IP 地址。"
+msgid "Please enter a host / IP address"
+msgstr "请输入主机 / IP 地址"
 
-msgid "Please enter a serial port."
-msgstr "请输入串口号。"
+msgid "Please enter a serial port"
+msgstr "请输入串口号"
 
 msgid "Cancel"
 msgstr "取消"
@@ -162,8 +162,8 @@ msgstr "大小"
 msgid "Modified"
 msgstr "修改时间"
 
-msgid "Loading..."
-msgstr "加载中..."
+msgid "Loading…"
+msgstr "加载中…"
 
 msgid "Empty directory"
 msgstr "目录为空"
@@ -201,8 +201,8 @@ msgstr "复制路径"
 msgid "Paste path and go"
 msgstr "粘贴路径并跳转"
 
-msgid "Copy to session..."
-msgstr "复制到会话..."
+msgid "Copy to session…"
+msgstr "复制到会话…"
 
 msgid "Refresh"
 msgstr "刷新"
@@ -217,7 +217,7 @@ msgid "New name"
 msgstr "新名称"
 
 msgid "Octal mode, e.g. 755"
-msgstr "八进制权限,例如 755"
+msgstr "八进制权限，例如 755"
 
 msgid "Read-only"
 msgstr "只读"
@@ -351,8 +351,8 @@ msgstr "终端编码"
 msgid "Backspace mode"
 msgstr "退格键模式"
 
-msgid "Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local."
-msgstr "设置发送给设备的退格编码。Auto：SSH/Telnet/Serial 用 BS，Local 用 DEL。"
+msgid "Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local"
+msgstr "设置发送给设备的退格编码。Auto：SSH/Telnet/Serial 用 BS，Local 用 DEL"
 
 msgid "Auto"
 msgstr "自动"
@@ -402,8 +402,8 @@ msgstr "流量控制"
 msgid "Confirm delete"
 msgstr "确认删除"
 
-msgid "Delete this item? This cannot be undone."
-msgstr "确定删除此项？此操作不可撤销。"
+msgid "Delete this item? This cannot be undone"
+msgstr "确定删除此项？此操作不可撤销"
 
 msgid "Please confirm"
 msgstr "请确认"
@@ -414,20 +414,20 @@ msgstr "确认"
 msgid "Enable SFTP"
 msgstr "启用 SFTP"
 
-msgid "When off, the SFTP side panel is hidden for this session."
-msgstr "关闭后,此会话不显示 SFTP 侧栏。"
+msgid "When off, the SFTP side panel is hidden for this session"
+msgstr "关闭后，此会话不显示 SFTP 侧栏"
 
 msgid "Enable shell integration"
 msgstr "启用 Shell 集成"
 
-msgid "When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells."
-msgstr "开启后会通过独立 exec 通道探测 bash/zsh，并注入提示符钩子(目录跟随与命令捕获)。交换机/路由器或不支持的 shell 请保持关闭。"
+msgid "When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells"
+msgstr "开启后会通过独立 exec 通道探测 bash/zsh，并注入提示符钩子(目录跟随与命令捕获)。交换机/路由器或不支持的 shell 请保持关闭"
 
 msgid "Enable command panel"
 msgstr "启用命令面板"
 
-msgid "When off, the command panel (quick commands, input box, and history) is hidden for this session."
-msgstr "关闭后,此会话不显示命令面板(快捷命令、输入框与历史命令)。"
+msgid "When off, the command panel (quick commands, input box, and history) is hidden for this session"
+msgstr "关闭后，此会话不显示命令面板（快捷命令、输入框与历史命令）"
 
 msgid "Split right"
 msgstr "向右拆分"
@@ -517,40 +517,40 @@ msgid "Write"
 msgstr "写入"
 
 msgid "Close ZinTerm?"
-msgstr "确定关闭 ZinTerm?"
+msgstr "确定关闭 ZinTerm？"
 
-msgid "There are active sessions. Closing will disconnect them."
-msgstr "当前有活动会话,关闭将断开它们。"
+msgid "There are active sessions. Closing will disconnect them"
+msgstr "当前有活动会话，关闭将断开它们"
 
-msgid "Delete the checked items? This cannot be undone."
-msgstr "删除选中的多个项目?此操作不可撤销。"
+msgid "Delete the checked items? This cannot be undone"
+msgstr "删除选中的多个项目？此操作不可撤销"
 
-msgid "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone."
-msgstr "确定删除该分组？其下的子分组和会话也会一并删除，此操作不可撤销。"
+msgid "Delete this group? Nested groups and sessions inside will also be removed. This cannot be undone"
+msgstr "确定删除该分组？其下的子分组和会话也会一并删除，此操作不可撤销"
 
-msgid "Delete this session? This cannot be undone."
-msgstr "确定删除该会话？此操作不可撤销。"
+msgid "Delete this session? This cannot be undone"
+msgstr "确定删除该会话？此操作不可撤销"
 
 msgid "Confirm multi-line paste"
 msgstr "确认多行粘贴"
 
-msgid "The clipboard contains line breaks and may execute multiple commands. Review it before pasting."
-msgstr "剪贴板内容包含换行，粘贴后可能连续执行多个命令，请确认内容后再继续。"
+msgid "The clipboard contains line breaks and may execute multiple commands. Review it before pasting"
+msgstr "剪贴板内容包含换行，粘贴后可能连续执行多个命令，请确认内容后再继续"
 
 msgid "Restore defaults"
 msgstr "恢复默认设置"
 
-msgid "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again."
+msgid "Clear all remembered SSH host keys? The next connection to each host will ask you to trust the key again"
 msgstr "确定清除所有已记住的 SSH 主机公钥？下次连接各主机时会再次要求确认信任。"
 
-msgid "Clear every saved password, private-keys? This cannot be undone."
-msgstr "确定清除所有已保存的密码、私钥？此操作不可撤销。"
+msgid "Clear every saved password, private-keys? This cannot be undone"
+msgstr "确定清除所有已保存的密码、私钥？此操作不可撤销"
 
-msgid "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept."
-msgstr "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码、私钥和 SSH 已知主机公钥会保留。"
+msgid "Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept"
+msgstr "确定将设置相关偏好恢复为默认值？设置界面以外的已保存连接、命令、密码、私钥和 SSH 已知主机公钥会保留"
 
-msgid "Delete every saved group and session? This cannot be undone. Open tabs stay open."
-msgstr "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭。"
+msgid "Delete every saved group and session? This cannot be undone. Open tabs stay open"
+msgstr "确定删除全部已保存的分组和会话？此操作不可撤销。已打开的标签页不会关闭"
 
 msgid "Also clear saved passwords / private keys"
 msgstr "同时清除已保存的密码/私钥"
@@ -675,35 +675,35 @@ msgstr "数据"
 msgid "Save passwords / private-keys"
 msgstr "保存密码/私钥"
 
-msgid "Unavailable: OS keyring cannot store the vault master key."
-msgstr "不可用：系统钥匙串无法保存凭证库主密钥。"
+msgid "Unavailable: OS keyring cannot store the vault master key"
+msgstr "不可用：系统钥匙串无法保存凭证库主密钥"
 
-msgid "When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved."
-msgstr "开启后密码与私钥写入加密凭证库(主密钥在系统钥匙串)。关闭此选项不会清除已保存的内容。"
+msgid "When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved"
+msgstr "开启后密码与私钥写入加密凭证库（主密钥在系统钥匙串）。关闭此选项不会清除已保存的内容"
 
 msgid "Clear saved passwords / private-keys"
 msgstr "清除所有保存的密码/私钥"
 
-msgid "Remove every stored password, private-keys from saved sessions."
-msgstr "清除所有已保存会话中的密码、私钥。"
+msgid "Remove every stored password, private-keys from saved sessions"
+msgstr "清除所有已保存会话中的密码、私钥"
 
 msgid "Clear SSH known hosts"
 msgstr "清除 SSH 已知主机公钥"
 
-msgid "Forget remembered server host keys. The next connection to each host will ask you to trust the key again."
-msgstr "清除已记住的服务器主机公钥。下次连接各主机时会再次要求确认信任。"
+msgid "Forget remembered server host keys. The next connection to each host will ask you to trust the key again"
+msgstr "清除已记住的服务器主机公钥。下次连接各主机时会再次要求确认信任"
 
 msgid "Clear all groups and sessions"
 msgstr "清除所有分组和会话"
 
-msgid "Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys."
-msgstr "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。可选择是否同时清除已保存的密码/私钥。"
+msgid "Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys"
+msgstr "永久删除全部已保存的快速连接分组和会话。已打开的标签页不会关闭。可选择是否同时清除已保存的密码/私钥"
 
 msgid "Restore default settings"
 msgstr "恢复默认设置"
 
-msgid "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept."
-msgstr "将设置相关偏好恢复为默认值（含 SSH/SFTP 算法）。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除。"
+msgid "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept"
+msgstr "将设置相关偏好恢复为默认值（含 SSH/SFTP 算法）。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除"
 
 msgid "FONT"
 msgstr "字体"
@@ -717,26 +717,26 @@ msgstr "终端字体大小"
 msgid "Terminal line spacing"
 msgstr "终端行距"
 
-msgid "Adjust terminal row height from compact to loose."
-msgstr "调整终端行高，可设置得更紧凑或更宽松。"
+msgid "Adjust terminal row height from compact to loose"
+msgstr "调整终端行高，可设置得更紧凑或更宽松"
 
 msgid "Installed fonts"
 msgstr "已安装字体"
 
-msgid "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list."
-msgstr "在 Windows 中安装 TTF/OTF 字体后，重启 ZinTerm 即可刷新字体列表。"
+msgid "Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list"
+msgstr "在 Windows 中安装 TTF/OTF 字体后，重启 ZinTerm 即可刷新字体列表"
 
 msgid "Bold terminal text"
 msgstr "终端字体加粗"
 
-msgid "Makes regular terminal output use a bold face."
-msgstr "让普通终端输出使用加粗字重。"
+msgid "Makes regular terminal output use a bold face"
+msgstr "让普通终端输出使用加粗字重"
 
 msgid "Cursor shape"
 msgstr "光标类型"
 
-msgid "Choose the terminal insertion cursor shape."
-msgstr "选择终端输入光标的形状。"
+msgid "Choose the terminal insertion cursor shape"
+msgstr "选择终端输入光标的形状"
 
 msgid "Block"
 msgstr "块状"
@@ -750,20 +750,20 @@ msgstr "下划线"
 msgid "Cursor color"
 msgstr "光标颜色"
 
-msgid "Enter a hexadecimal RGB color."
-msgstr "输入十六进制 RGB 颜色。"
+msgid "Enter a hexadecimal RGB color"
+msgstr "输入十六进制 RGB 颜色"
 
 msgid "UI scale"
 msgstr "界面缩放"
 
-msgid "Zooms the whole interface (not this panel)."
-msgstr "缩放整个界面(不影响本面板)。"
+msgid "Zooms the whole interface (not this panel)"
+msgstr "缩放整个界面（不影响本面板）"
 
 msgid "Settings font size"
 msgstr "界面字体大小"
 
-msgid "Enlarges this settings panel (font + window)."
-msgstr "放大本设置面板的字体和窗口。"
+msgid "Enlarges this settings panel (font + window)"
+msgstr "放大本设置面板的字体和窗口"
 
 msgid "PREVIEW"
 msgstr "预览"
@@ -774,20 +774,20 @@ msgstr "输入"
 msgid "Confirm multiline paste"
 msgstr "确认多行粘贴"
 
-msgid "Show a review dialog before sending multiline content."
-msgstr "发送多行内容前显示预览确认窗口。"
+msgid "Show a review dialog before sending multiline content"
+msgstr "发送多行内容前显示预览确认窗口"
 
 msgid "Select to copy / right-click paste"
 msgstr "选中复制/右键粘贴"
 
-msgid "Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead."
-msgstr "选中文字自动复制到剪贴板；右键粘贴。关闭后恢复右键上下文菜单。"
+msgid "Auto-copy selected text; right-click pastes. When off, the right-click context menu is used instead"
+msgstr "选中文字自动复制到剪贴板；右键粘贴。关闭后恢复右键上下文菜单"
 
 msgid "Additional paste shortcuts"
 msgstr "额外粘贴快捷键"
 
-msgid "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste."
-msgstr "启用 Ctrl+Alt+V、Shift+Insert 和鼠标中键粘贴。"
+msgid "Enable Ctrl+Alt+V, Shift+Insert, and middle-click paste"
+msgstr "启用 Ctrl+Alt+V、Shift+Insert 和鼠标中键粘贴"
 
 msgid "LANGUAGE"
 msgstr "语言"
@@ -795,8 +795,8 @@ msgstr "语言"
 msgid "Interface language"
 msgstr "界面语言"
 
-msgid "Auto follows the system language. Systems that are neither Chinese nor English use English."
-msgstr "自动跟随系统语言。系统既非中文也非英文时使用英文。"
+msgid "Auto follows the system language. Systems that are neither Chinese nor English use English"
+msgstr "自动跟随系统语言。系统既非中文也非英文时使用英文"
 
 msgid "Chinese"
 msgstr "中文"
@@ -810,14 +810,14 @@ msgstr "输出高亮"
 msgid "Highlight plain terminal output"
 msgstr "高亮纯文本终端输出"
 
-msgid "Adds client-side colours only when the program did not provide ANSI styling."
-msgstr "仅在程序未提供 ANSI 样式时由客户端补充颜色。"
+msgid "Adds client-side colours only when the program did not provide ANSI styling"
+msgstr "仅在程序未提供 ANSI 样式时由客户端补充颜色"
 
 msgid "Built-in rule set"
 msgstr "内置规则集"
 
-msgid "Log levels is conservative; DevOps also recognises deployment and health states."
-msgstr "日志级别更保守；DevOps 还识别部署与健康状态。"
+msgid "Log levels is conservative; DevOps also recognises deployment and health states"
+msgstr "日志级别更保守；DevOps 还识别部署与健康状态"
 
 msgid "Log levels"
 msgstr "日志级别"
@@ -825,14 +825,14 @@ msgstr "日志级别"
 msgid "Format and colour JSON lines"
 msgstr "格式化并着色 JSON 行"
 
-msgid "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged."
-msgstr "仅美化占据完整一行且可正确解析的 JSON 对象或数组，其他终端输出保持原样。"
+msgid "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged"
+msgstr "仅美化占据完整一行且可正确解析的 JSON 对象或数组，其他终端输出保持原样"
 
 msgid "CUSTOM RULES"
 msgstr "自定义规则"
 
-msgid "Custom rules run before the built-in preset and never overwrite ANSI colours."
-msgstr "自定义规则优先于内置规则，且不会覆盖程序输出的 ANSI 颜色。"
+msgid "Custom rules run before the built-in preset and never overwrite ANSI colours"
+msgstr "自定义规则优先于内置规则，且不会覆盖程序输出的 ANSI 颜色"
 
 msgid "Timeout errors"
 msgstr "超时错误"
@@ -849,8 +849,8 @@ msgstr "高亮整行"
 msgid "Add rule"
 msgstr "添加规则"
 
-msgid "No custom rules yet."
-msgstr "暂无自定义规则。"
+msgid "No custom rules yet"
+msgstr "暂无自定义规则"
 
 msgid "Keyword"
 msgstr "关键词"
@@ -864,11 +864,11 @@ msgstr "渲染"
 msgid "Renderer"
 msgstr "渲染器"
 
-msgid "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."
-msgstr "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速。"
+msgid "CPU is the compatibility default. FemtoVG and Skia use GPU acceleration"
+msgstr "CPU 是兼容性默认渲染器；FemtoVG 和 Skia 使用 GPU 加速"
 
-msgid "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."
-msgstr "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件。"
+msgid "Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility"
+msgstr "自动模式会尝试 GPU 加速，并由 Slint 在初始化失败时回退到软件渲染；虚拟机或兼容性优先时请选择软件"
 
 msgid "Automatic"
 msgstr "自动"
@@ -876,8 +876,8 @@ msgstr "自动"
 msgid "Software"
 msgstr "软件"
 
-msgid "Restart ZinTerm to apply the renderer change."
-msgstr "重启 ZinTerm 后渲染器设置才会生效。"
+msgid "Restart ZinTerm to apply the renderer change"
+msgstr "重启 ZinTerm 后渲染器设置才会生效"
 
 msgid "SIDEBARS"
 msgstr "侧栏"
@@ -885,20 +885,20 @@ msgstr "侧栏"
 msgid "Zen mode"
 msgstr "专注模式"
 
-msgid "Hide side panels and collapsed edge strips so the terminal fills the window."
-msgstr "隐藏侧栏、底栏和收起图标，让终端填满窗口内容区。"
+msgid "Hide side panels and collapsed edge strips so the terminal fills the window"
+msgstr "隐藏侧栏、底栏和收起图标，让终端填满窗口内容区"
 
 msgid "Collapse the SFTP panel by default"
 msgstr "默认收起 SFTP 侧栏"
 
-msgid "Takes effect on next launch; handy on low-spec jump hosts."
-msgstr "下次启动生效;低配跳板机上可减少常驻面板开销。"
+msgid "Takes effect on next launch; handy on low-spec jump hosts"
+msgstr "下次启动生效；低配跳板机上可减少常驻面板开销"
 
 msgid "Quick commands as a sidebar"
 msgstr "快捷命令作为侧栏"
 
-msgid "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon."
-msgstr "允许把快捷命令弹窗拖到窗口边缘；停靠后通过侧栏或收起图标使用。"
+msgid "Allows the quick-command popup to be dragged to a window edge. After docking, use the sidebar or its collapsed icon"
+msgstr "允许把快捷命令弹窗拖到窗口边缘；停靠后通过侧栏或收起图标使用"
 
 msgid "WELCOME PAGE"
 msgstr "欢迎页"
@@ -906,50 +906,50 @@ msgstr "欢迎页"
 msgid "Show the welcome page as a sidebar"
 msgstr "欢迎页设为侧栏"
 
-msgid "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center."
-msgstr "把会话列表停靠在左侧,不再用「欢迎页」标签;打开的会话占据中央区域。"
+msgid "Dock the session list on the left instead of a \"Welcome page\" tab; opened sessions fill the center"
+msgstr "把会话列表停靠在左侧，不再用「欢迎页」标签；打开的会话占据中央区域"
 
 msgid "Confirm before deleting a group"
 msgstr "删除分组前确认"
 
-msgid "Ask before removing a group (also deletes nested groups and sessions inside)."
-msgstr "删除分组前弹出确认（会一并删除其下的子分组和会话）。"
+msgid "Ask before removing a group (also deletes nested groups and sessions inside)"
+msgstr "删除分组前弹出确认（会一并删除其下的子分组和会话）"
 
 msgid "Confirm before deleting a session"
 msgstr "删除会话前确认"
 
-msgid "Ask before removing a saved session from the list."
-msgstr "从列表删除已保存的会话前弹出确认。"
+msgid "Ask before removing a saved session from the list"
+msgstr "从列表删除已保存的会话前弹出确认"
 
 msgid "Single-click to connect"
 msgstr "单击会话连接"
 
-msgid "Connect with one click. When off, double-click a session to connect."
-msgstr "开启后单击会话即可连接；关闭时需双击连接。"
+msgid "Connect with one click. When off, double-click a session to connect"
+msgstr "开启后单击会话即可连接；关闭时需双击连接"
 
 msgid "Keepalive interval"
 msgstr "保活间隔"
 
-msgid "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections."
-msgstr "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效。"
+msgid "0 disables keepalive. A positive value is the interval in seconds. Some older switches drop OpenSSH keepalive packets — leave this at 0 for those devices. Applies to new connections"
+msgstr "0 表示关闭。正整数为间隔秒数。部分老旧交换机可能因 OpenSSH keepalive 断开，此类设备请保持为 0。对新连接生效"
 
 msgid "SSH ALGORITHMS"
 msgstr "SSH 算法"
 
-msgid "Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections."
-msgstr "勾选要协商的算法（顺序即优先级）。保持内置默认时，会对极老设备自动尝试精简兼容配置；自定义后严格按所选列表协商。对新连接生效。"
+msgid "Choose which algorithms are offered (order = preference). Leaving the built-in defaults enables an automatic compact retry for very old devices. Custom lists are applied strictly. Takes effect on new connections"
+msgstr "勾选要协商的算法（顺序即优先级）。保持内置默认时，会对极老设备自动尝试精简兼容配置；自定义后严格按所选列表协商。对新连接生效"
 
 msgid "Category"
 msgstr "算法类别"
 
-msgid "Key exchange, host key, cipher, MAC, or compression."
-msgstr "密钥交换、主机密钥、加密、消息认证码或压缩。"
+msgid "Key exchange, host key, cipher, MAC, or compression"
+msgstr "密钥交换、主机密钥、加密、消息认证码或压缩"
 
 msgid "Reset"
 msgstr "重置"
 
-msgid "Restore this category or every algorithm list to the built-in defaults."
-msgstr "将当前类别或全部算法恢复为内置默认。"
+msgid "Restore this category or every algorithm list to the built-in defaults"
+msgstr "将当前类别或全部算法恢复为内置默认"
 
 msgid "This category"
 msgstr "当前类别"
@@ -963,14 +963,14 @@ msgstr "不安全"
 msgid "SFTP follows terminal cd"
 msgstr "SFTP 跟随 cd 更新"
 
-msgid "A cd in the terminal switches the SFTP panel to the same directory."
-msgstr "终端里执行 cd 时,SFTP 面板自动切到相同目录。"
+msgid "A cd in the terminal switches the SFTP panel to the same directory"
+msgstr "终端里执行 cd 时，SFTP 面板自动切到相同目录"
 
 msgid "Always ask where to save"
 msgstr "总是询问保存去何处"
 
-msgid "Every SFTP download prompts for a location instead of using the preset folder."
-msgstr "每次 SFTP 下载都询问保存位置,而不是直接存到预设下载目录。"
+msgid "Every SFTP download prompts for a location instead of using the preset folder"
+msgstr "每次 SFTP 下载都询问保存位置，而不是直接存到预设下载目录"
 
 msgid "UPDATE CHECK"
 msgstr "新版本提示"
@@ -978,14 +978,14 @@ msgstr "新版本提示"
 msgid "Check for new versions on startup"
 msgstr "启动时检查新版本"
 
-msgid "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)."
-msgstr "关闭后:不再向 GitHub 查询新版本,也不会弹出更新提示(下次启动生效)。"
+msgid "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)"
+msgstr "关闭后：不再向 GitHub 查询新版本，也不会弹出更新提示（下次启动生效）"
 
 msgid "WALLPAPER"
 msgstr "壁纸"
 
-msgid "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)."
-msgstr "选一张壁纸,界面会沉浸式地适配它的颜色(强调色、面板、深浅)。"
+msgid "Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)"
+msgstr "选一张壁纸，界面会沉浸式地适配它的颜色（强调色、面板、深浅）"
 
 msgid "None"
 msgstr "无"
@@ -1011,8 +1011,8 @@ msgstr "遮罩"
 msgid "Wallpaper transparency"
 msgstr "壁纸遮罩透明度"
 
-msgid "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)."
-msgstr "壁纸透过面板 / 终端背景的程度,越往右越透;没设壁纸时不生效。"
+msgid "How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)"
+msgstr "壁纸透过面板 / 终端背景的程度，越往右越透；没设壁纸时不生效"
 
 msgid "Pick a session on the left to begin"
 msgstr "从左侧选择一个会话开始"
@@ -1041,14 +1041,14 @@ msgstr "快捷键"
 msgid "Toggle theme"
 msgstr "切换主题"
 
-msgid "CPU is the default renderer on macOS."
-msgstr "macOS 默认使用 CPU 渲染器。"
+msgid "CPU is the default renderer on macOS"
+msgstr "macOS 默认使用 CPU 渲染器"
 
-msgid "Software remains the compatibility default for existing installations."
-msgstr "现有安装继续默认使用兼容性更好的软件渲染。"
+msgid "Software remains the compatibility default for existing installations"
+msgstr "现有安装继续默认使用兼容性更好的软件渲染"
 
-msgid "Automatic remains the default renderer on Linux."
-msgstr "Linux 默认继续使用自动渲染器。"
+msgid "Automatic remains the default renderer on Linux"
+msgstr "Linux 默认继续使用自动渲染器"
 
 msgid "Key exchange"
 msgstr "密钥交换"

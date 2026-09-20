@@ -65,7 +65,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Terminal line spacing");
-            desc: @tr("Adjust terminal row height from compact to loose.");
+            desc: @tr("Adjust terminal row height from compact to loose");
             Stepper {
                 value: round(root.terminal-line-spacing * 100);
                 minimum: 80;
@@ -78,7 +78,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Installed fonts");
-            desc: @tr("Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list.");
+            desc: @tr("Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list");
             show-divider: false;
             Rectangle {
                 width: 1px;
@@ -89,7 +89,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Bold terminal text");
-            desc: @tr("Makes regular terminal output use a bold face.");
+            desc: @tr("Makes regular terminal output use a bold face");
             Switch {
                 on: root.term-font-bold;
                 toggled(v) => { root.term-font-bold = v; root.set-term-font-bold(v); }
@@ -98,7 +98,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Cursor shape");
-            desc: @tr("Choose the terminal insertion cursor shape.");
+            desc: @tr("Choose the terminal insertion cursor shape");
             HorizontalLayout {
                 spacing: 5px;
                 CursorStyleButton {
@@ -126,7 +126,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Cursor color");
-            desc: @tr("Enter a hexadecimal RGB color.");
+            desc: @tr("Enter a hexadecimal RGB color");
             CursorColorInput {
                 width: 100px;
                 value <=> root.term-cursor-color-hex;
@@ -137,7 +137,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("UI scale");
-            desc: @tr("Zooms the whole interface (not this panel).");
+            desc: @tr("Zooms the whole interface (not this panel)");
             Stepper {
                 value: round(root.ui-scale * 100);
                 minimum: 80;
@@ -150,7 +150,7 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Settings font size");
-            desc: @tr("Enlarges this settings panel (font + window).");
+            desc: @tr("Enlarges this settings panel (font + window)");
             show-divider: false;
             Stepper {
                 value: round(Theme.panel-font * 100);

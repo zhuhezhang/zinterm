@@ -32,7 +32,7 @@ export component WallpaperSettingsPage inherits Rectangle {
         }
 
         SettingHint {
-            text: @tr("Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark).");
+            text: @tr("Pick a wallpaper — the interface tints itself to match (accent, panels, light/dark)");
         }
 
         Rectangle {
@@ -240,9 +240,9 @@ export component WallpaperSettingsPage inherits Rectangle {
             WallpaperSwatch {
                 selected: root.wp-is-custom;
                 clicked => { root.pick-wallpaper-file(); }
-                                // Show the real image when a custom one is active, else a
-                                // "choose a file" placeholder.
-                                if root.wp-is-custom: Image {
+                // Show the real image when a custom one is active, else a
+                // "choose a file" placeholder.
+                if root.wp-is-custom: Image {
                     width: 100%;
                     height: 100%;
                     source: Theme.wallpaper;
@@ -309,15 +309,15 @@ export component WallpaperSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Wallpaper transparency");
-            desc: @tr("How much the wallpaper shows through panels and the terminal (no effect without a wallpaper).");
+            desc: @tr("How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)");
             show-divider: false;
             HorizontalLayout {
                 spacing: 8px;
                 Slider {
                     width: 150px;
                     minimum: 0;
-                                    // Up to 70% transparency (overlay floor 0.30).
-                                    maximum: 70;
+                    // Up to 70% transparency (overlay floor 0.30).
+                    maximum: 70;
                     value: (1.0 - root.wallpaper-overlay) * 100;
                     changed(v) => { root.wallpaper-overlay = 1.0 - v / 100; }
                     released(v) => { root.persist-wallpaper-overlay(1.0 - v / 100); }

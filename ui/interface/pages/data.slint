@@ -24,8 +24,8 @@ export component DataSettingsPage inherits Rectangle {
         SettingRow {
             label: @tr("Save passwords / private-keys");
             desc: !root.credentials-vault-available
-                ? (@tr("Unavailable: OS keyring cannot store the vault master key."))
-                : (@tr("When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved."));
+                ? (@tr("Unavailable: OS keyring cannot store the vault master key"))
+                : (@tr("When on, passwords and private keys are stored in an encrypted vault (OS keyring master key). Turning this off does not clear credentials already saved"));
             Switch {
                 enabled: root.credentials-vault-available;
                 on: root.save-passwords;
@@ -35,7 +35,7 @@ export component DataSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Clear saved passwords / private-keys");
-            desc: @tr("Remove every stored password, private-keys from saved sessions.");
+            desc: @tr("Remove every stored password, private-keys from saved sessions");
             DangerButton {
                 text: @tr("Clear");
                 clicked => { root.request-clear-passwords(); }
@@ -44,7 +44,7 @@ export component DataSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Clear SSH known hosts");
-            desc: @tr("Forget remembered server host keys. The next connection to each host will ask you to trust the key again.");
+            desc: @tr("Forget remembered server host keys. The next connection to each host will ask you to trust the key again");
             DangerButton {
                 text: @tr("Clear");
                 clicked => { root.request-clear-known-hosts(); }
@@ -53,7 +53,7 @@ export component DataSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Clear all groups and sessions");
-            desc: @tr("Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys.");
+            desc: @tr("Permanently delete every saved Quick Connect group and session. Open tabs are not closed. You can choose whether to also clear saved passwords / private keys");
             DangerButton {
                 text: @tr("Clear");
                 clicked => { root.request-clear-sessions(); }
@@ -62,7 +62,7 @@ export component DataSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Restore default settings");
-            desc: @tr("Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept.");
+            desc: @tr("Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept");
             show-divider: false;
             PrimaryButton {
                 text: @tr("Restore");

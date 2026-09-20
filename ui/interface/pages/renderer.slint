@@ -23,8 +23,8 @@ export component RendererSettingsPage inherits Rectangle {
         SettingRow {
             label: @tr("Renderer");
             desc: Theme.is-mac
-                ? (@tr("CPU is the compatibility default. FemtoVG and Skia use GPU acceleration."))
-                : (@tr("Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility."));
+                ? (@tr("CPU is the compatibility default. FemtoVG and Skia use GPU acceleration"))
+                : (@tr("Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility"));
             show-divider: false;
             ComboBox {
                 width: 150px;
@@ -82,12 +82,12 @@ export component RendererSettingsPage inherits Rectangle {
 
         SettingHint {
             text: root.renderer-restart-required
-                ? @tr("Restart ZinTerm to apply the renderer change.")
+                ? @tr("Restart ZinTerm to apply the renderer change")
                 : (Theme.is-mac
-                ? @tr("CPU is the default renderer on macOS.")
+                ? @tr("CPU is the default renderer on macOS")
                 : (root.is-windows
-                ? @tr("Software remains the compatibility default for existing installations.")
-                : @tr("Automatic remains the default renderer on Linux.")));
+                ? @tr("Software remains the compatibility default for existing installations")
+                : @tr("Automatic remains the default renderer on Linux")));
             color: root.renderer-restart-required ? Theme.accent : Theme.text-muted;
         }
     }

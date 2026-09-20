@@ -123,7 +123,7 @@ export component OutputSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Highlight plain terminal output");
-            desc: @tr("Adds client-side colours only when the program did not provide ANSI styling.");
+            desc: @tr("Adds client-side colours only when the program did not provide ANSI styling");
             Switch {
                 on: root.output-highlight-enabled;
                 toggled(v) => {
@@ -135,7 +135,7 @@ export component OutputSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Built-in rule set");
-            desc: @tr("Log levels is conservative; DevOps also recognises deployment and health states.");
+            desc: @tr("Log levels is conservative; DevOps also recognises deployment and health states");
             show-divider: false;
             ComboBox {
                 width: 150px;
@@ -156,7 +156,7 @@ export component OutputSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("Format and colour JSON lines");
-            desc: @tr("Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged.");
+            desc: @tr("Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged");
             show-divider: false;
             Switch {
                 on: root.json-format-output;
@@ -230,7 +230,7 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         SettingHint {
-            text: @tr("Custom rules run before the built-in preset and never overwrite ANSI colours.");
+            text: @tr("Custom rules run before the built-in preset and never overwrite ANSI colours");
         }
 
         Rectangle {
@@ -332,7 +332,7 @@ export component OutputSettingsPage inherits Rectangle {
         }
 
         if root.output-highlight-rules.length == 0: SettingHint {
-            text: @tr("No custom rules yet.");
+            text: @tr("No custom rules yet");
             height: 34px;
             vertical-alignment: center;
         }

@@ -687,7 +687,7 @@ export component SftpPanel inherits Rectangle {
                             if root.loading: Rectangle {
                                 height: 40px;
                                 Text {
-                                    text: @tr("Loading...");
+                                    text: @tr("Loading…");
                                     color: Theme.text-muted;
                                     font-size: Theme.fs-sm;
                                     horizontal-alignment: center;
@@ -939,7 +939,7 @@ export component SftpPanel inherits Rectangle {
                                 }
 
                                 SftpMenuItem {
-                                    label: @tr("Copy to session...");
+                                    label: @tr("Copy to session…");
                                     enabled: (root.menu-target != "" || root.selected-count > 0) && root.transfer-targets.length > 1;
                                     clicked => { copy-target-menu.show(); }
                                 }
