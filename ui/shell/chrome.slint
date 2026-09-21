@@ -52,10 +52,6 @@ export component IconBtn inherits Rectangle {
         height: parent.height;
         mouse-cursor: pointer;
         tooltip-text: root.tooltip;
-        // Same as tab tips: left edge at cursor-x, growing rightward.
-        tip-from-cursor: true;
-        anchor-width: root.width;
-        anchor-height: root.height;
         activate => { root.clicked(); }
     }
 }

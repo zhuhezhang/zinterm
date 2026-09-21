@@ -634,8 +634,6 @@ export component SessionDialog inherits Rectangle {
                                     width: parent.width;
                                     height: parent.height;
                                     tooltip-text: @tr("Enter a key file path or paste the private key. Pasted keys are encrypted before saving");
-                                    anchor-width: parent.width;
-                                    anchor-height: parent.height;
                                 }
                             }
 
@@ -855,10 +853,7 @@ export component SessionDialog inherits Rectangle {
                                     TooltipArea {
                                         width: parent.width;
                                         height: parent.height;
-                                        tip-from-cursor: true;
                                         tooltip-text: @tr("Byte sent for Backspace. Auto: BS for SSH/Telnet/Serial, DEL for Local");
-                                        anchor-width: parent.width;
-                                        anchor-height: parent.height;
                                     }
                                 }
 
@@ -943,10 +938,7 @@ export component SessionDialog inherits Rectangle {
                                         width: parent.width;
                                         height: parent.height;
                                         mouse-cursor: pointer;
-                                        tip-from-cursor: true;
                                         tooltip-text: @tr("When off, the SFTP side panel is hidden for this session");
-                                        anchor-width: parent.width;
-                                        anchor-height: parent.height;
                                         activate => { root.draft-enable-sftp = !root.draft-enable-sftp; }
                                     }
                                 }
@@ -995,10 +987,7 @@ export component SessionDialog inherits Rectangle {
                                         width: parent.width;
                                         height: parent.height;
                                         mouse-cursor: pointer;
-                                        tip-from-cursor: true;
                                         tooltip-text: @tr("When off, the command panel (quick commands, input box, and history) is hidden for this session");
-                                        anchor-width: parent.width;
-                                        anchor-height: parent.height;
                                         activate => { root.draft-enable-command-panel = !root.draft-enable-command-panel; }
                                     }
                                 }
@@ -1048,10 +1037,7 @@ export component SessionDialog inherits Rectangle {
                                         width: parent.width;
                                         height: parent.height;
                                         mouse-cursor: pointer;
-                                        tip-from-cursor: true;
                                         tooltip-text: @tr("When on, probes for bash/zsh via a separate exec channel and injects prompt hooks (directory follow and command capture). Leave off for switches/routers or unsupported shells");
-                                        anchor-width: parent.width;
-                                        anchor-height: parent.height;
                                         activate => { root.draft-enable-prompt-setup = !root.draft-enable-prompt-setup; }
                                     }
                                 }

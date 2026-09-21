@@ -66,9 +66,6 @@ export component SessionRow inherits Rectangle {
     touch := TooltipArea {
         mouse-cursor: root.press-dragging && root.did-drag ? grabbing : pointer;
         tooltip-text: root.tip-text;
-        tip-from-cursor: true;
-        anchor-width: root.width;
-        anchor-height: root.height;
         // Default: double-click connects; optional setting flips to single-click.
         activate => {
             if (!root.did-drag && root.single-click-connect) {

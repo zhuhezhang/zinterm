@@ -51,7 +51,7 @@ component SftpMenuItem inherits Rectangle {
     }
 }
 
-// Small toolbar icon with a PopupWindow hover tooltip (top layer, edge-aware).
+// Small toolbar icon with a hover tooltip that does not block clicks.
 component SftpToolBtn inherits Rectangle {
     in property <string> glyph;
     in property <string> tooltip;
@@ -85,8 +85,6 @@ component SftpToolBtn inherits Rectangle {
         height: parent.height;
         mouse-cursor: pointer;
         tooltip-text: root.tooltip;
-        anchor-width: root.width;
-        anchor-height: root.height;
         activate => { root.clicked(); }
     }
 }

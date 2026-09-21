@@ -69,8 +69,6 @@ export component FindToggle inherits Rectangle {
     ta := TooltipArea {
         mouse-cursor: pointer;
         tooltip-text: root.tip;
-        anchor-width: root.width;
-        anchor-height: root.height;
         activate => {
             root.on = !root.on;
             root.toggled(root.on);

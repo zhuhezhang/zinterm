@@ -264,8 +264,6 @@ export component CommandBar inherits Rectangle {
                     height: parent.height;
                     mouse-cursor: pointer;
                     tooltip-text: @tr("When selected, commands are sent to all sessions");
-                    anchor-width: parent.width;
-                    anchor-height: parent.height;
                     activate => { root.send-to-all = !root.send-to-all; }
                 }
 
