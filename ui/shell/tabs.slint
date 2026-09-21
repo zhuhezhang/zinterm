@@ -227,7 +227,7 @@ component SingleTab inherits Rectangle {
     if root.show-close: IconButton {
         glyph: "×";
         size: root.tab-close-size;
-        x: parent.width - root.tab-pad-right - root.tab-close-size;
+        x: parent.width - root.tab-pad-right - root.tab-close-size + 1px;
         y: (parent.height - self.height) / 2;
         clicked => { root.closed(); }
     }
