@@ -1,6 +1,44 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
+use pinyin::ToPinyin;
+
 use super::*;
+
+/// Sort key built left-to-right, one unit per character:
+/// - non-Han (letters/digits/punct): tier `\0` + lowercase char → always before Han
+/// - Han: tier `\x01` + tone-less pinyin + `\0` → compared by pinyin among themselves
+///
+/// So `"prob-a"` / `"prob-z"` / `"prob-生产"` → a, z, then 生产 (not a, 生产, z).
+fn pinyin_sort_key(s: &str) -> String {
+    let mut key = String::with_capacity(s.len().saturating_mul(2));
+    for ch in s.chars() {
+        if let Some(py) = ch.to_pinyin() {
+            key.push('\u{1}');
+            key.push_str(py.plain());
+            key.push('\0');
+        } else {
+            key.push('\0');
+            for c in ch.to_lowercase() {
+                key.push(c);
+            }
+        }
+    }
+    key
+}
+
+/// Left-to-right name order: non-Han before Han at each position; Han by pinyin.
+fn display_name_cmp(a: &str, b: &str) -> Ordering {
+    pinyin_sort_key(a)
+        .cmp(&pinyin_sort_key(b))
+        .then_with(|| a.cmp(b))
+}
+
+fn siblings_in_pinyin_order(nodes: &BTreeMap<String, GroupTreeNode>) -> Vec<&GroupTreeNode> {
+    let mut items: Vec<(&String, &GroupTreeNode)> = nodes.iter().collect();
+    items.sort_by(|(a, _), (b, _)| display_name_cmp(a, b));
+    items.into_iter().map(|(_, node)| node).collect()
+}
 
 fn session_endpoint(session: &Session) -> String {
     match session.kind {
@@ -92,7 +130,7 @@ fn ordered_user_group_paths(store: &ConfigStore) -> Vec<String> {
     let roots = build_user_group_tree(&paths);
     let mut out = Vec::new();
     fn walk(nodes: &BTreeMap<String, GroupTreeNode>, out: &mut Vec<String>) {
-        for node in nodes.values() {
+        for node in siblings_in_pinyin_order(nodes) {
             out.push(node.full_path.clone());
             walk(&node.children, out);
         }
@@ -171,12 +209,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
         let label = group_path_segment(group);
 
         let mut direct: Vec<&Session> = sessions.iter().filter(|s| s.group == group).collect();
-        direct.sort_by(|a, b| {
-            a.name
-                .to_lowercase()
-                .cmp(&b.name.to_lowercase())
-                .then_with(|| a.name.cmp(&b.name))
-        });
+        direct.sort_by(|a, b| display_name_cmp(&a.name, &b.name));
 
         if direct.is_empty() && node.children.is_empty() {
             rows.push(blank(group));
@@ -196,7 +229,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
         }
 
         // Same-level child folders before this group's own sessions.
-        for child in node.children.values() {
+        for child in siblings_in_pinyin_order(&node.children) {
             emit_group_branch(sessions, child, rows, group_is_collapsed, blank);
         }
 
@@ -205,7 +238,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
         }
     }
 
-    for root in user_tree.values() {
+    for root in siblings_in_pinyin_order(&user_tree) {
         emit_group_branch(sessions, root, &mut rows, &group_is_collapsed, &blank);
     }
 
@@ -214,12 +247,7 @@ pub(super) fn sync_sessions_to_model(store: &ConfigStore, model: &VecModel<Sessi
         .iter()
         .filter(|s| s.group.trim().is_empty() || is_reserved_session_group(s.group.trim()))
         .collect();
-    root_sessions.sort_by(|a, b| {
-        a.name
-            .to_lowercase()
-            .cmp(&b.name.to_lowercase())
-            .then_with(|| a.name.cmp(&b.name))
-    });
+    root_sessions.sort_by(|a, b| display_name_cmp(&a.name, &b.name));
     for s in root_sessions {
         rows.push(session_row(s, "", false, 0, "", false));
     }
@@ -272,12 +300,7 @@ fn emit_group_branch_search(
         .iter()
         .filter(|s| s.group == group && session_matches_query(s, query))
         .collect();
-    direct.sort_by(|a, b| {
-        a.name
-            .to_lowercase()
-            .cmp(&b.name.to_lowercase())
-            .then_with(|| a.name.cmp(&b.name))
-    });
+    direct.sort_by(|a, b| display_name_cmp(&a.name, &b.name));
 
     let has_child_groups = node
         .children
@@ -290,7 +313,7 @@ fn emit_group_branch_search(
 
     rows.push(group_header_row(group, depth, label, false));
 
-    for child in node.children.values() {
+    for child in siblings_in_pinyin_order(&node.children) {
         emit_group_branch_search(sessions, child, rows, query, visible_groups);
     }
 
@@ -316,7 +339,7 @@ pub(super) fn sync_welcome_sessions(
     let user_tree = build_user_group_tree(&collect_user_group_paths(store));
     let mut rows: Vec<SessionInfo> = Vec::new();
 
-    for root in user_tree.values() {
+    for root in siblings_in_pinyin_order(&user_tree) {
         emit_group_branch_search(sessions, root, &mut rows, &query, &visible_groups);
     }
 
@@ -327,12 +350,7 @@ pub(super) fn sync_welcome_sessions(
                 && session_matches_query(s, &query)
         })
         .collect();
-    root_sessions.sort_by(|a, b| {
-        a.name
-            .to_lowercase()
-            .cmp(&b.name.to_lowercase())
-            .then_with(|| a.name.cmp(&b.name))
-    });
+    root_sessions.sort_by(|a, b| display_name_cmp(&a.name, &b.name));
     for s in root_sessions {
         rows.push(session_row(s, "", false, 0, "", false));
     }
@@ -455,6 +473,7 @@ pub(super) fn session_infos_from_model(model: &ModelRc<SessionInfo>) -> Vec<Sess
 mod tests {
     use super::*;
     use crate::config::{Session, SessionKind};
+    use std::cmp::Ordering;
 
     #[test]
     fn session_search_matches_name_host_serial_and_shell() {
@@ -483,5 +502,46 @@ mod tests {
         assert!(session_matches_query(&serial, "com3"));
         assert!(session_matches_query(&local, "zsh"));
         assert!(!session_matches_query(&ssh, "missing"));
+    }
+
+    #[test]
+    fn display_name_cmp_orders_han_by_pinyin() {
+        // 安 an < 北 bei < 上 shang
+        assert_eq!(display_name_cmp("安全", "北京"), Ordering::Less);
+        assert_eq!(display_name_cmp("北京", "上海"), Ordering::Less);
+        assert_eq!(display_name_cmp("上海", "安全"), Ordering::Greater);
+    }
+
+    #[test]
+    fn display_name_cmp_mixed_prefix_then_han() {
+        // Leading Latin keeps the name with Latin peers; Han-only names follow.
+        let mut names = vec![
+            "忠实",
+            "生产prod",
+            "prod-生产",
+            "aa",
+            "生产",
+            "prod",
+        ];
+        names.sort_by(|a, b| display_name_cmp(a, b));
+        assert_eq!(
+            names,
+            vec!["aa", "prod", "prod-生产", "生产", "生产prod", "忠实"]
+        );
+    }
+
+    #[test]
+    fn display_name_cmp_non_han_before_han_at_same_position() {
+        // After "prob-", letters a/z both precede 生产 (Han always after letters/digits).
+        let mut names = vec!["prob-生产", "prob-z", "prob-a"];
+        names.sort_by(|a, b| display_name_cmp(a, b));
+        assert_eq!(names, vec!["prob-a", "prob-z", "prob-生产"]);
+    }
+
+    #[test]
+    fn display_name_cmp_is_case_insensitive_for_ascii() {
+        // Lowercase keys match; original-case tie-break keeps "Alpha" before "alpha".
+        assert_eq!(display_name_cmp("Alpha", "alpha"), Ordering::Less);
+        assert_eq!(display_name_cmp("Beta", "alpha"), Ordering::Greater);
     }
 }
