@@ -531,9 +531,6 @@ msgstr "Delete this group? Nested groups and sessions inside will also be remove
 msgid "Delete this session? This cannot be undone"
 msgstr "Delete this session? This cannot be undone"
 
-msgid "Confirm multi-line paste"
-msgstr "Confirm multi-line paste"
-
 msgid "The clipboard contains line breaks and may execute multiple commands. Review it before pasting"
 msgstr "The clipboard contains line breaks and may execute multiple commands. Review it before pasting"
 

@@ -531,9 +531,6 @@ msgstr "确定删除该分组？其下的子分组和会话也会一并删除，
 msgid "Delete this session? This cannot be undone"
 msgstr "确定删除该会话？此操作不可撤销"
 
-msgid "Confirm multi-line paste"
-msgstr "确认多行粘贴"
-
 msgid "The clipboard contains line breaks and may execute multiple commands. Review it before pasting"
 msgstr "剪贴板内容包含换行，粘贴后可能连续执行多个命令，请确认内容后再继续"
 
