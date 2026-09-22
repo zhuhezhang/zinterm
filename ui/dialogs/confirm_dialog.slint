@@ -22,6 +22,9 @@ export component ConfirmDialog inherits Rectangle {
     // Long AI prompts and other large multi-line pastes need a review surface
     // with room for the payload and fixed footer actions.
     in property <bool> large-detail: false;
+    // Soft-wrap detail text to the card width. Off for multiline-paste review so
+    // long lines stay intact and the detail pane scrolls horizontally instead.
+    in property <bool> detail-wrap: true;
     // Temporarily hide this modal behind a higher-priority prompt without
     // discarding its state (for example, app-exit confirmation).
     in property <bool> covered: false;
@@ -111,12 +114,43 @@ export component ConfirmDialog inherits Rectangle {
                 wrap: word-wrap;
             }
 
-            if root.detail != "" && !root.large-detail: Text {
+            if root.detail != "" && !root.large-detail && root.detail-wrap: Text {
                 text: root.detail;
                 color: Theme.text-primary;
                 font-family: Theme.font-mono;
                 font-size: Theme.fs-sm;
                 wrap: word-wrap;
+            }
+
+            // Compact no-wrap detail (e.g. short multiline paste): keep natural
+            // height, scroll horizontally when a line is wider than the card.
+            if root.detail != "" && !root.large-detail && !root.detail-wrap: Rectangle {
+                height: max(48px, min(160px, compact-detail-text.preferred-height + 16px));
+                background: Theme.bg-root;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                border-radius: Theme.radius-sm;
+                clip: true;
+
+                compact-detail-scroll := ScrollView {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    height: parent.height - 2px;
+                    viewport-width: max(self.visible-width, compact-detail-text.preferred-width + 16px);
+                    viewport-height: max(self.visible-height, compact-detail-text.preferred-height + 16px);
+
+                    compact-detail-text := Text {
+                        x: 8px;
+                        y: 8px;
+                        width: max(compact-detail-scroll.visible-width - 16px, self.preferred-width);
+                        text: root.detail;
+                        color: Theme.text-primary;
+                        font-family: Theme.font-mono;
+                        font-size: Theme.fs-sm;
+                        wrap: no-wrap;
+                    }
+                }
             }
 
             if root.detail != "" && root.large-detail: Rectangle {
@@ -133,18 +167,22 @@ export component ConfirmDialog inherits Rectangle {
                     y: 1px;
                     width: parent.width - 2px;
                     height: parent.height - 2px;
-                    viewport-width: self.visible-width;
+                    viewport-width: root.detail-wrap
+                        ? self.visible-width
+                        : max(self.visible-width, detail-text.preferred-width + 16px);
                     viewport-height: max(self.visible-height, detail-text.preferred-height + 16px);
 
                     detail-text := Text {
                         x: 8px;
                         y: 8px;
-                        width: max(1px, detail-scroll.visible-width - 16px);
+                        width: root.detail-wrap
+                            ? max(1px, detail-scroll.visible-width - 16px)
+                            : max(detail-scroll.visible-width - 16px, self.preferred-width);
                         text: root.detail;
                         color: Theme.text-primary;
                         font-family: Theme.font-mono;
                         font-size: Theme.fs-sm;
-                        wrap: word-wrap;
+                        wrap: root.detail-wrap ? word-wrap : no-wrap;
                     }
                 }
             }

@@ -298,6 +298,7 @@ export component ConfirmStack inherits Rectangle {
         message: @tr("The clipboard contains line breaks and may execute multiple commands. Review it before pasting");
         detail: root.paste-confirm-preview;
         large-detail: root.paste-confirm-large;
+        detail-wrap: false;
         confirm-label: @tr("Paste");
         confirm => {
             root.paste-confirmed(root.paste-confirm-tab);
