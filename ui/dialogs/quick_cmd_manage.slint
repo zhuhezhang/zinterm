@@ -548,6 +548,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         padding-left: 4px;
                                         padding-right: 6px;
                                         spacing: 4px;
+                                        cross-axis-alignment: center;
                                         Rectangle {
                                             horizontal-stretch: 1;
                                             body-ta := TouchArea {
@@ -629,7 +630,6 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         Rectangle {
                                             width: 24px;
                                             height: 28px;
-                                            y: (root.height - self.height) / 2;
                                             border-radius: Theme.radius-sm;
                                             background: run-ta.has-hover ? Theme.accent.with-alpha(0.25) : transparent;
                                             run-ta := TouchArea {
@@ -650,7 +650,6 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         Rectangle {
                                             width: 24px;
                                             height: 28px;
-                                            y: (root.height - self.height) / 2;
                                             border-radius: Theme.radius-sm;
                                             background: dup-ta.has-hover ? Theme.bg-hover : transparent;
                                             dup-ta := TouchArea {
@@ -671,7 +670,6 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         Rectangle {
                                             width: 28px;
                                             height: 28px;
-                                            y: (root.height - self.height) / 2;
                                             border-radius: Theme.radius-sm;
                                             background: del-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
                                             del-ta := TouchArea {
@@ -706,8 +704,8 @@ export component QuickCmdManageDialog inherits Rectangle {
             // Bottom-right resize grip. The chosen size is retained while the
             // application is running, and remains clamped to the main window.
             Rectangle {
-                x: root.width - 18px;
-                y: root.height - 18px;
+                x: parent.width - 18px;
+                y: parent.height - 18px;
                 width: 18px;
                 height: 18px;
                 background: qcm-resize-ta.has-hover || root.qcm-dialog-resizing
