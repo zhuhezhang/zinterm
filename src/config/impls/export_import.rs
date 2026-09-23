@@ -212,6 +212,124 @@ impl ConfigStore {
             .with_context(|| format!("failed to read {}", path.display()))?;
         self.import_json(&raw)
     }
+
+    // ── Portable quick-command export / import ────────────────────────────
+
+    /// Explicit `cache.quick_empty_groups` entries that currently have no command.
+    pub(super) fn collect_quick_empty_groups(&self) -> Vec<String> {
+        self.cache
+            .quick_empty_groups
+            .iter()
+            .filter(|g| {
+                let g = g.trim();
+                if g.is_empty() || g.eq_ignore_ascii_case("default") {
+                    return false;
+                }
+                !self
+                    .cache
+                    .quick_commands
+                    .iter()
+                    .any(|c| c.group.trim() == g)
+            })
+            .cloned()
+            .collect()
+    }
+
+    /// Export all quick commands to a portable JSON string. Returns `(json, count)`.
+    pub fn export_quick_commands_json(&self) -> Result<(String, usize)> {
+        let commands = self.cache.quick_commands.clone();
+        let count = commands.len();
+        let out = QuickCommandsExportFile {
+            zinterm_export: "quick_commands".into(),
+            version: 1,
+            exported_at: Self::format_export_timestamp(),
+            empty_groups: self.collect_quick_empty_groups(),
+            commands,
+        };
+        Ok((serde_json::to_string_pretty(&out)?, count))
+    }
+
+    /// Export all quick commands to a portable JSON file. Returns the command count.
+    pub fn export_quick_commands_to(&self, path: &Path) -> Result<usize> {
+        let (raw, count) = self.export_quick_commands_json()?;
+        fs::write(path, raw).with_context(|| format!("failed to write {}", path.display()))?;
+        Ok(count)
+    }
+
+    /// Import quick commands from a string produced by [`Self::export_quick_commands_json`].
+    ///
+    /// A command is skipped when the same group already has the same `name`
+    /// (case-sensitive trim). Empty name/command entries are skipped. Empty
+    /// groups are restored first. Returns `(added, skipped)`.
+    pub fn import_quick_commands_json(&mut self, raw: &str) -> Result<(usize, usize)> {
+        // 先校验导出类型，避免把会话导出文件误当成缺字段的命令文件
+        let probe: serde_json::Value =
+            serde_json::from_str(raw).context("not a valid zinterm quick-command export file")?;
+        let export_kind = probe
+            .get("zinterm_export")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if export_kind != "quick_commands" {
+            anyhow::bail!(
+                "invalid export: zinterm_export must be \"quick_commands\" (got {:?})",
+                export_kind
+            );
+        }
+        let file: QuickCommandsExportFile = serde_json::from_value(probe)
+            .context("not a valid zinterm quick-command export file")?;
+        if file.version != 1 {
+            anyhow::bail!("unsupported export version {} (expected 1)", file.version);
+        }
+
+        // Restore empty groups before commands so the manage dialog already
+        // shows those folders when commands land in sibling groups.
+        let mut groups_added = false;
+        for group in &file.empty_groups {
+            let before = self.cache.quick_empty_groups.len();
+            self.add_quick_group(group.clone());
+            if self.cache.quick_empty_groups.len() > before {
+                groups_added = true;
+            }
+        }
+
+        let mut added = 0usize;
+        let mut skipped = 0usize;
+        for mut cmd in file.commands {
+            cmd.name = cmd.name.trim().to_string();
+            cmd.group = cmd.group.trim().to_string();
+            if cmd.group.eq_ignore_ascii_case("default") {
+                cmd.group.clear();
+            }
+            if cmd.name.is_empty() || cmd.command.trim().is_empty() {
+                skipped += 1;
+                continue;
+            }
+            let group = cmd.group.as_str();
+            let name = cmd.name.as_str();
+            let dup = self
+                .cache
+                .quick_commands
+                .iter()
+                .any(|x| x.group.trim() == group && x.name.trim() == name);
+            if dup {
+                skipped += 1;
+                continue;
+            }
+            self.cache.quick_commands.push(cmd);
+            added += 1;
+        }
+        if added > 0 || groups_added {
+            self.save_parts(SaveKind::COMMANDS)?;
+        }
+        Ok((added, skipped))
+    }
+
+    /// Import quick commands from a file produced by [`Self::export_quick_commands_to`].
+    pub fn import_quick_commands_from(&mut self, path: &Path) -> Result<(usize, usize)> {
+        let raw = fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        self.import_quick_commands_json(&raw)
+    }
 }
 
 #[cfg(test)]
@@ -559,5 +677,58 @@ mod tests {
         let _ = std::fs::remove_file(&export_path);
         let _ = std::fs::remove_file(&a.path);
         let _ = std::fs::remove_file(&b.path);
+    }
+
+    #[test]
+    fn quick_commands_export_import_roundtrip_and_skip_duplicates() {
+        let mut a = temp_store();
+        a.add_quick_group("empty-ops".into());
+        a.add_quick_group("ops".into());
+        a.set_quick_commands(vec![
+            QuickCommand {
+                name: "ll".into(),
+                command: "ls -la".into(),
+                group: "ops".into(),
+                send_enter: true,
+            },
+            QuickCommand {
+                name: "df".into(),
+                command: "df -h".into(),
+                group: String::new(),
+                send_enter: false,
+            },
+        ]);
+
+        let export_path =
+            std::env::temp_dir().join(format!("ms-qcm-exp-{}.json", Uuid::new_v4()));
+        assert_eq!(a.export_quick_commands_to(&export_path).unwrap(), 2);
+        let raw = std::fs::read_to_string(&export_path).unwrap();
+        assert!(raw.contains("\"zinterm_export\": \"quick_commands\""));
+        assert!(raw.contains("\"empty-ops\""));
+        assert!(raw.contains("ls -la"));
+
+        let mut b = temp_store();
+        assert_eq!(b.import_quick_commands_from(&export_path).unwrap(), (2, 0));
+        assert_eq!(b.quick_commands().len(), 2);
+        assert!(b.quick_empty_groups().iter().any(|g| g == "empty-ops"));
+        assert_eq!(b.quick_commands()[0].name, "ll");
+        assert!(!b.quick_commands()[1].send_enter);
+
+        // 同组同名视为重复，再次导入应全部跳过
+        assert_eq!(b.import_quick_commands_from(&export_path).unwrap(), (0, 2));
+        assert_eq!(b.quick_commands().len(), 2);
+
+        let _ = std::fs::remove_file(&export_path);
+        let _ = std::fs::remove_file(&a.path);
+        let _ = std::fs::remove_file(&b.path);
+    }
+
+    #[test]
+    fn quick_commands_import_rejects_sessions_export() {
+        let mut store = temp_store();
+        let raw = r#"{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[]}"#;
+        let err = format!("{:#}", store.import_quick_commands_json(raw).unwrap_err());
+        assert!(err.contains("quick_commands"), "{err}");
+        let _ = std::fs::remove_file(&store.path);
     }
 }

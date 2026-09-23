@@ -333,6 +333,12 @@ msgstr "Search history"
 msgid "Search commands"
 msgstr "Search commands"
 
+msgid "Import commands"
+msgstr "Import commands"
+
+msgid "Export commands"
+msgstr "Export commands"
+
 msgid "Search sessions"
 msgstr "Search sessions"
 

@@ -281,3 +281,17 @@ pub(crate) struct ExportFileImport {
     pub(crate) empty_groups: Vec<String>,
     pub(crate) sessions: Vec<serde_json::Value>,
 }
+
+/// Portable quick-command export file (mirrors [`ExportFile`] for sessions).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct QuickCommandsExportFile {
+    /// Must be `"quick_commands"` for a quick-command export.
+    pub(crate) zinterm_export: String,
+    /// Schema version; currently only `1` is accepted.
+    pub(crate) version: u32,
+    /// Human-readable export timestamp (local time).
+    pub(crate) exported_at: String,
+    /// Explicit quick-command groups that currently hold no commands.
+    pub(crate) empty_groups: Vec<String>,
+    pub(crate) commands: Vec<QuickCommand>,
+}

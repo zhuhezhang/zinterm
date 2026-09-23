@@ -498,4 +498,77 @@ pub(super) fn wire_command_bar(
             }
         });
     }
+
+    // Export all quick commands to a portable JSON file.
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        window.on_export_quick_commands(move || {
+            if let Some(path) = rfd::FileDialog::new()
+                .set_file_name(
+                    chrono::Local::now()
+                        .format("zinterm-commands-%Y%m%d-%H%M%S.json")
+                        .to_string(),
+                )
+                .add_filter("JSON", &["json"])
+                .save_file()
+            {
+                let res = store.borrow().export_quick_commands_to(&path);
+                if let Some(w) = weak.upgrade() {
+                    let hint = match res {
+                        Ok(n) => {
+                            if crate::i18n::is_en() {
+                                format!("Successfully exported {n} commands")
+                            } else {
+                                format!("已成功导出{n}个命令")
+                            }
+                        }
+                        Err(e) => format!("{}: {}", t("导出失败", "export failed"), e),
+                    };
+                    w.set_ssh_import_hint(hint.into());
+                }
+            }
+        });
+    }
+
+    // Import quick commands from a portable JSON file.
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let collapsed = collapsed_quick_groups.clone();
+        let quick_query = quick_query.clone();
+        let qcm_manage_query = qcm_manage_query.clone();
+        window.on_import_quick_commands(move || {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("JSON", &["json"])
+                .pick_file()
+            {
+                let res = store.borrow_mut().import_quick_commands_from(&path);
+                if let Some(w) = weak.upgrade() {
+                    let hint = match res {
+                        Ok((added, skipped)) => {
+                            sync_quick_command_models(
+                                &w,
+                                &store.borrow(),
+                                &collapsed.borrow(),
+                                &quick_query.borrow(),
+                                &qcm_manage_query.borrow(),
+                            );
+                            if crate::i18n::is_en() {
+                                format!(
+                                    "Import succeeded - imported {added} command(s)/skipped {skipped} duplicate(s)"
+                                )
+                            } else {
+                                format!(
+                                    "导入成功 - 已导入{added}个命令/跳过{skipped}个重复命令"
+                                )
+                            }
+                        }
+                        Err(e) => format!("{} - {}", t("导入失败", "import failed"), e),
+                    };
+                    w.set_ssh_import_hint(hint.into());
+                }
+            }
+        });
+    }
 }

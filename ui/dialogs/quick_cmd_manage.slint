@@ -1,6 +1,6 @@
 import { Theme } from "../shared/theme.slint";
 import { QuickCmd } from "../types/terminal.slint";
-import { BorderedLineInput, BorderedTextArea } from "../shared/widgets.slint";
+import { BorderedLineInput, BorderedTextArea, GhostButton } from "../shared/widgets.slint";
 import { ScrollView, Button } from "std-widgets.slint";
 
 export component QuickCmdManageDialog inherits Rectangle {
@@ -12,6 +12,8 @@ export component QuickCmdManageDialog inherits Rectangle {
     callback drop-quick-group(string /* from */, string /* before-group */);
     callback duplicate-quick-command(int /* index */);
     callback edit-quick-command(int /* index */);
+    callback export-quick-commands();
+    callback import-quick-commands();
     in-out property <string> qcg-name;
     in-out property <bool> qcg-open: false;           // group name dialog open;
     in-out property <string> qcg-orig;
@@ -190,6 +192,7 @@ export component QuickCmdManageDialog inherits Rectangle {
 
                 // New (empty) group, cancel、save、edit command button.
                 HorizontalLayout {
+                    height: 30px;
                     spacing: 7px;
                     Rectangle {
                         horizontal-stretch: 1;
@@ -265,10 +268,14 @@ export component QuickCmdManageDialog inherits Rectangle {
                     vertical-stretch: 1;
                     spacing: 2px;
 
-                    Rectangle {
-                        height: 30px;
+                    HorizontalLayout {
+                        height: 35px;
+                        spacing: 6px;
+                        padding-bottom: 5px;
 
                         qcm-search-in := BorderedLineInput {
+                            height: 30px;
+                            horizontal-stretch: 1;
                             pad-x: 8px;
                             font-size: Theme.fs-sm;
                             leading-icon: "\u{E8B6}";
@@ -283,6 +290,18 @@ export component QuickCmdManageDialog inherits Rectangle {
                                     reject
                                 }
                             }
+                        }
+
+                        GhostButton {
+                            height: 30px;
+                            text: @tr("Import commands");
+                            clicked => { root.import-quick-commands(); }
+                        }
+
+                        GhostButton {
+                            height: 30px;
+                            text: @tr("Export commands");
+                            clicked => { root.export-quick-commands(); }
                         }
                     }
 

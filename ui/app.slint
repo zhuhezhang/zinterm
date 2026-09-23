@@ -188,6 +188,8 @@ export component AppWindow inherits Window {
     callback delete-quick-command(int /* index */);
     callback edit-quick-command(int /* index */);
     callback duplicate-quick-command(int /* index */);
+    callback export-quick-commands();          // export all quick commands to a file
+    callback import-quick-commands();          // import quick commands from a file
     callback move-quick-command(int /* index */, string /* group */);
     callback drop-quick-command(int /* from */, string /* target-group */, int /* before-orig */);
     callback drop-quick-group(string /* from */, string /* before-group */);
@@ -1066,6 +1068,8 @@ export component AppWindow inherits Window {
         drop-quick-group(from, before-group) => { root.drop-quick-group(from, before-group); }
         duplicate-quick-command(index) => { root.duplicate-quick-command(index); }
         edit-quick-command(index) => { root.edit-quick-command(index); }
+        export-quick-commands => { root.export-quick-commands(); }
+        import-quick-commands => { root.import-quick-commands(); }
         qcg-name <=> root.qcg-name;
         qcg-open <=> root.qcg-open;
         qcg-orig <=> root.qcg-orig;

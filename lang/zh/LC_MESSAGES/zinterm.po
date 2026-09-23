@@ -333,6 +333,12 @@ msgstr "搜索历史"
 msgid "Search commands"
 msgstr "搜索命令"
 
+msgid "Import commands"
+msgstr "导入命令"
+
+msgid "Export commands"
+msgstr "导出命令"
+
 msgid "Search sessions"
 msgstr "搜索会话"
 
