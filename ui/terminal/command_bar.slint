@@ -52,7 +52,7 @@ export component CommandBar inherits Rectangle {
     in property <bool> zen-mode: false;
 
     visible: !root.zen-mode && root.command-panel-available;
-    height: root.zen-mode || !root.command-panel-available ? 0px : root.cmd-bar-input-height + 12px;
+    height: root.zen-mode || !root.command-panel-available ? 0px : root.cmd-bar-input-height + 13px;
     background: Theme.bg-panel-alt;
     border-width: 0;
 
@@ -102,9 +102,9 @@ export component CommandBar inherits Rectangle {
 
         HorizontalLayout {
             padding-left: 6px;
-            padding-right: 8px;
+            padding-right: 6px;
             padding-top: 4px;
-            padding-bottom: 4px;
+            padding-bottom: 5px;
             spacing: 6px;
             // Main-axis must stay stretch so cmd-input can expand;
             // center only vertically (buttons are shorter than the area).
