@@ -188,6 +188,17 @@ pub(super) fn apply_session_event_to_window(
             if let Some(st) = statuses.lock().unwrap().get_mut(tab_id) {
                 st.state = 2;
             }
+            // Shell is down; the pump already closed the dedicated SFTP link.
+            // Collapse the panel UI so it no longer looks ready/operable.
+            update_terminal(&|term| {
+                if term.sftp_available {
+                    term.sftp_ready = false;
+                    term.sftp_loading = false;
+                    term.sftp_collapsed = true;
+                    term.sftp_selected_count = 0;
+                    term.sftp_status = crate::i18n::t("SFTP 已断开", "SFTP disconnected").into();
+                }
+            });
         }
 
         // --- SFTP events ---------------------------------------------------

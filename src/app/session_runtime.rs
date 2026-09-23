@@ -87,6 +87,11 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
     // Separate SFTP connection for the same session (SSH only). It waits for
     // the interactive PTY to report Connected so a second SSH handshake cannot
     // contend with terminal startup on the same host/network path.
+    //
+    // `sftp_alive` ensures that once the shell drops (exit, peer close, network
+    // loss, …), any in-flight or live dedicated SFTP SSH link is torn down and
+    // cannot outlive the PTY.
+    let sftp_alive = Arc::new(std::sync::atomic::AtomicBool::new(has_sftp));
     let (sftp_evt_tx, sftp_ready_tx) = if has_sftp {
         let (sftp_tx, sftp_rx) = tokio::sync::mpsc::unbounded_channel::<SessionEvent>();
         let (ready_tx, ready_rx) = tokio::sync::oneshot::channel::<()>();
@@ -94,8 +99,13 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         let sftp_task_runtime = sftp_runtime.clone();
         let sftp_handles = ctx.sftp_handles.clone();
         let sftp_tab_id = tab_id.to_string();
+        let sftp_alive_spawn = sftp_alive.clone();
         sftp_runtime.spawn(async move {
             if ready_rx.await.is_err() {
+                return;
+            }
+            // Shell may have died while we waited; do not open a second SSH.
+            if !sftp_alive_spawn.load(std::sync::atomic::Ordering::SeqCst) {
                 return;
             }
             tokio::task::yield_now().await;
@@ -106,8 +116,19 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 keepalive_secs,
                 algorithms,
             );
+            if !sftp_alive_spawn.load(std::sync::atomic::Ordering::SeqCst) {
+                // Shell died during handshake: close immediately, do not register.
+                sftp_handle.close();
+                return;
+            }
             if let Ok(mut handles) = sftp_handles.lock() {
-                handles.insert(sftp_tab_id, sftp_handle);
+                handles.insert(sftp_tab_id.clone(), sftp_handle);
+                // Race between insert and tear-down: remove + close if already dead.
+                if !sftp_alive_spawn.load(std::sync::atomic::Ordering::SeqCst) {
+                    if let Some(h) = handles.remove(&sftp_tab_id) {
+                        h.close();
+                    }
+                }
             }
         });
         (Some(sftp_rx), Some(ready_tx))
@@ -121,6 +142,7 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         let bufs_thread = ctx.bufs.clone();
         let sftp_handles_pump = ctx.sftp_handles.clone();
         let sftp_last_cwd_pump = ctx.sftp_last_cwd.clone();
+        let sftp_alive_pump = sftp_alive.clone();
         let rt_pump = ctx.runtime.clone();
         let tab_id_pump = tab_id.to_string();
         let statuses_pump = ctx.tab_statuses.clone();
@@ -135,6 +157,23 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
             // This survives drain batches, so a stream of small events cannot
             // evade the frame checkpoint merely because of thread timing.
             let mut ingested_since_checkpoint = 0usize;
+
+            // On shell end: kill the dedicated SFTP SSH link and cancel a pending start.
+            let tear_down_sftp = |sftp_ready_tx: &mut Option<tokio::sync::oneshot::Sender<()>>,
+                                  cwd_debounce: &mut Option<tokio::task::JoinHandle<()>>| {
+                sftp_alive_pump.store(false, std::sync::atomic::Ordering::SeqCst);
+                // Drop the oneshot so a pre-Connected spawn task exits on Err.
+                let _ = sftp_ready_tx.take();
+                if let Some(prev) = cwd_debounce.take() {
+                    prev.abort();
+                }
+                if let Ok(mut handles) = sftp_handles_pump.lock() {
+                    if let Some(h) = handles.remove(&tab_id_pump) {
+                        h.close();
+                    }
+                }
+            };
+
             loop {
                 // Block for the first event, then sweep up everything else that's
                 // already queued. A burst — e.g. `tail -f` on a busy log (#171) —
@@ -142,7 +181,11 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 // adjacent Output below) ONE vt100 ingest + render, instead of one
                 // UI task per chunk flooding the event loop and freezing the app.
                 match shell_rx.blocking_recv() {
-                    None => break,
+                    None => {
+                        // Event channel closed (incl. abnormal exit without Closed).
+                        tear_down_sftp(&mut sftp_ready_tx, &mut cwd_debounce);
+                        break;
+                    }
                     Some(first) => drained.push(first),
                 }
                 // Cap the sweep so an unending stream still yields to the renderer
@@ -166,6 +209,12 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                                 let _ = ready.send(());
                             }
                             ui_batch.push(SessionEvent::Connected);
+                        }
+                        SessionEvent::Closed(reason) => {
+                            // Any SSH/shell drop (exit, peer close, network loss,
+                            // cancel, …) must also tear down the dedicated SFTP link.
+                            tear_down_sftp(&mut sftp_ready_tx, &mut cwd_debounce);
+                            ui_batch.push(SessionEvent::Closed(reason));
                         }
                         SessionEvent::CwdChanged(cwd) => {
                             // Shared map (not a thread-local) so manual SFTP
