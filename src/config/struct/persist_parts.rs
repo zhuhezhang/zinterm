@@ -267,6 +267,16 @@ impl SettingsFile {
     }
 }
 
+/// Portable settings export (`zinterm_export: "settings"`).
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct SettingsExportFile {
+    pub(crate) zinterm_export: String,
+    pub(crate) version: u32,
+    pub(crate) exported_at: String,
+    #[serde(flatten)]
+    pub(crate) settings: SettingsFile,
+}
+
 /// `ui-state.json` — layout chrome and Quick Connect fold state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiStateFile {

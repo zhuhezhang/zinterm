@@ -330,6 +330,409 @@ impl ConfigStore {
             .with_context(|| format!("failed to read {}", path.display()))?;
         self.import_quick_commands_json(&raw)
     }
+
+    // ── Portable settings export / import ─────────────────────────────────
+
+    /// Export Settings-panel preferences (including custom highlight rules) to
+    /// a portable JSON string. Sessions, quick commands, and UI layout chrome
+    /// are not included.
+    pub fn export_settings_json(&self) -> Result<String> {
+        let out = SettingsExportFile {
+            zinterm_export: "settings".into(),
+            version: 1,
+            exported_at: Self::format_export_timestamp(),
+            settings: SettingsFile::from_config(&self.cache),
+        };
+        Ok(serde_json::to_string_pretty(&out)?)
+    }
+
+    /// Export Settings-panel preferences to a portable JSON file.
+    pub fn export_settings_to(&self, path: &Path) -> Result<()> {
+        let raw = self.export_settings_json()?;
+        fs::write(path, raw).with_context(|| format!("failed to write {}", path.display()))?;
+        Ok(())
+    }
+
+    /// Import settings from a string produced by [`Self::export_settings_json`].
+    ///
+    /// Preference fields use **overwrite** semantics: present and valid values
+    /// replace the current setting; missing or invalid items/values are ignored.
+    /// `output_highlight_rules` are **additive**: required `name` + `pattern`
+    /// (keyword/regex); same-name rules are skipped; other fields are optional
+    /// and fall back to the same defaults as the UI add-rule form when missing
+    /// or invalid. Does not touch `defaults_rev`. Does **not** persist — the
+    /// caller applies a live preview; disk write waits for Settings › Save.
+    pub fn import_settings_json(&mut self, raw: &str) -> Result<SettingsImportStats> {
+        let probe: serde_json::Value =
+            serde_json::from_str(raw).context("not a valid zinterm settings export file")?;
+        let export_kind = probe
+            .get("zinterm_export")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if export_kind != "settings" {
+            anyhow::bail!(
+                "invalid export: zinterm_export must be \"settings\" (got {:?})",
+                export_kind
+            );
+        }
+        let version = probe
+            .get("version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        if version != 1 {
+            anyhow::bail!("unsupported export version {version} (expected 1)");
+        }
+
+        let mut prefs_applied = self.apply_imported_settings_prefs(&probe);
+
+        let (rules_added, rules_skipped) = self.import_highlight_rules_additive(
+            probe
+                .get("output_highlight_rules")
+                .and_then(|v| v.as_array())
+                .map(|a| a.as_slice())
+                .unwrap_or(&[]),
+        );
+        if rules_added > 0 {
+            prefs_applied = true;
+        }
+
+        Ok(SettingsImportStats {
+            prefs_applied,
+            rules_added,
+            rules_skipped,
+        })
+    }
+
+    /// Import settings from a file produced by [`Self::export_settings_to`].
+    pub fn import_settings_from(&mut self, path: &Path) -> Result<SettingsImportStats> {
+        let raw = fs::read_to_string(path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        self.import_settings_json(&raw)
+    }
+
+    /// Overwrite individual Settings-panel fields when the JSON value is valid.
+    /// Skips `output_highlight_rules` (handled additively) and `defaults_rev`.
+    fn apply_imported_settings_prefs(&mut self, root: &serde_json::Value) -> bool {
+        let mut changed = false;
+
+        if let Some(s) = root.get("download_dir").and_then(|v| v.as_str()) {
+            self.set_download_dir(s.to_string());
+            changed = true;
+        }
+        if let Some(s) = root.get("language").and_then(|v| v.as_str()) {
+            self.set_language(s.to_string());
+            changed = true;
+        }
+        if let Some(s) = root.get("theme_pref").and_then(|v| v.as_str()) {
+            match s.trim() {
+                "" | "system" | "dark" | "light" => {
+                    self.set_theme_pref(s.trim().to_string());
+                    changed = true;
+                }
+                _ => {}
+            }
+        }
+        if let Some(s) = root.get("renderer_mode").and_then(|v| v.as_str()) {
+            if is_valid_renderer_mode_input(s) {
+                self.set_renderer_mode(s.to_string());
+                changed = true;
+            }
+        }
+        if let Some(s) = root.get("font_family").and_then(|v| v.as_str()) {
+            self.set_font_family(s.to_string());
+            changed = true;
+        }
+        if let Some(n) = json_u32(root.get("font_size")) {
+            if (8..=32).contains(&n) {
+                self.set_font_size(n);
+                changed = true;
+            }
+        }
+        if let Some(n) = json_f32(root.get("terminal_line_spacing")) {
+            if (0.8..=1.5).contains(&n) {
+                self.set_terminal_line_spacing(n);
+                changed = true;
+            }
+        }
+        if let Some(b) = root.get("terminal_bold").and_then(|v| v.as_bool()) {
+            self.set_terminal_bold(b);
+            changed = true;
+        }
+        if let Some(s) = root.get("terminal_cursor_style").and_then(|v| v.as_str()) {
+            match s.trim() {
+                "bar" | "block" | "underline" => {
+                    self.set_terminal_cursor_style(s.trim().to_string());
+                    changed = true;
+                }
+                _ => {}
+            }
+        }
+        if let Some(s) = root.get("terminal_cursor_color").and_then(|v| v.as_str()) {
+            let t = s.trim();
+            if t.is_empty() {
+                self.cache.terminal_cursor_color.clear();
+                changed = true;
+            } else if self.set_terminal_cursor_color(t) {
+                changed = true;
+            }
+        }
+        if let Some(b) = root
+            .get("output_highlight_disabled")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_output_highlight_enabled(!b);
+            changed = true;
+        }
+        if let Some(s) = root
+            .get("output_highlight_preset")
+            .and_then(|v| v.as_str())
+        {
+            match s.trim() {
+                "log" | "devops" => {
+                    self.set_output_highlight_preset(s.trim().to_string());
+                    changed = true;
+                }
+                _ => {}
+            }
+        }
+        if let Some(b) = root.get("json_format_disabled").and_then(|v| v.as_bool()) {
+            self.set_json_format_output(!b);
+            changed = true;
+        }
+        if let Some(n) = json_u32(root.get("ui_scale")) {
+            if (80..=200).contains(&n) {
+                self.set_ui_scale(n);
+                changed = true;
+            }
+        }
+        if let Some(s) = root.get("wallpaper").and_then(|v| v.as_str()) {
+            self.set_wallpaper(s.to_string());
+            changed = true;
+        }
+        if let Some(b) = root.get("sftp_no_follow_cd").and_then(|v| v.as_bool()) {
+            self.set_sftp_follow_cd(!b);
+            changed = true;
+        }
+        if let Some(b) = root.get("download_always_ask").and_then(|v| v.as_bool()) {
+            self.set_download_always_ask(b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("paste_confirm_disabled")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_paste_confirm_enabled(!b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("extra_paste_shortcuts_disabled")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_extra_paste_shortcuts_enabled(!b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("select_copy_right_paste_disabled")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_select_copy_right_paste_enabled(!b);
+            changed = true;
+        }
+        if let Some(b) = root.get("zen_mode").and_then(|v| v.as_bool()) {
+            self.set_zen_mode(b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("quick_commands_as_sidebar")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_quick_commands_as_sidebar(b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("collapse_sftp_default")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_collapse_sftp_default(b);
+            changed = true;
+        }
+        if let Some(b) = root.get("welcome_as_sidebar").and_then(|v| v.as_bool()) {
+            self.set_welcome_as_sidebar(b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("confirm_delete_group_disabled")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_confirm_delete_group(!b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("confirm_delete_session")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_confirm_delete_session(b);
+            changed = true;
+        }
+        if let Some(b) = root
+            .get("welcome_single_click_connect")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_welcome_single_click_connect(b);
+            changed = true;
+        }
+        if let Some(n) = json_f32(root.get("wallpaper_overlay")) {
+            if (0.30..=1.0).contains(&n) {
+                self.set_wallpaper_overlay(n);
+                changed = true;
+            }
+        }
+        if let Some(n) = json_u32(root.get("panel_font")) {
+            if (80..=160).contains(&n) {
+                self.set_panel_font(n);
+                changed = true;
+            }
+        }
+        if let Some(b) = root
+            .get("update_check_disabled")
+            .and_then(|v| v.as_bool())
+        {
+            self.set_update_check_enabled(!b);
+            changed = true;
+        }
+        if let Some(n) = json_u32(root.get("ssh_keepalive_secs")) {
+            if n <= SSH_KEEPALIVE_SECS_MAX {
+                self.set_ssh_keepalive_secs(n);
+                changed = true;
+            }
+        }
+        if let Some(v) = root.get("algorithm_preferences") {
+            if let Ok(prefs) = serde_json::from_value::<AlgorithmPreferences>(v.clone()) {
+                self.set_algorithm_preferences(prefs);
+                changed = true;
+            }
+        }
+        if let Some(b) = root.get("save_passwords").and_then(|v| v.as_bool()) {
+            self.set_save_passwords(b);
+            changed = true;
+        }
+
+        changed
+    }
+
+    /// Additive import of custom highlight rules. Returns `(added, skipped)`.
+    fn import_highlight_rules_additive(
+        &mut self,
+        rules: &[serde_json::Value],
+    ) -> (usize, usize) {
+        let mut added = 0usize;
+        let mut skipped = 0usize;
+        const MAX_RULES: usize = 128;
+
+        for raw in rules {
+            if self.cache.output_highlight_rules.len() >= MAX_RULES {
+                skipped += 1;
+                continue;
+            }
+            let Some(rule) = parse_imported_highlight_rule(raw) else {
+                skipped += 1;
+                continue;
+            };
+            let name = rule.name.as_str();
+            let dup = self
+                .cache
+                .output_highlight_rules
+                .iter()
+                .any(|x| x.name.trim() == name);
+            if dup {
+                skipped += 1;
+                continue;
+            }
+            self.add_output_highlight_rule(rule);
+            added += 1;
+        }
+        (added, skipped)
+    }
+}
+
+/// Parse one highlight-rule object from an import file. Required: non-empty
+/// `name` and `pattern` (valid regex when `regex` is true). Optional fields use
+/// the same defaults as the UI add-rule form when missing/invalid.
+fn parse_imported_highlight_rule(raw: &serde_json::Value) -> Option<OutputHighlightRule> {
+    let obj = raw.as_object()?;
+    let name = obj.get("name").and_then(|v| v.as_str())?.trim();
+    if name.is_empty() || name.chars().count() > 64 {
+        return None;
+    }
+    let pattern = obj.get("pattern").and_then(|v| v.as_str())?.trim();
+    if pattern.is_empty() || pattern.chars().count() > 512 {
+        return None;
+    }
+
+    // 与 UI 新增规则表单一致的默认值
+    let regex = obj.get("regex").and_then(|v| v.as_bool()).unwrap_or(false);
+    let case_sensitive = obj
+        .get("case_sensitive")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let whole_line = obj
+        .get("whole_line")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let enabled = obj.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true);
+
+    if regex {
+        if regex::RegexBuilder::new(pattern)
+            .case_insensitive(!case_sensitive)
+            .build()
+            .is_err()
+        {
+            return None;
+        }
+    }
+
+    let color = match obj.get("color").and_then(|v| v.as_str()) {
+        Some(c) if !c.trim().is_empty() => {
+            // 合法 #RRGGBB 或旧版调色板名；其余忽略并回落到 UI 默认红色
+            if normalize_hex_color(c).is_some() {
+                normalize_highlight_color(c)
+            } else {
+                match c.trim().to_ascii_lowercase().as_str() {
+                    "red" | "yellow" | "green" | "cyan" | "magenta" | "gray" | "grey" => {
+                        normalize_highlight_color(c)
+                    }
+                    _ => "#F14C4C".to_string(),
+                }
+            }
+        }
+        _ => "#F14C4C".to_string(),
+    };
+
+    Some(OutputHighlightRule {
+        name: name.to_string(),
+        pattern: pattern.to_string(),
+        regex,
+        case_sensitive,
+        whole_line,
+        color,
+        enabled,
+    })
+}
+
+fn json_u32(v: Option<&serde_json::Value>) -> Option<u32> {
+    v.and_then(|v| v.as_u64())
+        .and_then(|n| u32::try_from(n).ok())
+}
+
+fn json_f32(v: Option<&serde_json::Value>) -> Option<f32> {
+    v.and_then(|v| v.as_f64()).map(|n| n as f32)
+}
+
+fn is_valid_renderer_mode_input(mode: &str) -> bool {
+    matches!(
+        mode.trim(),
+        "auto" | "gpu" | "software" | "femtovg" | "skia"
+    )
 }
 
 #[cfg(test)]
@@ -729,6 +1132,95 @@ mod tests {
         let raw = r#"{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[]}"#;
         let err = format!("{:#}", store.import_quick_commands_json(raw).unwrap_err());
         assert!(err.contains("quick_commands"), "{err}");
+        let _ = std::fs::remove_file(&store.path);
+    }
+
+    #[test]
+    fn settings_export_import_overwrites_prefs_and_adds_rules() {
+        let mut a = temp_store();
+        a.set_font_size(18);
+        a.set_theme_pref("dark".into());
+        a.set_output_highlight_preset("devops".into());
+        a.add_output_highlight_rule(OutputHighlightRule {
+            name: "timeout".into(),
+            pattern: "timeout".into(),
+            regex: false,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F14C4C".into(),
+            enabled: true,
+        });
+
+        let export_path =
+            std::env::temp_dir().join(format!("ms-settings-exp-{}.json", Uuid::new_v4()));
+        a.export_settings_to(&export_path).unwrap();
+        let raw = std::fs::read_to_string(&export_path).unwrap();
+        assert!(raw.contains("\"zinterm_export\": \"settings\""));
+        assert!(raw.contains("\"font_size\": 18"));
+        assert!(raw.contains("timeout"));
+
+        let mut b = temp_store();
+        b.set_font_size(13);
+        b.add_output_highlight_rule(OutputHighlightRule {
+            name: "timeout".into(), // 同名应跳过
+            pattern: "old".into(),
+            regex: false,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#23D18B".into(),
+            enabled: true,
+        });
+        let stats = b.import_settings_from(&export_path).unwrap();
+        assert!(stats.prefs_applied);
+        assert_eq!(stats.rules_added, 0);
+        assert_eq!(stats.rules_skipped, 1);
+        assert_eq!(b.font_size(), 18);
+        assert_eq!(b.theme_pref(), "dark");
+        assert_eq!(b.output_highlight_preset(), "devops");
+        assert_eq!(b.output_highlight_rules().len(), 1);
+        assert_eq!(b.output_highlight_rules()[0].pattern, "old");
+
+        // 再导入带新规则的文件
+        let raw2 = r#"{
+            "zinterm_export": "settings",
+            "version": 1,
+            "exported_at": "t",
+            "font_size": 99,
+            "theme_pref": "nope",
+            "output_highlight_rules": [
+                {"name": "warn", "pattern": "WARN"},
+                {"name": "", "pattern": "x"},
+                {"pattern": "no-name"},
+                {"name": "bad-re", "pattern": "(", "regex": true},
+                {"name": "ip", "pattern": "\\d+", "regex": true, "color": "not-a-color"}
+            ]
+        }"#;
+        let stats2 = b.import_settings_json(raw2).unwrap();
+        assert_eq!(b.font_size(), 18); // 无效 font_size 忽略
+        assert_eq!(b.theme_pref(), "dark"); // 无效 theme 忽略
+        assert_eq!(stats2.rules_added, 2); // warn + ip
+        assert_eq!(stats2.rules_skipped, 3);
+        assert!(stats2.prefs_applied);
+        let ip = b
+            .output_highlight_rules()
+            .iter()
+            .find(|r| r.name == "ip")
+            .unwrap();
+        assert_eq!(ip.color, "#F14C4C"); // 无效颜色 → UI 默认
+        assert!(!ip.case_sensitive);
+        assert!(ip.enabled);
+
+        let _ = std::fs::remove_file(&export_path);
+        let _ = std::fs::remove_file(&a.path);
+        let _ = std::fs::remove_file(&b.path);
+    }
+
+    #[test]
+    fn settings_import_rejects_sessions_export() {
+        let mut store = temp_store();
+        let raw = r#"{"zinterm_export":"sessions","version":1,"exported_at":"t","empty_groups":[],"sessions":[]}"#;
+        let err = format!("{:#}", store.import_settings_json(raw).unwrap_err());
+        assert!(err.contains("settings"), "{err}");
         let _ = std::fs::remove_file(&store.path);
     }
 }

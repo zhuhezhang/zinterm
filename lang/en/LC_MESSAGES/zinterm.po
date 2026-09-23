@@ -708,6 +708,24 @@ msgstr "Restore default settings"
 msgid "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept"
 msgstr "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept"
 
+msgid "Import settings"
+msgstr "Import settings"
+
+msgid "Overwrite settings from a portable JSON file. Invalid fields are ignored. Custom highlight rules are added (same-name rules are skipped)"
+msgstr "Overwrite settings from a portable JSON file. Invalid fields are ignored. Custom highlight rules are added (same-name rules are skipped)"
+
+msgid "Export settings"
+msgstr "Export settings"
+
+msgid "Save current settings preferences and custom highlight rules to a portable JSON file. Sessions and quick commands are not included"
+msgstr "Save current settings preferences and custom highlight rules to a portable JSON file. Sessions and quick commands are not included"
+
+msgid "Import"
+msgstr "Import"
+
+msgid "Export"
+msgstr "Export"
+
 msgid "FONT"
 msgstr "FONT"
 

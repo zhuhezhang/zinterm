@@ -164,6 +164,8 @@ export component InterfacePanel inherits Rectangle {
     callback request-clear-sessions();
     callback request-clear-passwords();
     callback request-restore-settings();
+    callback import-settings();
+    callback export-settings();
 
     HorizontalLayout {
         // --- Left nav ------------------------------------------------------
@@ -397,6 +399,8 @@ export component InterfacePanel inherits Rectangle {
                         request-clear-passwords => { root.request-clear-passwords(); }
                         request-clear-sessions => { root.request-clear-sessions(); }
                         request-restore-settings => { root.request-restore-settings(); }
+                        import-settings => { root.import-settings(); }
+                        export-settings => { root.export-settings(); }
                         set-save-passwords(a0) => { root.set-save-passwords(a0); }
                     }
                     if root.ifd-page == "language": LanguageSettingsPage {

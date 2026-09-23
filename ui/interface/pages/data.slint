@@ -1,4 +1,4 @@
-import { PrimaryButton, DangerButton } from "../../shared/widgets.slint";
+import { PrimaryButton, DangerButton, GhostButton } from "../../shared/widgets.slint";
 import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 
 export component DataSettingsPage inherits Rectangle {
@@ -8,6 +8,8 @@ export component DataSettingsPage inherits Rectangle {
     callback request-clear-passwords();
     callback request-clear-sessions();
     callback request-restore-settings();
+    callback import-settings();
+    callback export-settings();
     in-out property <bool> save-passwords: false;
     callback set-save-passwords(bool);
 
@@ -57,6 +59,24 @@ export component DataSettingsPage inherits Rectangle {
             DangerButton {
                 text: @tr("Clear");
                 clicked => { root.request-clear-sessions(); }
+            }
+        }
+
+        SettingRow {
+            label: @tr("Import settings");
+            desc: @tr("Overwrite settings from a portable JSON file. Invalid fields are ignored. Custom highlight rules are added (same-name rules are skipped)");
+            GhostButton {
+                text: @tr("Import");
+                clicked => { root.import-settings(); }
+            }
+        }
+
+        SettingRow {
+            label: @tr("Export settings");
+            desc: @tr("Save current settings preferences and custom highlight rules to a portable JSON file. Sessions and quick commands are not included");
+            GhostButton {
+                text: @tr("Export");
+                clicked => { root.export-settings(); }
             }
         }
 

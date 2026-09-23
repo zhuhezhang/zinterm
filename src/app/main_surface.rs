@@ -109,6 +109,38 @@ pub(super) fn wire_main_surface(
         });
     }
 
+    // Export Settings-panel preferences to a portable JSON file.
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        window.on_export_settings(move || {
+            if let Some(path) = rfd::FileDialog::new()
+                .set_file_name(
+                    chrono::Local::now()
+                        .format("zinterm-settings-%Y%m%d-%H%M%S.json")
+                        .to_string(),
+                )
+                .add_filter("JSON", &["json"])
+                .save_file()
+            {
+                let res = store.borrow().export_settings_to(&path);
+                if let Some(w) = weak.upgrade() {
+                    let hint = match res {
+                        Ok(()) => {
+                            if crate::i18n::is_en() {
+                                "Successfully exported settings".to_string()
+                            } else {
+                                "已成功导出设置".to_string()
+                            }
+                        }
+                        Err(e) => format!("{}: {}", t("导出失败", "export failed"), e),
+                    };
+                    w.set_ssh_import_hint(hint.into());
+                }
+            }
+        });
+    }
+
     let terminals_model: Rc<VecModel<TerminalState>> = Rc::new(VecModel::default());
     window.set_terminals(ModelRc::from(terminals_model.clone()));
 
@@ -370,6 +402,75 @@ pub(super) fn wire_main_surface(
                 &panes_model,
                 &splitters_model,
             );
+        });
+    }
+
+    // Import settings from a portable JSON file (overwrite prefs; additive rules).
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        let sftp_follow_cd = sftp_follow_cd.clone();
+        let ssh_keepalive_secs = ssh_keepalive_secs.clone();
+        let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let tabs_model = tabs_model.clone();
+        let layout = layout.clone();
+        let content_size = content_size.clone();
+        let panes_model = panes_model.clone();
+        let splitters_model = splitters_model.clone();
+        window.on_import_settings(move || {
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("JSON", &["json"])
+                .pick_file()
+            {
+                let res = store.borrow_mut().import_settings_from(&path);
+                if let Some(w) = weak.upgrade() {
+                    let hint = match res {
+                        Ok(stats) => {
+                            apply_settings_prefs_to_window(
+                                &w,
+                                &store.borrow(),
+                                &bufs,
+                                &sftp_follow_cd,
+                                &ssh_keepalive_secs,
+                                &ssh_algorithm_prefs,
+                                &tabs_model,
+                            );
+                            // 主题偏好可能已变，同步暗色模式
+                            apply_dark_mode(&w, &bufs, theme_pref_is_dark(&store.borrow()));
+                            let welcome_as_sidebar = store.borrow().welcome_as_sidebar();
+                            {
+                                let mut lay = layout.borrow_mut();
+                                update_welcome_tab(&mut lay, welcome_as_sidebar);
+                            }
+                            refresh_panes(
+                                &w,
+                                &layout.borrow(),
+                                content_size.get(),
+                                &tabs_model,
+                                &panes_model,
+                                &splitters_model,
+                            );
+                            // 仅预览 — 落盘等 Save / Save and close；保留打开面板时的快照以便 Cancel 撤销
+                            if crate::i18n::is_en() {
+                                format!(
+                                    "Import succeeded - settings updated / added {added} rule(s)/skipped {skipped}",
+                                    added = stats.rules_added,
+                                    skipped = stats.rules_skipped
+                                )
+                            } else {
+                                format!(
+                                    "导入成功 - 设置已更新 / 新增{added}条高亮规则/跳过{skipped}条",
+                                    added = stats.rules_added,
+                                    skipped = stats.rules_skipped
+                                )
+                            }
+                        }
+                        Err(e) => format!("{} - {}", t("导入失败", "import failed"), e),
+                    };
+                    w.set_ssh_import_hint(hint.into());
+                }
+            }
         });
     }
 

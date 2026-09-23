@@ -708,6 +708,24 @@ msgstr "恢复默认设置"
 msgid "Reset settings preferences to defaults (including SSH/SFTP algorithms). Saved groups, sessions, commands, passwords, private-keys, and SSH known hosts are kept"
 msgstr "将设置相关偏好恢复为默认值（含 SSH/SFTP 算法）。已保存的分组、会话、命令、密码、私钥和 SSH 已知主机公钥不会被清除"
 
+msgid "Import settings"
+msgstr "导入设置"
+
+msgid "Overwrite settings from a portable JSON file. Invalid fields are ignored. Custom highlight rules are added (same-name rules are skipped)"
+msgstr "从便携 JSON 文件覆盖导入设置。无效项会被忽略。自定义高亮规则为新增导入（同名规则跳过）"
+
+msgid "Export settings"
+msgstr "导出设置"
+
+msgid "Save current settings preferences and custom highlight rules to a portable JSON file. Sessions and quick commands are not included"
+msgstr "将当前设置偏好与自定义高亮规则保存为便携 JSON 文件。不含会话与快捷命令"
+
+msgid "Import"
+msgstr "导入"
+
+msgid "Export"
+msgstr "导出"
+
 msgid "FONT"
 msgstr "字体"
 

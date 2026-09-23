@@ -84,6 +84,8 @@ export component InterfaceOverlay inherits Rectangle {
     callback set-welcome-as-sidebar(bool);
     callback set-welcome-single-click-connect(bool);
     callback set-zen-mode(bool);
+    callback import-settings();
+    callback export-settings();
     in-out property <bool> sftp-follow-cd: true;
     in-out property <string> ssh-algorithm-category: "kex";
     in-out property <[AlgorithmOptionRow]> ssh-algorithm-rows;
@@ -348,6 +350,8 @@ export component InterfaceOverlay inherits Rectangle {
                         root.data-clear-kind = "restore-settings";
                         root.data-clear-open = true;
                     }
+                    import-settings => { root.import-settings(); }
+                    export-settings => { root.export-settings(); }
                 }
 
                 Rectangle {

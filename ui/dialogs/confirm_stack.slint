@@ -118,6 +118,8 @@ export component ConfirmStack inherits Rectangle {
     callback reset-ssh-algorithm-section();
     callback reset-ssh-algorithms();
     callback restore-settings-defaults();
+    callback import-settings();
+    callback export-settings();
     in-out property <bool> save-passwords: false;
     callback save-settings();
     in-out property <bool> select-copy-right-paste-enabled: true;
@@ -252,16 +254,6 @@ export component ConfirmStack inherits Rectangle {
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
     }
 
-    // Import / export / save-terminal-output result notice (#46).
-    MessageDialog {
-        width: parent.width;
-        height: parent.height;
-        is-open: root.ssh-import-hint != "";
-        title: @tr("Notice");
-        message: root.ssh-import-hint;
-        dismissed => { root.ssh-import-hint = ""; }
-    }
-
     // Welcome list: optional confirm before deleting a group or session.
     ConfirmDialog {
         width: parent.width;
@@ -394,6 +386,8 @@ export component ConfirmStack inherits Rectangle {
         renderer-mode <=> root.renderer-mode;
         reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
         reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
+        import-settings => { root.import-settings(); }
+        export-settings => { root.export-settings(); }
         save-passwords <=> root.save-passwords;
         save-settings => { root.save-settings(); }
         select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
@@ -485,5 +479,16 @@ export component ConfirmStack inherits Rectangle {
             root.data-clear-open = false;
         }
         cancel => { root.data-clear-open = false; }
+    }
+
+    // Import / export / save-terminal-output result notice — after InterfaceOverlay
+    // so it is not covered while Settings › Data is open.
+    MessageDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open: root.ssh-import-hint != "";
+        title: @tr("Notice");
+        message: root.ssh-import-hint;
+        dismissed => { root.ssh-import-hint = ""; }
     }
 }

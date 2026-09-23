@@ -295,3 +295,16 @@ pub(crate) struct QuickCommandsExportFile {
     pub(crate) empty_groups: Vec<String>,
     pub(crate) commands: Vec<QuickCommand>,
 }
+
+/// Result of [`ConfigStore::import_settings_json`]: preference overwrite plus
+/// additive highlight-rule import counts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SettingsImportStats {
+    /// At least one Settings-panel preference field was applied.
+    pub prefs_applied: bool,
+    /// Custom highlight rules newly appended.
+    pub rules_added: usize,
+    /// Highlight rules skipped (missing required fields, invalid regex, duplicate
+    /// name, or over the 128-rule cap).
+    pub rules_skipped: usize,
+}

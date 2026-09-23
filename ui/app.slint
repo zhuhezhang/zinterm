@@ -359,6 +359,8 @@ export component AppWindow inherits Window {
     callback clear-all-sessions(bool);
     callback clear-saved-passwords();
     callback restore-settings-defaults();
+    callback import-settings();
+    callback export-settings();
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).
@@ -1273,6 +1275,8 @@ export component AppWindow inherits Window {
         reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
         reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
         restore-settings-defaults => { root.restore-settings-defaults(); }
+        import-settings => { root.import-settings(); }
+        export-settings => { root.export-settings(); }
         save-passwords <=> root.save-passwords;
         save-settings => { root.save-settings(); }
         select-copy-right-paste-enabled <=> root.select-copy-right-paste-enabled;
