@@ -1,6 +1,6 @@
 [package]
 name = "zinterm"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["ZinTerm contributors"]
 description = "A lightweight low-memory cross-platform terminal emulator using Rust + Slint, with SSH, SFTP, Telnet, serial and local shell support."
@@ -29,7 +29,7 @@ slint = { version = "1.8", features = ["compat-1-2"] }
 # ICU4X (pulled in by Slint's text layout) spams stderr with raw `eprintln!`
 # ("ICU4X data error: No segmentation model for language: ja") because its
 # `log` shim falls back to eprintln when the `logging` feature is off. Turning
-# `logging` on routes those through the real `log` crate 閳?our tracing
+# `logging` on routes those through the real `log` crate 闁?our tracing
 # subscriber, where init_tracing silences the `icu_provider` target.
 icu_provider = { version = "2", features = ["logging"] }
 # Direct access to the winit window/events (OS file-drop for drag-and-drop upload).
@@ -49,11 +49,11 @@ uuid = { version = "1", features = ["v4", "serde"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "io-util", "net", "time", "fs"] }
 # Pinned below 0.60: RUSTSEC-2026-0154 (ssh-agent frame DoS) is fixed only in
 # >= 0.60.3, which pulls pre-release crypto crates (ed25519-dalek 3.0.0-pre,
-# aes-gcm 0.11.0-rc, 鈥?. zinterm never uses the ssh-agent, so the advisory is
-# not reachable 鈥?see audit.toml. 0.52 is the first release that accepts RFC 4253
+# aes-gcm 0.11.0-rc, 閳?. zinterm never uses the ssh-agent, so the advisory is
+# not reachable 閳?see audit.toml. 0.52 is the first release that accepts RFC 4253
 # SSH-1.99- banners (H3C/Huawei VRP); stay on this line until russh's crypto
 # deps leave the -rc channel (cf. PR #151).
-# `md5-mac` is a ZinTerm vendor patch (vendor/russh) 鈥?upstream has no hmac-md5.
+# `md5-mac` is a ZinTerm vendor patch (vendor/russh) 閳?upstream has no hmac-md5.
 russh = { path = "vendor/russh", version = "0.52.1", features = ["des", "flate2", "md5-mac"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
@@ -66,7 +66,7 @@ portable-pty = "0.8"
 pinyin = { version = "0.11", default-features = false, features = ["plain"] }
 # East Asian width detection for terminal copy/find column math. Pinned to the
 # same version vt100 uses so "is this glyph 2 cells wide?" agrees with how vt100
-# lays CJK glyphs on the grid 閳?otherwise selection/find columns drift (#132).
+# lays CJK glyphs on the grid 闁?otherwise selection/find columns drift (#132).
 unicode-width = "0.1.14"
 # Split terminal output into complete emoji grapheme clusters (ZWJ sequences,
 # flags, skin tones, variation selectors) before replacing them with images.
@@ -122,7 +122,7 @@ arboard = { version = "3", features = ["wayland-data-control"] }
 
 # Compile the Skia renderer in *only* on macOS (feature is additive over the base
 # slint dependency) so users can opt into it at launch with SLINT_BACKEND=winit-skia.
-# The default stays femtovg 閳?see the renderer history note in main.rs (#108/#129).
+# The default stays femtovg 闁?see the renderer history note in main.rs (#108/#129).
 # Windows/Linux never compile Skia; on Windows it conflicts with another ICU
 # import library at link time when using the MSVC toolchain (#224).
 [target.'cfg(target_os = "macos")'.dependencies]
