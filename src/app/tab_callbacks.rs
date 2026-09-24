@@ -13,6 +13,7 @@ struct TabCloseCtx {
     sftp_last_cwd: SftpLastCwd,
     panes_model: Rc<VecModel<PaneInfo>>,
     splitters_model: Rc<VecModel<SplitterInfo>>,
+    session_logs: SessionLoggers,
 }
 
 fn close_tab_id(ctx: &TabCloseCtx, id: &str) {
@@ -20,6 +21,7 @@ fn close_tab_id(ctx: &TabCloseCtx, id: &str) {
         return;
     }
     clear_tab_credentials(id);
+    ctx.session_logs.close_tab(id);
     if let Some(handle) = ctx.handles.borrow_mut().remove(id) {
         handle.close();
     }
@@ -149,6 +151,7 @@ pub(super) fn wire_tab_callbacks(
     render_gates: RenderGates,
     sftp_handles: SftpHandles,
     sftp_last_cwd: SftpLastCwd,
+    session_logs: SessionLoggers,
 ) {
     // Ctrl+Tab / Ctrl+Shift+Tab cycle within the currently focused pane (#294).
     {
@@ -354,6 +357,7 @@ pub(super) fn wire_tab_callbacks(
             sftp_last_cwd: sftp_last_cwd.clone(),
             panes_model: panes_model.clone(),
             splitters_model: splitters_model.clone(),
+            session_logs: session_logs.clone(),
         });
         {
             let close_ctx = close_ctx.clone();

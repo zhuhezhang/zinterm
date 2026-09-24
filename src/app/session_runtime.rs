@@ -148,6 +148,8 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         let statuses_pump = ctx.tab_statuses.clone();
         let follow_cd_pump = ctx.sftp_follow_cd.clone();
         let render_gates_pump = ctx.render_gates.clone();
+        let session_logs_pump = ctx.session_logs.clone();
+        let tab_title_pump = tab_title_for_id(ctx, tab_id);
         std::thread::spawn(move || {
             let mut shell_rx = rx;
             let mut sftp_ready_tx = sftp_ready_tx;
@@ -303,6 +305,15 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                             if !reply.is_empty() {
                                 let _ = terminal_reply_tx.send(SessionCommand::RawInput(reply));
                             }
+                            // WYSIWYG session log: plain text from the buffer
+                            // (not raw PTY bytes). Cursor line excluded so
+                            // in-progress edits / progress bars stay final-state.
+                            session_logs_pump.snapshot_tab(
+                                &tab_id_pump,
+                                &tab_title_pump,
+                                &bufs_thread,
+                                false,
+                            );
                             remaining_output_bytes =
                                 remaining_output_bytes.saturating_sub(chunk_len);
                             dirty_since_request = true;
@@ -329,6 +340,17 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                                 }
                             }
                         }
+                        SessionEvent::Closed(reason) => {
+                            // Flush the cursor line before the UI paints the
+                            // disconnect banner, so the final prompt is logged.
+                            session_logs_pump.snapshot_tab(
+                                &tab_id_pump,
+                                &tab_title_pump,
+                                &bufs_thread,
+                                true,
+                            );
+                            ui_only.push(SessionEvent::Closed(reason));
+                        }
                         other => ui_only.push(other),
                     }
                 }
@@ -351,11 +373,12 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 let bufs_evt = bufs_thread.clone();
                 let st_evt = statuses_pump.clone();
                 let gates_evt = render_gates_pump.clone();
+                let logs_evt = session_logs_pump.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(win) = weak_evt.upgrade() {
                         for evt in ui_only {
                             apply_session_event_to_window(
-                                &win, &tid, evt, &bufs_evt, &gates_evt, &st_evt,
+                                &win, &tid, evt, &bufs_evt, &gates_evt, &st_evt, &logs_evt,
                             );
                         }
                     }
@@ -371,6 +394,7 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
         let tab_id_sftp = tab_id.to_string();
         let statuses_sftp = ctx.tab_statuses.clone();
         let gates_sftp = ctx.render_gates.clone();
+        let logs_sftp = ctx.session_logs.clone();
         std::thread::spawn(move || {
             let mut sftp_rx = sftp_evt_tx;
             let mut drained: Vec<SessionEvent> = Vec::new();
@@ -395,11 +419,12 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
                 let bufs_s = bufs_sftp.clone();
                 let st_s = statuses_sftp.clone();
                 let gates_s = gates_sftp.clone();
+                let logs_s = logs_sftp.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(win) = weak_s.upgrade() {
                         for sftp_evt in ui_batch {
                             apply_session_event_to_window(
-                                &win, &tid, sftp_evt, &bufs_s, &gates_s, &st_s,
+                                &win, &tid, sftp_evt, &bufs_s, &gates_s, &st_s, &logs_s,
                             );
                         }
                     }
@@ -407,4 +432,23 @@ pub(super) fn start_session_in_tab(tab_id: &str, session: Session, ctx: &Connect
             }
         });
     }
+}
+
+fn tab_title_for_id(ctx: &ConnectCtx, tab_id: &str) -> String {
+    let Some(w) = ctx.weak.upgrade() else {
+        return "terminal".to_string();
+    };
+    let tabs = w.get_tabs();
+    for i in 0..tabs.row_count() {
+        if let Some(row) = tabs.row_data(i) {
+            if row.id.as_str() == tab_id {
+                let title = row.title.trim();
+                if !title.is_empty() {
+                    return title.to_string();
+                }
+                break;
+            }
+        }
+    }
+    "terminal".to_string()
 }

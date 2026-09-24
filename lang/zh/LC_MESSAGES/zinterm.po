@@ -828,6 +828,9 @@ msgstr "英文"
 msgid "OUTPUT HIGHLIGHTING"
 msgstr "输出高亮"
 
+msgid "TERMINAL OUTPUT LOG"
+msgstr "终端输出日志"
+
 msgid "Highlight plain terminal output"
 msgstr "高亮纯文本终端输出"
 
@@ -848,6 +851,12 @@ msgstr "格式化并着色 JSON 行"
 
 msgid "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged"
 msgstr "仅美化占据完整一行且可正确解析的 JSON 对象或数组，其他终端输出保持原样"
+
+msgid "Record terminal output log"
+msgstr "记录终端输出日志"
+
+msgid "Writes each tab's screen as plain text (what you see). Same tab reuses one file across reconnect; full-screen TUIs like vim are skipped"
+msgstr "将各标签页屏幕所见内容以纯文本写入日志；同一标签页在重连后仍使用同一日志文件；vim 等全屏 TUI 期间不记入"
 
 msgid "CUSTOM RULES"
 msgstr "自定义规则"

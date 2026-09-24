@@ -43,6 +43,7 @@ Target platforms: Windows / Linux / macOS. Every `v*` tag is built for all three
 | Security | Encrypted credentials vault + OS keyring master key; known-hosts checks |
 | Build | Pure Rust stack (SSH via `russh`; no hard libssh / OpenSSL dependency) |
 | Language | Chinese / English UI; follow system or pick manually |
+| Logging | WYSIWYG plain-text session output logs per tab; configurable save directory |
 | Shortcuts | Global `Ctrl+F` focuses the session search box; ↑/↓ then Enter to connect. For more shortcuts, see Settings → Shortcuts |
 
 ## Download & install
@@ -124,6 +125,7 @@ open /Applications/zinterm.app
 -  Known-hosts fingerprint check + first-connect confirmation; optional save host keys
 -  Data cleanup: clear saved passwords/keys, groups & sessions, host keys; restore default settings
 -  Terminal find, output-highlight rules, font / encoding / input-related settings
+-  Session output log: plain text matching the screen per tab (default `Downloads/zinterm-session-log`); same tab reuses one file across reconnect; full-screen TUIs like vim are skipped
 -  UI language: follow system / 简体中文 / English (switchable at runtime)
 -  In-app update check (GitHub Releases)
 

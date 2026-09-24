@@ -399,6 +399,7 @@ pub(super) fn wire_session_dialog(
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: Arc<std::sync::atomic::AtomicU32>,
     ssh_algorithm_prefs: Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
+    session_logs: SessionLoggers,
 ) {
     // Dialog submit -> persist and/or connect (Save / Connect / Save-and-connect).
     {
@@ -423,6 +424,7 @@ pub(super) fn wire_session_dialog(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let session_logs = session_logs.clone();
         window.on_session_dialog_submit(
             move |draft: SessionDraft, persist: bool, connect: bool| {
                 let mut new_session = session_from_draft(&draft);
@@ -500,6 +502,7 @@ pub(super) fn wire_session_dialog(
                         sftp_follow_cd: sftp_follow_cd.clone(),
                         ssh_keepalive_secs: ssh_keepalive_secs.clone(),
                         ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
+                        session_logs: session_logs.clone(),
                     };
                     open_session_in_new_tab(
                         new_session,
@@ -592,6 +595,7 @@ pub(super) fn wire_session_dialog(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let session_logs = session_logs.clone();
         let panes_model = panes_model.clone();
         let splitters_model = splitters_model.clone();
         window.on_connect_session(move |id: SharedString| {
@@ -613,6 +617,7 @@ pub(super) fn wire_session_dialog(
                 sftp_follow_cd: sftp_follow_cd.clone(),
                 ssh_keepalive_secs: ssh_keepalive_secs.clone(),
                 ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
+                session_logs: session_logs.clone(),
             };
             open_session_in_new_tab(
                 session,
@@ -651,6 +656,7 @@ pub(super) fn wire_session_dialog(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let session_logs = session_logs.clone();
         let panes_model = panes_model.clone();
         let splitters_model = splitters_model.clone();
         window.on_tab_duplicate(move |tab_id: SharedString| {
@@ -687,6 +693,7 @@ pub(super) fn wire_session_dialog(
                 sftp_follow_cd: sftp_follow_cd.clone(),
                 ssh_keepalive_secs: ssh_keepalive_secs.clone(),
                 ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
+                session_logs: session_logs.clone(),
             };
             open_session_in_new_tab(
                 session,

@@ -32,6 +32,11 @@ impl ConfigStore {
                 self.cache.download_dir = dl;
             }
         }
+        if self.cache.session_log_dir.is_empty() {
+            self.cache.session_log_dir = crate::session::default_session_log_dir()
+                .to_string_lossy()
+                .into_owned();
+        }
     }
 
     /// Snapshot of Settings-panel preferences (excludes sessions, commands, and
@@ -59,6 +64,8 @@ impl ConfigStore {
         c.output_highlight_preset = snap.output_highlight_preset.clone();
         c.output_highlight_rules = snap.output_highlight_rules.clone();
         c.json_format_disabled = snap.json_format_disabled;
+        c.session_log_enabled = snap.session_log_enabled;
+        c.session_log_dir = snap.session_log_dir.clone();
         c.ui_scale = snap.ui_scale;
         c.wallpaper = snap.wallpaper.clone();
         c.sftp_no_follow_cd = snap.sftp_no_follow_cd;

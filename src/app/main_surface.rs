@@ -14,6 +14,7 @@ pub(super) fn wire_main_surface(
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: Arc<std::sync::atomic::AtomicU32>,
     ssh_algorithm_prefs: Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
+    session_logs: SessionLoggers,
 ) {
     let sessions_model: Rc<VecModel<SessionInfo>> = Rc::new(VecModel::default());
     let welcome_session_query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
@@ -86,6 +87,7 @@ pub(super) fn wire_main_surface(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let session_logs = session_logs.clone();
         let tabs_model = tabs_model.clone();
         window.on_restore_settings_defaults(move || {
             {
@@ -102,6 +104,7 @@ pub(super) fn wire_main_surface(
                 &sftp_follow_cd,
                 &ssh_keepalive_secs,
                 &ssh_algorithm_prefs,
+                &session_logs,
                 &tabs_model,
             );
             // Preview only — disk write waits for Save / Save and close.
@@ -307,6 +310,7 @@ pub(super) fn wire_main_surface(
         sftp_follow_cd.clone(),
         ssh_keepalive_secs.clone(),
         ssh_algorithm_prefs.clone(),
+        session_logs.clone(),
     );
 
     // Switch UI language at runtime.  Preference is "auto" / "zh" / "en"
@@ -363,6 +367,7 @@ pub(super) fn wire_main_surface(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let session_logs = session_logs.clone();
         let tabs_model = tabs_model.clone();
         let layout = layout.clone();
         let content_size = content_size.clone();
@@ -387,6 +392,7 @@ pub(super) fn wire_main_surface(
                 &sftp_follow_cd,
                 &ssh_keepalive_secs,
                 &ssh_algorithm_prefs,
+                &session_logs,
                 &tabs_model,
             );
             let welcome_as_sidebar = store.borrow().welcome_as_sidebar();
@@ -413,6 +419,7 @@ pub(super) fn wire_main_surface(
         let sftp_follow_cd = sftp_follow_cd.clone();
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
+        let session_logs = session_logs.clone();
         let tabs_model = tabs_model.clone();
         let layout = layout.clone();
         let content_size = content_size.clone();
@@ -434,6 +441,7 @@ pub(super) fn wire_main_surface(
                                 &sftp_follow_cd,
                                 &ssh_keepalive_secs,
                                 &ssh_algorithm_prefs,
+                                &session_logs,
                                 &tabs_model,
                             );
                             // 主题偏好可能已变，同步暗色模式
@@ -757,6 +765,7 @@ pub(super) fn wire_main_surface(
         render_gates.clone(),
         sftp_handles.clone(),
         sftp_last_cwd.clone(),
+        session_logs.clone(),
     );
     wire_sftp_callbacks(window, sftp_handles.clone(), sftp_last_cwd.clone());
     wire_key_input(
@@ -779,6 +788,7 @@ pub(super) fn wire_main_surface(
             sftp_follow_cd: sftp_follow_cd.clone(),
             ssh_keepalive_secs: ssh_keepalive_secs.clone(),
             ssh_algorithm_prefs: ssh_algorithm_prefs.clone(),
+            session_logs: session_logs.clone(),
         },
     );
 }

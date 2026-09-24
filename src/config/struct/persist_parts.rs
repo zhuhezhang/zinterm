@@ -138,6 +138,10 @@ pub struct SettingsFile {
     #[serde(default)]
     pub json_format_disabled: bool,
     #[serde(default)]
+    pub session_log_enabled: bool,
+    #[serde(default)]
+    pub session_log_dir: String,
+    #[serde(default)]
     pub ui_scale: u32,
     #[serde(default = "default_wallpaper")]
     pub wallpaper: String,
@@ -204,6 +208,8 @@ impl SettingsFile {
             output_highlight_preset: cfg.output_highlight_preset.clone(),
             output_highlight_rules: cfg.output_highlight_rules.clone(),
             json_format_disabled: cfg.json_format_disabled,
+            session_log_enabled: cfg.session_log_enabled,
+            session_log_dir: cfg.session_log_dir.clone(),
             ui_scale: cfg.ui_scale,
             wallpaper: cfg.wallpaper.clone(),
             sftp_no_follow_cd: cfg.sftp_no_follow_cd,
@@ -243,6 +249,8 @@ impl SettingsFile {
         cfg.output_highlight_preset = self.output_highlight_preset.clone();
         cfg.output_highlight_rules = self.output_highlight_rules.clone();
         cfg.json_format_disabled = self.json_format_disabled;
+        cfg.session_log_enabled = self.session_log_enabled;
+        cfg.session_log_dir = self.session_log_dir.clone();
         cfg.ui_scale = self.ui_scale;
         cfg.wallpaper = self.wallpaper.clone();
         cfg.sftp_no_follow_cd = self.sftp_no_follow_cd;

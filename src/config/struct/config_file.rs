@@ -99,6 +99,12 @@ pub struct ConfigFile {
     /// by default while still allowing users to preserve byte-for-byte display.
     #[serde(default)]
     pub json_format_disabled: bool,
+    /// Append raw terminal output to per-tab log files. Default off.
+    #[serde(default)]
+    pub session_log_enabled: bool,
+    /// Directory for session output logs. Empty = Downloads/zinterm-session-log.
+    #[serde(default)]
+    pub session_log_dir: String,
     /// Global UI scale in percent (#100). 0 = default (100%).
     #[serde(default)]
     pub ui_scale: u32,

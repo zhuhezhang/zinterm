@@ -162,10 +162,6 @@ export component FontSettingsPage inherits Rectangle {
             }
         }
 
-        Rectangle {
-            height: 14px;
-        }
-
         SectionHeader {
             text: @tr("PREVIEW");
         }
@@ -186,6 +182,10 @@ export component FontSettingsPage inherits Rectangle {
                 vertical-alignment: center;
                 height: parent.height;
             }
+        }
+
+        Rectangle {
+            height: 10px;
         }
     }
 }

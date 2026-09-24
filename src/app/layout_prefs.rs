@@ -92,6 +92,7 @@ pub(super) fn apply_settings_prefs_to_window(
     sftp_follow_cd: &Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: &Arc<std::sync::atomic::AtomicU32>,
     ssh_algorithm_prefs: &Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
+    session_logs: &SessionLoggers,
     tabs_model: &VecModel<TabInfo>,
 ) {
     let lang_pref = s.language().to_string();
@@ -133,6 +134,17 @@ pub(super) fn apply_settings_prefs_to_window(
     }
     w.set_output_highlight_enabled(s.output_highlight_enabled());
     w.set_json_format_output(s.json_format_output());
+    w.set_session_log_enabled(s.session_log_enabled());
+    session_logs.set_enabled(s.session_log_enabled());
+    let log_dir = if s.session_log_dir().is_empty() {
+        crate::session::default_session_log_dir()
+            .to_string_lossy()
+            .into_owned()
+    } else {
+        s.session_log_dir().to_string()
+    };
+    session_logs.set_dir(log_dir.clone());
+    w.set_session_log_dir(log_dir.into());
     w.set_output_highlight_preset(s.output_highlight_preset().into());
     w.set_output_highlight_rules(output_highlight_rule_model(s));
     w.set_ui_scale(s.ui_scale() as f32 / 100.0);

@@ -1,5 +1,21 @@
 use super::*;
 
+fn tab_title_from_window(win: &AppWindow, tab_id: &str) -> String {
+    let tabs = win.get_tabs();
+    for i in 0..tabs.row_count() {
+        if let Some(row) = tabs.row_data(i) {
+            if row.id.as_str() == tab_id {
+                let title = row.title.trim();
+                if !title.is_empty() {
+                    return title.to_string();
+                }
+                break;
+            }
+        }
+    }
+    "terminal".to_string()
+}
+
 /// Clean / user-initiated closes: muted tab dot. Everything else (auth fail,
 /// handshake error, write/read failure, …) paints the failure red.
 fn is_normal_session_close(reason: &str) -> bool {
@@ -96,6 +112,7 @@ pub(super) fn apply_session_event_to_window(
     bufs: &TermBuffers,
     gates: &RenderGates,
     statuses: &TabStatuses,
+    session_logs: &SessionLoggers,
 ) {
     let terminals_rc = win.get_terminals();
     let terminals = terminals_rc
@@ -115,6 +132,8 @@ pub(super) fn apply_session_event_to_window(
         }
     };
 
+    let tab_title = tab_title_from_window(win, tab_id);
+
     match event {
         SessionEvent::Status(status) => {
             // Connection progress / info goes into the terminal like remote
@@ -130,12 +149,14 @@ pub(super) fn apply_session_event_to_window(
                 format!("\r\n\x1b[90m{status}\x1b[0m\r\n")
             };
             let _ = ingest_terminal_output(bufs, tab_id, chunk.as_bytes());
+            session_logs.snapshot_tab(tab_id, &tab_title, bufs, false);
             request_tab_render_from_ui(win.as_weak(), tab_id, bufs, gates);
         }
         SessionEvent::Output(chunk) => {
             // Synthetic Output (disconnect hint, editor error, …) — rare, already
             // on the UI thread. Live shell output is ingested on the pump thread.
             let _ = ingest_terminal_output(bufs, tab_id, chunk.as_bytes());
+            session_logs.snapshot_tab(tab_id, &tab_title, bufs, false);
             request_tab_render_from_ui(win.as_weak(), tab_id, bufs, gates);
         }
         SessionEvent::Connected => {
@@ -176,6 +197,7 @@ pub(super) fn apply_session_event_to_window(
                 bufs,
                 gates,
                 statuses,
+                session_logs,
             );
             // Normal closes (user cancel, clean peer/local exit) stay muted;
             // only connect/auth/IO failures paint the tab dot red.
@@ -320,6 +342,7 @@ pub(super) fn apply_session_event_to_window(
                     bufs,
                     gates,
                     statuses,
+                    session_logs,
                 );
                 update_terminal(&|t| t.sftp_status = error.clone().into());
             }

@@ -20,6 +20,8 @@ export component OutputSettingsPage inherits Rectangle {
     in-out property <string> highlight-draft-color-hex: "#F14C4C";
     in-out property <color> highlight-draft-swatch: #F14C4C;
     in-out property <bool> json-format-output: true;
+    in-out property <bool> session-log-enabled: false;
+    in property <string> session-log-dir;
     in-out property <bool> new-rule-case-sensitive;
     in-out property <string> new-rule-name;
     in-out property <string> new-rule-pattern;
@@ -40,6 +42,9 @@ export component OutputSettingsPage inherits Rectangle {
         max(m-rule-name.preferred-width, m-rule-pattern.preferred-width);
     callback set-highlight-draft-color(string) -> bool;
     callback set-json-format-output(bool);
+    callback set-session-log-enabled(bool);
+    callback pick-session-log-dir();
+    callback open-session-log-dir();
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
 
@@ -116,6 +121,108 @@ export component OutputSettingsPage inherits Rectangle {
         padding-top: 15px;
         spacing: 0;
         alignment: start;
+
+        SectionHeader {
+            text: @tr("TERMINAL OUTPUT LOG");
+        }
+
+        SettingRow {
+            label: @tr("Record terminal output log");
+            desc: @tr("Writes each tab's screen as plain text (what you see). Same tab reuses one file across reconnect; full-screen TUIs like vim are skipped");
+            show-divider: false;
+            Switch {
+                on: root.session-log-enabled;
+                toggled(v) => {
+                    root.session-log-enabled = v;
+                    root.set-session-log-enabled(v);
+                }
+            }
+        }
+
+        HorizontalLayout {
+            width: 100%;
+            spacing: 8px;
+            padding-top: 9px;
+            padding-bottom: 9px;
+
+            Rectangle {
+                height: 28px;
+                horizontal-stretch: 1;
+                background: Theme.bg-elevated;
+                border-radius: Theme.radius-sm;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    Text {
+                        width: 100%;
+                        text: root.session-log-dir;
+                        color: Theme.text-primary;
+                        font-size: Theme.fs-sm;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 28px;
+                border-radius: Theme.radius-sm;
+                background: pick-log-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    Text {
+                        text: @tr("Choose save path");
+                        color: #ffffff;
+                        font-size: Theme.fs-sm;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                pick-log-ta := TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    mouse-cursor: pointer;
+                    clicked => { root.pick-session-log-dir(); }
+                }
+            }
+
+            Rectangle {
+                height: 28px;
+                border-radius: Theme.radius-sm;
+                background: open-log-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    Text {
+                        text: @tr("Open folder");
+                        color: Theme.text-primary;
+                        font-size: Theme.fs-sm;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                open-log-ta := TouchArea {
+                    width: 100%;
+                    height: 100%;
+                    mouse-cursor: pointer;
+                    clicked => { root.open-session-log-dir(); }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Theme.border-subtle;
+        }
+
+        Rectangle {
+            height: 18px;
+        }
 
         SectionHeader {
             text: @tr("OUTPUT HIGHLIGHTING");

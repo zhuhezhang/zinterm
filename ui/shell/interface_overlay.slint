@@ -34,6 +34,8 @@ export component InterfaceOverlay inherits Rectangle {
     in-out property <bool> interface-open: false;  // Interface settings overlay;
     in-out property <bool> is-windows: false;
     in-out property <bool> json-format-output: true;
+    in-out property <bool> session-log-enabled: false;
+    in property <string> session-log-dir;
     in-out property <string> language-pref: "auto";
     callback move-ssh-algorithm(string, int);
     in-out property <bool> output-highlight-enabled: true;
@@ -60,6 +62,9 @@ export component InterfaceOverlay inherits Rectangle {
     callback set-extra-paste-shortcuts-enabled(bool);
     callback set-highlight-draft-color(string)-> bool;
     callback set-json-format-output(bool);
+    callback set-session-log-enabled(bool);
+    callback pick-session-log-dir();
+    callback open-session-log-dir();
     callback set-language(string);
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
@@ -248,6 +253,8 @@ export component InterfaceOverlay inherits Rectangle {
                     highlight-draft-swatch <=> root.highlight-draft-swatch;
                     output-highlight-enabled <=> root.output-highlight-enabled;
                     json-format-output <=> root.json-format-output;
+                    session-log-enabled <=> root.session-log-enabled;
+                    session-log-dir: root.session-log-dir;
                     output-highlight-preset <=> root.output-highlight-preset;
                     output-highlight-rules: root.output-highlight-rules;
                     output-highlight-rule-status <=> root.output-highlight-rule-status;
@@ -285,6 +292,9 @@ export component InterfaceOverlay inherits Rectangle {
                         root.set-output-highlight(enabled, preset);
                     }
                     set-json-format-output(enabled) => { root.set-json-format-output(enabled); }
+                    set-session-log-enabled(enabled) => { root.set-session-log-enabled(enabled); }
+                    pick-session-log-dir() => { root.pick-session-log-dir(); }
+                    open-session-log-dir() => { root.open-session-log-dir(); }
                     set-highlight-draft-color(v) => { root.set-highlight-draft-color(v) }
                     add-output-highlight-rule(name, pattern, regex, case-sensitive, whole-line, color) => {
                         root.add-output-highlight-rule(

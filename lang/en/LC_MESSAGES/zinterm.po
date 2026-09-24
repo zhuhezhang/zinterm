@@ -828,6 +828,9 @@ msgstr "English"
 msgid "OUTPUT HIGHLIGHTING"
 msgstr "OUTPUT HIGHLIGHTING"
 
+msgid "TERMINAL OUTPUT LOG"
+msgstr "TERMINAL OUTPUT LOG"
+
 msgid "Highlight plain terminal output"
 msgstr "Highlight plain terminal output"
 
@@ -848,6 +851,12 @@ msgstr "Format and colour JSON lines"
 
 msgid "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged"
 msgstr "Pretty-prints only complete JSON objects or arrays that occupy a whole terminal line. Other output is unchanged"
+
+msgid "Record terminal output log"
+msgstr "Record terminal output log"
+
+msgid "Writes each tab's screen as plain text (what you see). Same tab reuses one file across reconnect; full-screen TUIs like vim are skipped"
+msgstr "Writes each tab's screen as plain text (what you see). Same tab reuses one file across reconnect; full-screen TUIs like vim are skipped"
 
 msgid "CUSTOM RULES"
 msgstr "CUSTOM RULES"

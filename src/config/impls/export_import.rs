@@ -499,6 +499,16 @@ impl ConfigStore {
             self.set_json_format_output(!b);
             changed = true;
         }
+        if let Some(b) = root.get("session_log_enabled").and_then(|v| v.as_bool()) {
+            self.set_session_log_enabled(b);
+            changed = true;
+        }
+        if let Some(s) = root.get("session_log_dir").and_then(|v| v.as_str()) {
+            if !s.trim().is_empty() {
+                self.set_session_log_dir(s.to_string());
+                changed = true;
+            }
+        }
         if let Some(n) = json_u32(root.get("ui_scale")) {
             if (80..=200).contains(&n) {
                 self.set_ui_scale(n);

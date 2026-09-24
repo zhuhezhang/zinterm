@@ -94,6 +94,24 @@ impl ConfigStore {
         self.cache.json_format_disabled = !enabled;
     }
 
+    /// Whether raw terminal output is appended to per-tab session log files.
+    pub fn session_log_enabled(&self) -> bool {
+        self.cache.session_log_enabled
+    }
+
+    pub fn set_session_log_enabled(&mut self, enabled: bool) {
+        self.cache.session_log_enabled = enabled;
+    }
+
+    /// Directory for session output logs. Empty means the built-in default.
+    pub fn session_log_dir(&self) -> &str {
+        &self.cache.session_log_dir
+    }
+
+    pub fn set_session_log_dir(&mut self, dir: String) {
+        self.cache.session_log_dir = dir;
+    }
+
     /// Selected built-in rule set. Unknown values safely fall back to the
     /// conservative log-level preset for forward/backward compatibility.
     pub fn output_highlight_preset(&self) -> &str {

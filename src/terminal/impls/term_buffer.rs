@@ -298,6 +298,45 @@ impl TermBuffer {
         self.extract_range_text((0, 0), (combined_len - 1, u16::MAX))
     }
 
+    /// Plain text of the normal-screen committed region (matches what the user
+    /// sees). Returns `None` on the alternate screen so full-screen TUIs
+    /// (vim/htop) are not written to the session log.
+    ///
+    /// By default the cursor row is excluded so in-progress edits and progress
+    /// bars are not snapshotted mid-update; pass `include_cursor_line` on
+    /// disconnect flush so the final prompt line is captured.
+    pub(crate) fn export_committed_plain(&self, include_cursor_line: bool) -> Option<String> {
+        let s = self.parser.screen();
+        if s.alternate_screen() {
+            return None;
+        }
+        let (rows, cols) = s.size();
+        let (cursor_row, _) = s.cursor_position();
+        let end_exclusive = if include_cursor_line {
+            (cursor_row as usize + 1).min(rows as usize)
+        } else {
+            (cursor_row as usize).min(rows as usize)
+        };
+
+        let mut parts: Vec<(String, bool)> = Vec::with_capacity(self.history.len() + end_exclusive);
+        for line in &self.history {
+            parts.push((line.0.trim_end().to_string(), line.2));
+        }
+        for r in 0..end_exclusive as u16 {
+            let (plain, _, wrapped) = build_row(s, r, cols);
+            parts.push((plain.trim_end().to_string(), wrapped));
+        }
+
+        let mut out = String::new();
+        for (i, (text, wrapped)) in parts.iter().enumerate() {
+            out.push_str(text);
+            if i + 1 < parts.len() && !wrapped {
+                out.push('\n');
+            }
+        }
+        Some(out.trim_end().to_string())
+    }
+
     /// Feed bytes to vt100 and capture scrolled-off lines into history.
     ///
     /// We detect scroll by diffing the screen before/after a `process`, which
@@ -640,5 +679,68 @@ impl TermBuffer {
             scroll_max: self.history.len() as i32,
             scroll_offset: self.view_offset as i32,
         }
+    }
+}
+
+#[cfg(test)]
+mod export_committed_tests {
+    use crate::terminal::{CsiState, FindOptions, OutputHighlightPreset, TermBuffer};
+    use std::collections::VecDeque;
+
+    fn empty_buf(rows: u16, cols: u16) -> TermBuffer {
+        TermBuffer {
+            parser: vt100::Parser::new(rows, cols, 0),
+            find_query: String::new(),
+            find_options: FindOptions::default(),
+            is_dark: false,
+            output_highlight: OutputHighlightPreset::Off,
+            custom_highlight_rules: Vec::new(),
+            json_format_output: false,
+            interactive_echo_until: std::time::Instant::now(),
+            sel_anchor: None,
+            sel_focus: None,
+            sel_ranges: Vec::new(),
+            history: VecDeque::new(),
+            prev: Vec::new(),
+            view_offset: 0,
+            displayed_text: Vec::new(),
+            csi_state: CsiState::Normal,
+            csi_pending: Vec::new(),
+            raw: VecDeque::new(),
+        }
+    }
+
+    #[test]
+    fn export_committed_strips_ansi_and_excludes_cursor_line() {
+        let mut buf = empty_buf(24, 80);
+        // OSC 7 + styled prompt + command + output, ending with a fresh prompt
+        // on the cursor line (excluded until flush).
+        let input = b"\x1b]7;file:///Users/zhuhezhang\x07\
+\x1b[0m\x1b[27m\x1b[24m\x1b[Jzhuhezhang@Mac-mini ~ % \x1b[Kls\r\n\
+Applications  Downloads\r\n\
+\x1b[0mzhuhezhang@Mac-mini ~ % ";
+        let _ = buf.ingest(input);
+        let committed = buf.export_committed_plain(false).expect("normal screen");
+        assert!(
+            !committed.contains('\u{1b}'),
+            "must not contain ESC: {committed:?}"
+        );
+        assert!(committed.contains("zhuhezhang@Mac-mini ~ % ls"));
+        assert!(committed.contains("Applications  Downloads"));
+        // Cursor sits on the final prompt → excluded without include_cursor_line.
+        assert!(
+            !committed.ends_with("zhuhezhang@Mac-mini ~ %"),
+            "cursor line should be excluded: {committed:?}"
+        );
+
+        let flushed = buf.export_committed_plain(true).expect("normal screen");
+        assert!(flushed.ends_with("zhuhezhang@Mac-mini ~ %"));
+    }
+
+    #[test]
+    fn export_committed_skips_alternate_screen() {
+        let mut buf = empty_buf(24, 80);
+        let _ = buf.ingest(b"hello\r\n\x1b[?1049h");
+        assert!(buf.export_committed_plain(false).is_none());
     }
 }

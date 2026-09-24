@@ -233,6 +233,8 @@ export component AppWindow inherits Window {
     in-out property <color> highlight-draft-swatch: #F14C4C;
     in-out property <bool> output-highlight-enabled: true;
     in-out property <bool> json-format-output: true;
+    in-out property <bool> session-log-enabled: false;
+    in property <string> session-log-dir;
     in-out property <string> output-highlight-preset: "log";
     in property <[OutputRuleItem]> output-highlight-rules;
     in-out property <string> output-highlight-rule-status;
@@ -302,6 +304,9 @@ export component AppWindow inherits Window {
     // validate + apply cursor colour (#275; Save to persist)
     callback set-output-highlight(bool, string);   // enable + built-in preset
     callback set-json-format-output(bool);
+    callback set-session-log-enabled(bool);
+    callback pick-session-log-dir();
+    callback open-session-log-dir();
     callback set-highlight-draft-color(string) -> bool;
     callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
@@ -1251,6 +1256,8 @@ export component AppWindow inherits Window {
         interface-open <=> root.interface-open;
         is-windows: root.is-windows;
         json-format-output <=> root.json-format-output;
+        session-log-enabled <=> root.session-log-enabled;
+        session-log-dir: root.session-log-dir;
         language-pref <=> root.language-pref;
         move-ssh-algorithm(a0, a1) => { root.move-ssh-algorithm(a0, a1); }
         output-highlight-enabled <=> root.output-highlight-enabled;
@@ -1293,6 +1300,9 @@ export component AppWindow inherits Window {
         set-extra-paste-shortcuts-enabled(a0) => { root.set-extra-paste-shortcuts-enabled(a0); }
         set-highlight-draft-color(a0) => { return root.set-highlight-draft-color(a0); }
         set-json-format-output(a0) => { root.set-json-format-output(a0); }
+        set-session-log-enabled(a0) => { root.set-session-log-enabled(a0); }
+        pick-session-log-dir => { root.pick-session-log-dir(); }
+        open-session-log-dir => { root.open-session-log-dir(); }
         set-language(a0) => { root.set-language(a0); }
         set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }

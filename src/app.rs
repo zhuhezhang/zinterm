@@ -71,7 +71,9 @@ use crate::config::{
 };
 use crate::i18n::t;
 use crate::layout::{LogicalRect, TerminalWheelHit};
-use crate::session::{ConnectCtx, PendingCred, PendingHostKey, TabStatus, TabStatuses};
+use crate::session::{
+    ConnectCtx, PendingCred, PendingHostKey, SessionLoggers, TabStatus, TabStatuses,
+};
 use crate::sftp::{download_target_path, spawn_sftp, DownloadConflict, SftpHandles, SftpLastCwd};
 use crate::ssh::{
     format_mtime, format_size, spawn_session, AlgorithmCategory, SessionCommand, SessionEvent,
@@ -253,7 +255,7 @@ pub fn run() -> Result<()> {
     // read this AtomicBool on every CwdChanged, so toggling applies live to
     // already-open sessions too.
 
-    let (sftp_follow_cd, ssh_keepalive_secs, ssh_algorithm_prefs) =
+    let (sftp_follow_cd, ssh_keepalive_secs, ssh_algorithm_prefs, session_logs) =
         wire_settings_callbacks(&window, &store, &bufs, &pending_window_size_restore);
 
     wire_main_surface(
@@ -269,6 +271,7 @@ pub fn run() -> Result<()> {
         sftp_follow_cd,
         ssh_keepalive_secs,
         ssh_algorithm_prefs,
+        session_logs,
     );
 
     run_window_events(
@@ -305,6 +308,7 @@ fn wire_session_callbacks(
     sftp_follow_cd: Arc<std::sync::atomic::AtomicBool>,
     ssh_keepalive_secs: Arc<std::sync::atomic::AtomicU32>,
     ssh_algorithm_prefs: Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
+    session_logs: SessionLoggers,
 ) {
     wire_session_tree(
         window,
@@ -334,6 +338,7 @@ fn wire_session_callbacks(
         sftp_follow_cd,
         ssh_keepalive_secs,
         ssh_algorithm_prefs,
+        session_logs,
     );
 }
 

@@ -28,6 +28,8 @@ export component InterfacePanel inherits Rectangle {
     in property <color> term-cursor-color: #D4D4D4;
     in-out property <bool> output-highlight-enabled;
     in-out property <bool> json-format-output: true;
+    in-out property <bool> session-log-enabled: false;
+    in property <string> session-log-dir;
     in-out property <string> output-highlight-preset;
     in property <[OutputRuleItem]> output-highlight-rules;
     in-out property <string> output-highlight-rule-status;
@@ -80,6 +82,9 @@ export component InterfacePanel inherits Rectangle {
     callback set-term-cursor-color(string) -> bool;
     callback set-output-highlight(bool, string);
     callback set-json-format-output(bool);
+    callback set-session-log-enabled(bool);
+    callback pick-session-log-dir();
+    callback open-session-log-dir();
     callback set-highlight-draft-color(string) -> bool;
     // name, pattern, regex, case-sensitive, whole-line, color
     callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
@@ -333,6 +338,8 @@ export component InterfacePanel inherits Rectangle {
                         highlight-draft-color-hex <=> root.highlight-draft-color-hex;
                         highlight-draft-swatch <=> root.highlight-draft-swatch;
                         json-format-output <=> root.json-format-output;
+                        session-log-enabled <=> root.session-log-enabled;
+                        session-log-dir: root.session-log-dir;
                         new-rule-case-sensitive <=> root.new-rule-case-sensitive;
                         new-rule-name <=> root.new-rule-name;
                         new-rule-pattern <=> root.new-rule-pattern;
@@ -345,6 +352,9 @@ export component InterfacePanel inherits Rectangle {
                         rule-edit-index <=> root.rule-edit-index;
                         remove-output-highlight-rule(a0) => { root.remove-output-highlight-rule(a0); }
                         set-json-format-output(a0) => { root.set-json-format-output(a0); }
+                        set-session-log-enabled(a0) => { root.set-session-log-enabled(a0); }
+                        pick-session-log-dir => { root.pick-session-log-dir(); }
+                        open-session-log-dir => { root.open-session-log-dir(); }
                         set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
                         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
                     }

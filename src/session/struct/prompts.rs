@@ -11,6 +11,8 @@ use crate::ssh::{CredentialResponder, HostKeyResponder, SessionHandle};
 use crate::terminal::{RenderGates, TermBuffers};
 use crate::ui::AppWindow;
 
+use super::session_log::SessionLoggers;
+
 /// Per-tab connection state used for reconnect (R) and tab duplicate.
 #[derive(Clone, Default)]
 pub(crate) struct TabStatus {
@@ -38,6 +40,8 @@ pub(crate) struct ConnectCtx {
     pub(crate) ssh_keepalive_secs: Arc<AtomicU32>,
     /// SSH/SFTP algorithm preferences. Cloned when a session starts.
     pub(crate) ssh_algorithm_prefs: Arc<Mutex<crate::config::AlgorithmPreferences>>,
+    /// Live terminal-output session loggers (keyed by tab id).
+    pub(crate) session_logs: SessionLoggers,
 }
 
 pub(crate) struct PendingHostKey {

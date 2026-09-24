@@ -9,6 +9,7 @@ pub(super) fn wire_settings_callbacks(
     Arc<std::sync::atomic::AtomicBool>,
     Arc<std::sync::atomic::AtomicU32>,
     Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
+    SessionLoggers,
 ) {
     let sftp_follow_cd = Arc::new(std::sync::atomic::AtomicBool::new(
         store.borrow().sftp_follow_cd(),
@@ -21,6 +22,81 @@ pub(super) fn wire_settings_callbacks(
             flag.store(follow, std::sync::atomic::Ordering::Relaxed);
             let mut s = store.borrow_mut();
             s.set_sftp_follow_cd(follow);
+        });
+    }
+
+    let log_dir = {
+        let mut s = store.borrow_mut();
+        if s.session_log_dir().is_empty() {
+            let d = crate::session::default_session_log_dir()
+                .to_string_lossy()
+                .into_owned();
+            s.set_session_log_dir(d.clone());
+            s.save_later(crate::config::SaveKind::SETTINGS);
+            d
+        } else {
+            s.session_log_dir().to_string()
+        }
+    };
+    let session_logs = SessionLoggers::new(store.borrow().session_log_enabled(), log_dir.clone());
+    window.set_session_log_enabled(store.borrow().session_log_enabled());
+    window.set_session_log_dir(log_dir.into());
+    {
+        let store = store.clone();
+        let logs = session_logs.clone();
+        window.on_set_session_log_enabled(move |enabled| {
+            logs.set_enabled(enabled);
+            let mut s = store.borrow_mut();
+            s.set_session_log_enabled(enabled);
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let logs = session_logs.clone();
+        window.on_pick_session_log_dir(move || {
+            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+                let dir = folder.to_string_lossy().to_string();
+                {
+                    let mut s = store.borrow_mut();
+                    s.set_session_log_dir(dir.clone());
+                }
+                logs.set_dir(dir.clone());
+                if let Some(w) = weak.upgrade() {
+                    w.set_session_log_dir(dir.into());
+                }
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
+        window.on_open_session_log_dir(move || {
+            let Some(w) = weak.upgrade() else {
+                return;
+            };
+            let dir = w.get_session_log_dir().to_string();
+            let dir = if dir.trim().is_empty() {
+                crate::session::default_session_log_dir()
+            } else {
+                std::path::PathBuf::from(dir)
+            };
+            if let Err(e) = std::fs::create_dir_all(&dir) {
+                tracing::warn!("session log: create_dir_all {}: {e}", dir.display());
+                return;
+            }
+            let dir = dir.to_string_lossy().to_string();
+            #[cfg(windows)]
+            {
+                let _ = std::process::Command::new("explorer").arg(&dir).spawn();
+            }
+            #[cfg(target_os = "macos")]
+            {
+                let _ = std::process::Command::new("open").arg(&dir).spawn();
+            }
+            #[cfg(all(not(windows), not(target_os = "macos")))]
+            {
+                let _ = std::process::Command::new("xdg-open").arg(&dir).spawn();
+            }
         });
     }
 
@@ -718,5 +794,5 @@ pub(super) fn wire_settings_callbacks(
         });
     }
 
-    (sftp_follow_cd, ssh_keepalive_secs, ssh_algorithm_prefs)
+    (sftp_follow_cd, ssh_keepalive_secs, ssh_algorithm_prefs, session_logs)
 }
