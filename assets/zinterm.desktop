@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=ZinTerm
+Name=zinterm
 GenericName=SSH Client
 Comment=A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint
 Comment[zh_CN]=轻量级、低内存的 Rust + Slint 终端模拟器
