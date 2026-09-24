@@ -8369,7 +8369,7 @@ dependencies = [
 
 [[package]]
 name = "zinterm"
-version = "0.6.12"
+version = "1.0.0"
 dependencies = [
  "aes",
  "anyhow",
