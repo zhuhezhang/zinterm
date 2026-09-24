@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.zhuhezhang.zinterm</id>
+  <name>ZinTerm</name>
+  <summary>Lightweight SSH, SFTP, and terminal client</summary>
+  <summary xml:lang="zh-CN">轻量级 SSH、SFTP 和终端客户端</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>ZinTerm is a cross-platform SSH, SFTP, and terminal client written in Rust and Slint.</p>
+    <p xml:lang="zh-CN">ZinTerm 是使用 Rust 和 Slint 编写的跨平台 SSH、SFTP 和终端客户端。</p>
+  </description>
+  <launchable type="desktop-id">io.github.zhuhezhang.zinterm.desktop</launchable>
+  <url type="homepage">https://github.com/zhuhezhang/zinterm</url>
+  <url type="bugtracker">https://github.com/zhuhezhang/zinterm/issues</url>
+  <provides>
+    <binary>zinterm</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+</component>

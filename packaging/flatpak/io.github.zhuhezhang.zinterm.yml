@@ -1,0 +1,44 @@
+id: io.github.zhuhezhang.zinterm
+runtime: org.freedesktop.Platform
+runtime-version: "25.08"
+sdk: org.freedesktop.Sdk
+command: zinterm
+default-branch: stable
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  # Slint/winit prefers Wayland when available; keep X11 as a fallback so
+  # the UI still works on Xorg and on compositors without a Wayland socket.
+  - --socket=fallback-x11
+  - --device=dri
+  # ZinTerm uploads/downloads arbitrary user-selected files and can open
+  # local terminal sessions. Keep host-home access until those paths use
+  # portals throughout the application.
+  - --filesystem=home
+  # Required for serial sessions (/dev/ttyUSB*, /dev/ttyACM*, and similar).
+  - --device=all
+
+modules:
+  - name: zinterm
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 zinterm /app/bin/zinterm
+      - install -Dm644 io.github.zhuhezhang.zinterm.desktop /app/share/applications/io.github.zhuhezhang.zinterm.desktop
+      - install -Dm644 io.github.zhuhezhang.zinterm.metainfo.xml /app/share/metainfo/io.github.zhuhezhang.zinterm.metainfo.xml
+      - install -Dm644 icon.png /app/share/icons/hicolor/512x512/apps/io.github.zhuhezhang.zinterm.png
+      - install -Dm644 THIRD_PARTY_NOTICES.md /app/share/doc/zinterm/THIRD_PARTY_NOTICES.md
+    sources:
+      - type: file
+        path: ../../target/x86_64-unknown-linux-gnu/release/zinterm
+        dest-filename: zinterm
+      - type: file
+        path: io.github.zhuhezhang.zinterm.desktop
+      - type: file
+        path: io.github.zhuhezhang.zinterm.metainfo.xml
+      - type: file
+        path: ../../assets/icon@512.png
+        dest-filename: icon.png
+      - type: file
+        path: ../../THIRD_PARTY_NOTICES.md
