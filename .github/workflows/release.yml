@@ -239,7 +239,7 @@ jobs:
           path: ${{ env.ASSET }}
 
       - name: Upload AppImage artifact
-        if: matrix.name == 'linux-x86_64'
+        if: matrix.name == 'linux-x86_64' && env.APPIMAGE != ''
         uses: actions/upload-artifact@v4
         with:
           name: linux-x86_64-appimage
@@ -260,7 +260,7 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Attach AppImage to GitHub Release
-        if: matrix.name == 'linux-x86_64' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.name == 'linux-x86_64' && env.APPIMAGE != '' && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.APPIMAGE }}
