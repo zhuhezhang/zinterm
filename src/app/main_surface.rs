@@ -653,9 +653,18 @@ pub(super) fn wire_main_surface(
         #[cfg(all(not(windows), not(target_os = "macos")))]
         let _ = std::process::Command::new("xdg-open").arg(url).spawn();
     });
-    // The open-source link in the About dialog opens the project page.
+    // About dialog repo links open the project pages in the browser.
     window.on_open_repo(move || {
         let url = "https://github.com/zhuhezhang/zinterm";
+        #[cfg(windows)]
+        let _ = std::process::Command::new("explorer").arg(url).spawn();
+        #[cfg(target_os = "macos")]
+        let _ = std::process::Command::new("open").arg(url).spawn();
+        #[cfg(all(not(windows), not(target_os = "macos")))]
+        let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    });
+    window.on_open_gitee(move || {
+        let url = "https://gitee.com/zhuhezhang/zinterm";
         #[cfg(windows)]
         let _ = std::process::Command::new("explorer").arg(url).spawn();
         #[cfg(target_os = "macos")]

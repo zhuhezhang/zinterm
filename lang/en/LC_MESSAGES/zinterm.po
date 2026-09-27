@@ -45,8 +45,8 @@ msgstr "About"
 msgid "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
 msgstr "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
 
-msgid "MIT Open Source License"
-msgstr "MIT Open Source License"
+msgid "MIT License"
+msgstr "MIT License"
 
 msgid "New session"
 msgstr "New session"

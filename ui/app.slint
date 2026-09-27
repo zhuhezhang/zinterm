@@ -136,6 +136,7 @@ export component AppWindow inherits Window {
         root.custom-titlebar ? 38px : root.titlebar-inset;
     in-out property <bool> about-open: false;     // centered About dialog
     callback open-repo();                          // open the project's GitHub page
+    callback open-gitee();                         // open the project's Gitee mirror
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103)
     in property <string> download-dir;      // preset SFTP download folder ("" = ask)
     // Command bar (#55): quick commands + history, fed from Rust.
@@ -1167,6 +1168,7 @@ export component AppWindow inherits Window {
         about-open <=> root.about-open;
         app-version: root.app-version;
         open-repo => { root.open-repo(); }
+        open-gitee => { root.open-gitee(); }
     }
     // (extracted) ConfirmStack
     ConfirmStack {

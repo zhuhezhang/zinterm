@@ -4,6 +4,7 @@ export component AboutDialog inherits Rectangle {
     in-out property <bool> about-open: false;     // centered About dialog;
     in property <string> app-version;
     callback open-repo();
+    callback open-gitee();
 
     // --- About dialog (centered on the window, with dim backdrop) ---------
     Rectangle {
@@ -28,7 +29,7 @@ export component AboutDialog inherits Rectangle {
             key-released(e) => { accept }
         }
 
-        // Landscape card: logo on the left, a short intro + repo link on the right.
+        // Landscape card: logo on the left, intro + full repo URLs on the right.
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
@@ -97,7 +98,14 @@ export component AboutDialog inherits Rectangle {
                         }
 
                         Text {
-                            text: "v" + root.app-version;
+                            text: @tr("MIT License");
+                            color: Theme.text-muted;
+                            font-size: Theme.fs-sm;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: "v1.3.5" + root.app-version;
                             color: Theme.text-muted;
                             font-size: Theme.fs-sm;
                             vertical-alignment: center;
@@ -111,34 +119,41 @@ export component AboutDialog inherits Rectangle {
                         wrap: word-wrap;
                     }
 
-                    // Clickable open-source link → opens the GitHub page.
-                    HorizontalLayout {
-                        alignment: start;
-                        spacing: 6px;
-                        Text {
-                            text: @tr("MIT Open Source License");
-                            color: Theme.text-muted;
-                            font-size: Theme.fs-sm;
-                            vertical-alignment: center;
-                        }
+                    // Clickable full repo URLs.
+                    VerticalLayout {
+                        spacing: 2px;
 
                         Rectangle {
                             border-radius: Theme.radius-sm;
-                            background: repo-ta.has-hover ? Theme.bg-hover : transparent;
+                            background: github-ta.has-hover ? Theme.bg-hover : transparent;
                             HorizontalLayout {
-                                padding-left: 4px;
-                                padding-right: 4px;
                                 Text {
-                                    text: "github.com/zhuhezhang/zinterm";
+                                    text: "https://github.com/zhuhezhang/zinterm";
                                     color: Theme.accent;
                                     font-size: Theme.fs-sm;
                                     vertical-alignment: center;
                                 }
                             }
-
-                            repo-ta := TouchArea {
+                            github-ta := TouchArea {
                                 mouse-cursor: pointer;
                                 clicked => { root.open-repo(); }
+                            }
+                        }
+
+                        Rectangle {
+                            border-radius: Theme.radius-sm;
+                            background: gitee-ta.has-hover ? Theme.bg-hover : transparent;
+                            HorizontalLayout {
+                                Text {
+                                    text: "https://gitee.com/zhuhezhang/zinterm";
+                                    color: Theme.accent;
+                                    font-size: Theme.fs-sm;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            gitee-ta := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.open-gitee(); }
                             }
                         }
                     }

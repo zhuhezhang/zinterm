@@ -45,8 +45,8 @@ msgstr "关于"
 msgid "A lightweight, low-memory cross-platform terminal emulator built with Rust + Slint"
 msgstr "轻量级、低内存的 Rust + Slint 终端模拟器"
 
-msgid "MIT Open Source License"
-msgstr "MIT 开源协议"
+msgid "MIT License"
+msgstr "MIT 协议"
 
 msgid "New session"
 msgstr "新建会话"
