@@ -746,18 +746,20 @@ export component DockArea inherits Rectangle {
                                     sftp-download-selected() => { root.sftp-download-selected(term.id); }
                                     sftp-copy-to-target(path, target) => { root.sftp-copy-to-target(term.id, path, target); }
                                     sftp-copy-selected-to-target(target) => { root.sftp-copy-selected-to-target(term.id, target); }
-                                    // Confirm before deleting the checked entries (#100), reusing
-                                    // the delete-confirm dialog in batch mode.
+                                    // Confirm before deleting the checked entries (#100).
+                                    // Empty path → confirm runs delete-selected; batch flag is
+                                    // only for plural vs singular copy (no "selected items" detail).
                                     sftp-delete-selected() => {
                                         root.confirm-delete-tab = term.id;
-                                        root.confirm-delete-batch = true;
-                                        root.confirm-delete-path = @tr("the selected items");
+                                        root.confirm-delete-batch = term.sftp-selected-count > 1;
+                                        root.confirm-delete-path = "";
                                         root.confirm-delete-open = true;
                                     }
                                     // Gate delete behind an in-app confirmation (#28): stash the
                                     // target and open the modal; the real delete fires on confirm.
                                     sftp-delete(path) => {
                                         root.confirm-delete-tab = term.id;
+                                        root.confirm-delete-batch = false;
                                         root.confirm-delete-path = path;
                                         root.confirm-delete-open = true;
                                     }

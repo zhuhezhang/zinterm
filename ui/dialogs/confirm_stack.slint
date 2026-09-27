@@ -243,18 +243,19 @@ export component ConfirmStack inherits Rectangle {
         height: parent.height;
         is-open <=> root.confirm-delete-open;
         title: @tr("Confirm delete");
+        // batch = plural copy (2+ checked); empty path = toolbar delete-selected.
         message: root.confirm-delete-batch
             ? (@tr("Delete the checked items? This cannot be undone"))
             : @tr("Delete this item? This cannot be undone");
         detail: root.confirm-delete-path;
         confirm-label: @tr("Delete");
         confirm => {
-            if (root.confirm-delete-batch) {
+            if (root.confirm-delete-path == "") {
                 root.sftp-delete-selected(root.confirm-delete-tab);
-                root.confirm-delete-batch = false;
             } else {
                 root.sftp-delete(root.confirm-delete-tab, root.confirm-delete-path);
             }
+            root.confirm-delete-batch = false;
             root.confirm-delete-open = false;
         }
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
