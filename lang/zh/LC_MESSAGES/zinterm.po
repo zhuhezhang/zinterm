@@ -18,6 +18,9 @@ msgstr "（每次下载时询问）"
 msgid "Choose save path"
 msgstr "选择保存路径"
 
+msgid "Restore default path"
+msgstr "恢复默认路径"
+
 msgid "Upload file"
 msgstr "上传文件"
 

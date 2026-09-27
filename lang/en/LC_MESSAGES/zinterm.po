@@ -18,6 +18,9 @@ msgstr "(ask every time)"
 msgid "Choose save path"
 msgstr "Choose save path"
 
+msgid "Restore default path"
+msgstr "Restore default path"
+
 msgid "Upload file"
 msgstr "Upload file"
 

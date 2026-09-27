@@ -5,6 +5,7 @@ import {
     PrimaryButton,
     GhostButton,
     CompactCheckBox,
+    TooltipArea,
 } from "../../shared/widgets.slint";
 import {
     SectionHeader,
@@ -45,6 +46,7 @@ export component OutputSettingsPage inherits Rectangle {
     callback set-session-log-enabled(bool);
     callback pick-session-log-dir();
     callback open-session-log-dir();
+    callback restore-session-log-dir();
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
 
@@ -163,6 +165,29 @@ export component OutputSettingsPage inherits Rectangle {
                         vertical-alignment: center;
                         overflow: elide;
                     }
+                }
+            }
+
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: Theme.radius-sm;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                background: restore-log-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                restore-log-ta := TooltipArea {
+                    mouse-cursor: pointer;
+                    tooltip-text: @tr("Restore default path");
+                    activate => { root.restore-session-log-dir(); }
+                }
+
+                Text {
+                    text: "\u{E5D5}";
+                    font-family: "Material Icons";
+                    color: Theme.text-secondary;
+                    font-size: 18px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
                 }
             }
 

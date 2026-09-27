@@ -1,5 +1,6 @@
 import { Theme } from "../shared/theme.slint";
 import { ScrollView } from "std-widgets.slint";
+import { TooltipArea } from "../shared/widgets.slint";
 import { TransferInfo } from "../types/app_state.slint";
 
 export component DownloadPopup inherits Rectangle {
@@ -9,6 +10,7 @@ export component DownloadPopup inherits Rectangle {
     in-out property <bool> download-open: false;  // download manager popup;
     callback open-download-dir();
     callback pick-download-dir();
+    callback restore-download-dir();
     in-out property <length> titlebar-bottom;
     in property <[TransferInfo]> transfers;
 
@@ -97,7 +99,7 @@ export component DownloadPopup inherits Rectangle {
             }
 
             // Current path display
-                Rectangle {
+            Rectangle {
                 height: 26px;
                 background: Theme.bg-root;
                 border-radius: Theme.radius-sm;
@@ -118,40 +120,71 @@ export component DownloadPopup inherits Rectangle {
                 alignment: end;
 
                 Rectangle {
-                    width: 110px;
+                    width: 28px;
                     height: 28px;
                     border-radius: Theme.radius-sm;
-                    background: pick-ta.has-hover ? Theme.accent-hover : Theme.accent;
-                    pick-ta := TouchArea {
+                    border-width: 1px;
+                    border-color: Theme.border-subtle;
+                    background: restore-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                    restore-ta := TooltipArea {
                         mouse-cursor: pointer;
-                        clicked => { root.pick-download-dir(); }
+                        tooltip-text: @tr("Restore default path");
+                        activate => { root.restore-download-dir(); }
                     }
 
                     Text {
-                        text: @tr("Choose save path");
-                        color: #ffffff;
-                        font-size: Theme.fs-sm;
+                        text: "\u{E5D5}";
+                        font-family: "Material Icons";
+                        color: Theme.text-secondary;
+                        font-size: 18px;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
                 }
 
                 Rectangle {
-                    width: 76px;
+                    height: 28px;
+                    border-radius: Theme.radius-sm;
+                    background: pick-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        Text {
+                            text: @tr("Choose save path");
+                            color: #ffffff;
+                            font-size: Theme.fs-sm;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    pick-ta := TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        mouse-cursor: pointer;
+                        clicked => { root.pick-download-dir(); }
+                    }
+                }
+
+                Rectangle {
                     height: 28px;
                     border-radius: Theme.radius-sm;
                     background: open-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        Text {
+                            text: @tr("Open folder");
+                            color: Theme.text-primary;
+                            font-size: Theme.fs-sm;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
                     open-ta := TouchArea {
+                        width: 100%;
+                        height: 100%;
                         mouse-cursor: pointer;
                         clicked => { root.open-download-dir(); }
-                    }
-
-                    Text {
-                        text: @tr("Open folder");
-                        color: Theme.text-primary;
-                        font-size: Theme.fs-sm;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
                     }
                 }
             }

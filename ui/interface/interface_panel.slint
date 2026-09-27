@@ -85,6 +85,7 @@ export component InterfacePanel inherits Rectangle {
     callback set-session-log-enabled(bool);
     callback pick-session-log-dir();
     callback open-session-log-dir();
+    callback restore-session-log-dir();
     callback set-highlight-draft-color(string) -> bool;
     // name, pattern, regex, case-sensitive, whole-line, color
     callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
@@ -355,6 +356,7 @@ export component InterfacePanel inherits Rectangle {
                         set-session-log-enabled(a0) => { root.set-session-log-enabled(a0); }
                         pick-session-log-dir => { root.pick-session-log-dir(); }
                         open-session-log-dir => { root.open-session-log-dir(); }
+                        restore-session-log-dir => { root.restore-session-log-dir(); }
                         set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
                         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
                     }

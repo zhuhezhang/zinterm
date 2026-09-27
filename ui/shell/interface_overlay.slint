@@ -65,6 +65,7 @@ export component InterfaceOverlay inherits Rectangle {
     callback set-session-log-enabled(bool);
     callback pick-session-log-dir();
     callback open-session-log-dir();
+    callback restore-session-log-dir();
     callback set-language(string);
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
@@ -295,6 +296,7 @@ export component InterfaceOverlay inherits Rectangle {
                     set-session-log-enabled(enabled) => { root.set-session-log-enabled(enabled); }
                     pick-session-log-dir() => { root.pick-session-log-dir(); }
                     open-session-log-dir() => { root.open-session-log-dir(); }
+                    restore-session-log-dir() => { root.restore-session-log-dir(); }
                     set-highlight-draft-color(v) => { root.set-highlight-draft-color(v) }
                     add-output-highlight-rule(name, pattern, regex, case-sensitive, whole-line, color) => {
                         root.add-output-highlight-rule(

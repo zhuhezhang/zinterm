@@ -604,6 +604,23 @@ pub(super) fn wire_main_surface(
     }
     {
         let weak = window.as_weak();
+        let store = store.clone();
+        window.on_restore_download_dir(move || {
+            let dir = directories::UserDirs::new()
+                .and_then(|u| u.download_dir().map(|p| p.to_string_lossy().to_string()))
+                .unwrap_or_default();
+            {
+                let mut s = store.borrow_mut();
+                s.set_download_dir(dir.clone());
+                s.save_later(SaveKind::SETTINGS);
+            }
+            if let Some(w) = weak.upgrade() {
+                w.set_download_dir(dir.into());
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
         window.on_open_download_dir(move || {
             let Some(w) = weak.upgrade() else { return };
             let dir = w.get_download_dir().to_string();

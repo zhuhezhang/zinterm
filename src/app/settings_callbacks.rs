@@ -70,6 +70,24 @@ pub(super) fn wire_settings_callbacks(
     }
     {
         let weak = window.as_weak();
+        let store = store.clone();
+        let logs = session_logs.clone();
+        window.on_restore_session_log_dir(move || {
+            let dir = crate::session::default_session_log_dir()
+                .to_string_lossy()
+                .into_owned();
+            {
+                let mut s = store.borrow_mut();
+                s.set_session_log_dir(dir.clone());
+            }
+            logs.set_dir(dir.clone());
+            if let Some(w) = weak.upgrade() {
+                w.set_session_log_dir(dir.into());
+            }
+        });
+    }
+    {
+        let weak = window.as_weak();
         window.on_open_session_log_dir(move || {
             let Some(w) = weak.upgrade() else {
                 return;

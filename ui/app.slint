@@ -307,6 +307,7 @@ export component AppWindow inherits Window {
     callback set-session-log-enabled(bool);
     callback pick-session-log-dir();
     callback open-session-log-dir();
+    callback restore-session-log-dir();
     callback set-highlight-draft-color(string) -> bool;
     callback add-output-highlight-rule(string, string, bool, bool, bool, string) -> bool;
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
@@ -495,6 +496,7 @@ export component AppWindow inherits Window {
     in-out property <string> sftp-dock: "bottom";      // SFTP dock edge, shared across tabs
     callback pick-download-dir();            // open a folder picker
     callback open-download-dir();            // reveal the folder in the OS
+    callback restore-download-dir();         // reset to system Downloads
     callback clear-transfers();              // wipe the transfer history
     callback cancel-transfer(string);        // cancel an in-progress transfer by id (#100)
 
@@ -1034,6 +1036,7 @@ export component AppWindow inherits Window {
         download-open <=> root.download-open;
         open-download-dir => { root.open-download-dir(); }
         pick-download-dir => { root.pick-download-dir(); }
+        restore-download-dir => { root.restore-download-dir(); }
         titlebar-bottom <=> root.titlebar-bottom;
         transfers: root.transfers;
     }
@@ -1303,6 +1306,7 @@ export component AppWindow inherits Window {
         set-session-log-enabled(a0) => { root.set-session-log-enabled(a0); }
         pick-session-log-dir => { root.pick-session-log-dir(); }
         open-session-log-dir => { root.open-session-log-dir(); }
+        restore-session-log-dir => { root.restore-session-log-dir(); }
         set-language(a0) => { root.set-language(a0); }
         set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
