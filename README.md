@@ -2,6 +2,8 @@
 
 **简体中文** | [English](./README.en.md)
 
+项目地址：[GitHub](https://github.com/zhuhezhang/zinterm) · [Gitee](https://gitee.com/zhuhezhang/zinterm)
+
 ZinTerm 是一款基于 **Rust + [Slint](https://slint.dev)** 开发的轻量级、低内存跨平台终端模拟器。
 它面向日常运维与远程开发场景，把 Electron 类终端动辄 **200 MB+** 的内存占用压到原生级别的几十 MB，
 同时保留多协议连接、会话管理、文件传输与快捷命令等实用能力。本项目 fork [meatshell](https://github.com/yituorou/meatshell/) 的 v0.6.12 版本，并根据本人使用 MobaXterm 的习惯、日常使用场景进行二次开发，感谢 yituorou 的开源！
