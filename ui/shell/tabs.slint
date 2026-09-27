@@ -402,8 +402,9 @@ export component TabBar inherits Rectangle {
         padding-bottom: 3px;
         padding-top: 3px;
         padding-left: 2px;
-        padding-right: 1px;
+        padding-right: 3px;
         spacing: 2px;
+        cross-axis-alignment: center;
 
         // Horizontally-scrollable strip; overflow uses the overlay scrollbar
         // (and mouse-wheel / trackpad scroll). `interactive: false` so pressing
@@ -465,7 +466,7 @@ export component TabBar inherits Rectangle {
         IconButton {
             glyph: all-tabs-menu.is-open ? "\u{E316}" : "\u{E313}";
             font-family: "Material Icons";
-            size: 30px;
+            size: 25px;
             clicked => {
                 if (all-tabs-menu.is-open) {
                     all-tabs-menu.close();
