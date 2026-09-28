@@ -166,6 +166,12 @@ export component OutputSettingsPage inherits Rectangle {
                         overflow: elide;
                     }
                 }
+                // Full path on hover when the label is elided.
+                TooltipArea {
+                    width: 100%;
+                    height: 100%;
+                    tooltip-text: root.session-log-dir;
+                }
             }
 
             Rectangle {

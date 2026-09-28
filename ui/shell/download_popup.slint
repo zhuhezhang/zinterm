@@ -113,6 +113,12 @@ export component DownloadPopup inherits Rectangle {
                     vertical-alignment: center;
                     overflow: elide;
                 }
+                // Full path on hover when the label is elided.
+                TooltipArea {
+                    width: 100%;
+                    height: 100%;
+                    tooltip-text: root.download-dir;
+                }
             }
 
             HorizontalLayout {
