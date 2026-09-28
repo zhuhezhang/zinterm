@@ -185,6 +185,7 @@ export component ConfirmStack inherits Rectangle {
     callback toggle-ssh-algorithm(string);
     in-out property <float> ui-scale;   // global UI zoom (#100);
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184);
+    in property <bool> update-check-locked: false;         // compile-time lock (--features no-update-check);
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
     in-out property <float> wallpaper-overlay;
     in-out property <bool> welcome-as-sidebar: false;
@@ -450,6 +451,7 @@ export component ConfirmStack inherits Rectangle {
         toggle-ssh-algorithm(a0) => { root.toggle-ssh-algorithm(a0); }
         ui-scale <=> root.ui-scale;
         update-check-enabled <=> root.update-check-enabled;
+        update-check-locked: root.update-check-locked;
         update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6) => { return root.update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6); }
         wallpaper-overlay <=> root.wallpaper-overlay;
         welcome-as-sidebar <=> root.welcome-as-sidebar;

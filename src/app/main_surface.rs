@@ -675,8 +675,9 @@ pub(super) fn wire_main_surface(
     // Query the GitHub releases API on a background thread; if a newer version
     // exists, flip the banner on. Best-effort: any network/parse error is
     // silently ignored and the app keeps working on the current version.
-    // Skipped entirely when the user turned the check off (#184).
-    if store.borrow().update_check_enabled() {
+    // Skipped entirely when the user turned the check off (#184), or when this
+    // binary was built with `--features no-update-check`.
+    if !cfg!(feature = "no-update-check") && store.borrow().update_check_enabled() {
         let weak = window.as_weak();
         std::thread::spawn(move || {
             let body =

@@ -50,6 +50,7 @@ export component InterfacePanel inherits Rectangle {
     in-out property <bool> welcome-single-click-connect: true;
     in-out property <bool> quick-commands-as-sidebar;
     in-out property <bool> update-check-enabled: false;
+    in property <bool> update-check-locked: false;
     in-out property <int> ssh-keepalive-secs: 0;
     in-out property <string> ssh-algorithm-category: "kex";
     in property <[AlgorithmOptionRow]> ssh-algorithm-rows;
@@ -423,6 +424,7 @@ export component InterfacePanel inherits Rectangle {
                     if root.ifd-page == "update": UpdateSettingsPage {
                         width: 100%;
                         update-check-enabled <=> root.update-check-enabled;
+                        update-check-locked: root.update-check-locked;
                         set-update-check-enabled(a0) => { root.set-update-check-enabled(a0); }
                     }
                 }

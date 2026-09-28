@@ -199,6 +199,15 @@ cargo check
 cargo run --release -- --version
 ```
 
+### 编译开关 `no-update-check`
+
+默认构建保留「设置 → 新版本提示」开关，可在启动时查询 GitHub Releases。
+考虑到内网环境，若需要打一个**永久关闭**更新检查的定制包（不再请求 GitHub，界面开关灰显且标注「该版本不支持」）：
+
+```bash
+cargo build --release --features no-update-check
+```
+
 ## 导入连接与密码字段
 
 设置菜单中的 **导出连接** 会写出可移植 JSON（`zinterm_export: "sessions"`），

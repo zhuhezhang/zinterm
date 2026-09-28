@@ -1011,6 +1011,9 @@ msgstr "新版本提示"
 msgid "Check for new versions on startup"
 msgstr "启动时检查新版本"
 
+msgid " (not supported in this build)"
+msgstr "（该版本不支持）"
+
 msgid "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)"
 msgstr "关闭后：不再向 GitHub 查询新版本，也不会弹出更新提示（下次启动生效）"
 

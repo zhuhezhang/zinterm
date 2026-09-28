@@ -199,6 +199,15 @@ cargo check
 cargo run --release -- --version
 ```
 
+### Compile flag `no-update-check`
+
+By default the build keeps **Settings → Update check**, which can query GitHub Releases on startup.
+For intranet environments, to ship a build where update checks are **permanently disabled** (no GitHub request; the toggle is greyed out and marked “not supported in this build”):
+
+```bash
+cargo build --release --features no-update-check
+```
+
 ## Importing connections and password fields
 
 **Export connections** writes a portable JSON file (`zinterm_export: "sessions"`),

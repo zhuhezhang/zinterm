@@ -4,6 +4,8 @@ export component UpdateSettingsPage inherits Rectangle {
     height: self.preferred-height;
     callback set-update-check-enabled(bool);
     in-out property <bool> update-check-enabled: false;
+    // True when the binary was built with `--features no-update-check`.
+    in property <bool> update-check-locked: false;
 
     VerticalLayout {
         padding-left: 15px;
@@ -16,11 +18,13 @@ export component UpdateSettingsPage inherits Rectangle {
         }
 
         SettingRow {
-            label: @tr("Check for new versions on startup");
+            label: @tr("Check for new versions on startup")
+                + (root.update-check-locked ? @tr(" (not supported in this build)") : "");
             desc: @tr("Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)");
             show-divider: false;
             Switch {
                 on: root.update-check-enabled;
+                enabled: !root.update-check-locked;
                 toggled(v) => { root.update-check-enabled = v; root.set-update-check-enabled(v); }
             }
         }

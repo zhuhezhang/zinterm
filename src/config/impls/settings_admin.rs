@@ -92,10 +92,18 @@ impl ConfigStore {
     }
 
     /// Whether the startup new-version check is enabled (#184).
+    /// Always false when built with `--features no-update-check`.
     pub fn update_check_enabled(&self) -> bool {
-        !self.cache.update_check_disabled
+        if cfg!(feature = "no-update-check") {
+            false
+        } else {
+            !self.cache.update_check_disabled
+        }
     }
     pub fn set_update_check_enabled(&mut self, enabled: bool) {
+        if cfg!(feature = "no-update-check") {
+            return;
+        }
         self.cache.update_check_disabled = !enabled;
     }
     /// SSH keepalive interval in seconds. 0 disables keepalive.

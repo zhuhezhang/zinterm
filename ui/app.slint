@@ -369,6 +369,7 @@ export component AppWindow inherits Window {
     callback import-settings();
     callback export-settings();
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184)
+    in property <bool> update-check-locked: false;         // compile-time lock (--features no-update-check)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).
     in-out property <int> ssh-keepalive-secs: 0;
@@ -1352,6 +1353,7 @@ export component AppWindow inherits Window {
         toggle-ssh-algorithm(a0) => { root.toggle-ssh-algorithm(a0); }
         ui-scale <=> root.ui-scale;
         update-check-enabled <=> root.update-check-enabled;
+        update-check-locked: root.update-check-locked;
         update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6) => { return root.update-output-highlight-rule(a0, a1, a2, a3, a4, a5, a6); }
         wallpaper-overlay <=> root.wallpaper-overlay;
         welcome-as-sidebar <=> root.welcome-as-sidebar;

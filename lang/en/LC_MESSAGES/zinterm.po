@@ -1011,6 +1011,9 @@ msgstr "UPDATE CHECK"
 msgid "Check for new versions on startup"
 msgstr "Check for new versions on startup"
 
+msgid " (not supported in this build)"
+msgstr " (not supported in this build)"
+
 msgid "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)"
 msgstr "Off: ZinTerm no longer queries GitHub for releases and the update banner won't appear (takes effect next launch)"
 
