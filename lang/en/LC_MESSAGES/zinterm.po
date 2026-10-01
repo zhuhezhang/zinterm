@@ -591,6 +591,12 @@ msgstr "Focus session search box"
 msgid "Terminal"
 msgstr "Terminal"
 
+msgid "Zoom out terminal font"
+msgstr "Zoom out terminal font"
+
+msgid "Zoom in terminal font"
+msgstr "Zoom in terminal font"
+
 msgid "Copy selection"
 msgstr "Copy selection"
 

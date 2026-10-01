@@ -33,6 +33,7 @@ export component DockArea inherits Rectangle {
     callback copy-terminal-text(string /* tab-id */);
     callback copy-text(string);
     callback cycle-tab(bool /* reverse */);
+    callback zoom-term-font(int /* delta */);
     callback delete-group(string /* name */);
     callback delete-history(int /* index */);
     callback delete-history-cmd(string /* cmd */);
@@ -736,6 +737,7 @@ export component DockArea inherits Rectangle {
                                     }
                                     cycle-tab(reverse) => { root.cycle-tab(reverse); }
                                     focus-session-search => { root.focus-session-search(); }
+                                    zoom-term-font(delta) => { root.zoom-term-font(delta); }
                                     terminal-resize(w, h) => { root.terminal-resize(term.id, w, h) }
                                     sftp-navigate(path) => { root.sftp-navigate(term.id, path); }
                                     sftp-download(path) => { root.sftp-download(term.id, path); }

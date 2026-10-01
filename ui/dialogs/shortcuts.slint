@@ -165,6 +165,16 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         ShortcutRow {
+                            keys: root.is-mac ? "⌘-" : "Ctrl+-";
+                            desc: @tr("Zoom out terminal font");
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘=" : "Ctrl+=";
+                            desc: @tr("Zoom in terminal font");
+                        }
+
+                        ShortcutRow {
                             keys: root.is-mac ? "⌘C" : "Ctrl+Shift+C";
                             desc: @tr("Copy selection");
                         }

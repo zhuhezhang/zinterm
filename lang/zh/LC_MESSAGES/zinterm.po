@@ -591,6 +591,12 @@ msgstr "聚焦会话搜索框"
 msgid "Terminal"
 msgstr "终端"
 
+msgid "Zoom out terminal font"
+msgstr "缩小终端字体"
+
+msgid "Zoom in terminal font"
+msgstr "放大终端字体"
+
 msgid "Copy selection"
 msgstr "复制选中内容"
 

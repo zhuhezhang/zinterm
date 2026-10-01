@@ -149,6 +149,8 @@ export component TerminalView inherits Rectangle {
     callback diagnose-key-event(string, bool, bool, bool, bool);
     callback cycle-tab(bool /* reverse */);
     callback focus-session-search();
+    // ⌘/Ctrl+- and ⌘/Ctrl+= adjust the global terminal font size (#shortcuts).
+    callback zoom-term-font(int /* delta */);
     callback terminal-resize(float, float);
     callback sftp-navigate(string);
     callback sftp-download(string);
@@ -893,6 +895,16 @@ export component TerminalView inherits Rectangle {
                                     && event.modifiers.shift && event.text == Key.Insert) {
                                     root.paste-from-clipboard();
                                     ime-input.focus();
+                                    accept
+                                // ── Zoom out: ⌘- / Ctrl+- (also Ctrl+_ from Shift+-) ──
+                                } else if (event.modifiers.control
+                                    && (event.text == "-" || event.text == "_")) {
+                                    root.zoom-term-font(-1);
+                                    accept
+                                // ── Zoom in: ⌘= / Ctrl+= (also Ctrl++ from Shift+=) ──
+                                } else if (event.modifiers.control
+                                    && (event.text == "=" || event.text == "+")) {
+                                    root.zoom-term-font(1);
                                     accept
                                 // ── macOS: swallow any other ⌘ combo (control == Cmd here) so it
                                 // isn't typed into the shell as a literal character. ──

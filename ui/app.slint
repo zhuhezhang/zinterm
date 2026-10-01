@@ -298,6 +298,7 @@ export component AppWindow inherits Window {
     callback cancel-settings();
     callback set-term-font(string);                // apply font family (Save to persist)
     callback set-term-font-size(int);              // apply font size px (Save to persist)
+    callback zoom-term-font(int);                  // ⌘/Ctrl+/- terminal font zoom (persists)
     callback set-terminal-line-spacing(float);
     callback set-term-font-bold(bool);             // apply bold terminal text (Save to persist)
     callback set-term-cursor-style(string);        // apply cursor shape (#275; Save to persist)
@@ -822,6 +823,7 @@ export component AppWindow inherits Window {
                 copy-terminal-text(tab-id) => { root.copy-terminal-text(tab-id); }
                 copy-text(a0) => { root.copy-text(a0); }
                 cycle-tab(reverse) => { root.cycle-tab(reverse); }
+                zoom-term-font(delta) => { root.zoom-term-font(delta); }
                 delete-group(name) => { root.delete-group(name); }
                 delete-history(index) => { root.delete-history(index); }
                 delete-history-cmd(cmd) => { root.delete-history-cmd(cmd); }

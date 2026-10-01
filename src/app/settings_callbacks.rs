@@ -681,6 +681,25 @@ pub(super) fn wire_settings_callbacks(
             }
         });
     }
+    // Terminal ⌘/Ctrl+/- font zoom: apply immediately and persist (unlike the
+    // Settings stepper, which stays preview-only until Save).
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        window.on_zoom_term_font(move |delta: i32| {
+            let new_size = {
+                let mut s = store.borrow_mut();
+                let cur = s.font_size() as i32;
+                let next = (cur + delta).clamp(8, 32) as u32;
+                s.set_font_size(next);
+                s.save_later(SaveKind::SETTINGS);
+                next
+            };
+            if let Some(w) = weak.upgrade() {
+                w.set_term_font_size(new_size as f32);
+            }
+        });
+    }
     {
         let store = store.clone();
         window.on_persist_sftp_tree_width(move |width| {
