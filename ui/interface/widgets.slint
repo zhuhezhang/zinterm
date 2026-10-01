@@ -155,6 +155,8 @@ export component Stepper inherits Rectangle {
     HorizontalLayout {
         Rectangle {
             width: 30px;
+            border-top-left-radius: Theme.radius-md;
+            border-bottom-left-radius: Theme.radius-md;
             background: minus-ta.has-hover ? Theme.bg-hover : transparent;
             minus-ta := TouchArea {
                 mouse-cursor: pointer;
@@ -192,6 +194,8 @@ export component Stepper inherits Rectangle {
 
         Rectangle {
             width: 30px;
+            border-top-right-radius: Theme.radius-md;
+            border-bottom-right-radius: Theme.radius-md;
             background: plus-ta.has-hover ? Theme.bg-hover : transparent;
             plus-ta := TouchArea {
                 mouse-cursor: pointer;
