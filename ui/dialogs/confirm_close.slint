@@ -34,19 +34,19 @@ export component ConfirmCloseDialog inherits Rectangle {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 300px;
-            height: 110px;
+            width: 300px * Theme.ui-scale;
+            height: 110px * Theme.ui-scale;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #000000a0;
             TouchArea { }
 
             VerticalLayout {
-                padding: 8px;
-                spacing: 8px;
+                padding: 8px * Theme.ui-scale;
+                spacing: 8px * Theme.ui-scale;
                 Text {
                     text: @tr("Close ZinTerm?");
                     color: Theme.text-primary;
@@ -67,7 +67,7 @@ export component ConfirmCloseDialog inherits Rectangle {
 
                 HorizontalLayout {
                     alignment: end;
-                    spacing: 8px;
+                    spacing: 8px * Theme.ui-scale;
                     GhostButton {
                         text: @tr("Cancel");
                         clicked => { root.confirm-close-open = false; }

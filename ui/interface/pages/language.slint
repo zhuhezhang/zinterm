@@ -1,3 +1,4 @@
+import { Theme } from "../../shared/theme.slint";
 import { ComboBox } from "std-widgets.slint";
 import { SectionHeader, SettingRow } from "../widgets.slint";
 
@@ -7,9 +8,9 @@ export component LanguageSettingsPage inherits Rectangle {
     callback set-language(string);
 
     VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
         SectionHeader {
@@ -21,8 +22,8 @@ export component LanguageSettingsPage inherits Rectangle {
             desc: @tr("Auto follows the system language. Systems that are neither Chinese nor English use English");
             show-divider: false;
             ComboBox {
-                width: 150px;
-                height: 30px;
+                width: 150px * Theme.ui-scale;
+                height: 30px * Theme.ui-scale;
                 model: [@tr("Auto"), @tr("Chinese"), @tr("English")];
                 current-value: root.language-pref == "zh"
                     ? @tr("Chinese")

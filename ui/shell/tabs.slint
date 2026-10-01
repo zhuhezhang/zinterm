@@ -52,21 +52,21 @@ component SingleTab inherits Rectangle {
     property <int> hops;
     out property <bool> dragging;
 
-    height: 30px;
+    height: 30px * Theme.ui-scale;
     // Uniform tab width: long titles elide, short titles leave blank space.
-    property <length> tab-width: 160px;
+    property <length> tab-width: 160px * Theme.ui-scale;
     width: tab-width;
     preferred-width: tab-width;
     horizontal-stretch: 0;
     clip: true;
 
     // Fixed tab chrome — spacing must not shift with title length.
-    property <length> tab-pad-left: 8px;
-    property <length> tab-pad-right: 6px;
-    property <length> tab-gap: 6px;
-    property <length> tab-icon-size: 14px;
-    property <length> tab-dot-size: 8px;
-    property <length> tab-close-size: 20px;
+    property <length> tab-pad-left: 8px * Theme.ui-scale;
+    property <length> tab-pad-right: 6px * Theme.ui-scale;
+    property <length> tab-gap: 6px * Theme.ui-scale;
+    property <length> tab-icon-size: 14px * Theme.ui-scale;
+    property <length> tab-dot-size: 8px * Theme.ui-scale;
+    property <length> tab-close-size: 20px * Theme.ui-scale;
     property <bool> show-close: info.kind != "welcome";
     property <string> conn-icon:
         info.kind == "welcome" ? "\u{E88A}"       // home
@@ -96,7 +96,7 @@ component SingleTab inherits Rectangle {
             : (root.width - tab-pad-right))
             - title-x);
     border-radius: Theme.radius-sm;
-    border-width: active ? 2px : 0px;
+    border-width: active ? 2px * Theme.ui-scale : 0px;
     border-color: active ? Theme.accent : transparent;
     background: drag-highlight ? Theme.bg-active
         : (active ? Theme.tab-active-bg
@@ -111,7 +111,7 @@ component SingleTab inherits Rectangle {
         pointer-event(e) => {
             if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
                 root.grab-offset = self.mouse-x;
-                root.hop-unit = root.width + 2px;
+                root.hop-unit = root.width + 2px * Theme.ui-scale;
                 root.grab-id = root.info.id;
                 root.pressing = true;
                 root.dragging = false;
@@ -138,8 +138,8 @@ component SingleTab inherits Rectangle {
             if (root.pressing) {
                 // A drag begins once the cursor drifts horizontally OR leaves the
                 // tab vertically (so a straight-down drag to split also counts).
-                if (!root.dragging && (abs(self.mouse-x - root.grab-offset) > 5px
-                    || self.mouse-y < -6px || self.mouse-y > root.height + 6px)) {
+                if (!root.dragging && (abs(self.mouse-x - root.grab-offset) > 5px * Theme.ui-scale
+                    || self.mouse-y < -6px * Theme.ui-scale || self.mouse-y > root.height + 6px * Theme.ui-scale)) {
                     root.dragging = true;
                     root.drag-began(root.grab-id);
                 }
@@ -154,7 +154,7 @@ component SingleTab inherits Rectangle {
                     // Hop count from cursor drift (half-slot threshold); one callback
                     // can cross several tabs so a fast swipe keeps up with the pointer.
                     if (root.hop-unit > 0px
-                        && self.mouse-y > -10px && self.mouse-y < root.height + 10px) {
+                        && self.mouse-y > -10px * Theme.ui-scale && self.mouse-y < root.height + 10px * Theme.ui-scale) {
                         hops = floor(
                             ((self.mouse-x - root.grab-offset) + root.hop-unit / 2)
                                 / root.hop-unit);
@@ -227,7 +227,7 @@ component SingleTab inherits Rectangle {
     if root.show-close: IconButton {
         glyph: "×";
         size: root.tab-close-size;
-        x: parent.width - root.tab-pad-right - root.tab-close-size + 1px;
+        x: parent.width - root.tab-pad-right - root.tab-close-size + 1px * Theme.ui-scale;
         y: (parent.height - self.height) / 2;
         clicked => { root.closed(); }
     }
@@ -245,15 +245,15 @@ component TabMenuItem inherits Rectangle {
     in property <bool> force-hover: false;
     callback clicked();
     callback hovered(bool);
-    height: 28px;
+    height: 28px * Theme.ui-scale;
     clip: true;
     border-radius: Theme.radius-sm;
     background: enabled && (ta.has-hover || root.force-hover) ? Theme.bg-hover : transparent;
     HorizontalLayout {
         width: 100%;
-        padding-left: 10px;
-        padding-right: 10px;
-        spacing: 8px;
+        padding-left: 10px * Theme.ui-scale;
+        padding-right: 10px * Theme.ui-scale;
+        spacing: 8px * Theme.ui-scale;
         Text {
             text: label;
             color: enabled
@@ -379,14 +379,14 @@ export component TabBar inherits Rectangle {
         }
     }
 
-    height: 36px;
+    height: 36px * Theme.ui-scale;
     background: Theme.bg-panel-alt;
 
     // True when tabs are wider than the flickable strip (#122).
     // 34px ≈ all-tabs button + padding/spacing. Overlay chrome must not sit in
     // the layout tree or it feeds back into width / preferred-size.
     property <bool> tab-overflow:
-        strip.preferred-width > root.width - root.reserve-right - 34px;
+        strip.preferred-width > root.width - root.reserve-right - 34px * Theme.ui-scale;
     property <length> tab-scroll-range:
         max(0px, flick.viewport-width - flick.width);
 
@@ -399,11 +399,11 @@ export component TabBar inherits Rectangle {
     }
 
     HorizontalLayout {
-        padding-bottom: 3px;
-        padding-top: 3px;
-        padding-left: 2px;
-        padding-right: 3px;
-        spacing: 2px;
+        padding-bottom: 3px * Theme.ui-scale;
+        padding-top: 3px * Theme.ui-scale;
+        padding-left: 2px * Theme.ui-scale;
+        padding-right: 3px * Theme.ui-scale;
+        spacing: 2px * Theme.ui-scale;
         cross-axis-alignment: center;
 
         // Horizontally-scrollable strip; overflow uses the overlay scrollbar
@@ -426,7 +426,7 @@ export component TabBar inherits Rectangle {
                 }
             }
             strip := HorizontalLayout {
-                spacing: 2px;
+                spacing: 2px * Theme.ui-scale;
                 alignment: start;
                 for tab[i] in tabs: SingleTab {
                     info: tab;
@@ -466,7 +466,7 @@ export component TabBar inherits Rectangle {
         IconButton {
             glyph: all-tabs-menu.is-open ? "\u{E316}" : "\u{E313}";
             font-family: "Material Icons";
-            size: 25px;
+            size: 25px * Theme.ui-scale;
             clicked => {
                 if (all-tabs-menu.is-open) {
                     all-tabs-menu.close();
@@ -487,16 +487,16 @@ export component TabBar inherits Rectangle {
     // it does not cover tab titles or change TabBar height. Only this track
     // pans the strip; tab bodies keep their own TouchArea for drag-reorder.
     if root.tab-overflow: sb := Rectangle {
-        x: flick.absolute-position.x - root.absolute-position.x + 4px;
-        width: max(0px, flick.width - 8px);
+        x: flick.absolute-position.x - root.absolute-position.x + 4px * Theme.ui-scale;
+        width: max(0px, flick.width - 8px * Theme.ui-scale);
         property <bool> expanded: track-ta.has-hover || track-ta.pressed;
         // Idle: slim like std ScrollView; hover: terminal-scrollbar thickness.
-        height: self.expanded ? 8px : 3px;
-        y: root.height - self.height - 1px;
+        height: self.expanded ? 8px * Theme.ui-scale : 3px * Theme.ui-scale;
+        y: root.height - self.height - 1px * Theme.ui-scale;
         animate height { duration: 100ms; }
         property <length> thumb-w:
-            max(28px, self.width * flick.width / max(1px, flick.viewport-width));
-        property <length> usable: max(1px, self.width - self.thumb-w);
+            max(28px * Theme.ui-scale, self.width * flick.width / max(1px * Theme.ui-scale, flick.viewport-width));
+        property <length> usable: max(1px * Theme.ui-scale, self.width - self.thumb-w);
         track-ta := TouchArea {
             mouse-cursor: default;
             moved => {
@@ -527,8 +527,8 @@ export component TabBar inherits Rectangle {
                 : 0px;
             y: (parent.height - self.height) / 2;
             width: sb.thumb-w;
-            height: sb.expanded ? 6px : 2px;
-            border-radius: sb.expanded ? 3px : 1px;
+            height: sb.expanded ? 6px * Theme.ui-scale : 2px * Theme.ui-scale;
+            border-radius: sb.expanded ? 3px * Theme.ui-scale : 1px * Theme.ui-scale;
             background: sb.expanded
                 ? Theme.text-secondary : Theme.border-strong;
             animate height { duration: 100ms; }
@@ -537,28 +537,28 @@ export component TabBar inherits Rectangle {
     }
 
     all-tabs-menu := PopupWindow {
-        x: max(4px, root.width - root.reserve-right - self.width - 4px);
+        x: max(4px * Theme.ui-scale, root.width - root.reserve-right - self.width - 4px * Theme.ui-scale);
         y: root.height;
-        width: 230px;
-        height: min(308px, root.tabs.length * 29px + 8px);
+        width: 230px * Theme.ui-scale;
+        height: min(308px * Theme.ui-scale, root.tabs.length * 29px * Theme.ui-scale + 8px * Theme.ui-scale);
         Rectangle {
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 12px;
+            drop-shadow-blur: 12px * Theme.ui-scale;
             drop-shadow-color: #00000060;
             clip: true;
             Flickable {
-                x: 4px;
-                y: 4px;
-                width: parent.width - 8px;
-                height: parent.height - 8px;
+                x: 4px * Theme.ui-scale;
+                y: 4px * Theme.ui-scale;
+                width: parent.width - 8px * Theme.ui-scale;
+                height: parent.height - 8px * Theme.ui-scale;
                 viewport-width: self.width;
                 viewport-height: max(self.height, all-tabs-list.preferred-height);
                 all-tabs-list := VerticalLayout {
                     width: parent.width;
-                    spacing: 1px;
+                    spacing: 1px * Theme.ui-scale;
                     for tab in root.tabs: TabMenuItem {
                         width: parent.width;
                         label: (tab.id == root.active-id ? "●  " : "    ") + tab.title;
@@ -581,20 +581,20 @@ export component TabBar inherits Rectangle {
         y: root.menu-y;
         // Always reserve flyout width so opening the submenu does not resize
         // (and shift) the primary menu.
-        width: 396px;
+        width: 396px * Theme.ui-scale;
         height: tab-menu-card.preferred-height;
         tab-menu-card := Rectangle {
             x: 0px;
-            width: 240px;
+            width: 240px * Theme.ui-scale;
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 12px;
+            drop-shadow-blur: 12px * Theme.ui-scale;
             drop-shadow-color: #00000060;
             tab-menu-list := VerticalLayout {
-                padding: 4px;
-                spacing: 1px;
+                padding: 4px * Theme.ui-scale;
+                spacing: 1px * Theme.ui-scale;
                 TabMenuItem {
                     label: @tr("Close tab");
                     enabled: root.menu-target != "welcome";
@@ -632,7 +632,7 @@ export component TabBar inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
@@ -659,7 +659,7 @@ export component TabBar inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
@@ -683,7 +683,7 @@ export component TabBar inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
@@ -695,7 +695,7 @@ export component TabBar inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
@@ -725,15 +725,15 @@ export component TabBar inherits Rectangle {
         // Flyout aligned with the trigger; overlaps 4px so the pointer can
         // travel from trigger → panel without closing (zauterm-style).
         if root.backspace-submenu-open: bs-panel := Rectangle {
-            x: 236px;
+            x: 236px * Theme.ui-scale;
             y: bs-trigger.y;
-            width: 160px;
+            width: 160px * Theme.ui-scale;
             height: bs-panel-list.preferred-height;
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 12px;
+            drop-shadow-blur: 12px * Theme.ui-scale;
             drop-shadow-color: #00000060;
 
             // Underlay first so menu items (drawn later) still receive clicks;
@@ -750,8 +750,8 @@ export component TabBar inherits Rectangle {
             }
 
             bs-panel-list := VerticalLayout {
-                padding: 4px;
-                spacing: 1px;
+                padding: 4px * Theme.ui-scale;
+                spacing: 1px * Theme.ui-scale;
                 TabMenuItem {
                     label: @tr("Auto");
                     hint: root.menu-backspace-mode == "auto" ? "\u{E5CA}" : "";

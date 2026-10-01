@@ -1,3 +1,4 @@
+import { Theme } from "../../shared/theme.slint";
 import { PrimaryButton, DangerButton, GhostButton } from "../../shared/widgets.slint";
 import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 
@@ -14,9 +15,9 @@ export component DataSettingsPage inherits Rectangle {
     callback set-save-passwords(bool);
 
     VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
         SectionHeader {

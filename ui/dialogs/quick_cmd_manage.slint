@@ -19,9 +19,9 @@ export component QuickCmdManageDialog inherits Rectangle {
     in-out property <string> qcg-orig;
     in-out property <bool> qcm-cmd-dragging;
     in-out property <string> qcm-command;
-    in-out property <length> qcm-dialog-height: 560px;
+    in-out property <length> qcm-dialog-height: 560px * Theme.ui-scale;
     in-out property <bool> qcm-dialog-resizing;
-    in-out property <length> qcm-dialog-width: 560px;
+    in-out property <length> qcm-dialog-width: 560px * Theme.ui-scale;
     callback qcm-drag-at(length /* list-top-y */, length /* pointer-y */, int /* drag-from */, string /* drag-group-from */);
     in-out property <int> qcm-drag-from: -1;
     in-out property <string> qcm-drag-group-from;
@@ -69,19 +69,19 @@ export component QuickCmdManageDialog inherits Rectangle {
         qcm-card := Rectangle {
             x: (root.width - self.width) / 2;
             y: (root.height - self.height) / 2;
-            width: min(root.qcm-dialog-width, root.width - 32px);
-            height: min(root.qcm-dialog-height, root.height - 32px);
+            width: min(root.qcm-dialog-width, root.width - 32px * Theme.ui-scale);
+            height: min(root.qcm-dialog-height, root.height - 32px * Theme.ui-scale);
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #000000a0;
             TouchArea { }   // swallow backdrop clicks on the card body
 
             VerticalLayout {
-                padding: 8px;
-                spacing: 8px;
+                padding: 8px * Theme.ui-scale;
+                spacing: 8px * Theme.ui-scale;
                 HorizontalLayout {
                     Text {
                         text: @tr("Quick commands");
@@ -93,8 +93,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                     }
 
                     Rectangle {
-                        width: 22px;
-                        height: 22px;
+                        width: 22px * Theme.ui-scale;
+                        height: 22px * Theme.ui-scale;
                         border-radius: Theme.radius-sm;
                         background: qcm-close.has-hover ? Theme.bg-hover : transparent;
                         qcm-close := TouchArea {
@@ -115,9 +115,9 @@ export component QuickCmdManageDialog inherits Rectangle {
 
                 // Add / edit form: name + group (optional) + command.
                 VerticalLayout {
-                    spacing: 8px;
+                    spacing: 8px * Theme.ui-scale;
                     HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 8px * Theme.ui-scale;
                         Text {
                             width: cmd-label.width;
                             text: @tr("Name");
@@ -142,7 +142,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 8px * Theme.ui-scale;
                         Text {
                             text: @tr("Group");
                             width: cmd-label.width;
@@ -167,7 +167,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 8px * Theme.ui-scale;
                         cmd-label := Text {
                             text: @tr("Command");
                             color: Theme.text-secondary;
@@ -192,8 +192,8 @@ export component QuickCmdManageDialog inherits Rectangle {
 
                 // New (empty) group, cancel、save、edit command button.
                 HorizontalLayout {
-                    height: 30px;
-                    spacing: 7px;
+                    height: 30px * Theme.ui-scale;
+                    spacing: 7px * Theme.ui-scale;
                     Rectangle {
                         horizontal-stretch: 1;
                     }
@@ -259,24 +259,24 @@ export component QuickCmdManageDialog inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
                 // Search + list — tighter gap than the dialog's 8px section spacing.
                 VerticalLayout {
                     vertical-stretch: 1;
-                    spacing: 2px;
+                    spacing: 2px * Theme.ui-scale;
 
                     HorizontalLayout {
-                        height: 35px;
-                        spacing: 6px;
-                        padding-bottom: 5px;
+                        height: 35px * Theme.ui-scale;
+                        spacing: 6px * Theme.ui-scale;
+                        padding-bottom: 5px * Theme.ui-scale;
 
                         qcm-search-in := BorderedLineInput {
-                            height: 30px;
+                            height: 30px * Theme.ui-scale;
                             horizontal-stretch: 1;
-                            pad-x: 8px;
+                            pad-x: 8px * Theme.ui-scale;
                             font-size: Theme.fs-sm;
                             leading-icon: "\u{E8B6}";
                             text <=> root.qcm-search;
@@ -293,13 +293,13 @@ export component QuickCmdManageDialog inherits Rectangle {
                         }
 
                         GhostButton {
-                            height: 30px;
+                            height: 30px * Theme.ui-scale;
                             text: @tr("Import commands");
                             clicked => { root.import-quick-commands(); }
                         }
 
                         GhostButton {
-                            height: 30px;
+                            height: 30px * Theme.ui-scale;
                             text: @tr("Export commands");
                             clicked => { root.export-quick-commands(); }
                         }
@@ -314,7 +314,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                         qcm-list := VerticalLayout {
                             alignment: start;
                             spacing: 0px;
-                            padding-top: root.qcm-manage-commands.length == 0 ? 6px : 0px;
+                            padding-top: root.qcm-manage-commands.length == 0 ? 6px * Theme.ui-scale : 0px;
                             if root.qcm-manage-commands.length == 0: Text {
                                 text: root.qcm-search != "" ? @tr("No match") : @tr("No quick commands yet");
                                 color: Theme.text-muted;
@@ -323,12 +323,12 @@ export component QuickCmdManageDialog inherits Rectangle {
                             for q in root.qcm-manage-commands: VerticalLayout {
                                 alignment: start;
                                 spacing: 0px;
-                                property <length> row-h: (q.group-header != "" ? 32px : 0px)
-                                    + (!q.collapsed && q.orig-index >= 0 ? 32px : 0px);
-                                height: row-h > 0px ? row-h + 1px : 0px;
+                                property <length> row-h: (q.group-header != "" ? 32px * Theme.ui-scale : 0px)
+                                    + (!q.collapsed && q.orig-index >= 0 ? 32px * Theme.ui-scale : 0px);
+                                height: row-h > 0px ? row-h + 1px * Theme.ui-scale : 0px;
                                 // Group header on the first row of each group (#55).
                                 if q.group-header != "": Rectangle {
-                                    height: 32px;
+                                    height: 32px * Theme.ui-scale;
                                     property <length> gmx;
                                     property <length> gmy;
                                     property <bool> grp-moved: false;
@@ -346,8 +346,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         : (grp-header-ta.has-hover || qgrp-menu.is-open ? Theme.bg-hover : transparent));
 
                                     HorizontalLayout {
-                                        padding-left: 8px;
-                                        padding-right: 4px;
+                                        padding-left: 8px * Theme.ui-scale;
+                                        padding-right: 4px * Theme.ui-scale;
                                         Text {
                                             text: q.collapsed ? "\u{E5CC}" : "\u{E5CF}";
                                             font-family: "Material Icons";
@@ -414,7 +414,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         moved => {
                                             if (grp-pressing && q.group != "default") {
                                                 if (!grp-moved
-                                                    && abs(self.mouse-x - grp-grab-x) > 5px) {
+                                                    && abs(self.mouse-x - grp-grab-x) > 5px * Theme.ui-scale) {
                                                     grp-moved = true;
                                                     root.qcm-drag-group-from = q.group;
                                                     root.qcm-drop-before-group = q.group;
@@ -435,20 +435,20 @@ export component QuickCmdManageDialog inherits Rectangle {
                                     qgrp-menu := PopupWindow {
                                         x: gmx;
                                         y: gmy;
-                                        width: 150px;
-                                        height: (q.orig-index == -1 ? 3 : 2) * 30px + 9px;
+                                        width: 150px * Theme.ui-scale;
+                                        height: (q.orig-index == -1 ? 3 : 2) * 30px * Theme.ui-scale + 9px * Theme.ui-scale;
                                         Rectangle {
                                             background: Theme.popup-bg;
                                             border-radius: Theme.radius-sm;
-                                            border-width: 1px;
+                                            border-width: 1px * Theme.ui-scale;
                                             border-color: Theme.border-strong;
-                                            drop-shadow-blur: 10px;
+                                            drop-shadow-blur: 10px * Theme.ui-scale;
                                             drop-shadow-color: #00000050;
                                             VerticalLayout {
-                                                padding: 4px;
-                                                spacing: 1px;
+                                                padding: 4px * Theme.ui-scale;
+                                                spacing: 1px * Theme.ui-scale;
                                                 Rectangle {
-                                                    height: 30px;
+                                                    height: 30px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: qeg-ta.has-hover ? Theme.bg-hover : transparent;
                                                     qeg-ta := TouchArea {
@@ -461,8 +461,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                     }
 
                                                     HorizontalLayout {
-                                                        padding-left: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E3C9}";
                                                             font-family: "Material Icons";
@@ -482,7 +482,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                 }
 
                                                 if q.orig-index == -1: Rectangle {
-                                                    height: 30px;
+                                                    height: 30px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: qdg-ta.has-hover ? #cc333320 : transparent;
                                                     qdg-ta := TouchArea {
@@ -491,8 +491,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                     }
 
                                                     HorizontalLayout {
-                                                        padding-left: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E872}";
                                                             font-family: "Material Icons";
@@ -511,7 +511,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                     }
                                                 }
                                                 Rectangle {
-                                                    height: 30px;
+                                                    height: 30px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: qng-ta.has-hover ? Theme.bg-hover : transparent;
                                                     qng-ta := TouchArea {
@@ -524,8 +524,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                     }
 
                                                     HorizontalLayout {
-                                                        padding-left: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E2CC}";
                                                             font-family: "Material Icons";
@@ -550,7 +550,7 @@ export component QuickCmdManageDialog inherits Rectangle {
 
                                 // Command row (skip the empty-group placeholder; hidden when collapsed).
                                 if !q.collapsed && q.orig-index >= 0: Rectangle {
-                                    height: 32px;
+                                    height: 32px * Theme.ui-scale;
                                     property <bool> cmd-moved: false;
                                     property <bool> cmd-pressing: false;
                                     property <length> cmd-grab-x: 0px;
@@ -564,9 +564,9 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         ? Theme.bg-hover : transparent));
 
                                     HorizontalLayout {
-                                        padding-left: 4px;
-                                        padding-right: 6px;
-                                        spacing: 4px;
+                                        padding-left: 4px * Theme.ui-scale;
+                                        padding-right: 6px * Theme.ui-scale;
+                                        spacing: 4px * Theme.ui-scale;
                                         cross-axis-alignment: center;
                                         Rectangle {
                                             horizontal-stretch: 1;
@@ -608,7 +608,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                                                 moved => {
                                                     if (cmd-pressing) {
                                                         if (!cmd-moved
-                                                            && abs(self.mouse-x - cmd-grab-x) > 5px) {
+                                                            && abs(self.mouse-x - cmd-grab-x) > 5px * Theme.ui-scale) {
                                                             cmd-moved = true;
                                                             root.qcm-drag-from = q.orig-index;
                                                             root.qcm-cmd-dragging = true;
@@ -628,7 +628,7 @@ export component QuickCmdManageDialog inherits Rectangle {
 
                                             VerticalLayout {
                                                 alignment: center;
-                                                padding-left: 2px;
+                                                padding-left: 2px * Theme.ui-scale;
                                                 Text {
                                                     text: q.name;
                                                     color: Theme.text-primary;
@@ -647,8 +647,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         }
 
                                         Rectangle {
-                                            width: 24px;
-                                            height: 28px;
+                                            width: 24px * Theme.ui-scale;
+                                            height: 28px * Theme.ui-scale;
                                             border-radius: Theme.radius-sm;
                                             background: run-ta.has-hover ? Theme.accent.with-alpha(0.25) : transparent;
                                             run-ta := TouchArea {
@@ -667,8 +667,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         }
 
                                         Rectangle {
-                                            width: 24px;
-                                            height: 28px;
+                                            width: 24px * Theme.ui-scale;
+                                            height: 28px * Theme.ui-scale;
                                             border-radius: Theme.radius-sm;
                                             background: dup-ta.has-hover ? Theme.bg-hover : transparent;
                                             dup-ta := TouchArea {
@@ -687,8 +687,8 @@ export component QuickCmdManageDialog inherits Rectangle {
                                         }
 
                                         Rectangle {
-                                            width: 28px;
-                                            height: 28px;
+                                            width: 28px * Theme.ui-scale;
+                                            height: 28px * Theme.ui-scale;
                                             border-radius: Theme.radius-sm;
                                             background: del-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
                                             del-ta := TouchArea {
@@ -710,7 +710,7 @@ export component QuickCmdManageDialog inherits Rectangle {
                             }
                             // Drop at end of the list (append group to the end).
                             Rectangle {
-                                height: 10px;
+                                height: 10px * Theme.ui-scale;
                                 background: root.qcm-drag-group-from != "" && root.qcm-drop-before-group == ""
                                     ? Theme.accent.with-alpha(0.12) : transparent;
                                 qcm-append-ta := TouchArea { }
@@ -723,25 +723,25 @@ export component QuickCmdManageDialog inherits Rectangle {
             // Bottom-right resize grip. The chosen size is retained while the
             // application is running, and remains clamped to the main window.
             Rectangle {
-                x: parent.width - 18px;
-                y: parent.height - 18px;
-                width: 18px;
-                height: 18px;
+                x: parent.width - 18px * Theme.ui-scale;
+                y: parent.height - 18px * Theme.ui-scale;
+                width: 18px * Theme.ui-scale;
+                height: 18px * Theme.ui-scale;
                 background: qcm-resize-ta.has-hover || root.qcm-dialog-resizing
                     ? Theme.bg-hover : transparent;
                 Text {
                     text: "\u{E3C2}";
                     font-family: "Material Icons";
                     color: Theme.text-muted;
-                    font-size: 14px;
+                    font-size: 14px * Theme.ui-scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
 
                 qcm-resize-ta := TouchArea {
-                    height: 23px;
+                    height: 23px * Theme.ui-scale;
                     mouse-cursor: nwse-resize;
-                    width: 26px;
+                    width: 26px * Theme.ui-scale;
                     pointer-event(e) => {
                         if (e.kind == PointerEventKind.down) {
                             root.qcm-dialog-resizing = true;
@@ -758,11 +758,11 @@ export component QuickCmdManageDialog inherits Rectangle {
                             root.qcm-dialog-width = clamp(
                                 root.qcm-resize-base-width
                                 + self.absolute-position.x + self.mouse-x - root.qcm-resize-grab-x,
-                                460px, max(460px, root.width - 32px));
+                                460px * Theme.ui-scale, max(460px * Theme.ui-scale, root.width - 32px * Theme.ui-scale));
                             root.qcm-dialog-height = clamp(
                                 root.qcm-resize-base-height
                                 + self.absolute-position.y + self.mouse-y - root.qcm-resize-grab-y,
-                                420px, max(420px, root.height - 32px));
+                                420px * Theme.ui-scale, max(420px * Theme.ui-scale, root.height - 32px * Theme.ui-scale));
                         }
                     }
                 }

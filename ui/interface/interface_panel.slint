@@ -176,13 +176,13 @@ export component InterfacePanel inherits Rectangle {
     HorizontalLayout {
         // --- Left nav ------------------------------------------------------
         Rectangle {
-            width: 168px;
+            width: 168px * Theme.ui-scale;
             // Transparent so the whole dialog is one frosted layer (the card's
             // bg-panel); a 1px divider keeps the nav/content separation (items 6/7).
             background: transparent;
             Rectangle {
-                x: parent.width - 1px;
-                width: 1px;
+                x: parent.width - 1px * Theme.ui-scale;
+                width: 1px * Theme.ui-scale;
                 height: parent.height;
                 background: Theme.border-subtle;
             }
@@ -194,8 +194,8 @@ export component InterfacePanel inherits Rectangle {
                 viewport-height: max(self.visible-height, nav-items.preferred-height);
                 nav-items := VerticalLayout {
                     width: nav-scroll.visible-width;
-                    padding: 8px;
-                    spacing: 2px;
+                    padding: 8px * Theme.ui-scale;
+                    spacing: 2px * Theme.ui-scale;
                     alignment: start;
                     NavItem {
                         icon: "\u{E167}";

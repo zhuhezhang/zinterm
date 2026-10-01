@@ -21,28 +21,28 @@ export component SettingsMenu inherits Rectangle {
     Rectangle {
         // Keep fully inside the window (was width−196 with width 198 → 2px clip).
         // 8px inset matches the title-bar button padding from the right edge.
-        x: parent.width - self.width - 8px;
-        y: root.titlebar-bottom + 4px;
-        width: 198px;
+        x: parent.width - self.width - 8px * Theme.ui-scale;
+        y: root.titlebar-bottom + 4px * Theme.ui-scale;
+        width: 198px * Theme.ui-scale;
         // Size to the menu's content so adding/removing items (or the
         // ~/.ssh/config import hint expanding) never overflows the card (#150-fix).
         height: menu-vl.preferred-height;
         visible: root.settings-open;
         background: Theme.popup-bg;
         border-radius: Theme.radius-md;
-        border-width: 1px;
+        border-width: 1px * Theme.ui-scale;
         border-color: Theme.border-strong;
-        drop-shadow-blur: 14px;
+        drop-shadow-blur: 14px * Theme.ui-scale;
         drop-shadow-color: #00000060;
 
         TouchArea { }   // swallow events so they don't reach the terminal
 
         menu-vl := VerticalLayout {
-            padding: 4px;
-            spacing: 1px;
+            padding: 4px * Theme.ui-scale;
+            spacing: 1px * Theme.ui-scale;
             // Interface (font) settings.
             Rectangle {
-                height: 28px;
+                height: 28px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: iface-ta.has-hover ? Theme.bg-hover : transparent;
                 iface-ta := TouchArea {
@@ -54,8 +54,8 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
+                    padding-left: 8px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E429}";
                         font-family: "Material Icons"; // tune
@@ -75,7 +75,7 @@ export component SettingsMenu inherits Rectangle {
             }
             // Import connections from a portable file (#46).
             Rectangle {
-                height: 28px;
+                height: 28px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: impconn-ta.has-hover ? Theme.bg-hover : transparent;
                 impconn-ta := TouchArea {
@@ -87,8 +87,8 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
+                    padding-left: 8px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E5DB}";
                         font-family: "Material Icons"; // ↓ import
@@ -108,7 +108,7 @@ export component SettingsMenu inherits Rectangle {
             }
             // Export all connections to a portable file (#46).
             Rectangle {
-                height: 28px;
+                height: 28px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: export-ta.has-hover ? Theme.bg-hover : transparent;
                 export-ta := TouchArea {
@@ -120,8 +120,8 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
+                    padding-left: 8px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E5D8}";
                         font-family: "Material Icons"; // ↑ export
@@ -141,7 +141,7 @@ export component SettingsMenu inherits Rectangle {
             }
             // Language toggle: shows the language you'll switch TO.
             Rectangle {
-                height: 28px;
+                height: 28px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: lang-ta.has-hover ? Theme.bg-hover : transparent;
                 lang-ta := TouchArea {
@@ -153,8 +153,8 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
+                    padding-left: 8px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E894}";
                         font-family: "Material Icons"; // language/translate
@@ -174,7 +174,7 @@ export component SettingsMenu inherits Rectangle {
             }
             // Keyboard shortcuts reference (#103).
             Rectangle {
-                height: 28px;
+                height: 28px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: keys-ta.has-hover ? Theme.bg-hover : transparent;
                 keys-ta := TouchArea {
@@ -186,8 +186,8 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
+                    padding-left: 8px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E312}";
                         font-family: "Material Icons"; // keyboard
@@ -207,7 +207,7 @@ export component SettingsMenu inherits Rectangle {
             }
 
             Rectangle {
-                height: 28px;
+                height: 28px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: about-ta.has-hover ? Theme.bg-hover : transparent;
                 about-ta := TouchArea {
@@ -219,8 +219,8 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    padding-left: 8px;
-                    spacing: 8px;
+                    padding-left: 8px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E88E}";
                         font-family: "Material Icons"; // Info

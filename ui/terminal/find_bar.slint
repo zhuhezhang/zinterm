@@ -18,7 +18,7 @@ export component FindBar inherits Rectangle {
     in-out property <bool> find-whole-word: false;
 
     background: Theme.popup-bg;
-    border-width: 1px;
+    border-width: 1px * Theme.ui-scale;
     border-color: Theme.border-strong;
     border-radius: Theme.radius-sm;
 
@@ -34,22 +34,22 @@ export component FindBar inherits Rectangle {
     }
 
     HorizontalLayout {
-        padding-left: 6px;
-        padding-right: 4px;
-        padding-top: 4px;
-        padding-bottom: 4px;
-        spacing: 4px;
+        padding-left: 6px * Theme.ui-scale;
+        padding-right: 4px * Theme.ui-scale;
+        padding-top: 4px * Theme.ui-scale;
+        padding-bottom: 4px * Theme.ui-scale;
+        spacing: 4px * Theme.ui-scale;
         // Vertically center the 24px toggles/buttons next to the
         // 32px input (Slint 1.17+: cross-axis, not `alignment`).
         cross-axis-alignment: center;
 
         find-input := BorderedLineInput {
             horizontal-stretch: 1;
-            min-width: 96px;
+            min-width: 96px * Theme.ui-scale;
             // Keep the widget's default 32px height — do not use
             // parent.height, which includes layout padding and
             // pushes the field below the find-bar chrome.
-            pad-x: 6px;
+            pad-x: 6px * Theme.ui-scale;
             font-size: Theme.fs-md;
             leading-icon: "\u{E8B6}";
             // Defer focus until popup event dispatch and layout
@@ -79,7 +79,7 @@ export component FindBar inherits Rectangle {
         }
 
         Text {
-            min-width: 40px;
+            min-width: 40px * Theme.ui-scale;
             text: find-input.text == "" ? ""
                 : (root.find-match-index > 0
                 ? root.find-match-index + "/" + root.find-matches.length
@@ -121,21 +121,21 @@ export component FindBar inherits Rectangle {
         }
 
         IconButton {
-            size: 24px;
+            size: 24px * Theme.ui-scale;
             glyph: "↑";
             tooltip: @tr("Previous match");
             clicked => { root.find-prev(); }
         }
 
         IconButton {
-            size: 24px;
+            size: 24px * Theme.ui-scale;
             glyph: "↓";
             tooltip: @tr("Next match");
             clicked => { root.find-next(); }
         }
 
         IconButton {
-            size: 24px;
+            size: 24px * Theme.ui-scale;
             glyph: "\u{E5CD}";
             font-family: "Material Icons";
             tooltip: @tr("Close");

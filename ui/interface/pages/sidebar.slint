@@ -1,3 +1,4 @@
+import { Theme } from "../../shared/theme.slint";
 import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 
 export component SidebarSettingsPage inherits Rectangle {
@@ -19,9 +20,9 @@ export component SidebarSettingsPage inherits Rectangle {
     in-out property <bool> zen-mode: false;
 
     if root.ifd-page == "sidebar": VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
         SectionHeader {
@@ -62,9 +63,9 @@ export component SidebarSettingsPage inherits Rectangle {
 
     // --- Welcome page ------------------------------------------
     if root.ifd-page == "welcome": VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
         SectionHeader {

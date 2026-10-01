@@ -64,22 +64,22 @@ export component SftpHost inherits Rectangle {
     Rectangle {
         visible: root.sftp-available && !root.sftp-shut;
         x: root.sftp-dock == "left" ? root.sf-w
-            : root.sftp-dock == "right" ? parent.width - root.sf-w - 4px
+            : root.sftp-dock == "right" ? parent.width - root.sf-w - 4px * Theme.ui-scale
             : 0px;
         y: root.sftp-dock == "top" ? root.sf-h
-            : root.sftp-dock == "bottom" ? parent.height - root.sf-h - 4px
+            : root.sftp-dock == "bottom" ? parent.height - root.sf-h - 4px * Theme.ui-scale
             : 0px;
-        width: root.sftp-horizontal ? 4px : parent.width;
-        height: root.sftp-horizontal ? parent.height : 4px;
+        width: root.sftp-horizontal ? 4px * Theme.ui-scale : parent.width;
+        height: root.sftp-horizontal ? parent.height : 4px * Theme.ui-scale;
         background: divider-ta.has-hover || root.sftp-dragging
             ? Theme.accent : Theme.border-subtle;
         divider-ta := TouchArea {
             // Hit area extends a few px past the thin visual bar so it's easy
             // to grab without landing on the terminal / SFTP edge.
-            x: root.sftp-horizontal ? -4px : 0px;
-            y: root.sftp-horizontal ? 0px : -4px;
-            width: root.sftp-horizontal ? 12px : parent.width;
-            height: root.sftp-horizontal ? parent.height : 12px;
+            x: root.sftp-horizontal ? -4px * Theme.ui-scale : 0px;
+            y: root.sftp-horizontal ? 0px : -4px * Theme.ui-scale;
+            width: root.sftp-horizontal ? 12px * Theme.ui-scale : parent.width;
+            height: root.sftp-horizontal ? parent.height : 12px * Theme.ui-scale;
             mouse-cursor: root.sftp-horizontal ? ew-resize : ns-resize;
             pointer-event(ev) => {
                 if (ev.kind == PointerEventKind.down) {
@@ -104,13 +104,13 @@ export component SftpHost inherits Rectangle {
                                         root.sftp-dock == "right"
                             ? root.width - ((self.absolute-position.x + self.mouse-x) - root.absolute-position.x)
                             : (self.absolute-position.x + self.mouse-x) - root.absolute-position.x,
-                                        300px, max(310px, root.width - 200px)));
+                                        300px * Theme.ui-scale, max(310px * Theme.ui-scale, root.width - 200px * Theme.ui-scale)));
                     } else {
                         root.set-sftp-panel-height(clamp(
                                         root.sftp-dock == "bottom"
                             ? root.height - ((self.absolute-position.y + self.mouse-y) - root.absolute-position.y)
                             : (self.absolute-position.y + self.mouse-y) - root.absolute-position.y,
-                                        60px, max(80px, root.height - 80px)));
+                                        60px * Theme.ui-scale, max(80px * Theme.ui-scale, root.height - 80px * Theme.ui-scale)));
                     }
                 }
             }
@@ -203,7 +203,7 @@ export component SftpHost inherits Rectangle {
             width: parent.width * 0.22;
             height: parent.height;
             background: root.sftp-dock-target == "left" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
-            border-width: root.sftp-dock-target == "left" ? 2px : 0px;
+            border-width: root.sftp-dock-target == "left" ? 2px * Theme.ui-scale : 0px;
             border-color: Theme.accent;
         }
 
@@ -213,7 +213,7 @@ export component SftpHost inherits Rectangle {
             width: parent.width * 0.22;
             height: parent.height;
             background: root.sftp-dock-target == "right" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
-            border-width: root.sftp-dock-target == "right" ? 2px : 0px;
+            border-width: root.sftp-dock-target == "right" ? 2px * Theme.ui-scale : 0px;
             border-color: Theme.accent;
         }
 
@@ -223,7 +223,7 @@ export component SftpHost inherits Rectangle {
             width: parent.width;
             height: parent.height * 0.22;
             background: root.sftp-dock-target == "top" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
-            border-width: root.sftp-dock-target == "top" ? 2px : 0px;
+            border-width: root.sftp-dock-target == "top" ? 2px * Theme.ui-scale : 0px;
             border-color: Theme.accent;
         }
 
@@ -233,7 +233,7 @@ export component SftpHost inherits Rectangle {
             width: parent.width;
             height: parent.height * 0.22;
             background: root.sftp-dock-target == "bottom" ? Theme.accent.with-alpha(0.35) : Theme.accent.with-alpha(0.10);
-            border-width: root.sftp-dock-target == "bottom" ? 2px : 0px;
+            border-width: root.sftp-dock-target == "bottom" ? 2px * Theme.ui-scale : 0px;
             border-color: Theme.accent;
         }
     }
@@ -246,7 +246,7 @@ export component SftpHost inherits Rectangle {
         y: root.sftp-dock == "bottom" ? parent.height - root.sf-h : 0px;
         // Top/bottom keep the SFTP path bar; only cover the folder icon so
         // the path field stays visible with a 4px gap (icon is 30px at x=4).
-        width: root.sftp-horizontal ? root.sf-w : 34px;
+        width: root.sftp-horizontal ? root.sf-w : 34px * Theme.ui-scale;
         height: root.sftp-horizontal ? parent.height : root.sf-h;
         dock-edge: root.sftp-dock;
         icon-only: !root.sftp-horizontal;

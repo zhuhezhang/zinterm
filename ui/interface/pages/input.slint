@@ -1,3 +1,4 @@
+import { Theme } from "../../shared/theme.slint";
 import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 
 export component InputSettingsPage inherits Rectangle {
@@ -10,9 +11,9 @@ export component InputSettingsPage inherits Rectangle {
     callback set-select-copy-right-paste-enabled(bool);
 
     VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
 

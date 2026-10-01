@@ -21,9 +21,9 @@ export component WallpaperSettingsPage inherits Rectangle {
         && root.current-wallpaper != "builtin:miku" && root.current-wallpaper != "builtin:ms";
 
     VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
 
@@ -36,24 +36,24 @@ export component WallpaperSettingsPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 12px;
+            height: 12px * Theme.ui-scale;
         }
 
         // Built-in choices: keep this row horizontally scrollable as
                         // bundled wallpapers grow.
                         builtin-wallpapers-scroll := ScrollView {
-            height: 106px;
+            height: 106px * Theme.ui-scale;
             width: 100%;
             viewport-width: max(self.visible-width, builtin-wallpapers-row.preferred-width);
             viewport-height: self.visible-height;
 
             builtin-wallpapers-row := HorizontalLayout {
-                spacing: 11px;
+                spacing: 11px * Theme.ui-scale;
                 alignment: start;
                 VerticalLayout {
-                    spacing: 5px;
+                    spacing: 5px * Theme.ui-scale;
                     WallpaperSwatch {
-                        width: 100px;
+                        width: 100px * Theme.ui-scale;
                         selected: root.current-wallpaper == "";
                         clicked => { root.set-wallpaper(""); }
                         Rectangle {
@@ -82,9 +82,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                 }
 
                 VerticalLayout {
-                    spacing: 5px;
+                    spacing: 5px * Theme.ui-scale;
                     WallpaperSwatch {
-                        width: 100px;
+                        width: 100px * Theme.ui-scale;
                         selected: root.current-wallpaper == "builtin:light";
                         clicked => { root.set-wallpaper("builtin:light"); }
                         Rectangle {
@@ -94,9 +94,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                             Rectangle {
                                 x: parent.width * 0.66;
                                 y: -parent.height * 0.2;
-                                width: 56px;
-                                height: 56px;
-                                border-radius: 28px;
+                                width: 56px * Theme.ui-scale;
+                                height: 56px * Theme.ui-scale;
+                                border-radius: 28px * Theme.ui-scale;
                                 background: #4a90e2;
                                 opacity: 0.30;
                             }
@@ -112,9 +112,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                 }
 
                 VerticalLayout {
-                    spacing: 5px;
+                    spacing: 5px * Theme.ui-scale;
                     WallpaperSwatch {
-                        width: 100px;
+                        width: 100px * Theme.ui-scale;
                         selected: root.current-wallpaper == "builtin:dark";
                         clicked => { root.set-wallpaper("builtin:dark"); }
                         Rectangle {
@@ -124,9 +124,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                             Rectangle {
                                 x: parent.width * 0.66;
                                 y: -parent.height * 0.2;
-                                width: 56px;
-                                height: 56px;
-                                border-radius: 28px;
+                                width: 56px * Theme.ui-scale;
+                                height: 56px * Theme.ui-scale;
+                                border-radius: 28px * Theme.ui-scale;
                                 background: #4a6ce0;
                                 opacity: 0.40;
                             }
@@ -142,9 +142,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                 }
 
                 VerticalLayout {
-                    spacing: 5px;
+                    spacing: 5px * Theme.ui-scale;
                     WallpaperSwatch {
-                        width: 100px;
+                        width: 100px * Theme.ui-scale;
                         selected: root.current-wallpaper == "builtin:tech";
                         clicked => { root.set-wallpaper("builtin:tech"); }
                         Rectangle {
@@ -154,18 +154,18 @@ export component WallpaperSettingsPage inherits Rectangle {
                             clip: true;
                                             // glowing planet
                                             Rectangle {
-                                x: parent.width * 0.5 - 16px;
+                                x: parent.width * 0.5 - 16px * Theme.ui-scale;
                                 y: parent.height * 0.22;
-                                width: 32px;
-                                height: 32px;
-                                border-radius: 16px;
+                                width: 32px * Theme.ui-scale;
+                                height: 32px * Theme.ui-scale;
+                                border-radius: 16px * Theme.ui-scale;
                                 background: @radial-gradient(circle, #ff5ea8 0%, #ff5ea800 70%);
                             }
                                             // neon horizon line
                                             Rectangle {
                                 y: parent.height * 0.58;
                                 width: parent.width;
-                                height: 2px;
+                                height: 2px * Theme.ui-scale;
                                 background: #19e6ff;
                                 opacity: 0.85;
                             }
@@ -181,9 +181,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                 }
 
                 VerticalLayout {
-                    spacing: 5px;
+                    spacing: 5px * Theme.ui-scale;
                     WallpaperSwatch {
-                        width: 100px;
+                        width: 100px * Theme.ui-scale;
                         selected: root.current-wallpaper == "builtin:ms";
                         clicked => { root.set-wallpaper("builtin:ms"); }
                         Image {
@@ -203,9 +203,9 @@ export component WallpaperSettingsPage inherits Rectangle {
                 }
 
                 VerticalLayout {
-                    spacing: 5px;
+                    spacing: 5px * Theme.ui-scale;
                     WallpaperSwatch {
-                        width: 100px;
+                        width: 100px * Theme.ui-scale;
                         selected: root.current-wallpaper == "builtin:miku";
                         clicked => { root.set-wallpaper("builtin:miku"); }
                         Image {
@@ -227,7 +227,7 @@ export component WallpaperSettingsPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 16px;
+            height: 16px * Theme.ui-scale;
         }
 
         SectionHeader {
@@ -235,7 +235,7 @@ export component WallpaperSettingsPage inherits Rectangle {
         }
 
         HorizontalLayout {
-            spacing: 14px;
+            spacing: 14px * Theme.ui-scale;
             alignment: start;
             WallpaperSwatch {
                 selected: root.wp-is-custom;
@@ -267,11 +267,11 @@ export component WallpaperSettingsPage inherits Rectangle {
 
             VerticalLayout {
                 alignment: center;
-                spacing: 6px;
+                spacing: 6px * Theme.ui-scale;
                 Rectangle {
-                    width: 130px;
-                    height: 30px;
-                    border-radius: 6px;
+                    width: 130px * Theme.ui-scale;
+                    height: 30px * Theme.ui-scale;
+                    border-radius: 6px * Theme.ui-scale;
                     background: pick-ta.has-hover ? Theme.accent-hover : Theme.accent;
                     pick-ta := TouchArea {
                         mouse-cursor: pointer;
@@ -293,14 +293,14 @@ export component WallpaperSettingsPage inherits Rectangle {
                     text: root.custom-wallpaper-name;
                     color: Theme.text-muted;
                     font-size: 11px * Theme.ui-scale;
-                    width: 150px;
+                    width: 150px * Theme.ui-scale;
                     overflow: elide;
                 }
             }
         }
 
         Rectangle {
-            height: 16px;
+            height: 16px * Theme.ui-scale;
         }
 
         SectionHeader {
@@ -312,9 +312,9 @@ export component WallpaperSettingsPage inherits Rectangle {
             desc: @tr("How much the wallpaper shows through panels and the terminal (no effect without a wallpaper)");
             show-divider: false;
             HorizontalLayout {
-                spacing: 8px;
+                spacing: 8px * Theme.ui-scale;
                 Slider {
-                    width: 150px;
+                    width: 150px * Theme.ui-scale;
                     minimum: 0;
                     // Up to 70% transparency (overlay floor 0.30).
                     maximum: 70;
@@ -328,7 +328,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     color: Theme.text-secondary;
                     font-size: 12px * Theme.ui-scale;
                     vertical-alignment: center;
-                    width: 34px;
+                    width: 34px * Theme.ui-scale;
                 }
             }
         }

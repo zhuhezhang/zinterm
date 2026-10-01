@@ -29,9 +29,9 @@ export component FontSettingsPage inherits Rectangle {
     in property <float> ui-scale;
 
     VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
 
@@ -42,8 +42,8 @@ export component FontSettingsPage inherits Rectangle {
         SettingRow {
             label: @tr("Terminal font");
             ComboBox {
-                width: 150px;
-                height: 30px;
+                width: 150px * Theme.ui-scale;
+                height: 30px * Theme.ui-scale;
                 model: root.term-fonts;
                 current-value: root.term-font-family;
                 selected(v) => { root.set-term-font(v); }
@@ -80,8 +80,8 @@ export component FontSettingsPage inherits Rectangle {
             desc: @tr("Install a TTF/OTF font in Windows, then restart ZinTerm to refresh this list");
             show-divider: false;
             Rectangle {
-                width: 1px;
-                height: 1px;
+                width: 1px * Theme.ui-scale;
+                height: 1px * Theme.ui-scale;
                 background: transparent;
             }
         }
@@ -99,7 +99,7 @@ export component FontSettingsPage inherits Rectangle {
             label: @tr("Cursor shape");
             desc: @tr("Choose the terminal insertion cursor shape");
             HorizontalLayout {
-                spacing: 5px;
+                spacing: 5px * Theme.ui-scale;
                 CursorStyleButton {
                     label: @tr("Block");
                     cursor-kind: "block";
@@ -127,7 +127,7 @@ export component FontSettingsPage inherits Rectangle {
             label: @tr("Cursor color");
             desc: @tr("Enter a hexadecimal RGB color");
             CursorColorInput {
-                width: 100px;
+                width: 100px * Theme.ui-scale;
                 value <=> root.term-cursor-color-hex;
                 preview-color: root.term-cursor-color;
                 apply-color(v) => { return root.set-term-cursor-color(v); }
@@ -153,16 +153,18 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 52px;
+            height: 52px * Theme.ui-scale;
             background: Theme.term-bg;
-            border-radius: 6px;
-            border-width: 1px;
+            border-radius: 6px * Theme.ui-scale;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-subtle;
             Text {
-                x: 12px;
+                x: 12px * Theme.ui-scale;
                 text: "ZinTerm ~$ echo preview 0123";
                 font-family: Theme.term-font-family;
-                font-size: Theme.term-font-size;
+                // Preview is settings chrome: zoom with UI scale. Actual terminal
+                // cell size still uses bare Theme.term-font-size (#100).
+                font-size: Theme.term-font-size * Theme.ui-scale;
                 font-weight: Theme.term-font-bold ? 700 : 400;
                 color: Theme.term-fg;
                 vertical-alignment: center;
@@ -171,7 +173,7 @@ export component FontSettingsPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 10px;
+            height: 10px * Theme.ui-scale;
         }
     }
 }

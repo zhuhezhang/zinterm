@@ -330,6 +330,8 @@ export component TerminalView inherits Rectangle {
     // font the spans below are actually rendered with.  (Forcing a hard-coded
     // minimum here is dangerous: if the spans fall back to a system font, a
     // mismatched cell-w garbles the grid.  Keep them derived from one source.)
+    // Intentionally NOT multiplied by Theme.ui-scale — terminal glyphs follow
+    // term-font-size only (UI zoom must not change the PTY grid).
     property <length> cell-w: max(1px, cell-probe.preferred-width / 50);
     property <length> cell-h: max(1px, cell-probe.preferred-height * root.terminal-line-spacing);
     // Usable text box = root.width minus the 10px left/right padding of
@@ -420,13 +422,13 @@ export component TerminalView inherits Rectangle {
             // Collapsed → side dock shows the 36px ToolStrip; top/bottom keep the
             // full toolbar row tall enough for the path field (Theme.toolbar-row-height).
             property <length> sf-w: root.zen-mode || !root.sftp-available ? 0px
-                : root.sftp-shut ? 36px
-                : root.sftp-horizontal ? max(300px, root.sftp-panel-width)
+                : root.sftp-shut ? 36px * Theme.ui-scale
+                : root.sftp-horizontal ? max(300px * Theme.ui-scale, root.sftp-panel-width)
                 : root.sftp-panel-width;
             property <length> sf-h: root.zen-mode || !root.sftp-available ? 0px
-                : root.sftp-shut ? (root.sftp-horizontal ? 36px : Theme.toolbar-row-height)
+                : root.sftp-shut ? (root.sftp-horizontal ? 36px * Theme.ui-scale : Theme.toolbar-row-height)
                 : root.sftp-panel-height;
-            property <length> sp: root.zen-mode || !root.sftp-available || root.sftp-shut ? 0px : 4px;
+            property <length> sp: root.zen-mode || !root.sftp-available || root.sftp-shut ? 0px : 4px * Theme.ui-scale;
             // The collapsed bar (sf-h) already reserves the bottom strip now.
             property <length> bottom-strip-h: 0px;
 
@@ -617,7 +619,7 @@ export component TerminalView inherits Rectangle {
                                         background: (idx + 1 == root.find-match-index)
                                             ? Theme.accent.with-alpha(0.55)
                                             : Theme.warning.with-alpha(0.40);
-                                        border-radius: 2px;
+                                        border-radius: 2px * Theme.ui-scale;
                                     }
 
                                     // Each span = a background fill (transparent for the
@@ -759,18 +761,18 @@ export component TerminalView inherits Rectangle {
                                     ctx-menu := PopupWindow {
                                         x: root.ctx-x;
                                         y: root.ctx-y;
-                                        width: 132px;
+                                        width: 132px * Theme.ui-scale;
                                         height: ctx-menu-vl.preferred-height;
                                         Rectangle {
                                             background: Theme.popup-bg;
                                             border-radius: Theme.radius-sm;
-                                            border-width: 1px;
+                                            border-width: 1px * Theme.ui-scale;
                                             border-color: Theme.border-strong;
-                                            drop-shadow-blur: 12px;
+                                            drop-shadow-blur: 12px * Theme.ui-scale;
                                             drop-shadow-color: #00000060;
                                             ctx-menu-vl := VerticalLayout {
-                                                padding: 4px;
-                                                spacing: 1px;
+                                                padding: 4px * Theme.ui-scale;
+                                                spacing: 1px * Theme.ui-scale;
                                                 MenuItem {
                                                     icon: "\u{E14D}";
                                                     label: @tr("Copy");
@@ -942,12 +944,12 @@ export component TerminalView inherits Rectangle {
                         if root.scroll-max > 0 && !root.is-alt-screen: Rectangle {
                             property <bool> expanded: track-ta.has-hover || track-ta.pressed;
                             // Distance from flickable right edge to the thumb's right edge.
-                            property <length> edge-inset: 12px;
-                            property <length> thumb-w: self.expanded ? 6px : 2px;
-                            width: self.edge-inset + self.thumb-w + 4px;
+                            property <length> edge-inset: 12px * Theme.ui-scale;
+                            property <length> thumb-w: self.expanded ? 6px * Theme.ui-scale : 2px * Theme.ui-scale;
+                            width: self.edge-inset + self.thumb-w + 4px * Theme.ui-scale;
                             x: flickable.x + flickable.width - self.width;
-                            y: flickable.y + 4px;
-                            height: flickable.height - 8px;
+                            y: flickable.y + 4px * Theme.ui-scale;
+                            height: flickable.height - 8px * Theme.ui-scale;
                             track-ta := TouchArea {
                                 moved => {
                                     if (self.pressed) {
@@ -965,9 +967,9 @@ export component TerminalView inherits Rectangle {
                                 property <float> total: root.scroll-max + root.term-rows;
                                 width: parent.thumb-w;
                                 x: parent.width - parent.edge-inset - self.width;
-                                height: max(28px, parent.height * root.term-rows / total);
+                                height: max(28px * Theme.ui-scale, parent.height * root.term-rows / total);
                                 y: (parent.height - self.height) * (root.scroll-max - root.scroll-offset) / max(1, root.scroll-max);
-                                border-radius: parent.expanded ? 3px : 1px;
+                                border-radius: parent.expanded ? 3px * Theme.ui-scale : 1px * Theme.ui-scale;
                                 background: parent.expanded
                                     ? Theme.text-secondary : Theme.border-strong;
                                 animate width { duration: 100ms; }
@@ -976,10 +978,10 @@ export component TerminalView inherits Rectangle {
                         }
 
                         if root.find-active: FindBar {
-                            x: max(8px, parent.width - self.width - 10px);
-                            y: 8px;
-                            width: min(460px, parent.width - 16px);
-                            height: 40px;
+                            x: max(8px * Theme.ui-scale, parent.width - self.width - 10px * Theme.ui-scale);
+                            y: 8px * Theme.ui-scale;
+                            width: min(460px * Theme.ui-scale, parent.width - 16px * Theme.ui-scale);
+                            height: 40px * Theme.ui-scale;
                             emit-find-query(query) => { root.emit-find-query(query); }
                             close-find => { root.close-find(); }
                             find-next => { root.find-next(); }

@@ -10,7 +10,7 @@ export component SessionListHeader inherits Rectangle {
     property <bool> resizing-host: false;
 
     // Match SessionRow / group-header: padding 4+4 + icon-w.
-    height: 4px + SessionColLayout.icon-w + 4px;
+    height: 4px * Theme.ui-scale + SessionColLayout.icon-w + 4px * Theme.ui-scale;
     border-radius: Theme.radius-sm;
     background: Theme.bg-root;
     clip: true;
@@ -50,8 +50,8 @@ export component SessionListHeader inherits Rectangle {
             width: SessionColLayout.split-w;
             background: name-split.pressed || root.resizing-name ? Theme.accent : Theme.border-subtle;
             name-split := TouchArea {
-                x: -3px;
-                width: parent.width + 6px;
+                x: -3px * Theme.ui-scale;
+                width: parent.width + 6px * Theme.ui-scale;
                 mouse-cursor: ew-resize;
                 pointer-event(ev) => {
                     if (ev.kind == PointerEventKind.down) {
@@ -97,8 +97,8 @@ export component SessionListHeader inherits Rectangle {
             width: SessionColLayout.split-w;
             background: host-split.pressed || root.resizing-host ? Theme.accent : Theme.border-subtle;
             host-split := TouchArea {
-                x: -3px;
-                width: parent.width + 6px;
+                x: -3px * Theme.ui-scale;
+                width: parent.width + 6px * Theme.ui-scale;
                 mouse-cursor: ew-resize;
                 pointer-event(ev) => {
                     if (ev.kind == PointerEventKind.down) {

@@ -8,7 +8,7 @@ export component MenuItem inherits Rectangle {
     in property <string> label;
     callback clicked();
 
-    height: 28px;
+    height: 28px * Theme.ui-scale;
     border-radius: Theme.radius-sm;
     background: ta.has-hover ? Theme.bg-hover : transparent;
 
@@ -18,9 +18,9 @@ export component MenuItem inherits Rectangle {
     }
 
     HorizontalLayout {
-        padding-left: 8px;
-        padding-right: 8px;
-        spacing: 8px;
+        padding-left: 8px * Theme.ui-scale;
+        padding-right: 8px * Theme.ui-scale;
+        spacing: 8px * Theme.ui-scale;
         Text {
             text: root.icon;
             font-family: "Material Icons";
@@ -46,13 +46,13 @@ export component FindToggle inherits Rectangle {
     in property <string> tip;
     callback toggled(bool);
 
-    width: 24px;
-    height: 24px;
-    border-radius: 3px;
+    width: 24px * Theme.ui-scale;
+    height: 24px * Theme.ui-scale;
+    border-radius: 3px * Theme.ui-scale;
     background: root.on
         ? Theme.accent.with-alpha(0.35)
         : (ta.has-hover ? Theme.bg-hover : transparent);
-    border-width: root.on ? 1px : 0;
+    border-width: root.on ? 1px * Theme.ui-scale : 0;
     border-color: Theme.accent.with-alpha(0.7);
 
     Text {

@@ -51,10 +51,10 @@ component SegOption inherits Rectangle {
     in property <string> label;
     in property <bool> active;
     callback clicked();
-    height: 30px;
+    height: 30px * Theme.ui-scale;
     horizontal-stretch: 1;
     border-radius: Theme.radius-sm;
-    border-width: 1px;
+    border-width: 1px * Theme.ui-scale;
     background: active ? Theme.accent : Theme.bg-root;
     border-color: active ? Theme.accent : Theme.border-subtle;
     Text {
@@ -333,17 +333,17 @@ export component SessionDialog inherits Rectangle {
         }
 
         Rectangle {
-            width: 600px;
+            width: 600px * Theme.ui-scale;
             // Height follows the content, but never exceeds the window — past that
             // the body scrolls.
-            height: min(body.preferred-height + 53px, parent.height - 40px);
+            height: min(body.preferred-height + 53px * Theme.ui-scale, parent.height - 40px * Theme.ui-scale);
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             background: Theme.popup-bg;
             border-radius: Theme.radius-lg;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #00000080;
 
             // Prevent backdrop click from propagating when user clicks inside the card.
@@ -359,15 +359,15 @@ export component SessionDialog inherits Rectangle {
 
                 Rectangle {
                     width: 100%;
-                    height: 52px;
+                    height: 52px * Theme.ui-scale;
                     background: Theme.bg-panel-alt;
                     border-top-left-radius: Theme.radius-lg;
                     border-top-right-radius: Theme.radius-lg;
 
                     HorizontalLayout {
-                        padding-left: 16px;
-                        padding-right: 10px;
-                        spacing: 10px;
+                        padding-left: 16px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
+                        spacing: 10px * Theme.ui-scale;
 
                         Text {
                             text: is-editing ? @tr("Edit session") : @tr("New session");
@@ -380,8 +380,8 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         Rectangle {
-                            width: 32px;
-                            height: 32px;
+                            width: 32px * Theme.ui-scale;
+                            height: 32px * Theme.ui-scale;
                             y: (parent.height - self.height) / 2;
                             border-radius: Theme.radius-sm;
                             background: close-ta.has-hover ? Theme.bg-hover : transparent;
@@ -394,7 +394,7 @@ export component SessionDialog inherits Rectangle {
                                 text: "\u{E5CD}";
                                 font-family: "Material Icons";
                                 color: Theme.text-secondary;
-                                font-size: 18px;
+                                font-size: 18px * Theme.ui-scale;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }
@@ -404,7 +404,7 @@ export component SessionDialog inherits Rectangle {
 
                 Rectangle {
                     width: 100%;
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
@@ -414,12 +414,12 @@ export component SessionDialog inherits Rectangle {
                     viewport-width: self.width;
                     viewport-height: body.preferred-height;
                     body := VerticalLayout {
-                        padding: 16px;
-                        spacing: 12px;
+                        padding: 16px * Theme.ui-scale;
+                        spacing: 12px * Theme.ui-scale;
 
                         // Session type selector (always shown).
                         HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 Text {
@@ -434,7 +434,7 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 6px;
+                                spacing: 6px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 SegOption {
                                     label: "SSH";
@@ -521,7 +521,7 @@ export component SessionDialog inherits Rectangle {
 
                         // ── SSH / Telnet share host + port ──────────────────────────────
                         if root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             LabeledInput {
                                 input-background: Theme.bg-elevated;
                                 idle-border: Theme.border-strong;
@@ -549,7 +549,7 @@ export component SessionDialog inherits Rectangle {
 
                         // Inline error when a host-less SSH/Telnet session is submitted (#110).
                         if root.host-missing && root.draft-host == "" && root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             Text {
                                 width: root.form-label-width;
                             }
@@ -573,7 +573,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         if root.draft-kind == "ssh": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 Text {
@@ -588,7 +588,7 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 6px;
+                                spacing: 6px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 SegOption {
                                     label: @tr("Password");
@@ -617,11 +617,11 @@ export component SessionDialog inherits Rectangle {
 
                         // Path vs pasted PEM/PPK is detected automatically from the text (#auto-key).
                         if root.draft-kind == "ssh" && root.draft-auth == "key": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 height: key-label.preferred-height;
-                                y: 8px;
+                                y: 8px * Theme.ui-scale;
                                 key-label := Text {
                                     width: 100%;
                                     text: @tr("Private key");
@@ -638,11 +638,11 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 8px;
+                                spacing: 8px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 BorderedTextArea {
                                     horizontal-stretch: 1;
-                                    area-height: 96px;
+                                    area-height: 96px * Theme.ui-scale;
                                     idle-border: Theme.border-strong;
                                     area-background: Theme.bg-elevated;
                                     // Unified field: file path or key body (classified on submit).
@@ -662,11 +662,11 @@ export component SessionDialog inherits Rectangle {
                                 }
 
                                 Rectangle {
-                                    width: 64px;
-                                    height: 32px;
+                                    width: 64px * Theme.ui-scale;
+                                    height: 32px * Theme.ui-scale;
                                     y: 0px;
                                     border-radius: Theme.radius-sm;
-                                    border-width: 1px;
+                                    border-width: 1px * Theme.ui-scale;
                                     border-color: Theme.border-subtle;
                                     background: browse-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
                                     Text {
@@ -700,7 +700,7 @@ export component SessionDialog inherits Rectangle {
 
                         // ── Serial-only fields ──────────────────────────────────────────
                         if root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 Text {
@@ -715,7 +715,7 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 8px;
+                                spacing: 8px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 EditableCombo {
                                     horizontal-stretch: 1;
@@ -727,10 +727,10 @@ export component SessionDialog inherits Rectangle {
                                 }
 
                                 Rectangle {
-                                    width: 32px;
-                                    height: 32px;
+                                    width: 32px * Theme.ui-scale;
+                                    height: 32px * Theme.ui-scale;
                                     border-radius: Theme.radius-sm;
-                                    border-width: 1px;
+                                    border-width: 1px * Theme.ui-scale;
                                     border-color: Theme.border-subtle;
                                     background: refresh-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
                                     refresh-ta := TouchArea {
@@ -742,7 +742,7 @@ export component SessionDialog inherits Rectangle {
                                         text: "\u{E5D5}";
                                         font-family: "Material Icons";
                                         color: Theme.text-secondary;
-                                        font-size: 18px;
+                                        font-size: 18px * Theme.ui-scale;
                                         horizontal-alignment: center;
                                         vertical-alignment: center;
                                     }
@@ -752,7 +752,7 @@ export component SessionDialog inherits Rectangle {
 
                         // Inline error when a serial session is submitted without a port.
                         if root.serial-port-missing && root.draft-serial-port == "" && root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             Text {
                                 width: root.form-label-width;
                             }
@@ -793,7 +793,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         if root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             EditableCombo {
                                 horizontal-stretch: 1;
                                 label: @tr("Data bits");
@@ -813,7 +813,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         if root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             LabeledCombo {
                                 horizontal-stretch: 1;
                                 label: @tr("Parity");
@@ -832,13 +832,13 @@ export component SessionDialog inherits Rectangle {
 
                         // ── Backspace mode + terminal encoding (all connection kinds) ──
                         HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
 
                             HorizontalLayout {
-                                spacing: 10px;
+                                spacing: 10px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 Rectangle {
-                                    height: 32px;
+                                    height: 32px * Theme.ui-scale;
                                     width: root.form-label-width;
                                     bs-label := Text {
                                         text: @tr("Backspace mode");
@@ -858,7 +858,7 @@ export component SessionDialog inherits Rectangle {
                                 }
 
                                 ComboBox {
-                                    height: 32px;
+                                    height: 32px * Theme.ui-scale;
                                     horizontal-stretch: 1;
                                     model: [@tr("Auto"), @tr("DEL (0x7F)"), @tr("BS (0x08)")];
                                     current-value: root.draft-backspace-mode == "del"
@@ -888,7 +888,7 @@ export component SessionDialog inherits Rectangle {
 
                         // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
                         HorizontalLayout {
-                            spacing: 10px;
+                            spacing: 10px * Theme.ui-scale;
                             alignment: start;
                             cross-axis-alignment: center;
                             Rectangle {
@@ -896,21 +896,21 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             if root.draft-kind == "ssh": HorizontalLayout {
-                                spacing: 8px;
+                                spacing: 8px * Theme.ui-scale;
                                 alignment: start;
                                 cross-axis-alignment: center;
                                 Rectangle {
-                                    width: 18px;
-                                    height: 18px;
-                                    border-radius: 4px;
-                                    border-width: 1px;
+                                    width: 18px * Theme.ui-scale;
+                                    height: 18px * Theme.ui-scale;
+                                    border-radius: 4px * Theme.ui-scale;
+                                    border-width: 1px * Theme.ui-scale;
                                     border-color: root.draft-enable-sftp ? Theme.accent : Theme.border-strong;
                                     background: root.draft-enable-sftp ? Theme.accent : transparent;
                                     Text {
                                         text: root.draft-enable-sftp ? "\u{E5CA}" : "";
                                         font-family: "Material Icons";
                                         color: white;
-                                        font-size: 14px;
+                                        font-size: 14px * Theme.ui-scale;
                                         width: 100%;
                                         height: 100%;
                                         horizontal-alignment: center;
@@ -925,7 +925,7 @@ export component SessionDialog inherits Rectangle {
 
                                 Rectangle {
                                     width: sftp-label.preferred-width;
-                                    height: 18px;
+                                    height: 18px * Theme.ui-scale;
                                     sftp-label := Text {
                                         text: @tr("Enable SFTP");
                                         color: Theme.text-primary;
@@ -945,21 +945,21 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 8px;
+                                spacing: 8px * Theme.ui-scale;
                                 alignment: start;
                                 cross-axis-alignment: center;
                                 Rectangle {
-                                    width: 18px;
-                                    height: 18px;
-                                    border-radius: 4px;
-                                    border-width: 1px;
+                                    width: 18px * Theme.ui-scale;
+                                    height: 18px * Theme.ui-scale;
+                                    border-radius: 4px * Theme.ui-scale;
+                                    border-width: 1px * Theme.ui-scale;
                                     border-color: root.draft-enable-command-panel ? Theme.accent : Theme.border-strong;
                                     background: root.draft-enable-command-panel ? Theme.accent : transparent;
                                     Text {
                                         text: root.draft-enable-command-panel ? "\u{E5CA}" : "";
                                         font-family: "Material Icons";
                                         color: white;
-                                        font-size: 14px;
+                                        font-size: 14px * Theme.ui-scale;
                                         width: 100%;
                                         height: 100%;
                                         horizontal-alignment: center;
@@ -974,7 +974,7 @@ export component SessionDialog inherits Rectangle {
 
                                 Rectangle {
                                     width: cmd-panel-label.preferred-width;
-                                    height: 18px;
+                                    height: 18px * Theme.ui-scale;
                                     cmd-panel-label := Text {
                                         text: @tr("Enable command panel");
                                         color: Theme.text-primary;
@@ -994,22 +994,22 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             if root.draft-kind == "ssh": HorizontalLayout {
-                                spacing: 8px;
+                                spacing: 8px * Theme.ui-scale;
                                 alignment: start;
                                 cross-axis-alignment: center;
 
                                 Rectangle {
-                                    width: 18px;
-                                    height: 18px;
-                                    border-radius: 4px;
-                                    border-width: 1px;
+                                    width: 18px * Theme.ui-scale;
+                                    height: 18px * Theme.ui-scale;
+                                    border-radius: 4px * Theme.ui-scale;
+                                    border-width: 1px * Theme.ui-scale;
                                     border-color: root.draft-enable-prompt-setup ? Theme.accent : Theme.border-strong;
                                     background: root.draft-enable-prompt-setup ? Theme.accent : transparent;
                                     Text {
                                         text: root.draft-enable-prompt-setup ? "\u{E5CA}" : "";
                                         font-family: "Material Icons";
                                         color: white;
-                                        font-size: 14px;
+                                        font-size: 14px * Theme.ui-scale;
                                         width: 100%;
                                         height: 100%;
                                         horizontal-alignment: center;
@@ -1024,7 +1024,7 @@ export component SessionDialog inherits Rectangle {
 
                                 Rectangle {
                                     width: prompt-setup-label.preferred-width;
-                                    height: 18px;
+                                    height: 18px * Theme.ui-scale;
                                     prompt-setup-label := Text {
                                         text: @tr("Enable shell integration");
                                         color: Theme.text-primary;
@@ -1045,7 +1045,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         HorizontalLayout {
-                            spacing: 8px;
+                            spacing: 8px * Theme.ui-scale;
                             Rectangle {
                                 horizontal-stretch: 1;
                             }

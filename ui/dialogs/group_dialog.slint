@@ -1,6 +1,5 @@
 import { Theme } from "../shared/theme.slint";
-import { BorderedLineInput } from "../shared/widgets.slint";
-import { Button } from "std-widgets.slint";
+import { BorderedLineInput, GhostButton, PrimaryButton } from "../shared/widgets.slint";
 
 export component GroupDialog inherits Rectangle {
     in-out property <string> group-dialog-error;
@@ -36,19 +35,19 @@ export component GroupDialog inherits Rectangle {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 320px;
-            height: 170px;
+            width: 320px * Theme.ui-scale;
+            height: 170px * Theme.ui-scale;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #000000a0;
             TouchArea { }   // swallow inside clicks
 
             VerticalLayout {
-                padding: 8px;
-                spacing: 8px;
+                padding: 8px * Theme.ui-scale;
+                spacing: 8px * Theme.ui-scale;
                 Text {
                     text: root.group-dialog-mode == "rename"
                         ? (@tr("Rename group"))
@@ -98,21 +97,20 @@ export component GroupDialog inherits Rectangle {
                     text: root.group-dialog-error;
                     color: Theme.danger;
                     font-size: Theme.fs-xs;
-                    height: 20px;
+                    height: 20px * Theme.ui-scale;
                 }
 
                 HorizontalLayout {
                     alignment: end;
-                    spacing: 8px;
-                    Button {
+                    spacing: 8px * Theme.ui-scale;
+                    GhostButton {
                         text: @tr("Cancel");
                         clicked => { root.group-dialog-open = false; }
                     }
 
-                    Button {
+                    PrimaryButton {
                         text: @tr("OK");
-                        primary: true;
-                        enabled: root.group-dialog-name != "";
+                        disabled: root.group-dialog-name == "";
                         clicked => {
                             root.group-dialog-error = root.submit-group(
                                 root.group-dialog-orig,

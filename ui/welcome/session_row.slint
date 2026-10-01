@@ -7,8 +7,8 @@ export component SessionRow inherits Rectangle {
     in property <SessionInfo> session;
     in property <bool> compact;
     in property <bool> single-click-connect: false;
-    in property <length> col-name-width: 180px;
-    in property <length> col-host-width: 180px;
+    in property <length> col-name-width: 180px * Theme.ui-scale;
+    in property <length> col-host-width: 180px * Theme.ui-scale;
     callback connect();
     callback edit();
     callback duplicate();
@@ -46,7 +46,7 @@ export component SessionRow inherits Rectangle {
         session.conn-kind == "serial" || session.conn-kind == "local" ? "" : session.user;
     // Nest under the owning group: one indent step past the group's own depth.
     property <length> group-indent:
-        session.group == "" ? 0px : (session.group-depth + 1) * 16px;
+        session.group == "" ? 0px : (session.group-depth + 1) * 16px * Theme.ui-scale;
 
     border-radius: Theme.radius-sm;
     background: root.is-drag-source ? Theme.bg-active
@@ -98,8 +98,8 @@ export component SessionRow inherits Rectangle {
         moved => {
             if (root.press-dragging) {
                 if (!root.did-drag
-                    && (abs(self.mouse-x - root.grab-x) > 5px
-                    || abs(self.mouse-y - root.grab-y) > 5px)) {
+                    && (abs(self.mouse-x - root.grab-x) > 5px * Theme.ui-scale
+                    || abs(self.mouse-y - root.grab-y) > 5px * Theme.ui-scale)) {
                     root.did-drag = true;
                     root.begin-drag();
                 }
@@ -128,18 +128,18 @@ export component SessionRow inherits Rectangle {
         Rectangle {
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 10px;
+            drop-shadow-blur: 10px * Theme.ui-scale;
             drop-shadow-color: #00000050;
 
             menu-vl := VerticalLayout {
-                padding: 4px;
-                spacing: 2px;
+                padding: 4px * Theme.ui-scale;
+                spacing: 2px * Theme.ui-scale;
 
                 // Connect — available for every row, including built-ins.
                 Rectangle {
-                    height: 28px;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: conn-ta.has-hover ? Theme.bg-hover : transparent;
                     conn-ta := TouchArea {
@@ -149,9 +149,9 @@ export component SessionRow inherits Rectangle {
 
                     HorizontalLayout {
                         alignment: start;
-                        padding-left: 10px;
-                        padding-right: 10px;
-                        spacing: 8px;
+                        padding-left: 10px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
+                        spacing: 8px * Theme.ui-scale;
                         Text {
                             text: "\u{E037}";
                             font-family: "Material Icons";
@@ -171,7 +171,7 @@ export component SessionRow inherits Rectangle {
 
                 // Edit
                 if !root.system-row: Rectangle {
-                    height: 28px;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: edit-ta.has-hover ? Theme.bg-hover : transparent;
                     edit-ta := TouchArea {
@@ -181,9 +181,9 @@ export component SessionRow inherits Rectangle {
 
                     HorizontalLayout {
                         alignment: start;
-                        padding-left: 10px;
-                        padding-right: 10px;
-                        spacing: 8px;
+                        padding-left: 10px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
+                        spacing: 8px * Theme.ui-scale;
                         Text {
                             text: "\u{E3C9}";
                             font-family: "Material Icons";
@@ -203,7 +203,7 @@ export component SessionRow inherits Rectangle {
 
                 // Duplicate — clone this session as a starting point (#41).
                 if !root.system-row: Rectangle {
-                    height: 28px;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: dup-ta.has-hover ? Theme.bg-hover : transparent;
                     dup-ta := TouchArea {
@@ -213,9 +213,9 @@ export component SessionRow inherits Rectangle {
 
                     HorizontalLayout {
                         alignment: start;
-                        padding-left: 10px;
-                        padding-right: 10px;
-                        spacing: 8px;
+                        padding-left: 10px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
+                        spacing: 8px * Theme.ui-scale;
                         Text {
                             text: "\u{E14D}";
                             font-family: "Material Icons";
@@ -235,7 +235,7 @@ export component SessionRow inherits Rectangle {
 
                 // Delete (red tint)
                 if !root.system-row: Rectangle {
-                    height: 28px;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: del-ta.has-hover ? #cc333320 : transparent;
                     del-ta := TouchArea {
@@ -245,9 +245,9 @@ export component SessionRow inherits Rectangle {
 
                     HorizontalLayout {
                         alignment: start;
-                        padding-left: 10px;
-                        padding-right: 10px;
-                        spacing: 8px;
+                        padding-left: 10px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
+                        spacing: 8px * Theme.ui-scale;
                         Text {
                             text: "\u{E872}";
                             font-family: "Material Icons";
@@ -277,8 +277,8 @@ export component SessionRow inherits Rectangle {
         width: 100%;
         padding-left: SessionColLayout.pad-left + (root.compact ? root.group-indent : 0px);
         padding-right: SessionColLayout.pad-right;
-        padding-top: 4px;
-        padding-bottom: 4px;
+        padding-top: 4px * Theme.ui-scale;
+        padding-bottom: 4px * Theme.ui-scale;
         spacing: 0;
         // Slint 1.17+: `alignment` is the main axis (horizontal). Keep stretch so
         // column stretch factors work; trailing compact spacer eats leftover width.
@@ -290,7 +290,7 @@ export component SessionRow inherits Rectangle {
             width: SessionColLayout.icon-w;
             height: SessionColLayout.icon-w;
             y: (parent.height - self.height) / 2;
-            border-radius: 3px;
+            border-radius: 3px * Theme.ui-scale;
             background: Theme.bg-elevated;
             Text {
                 text: root.conn-icon;
@@ -303,7 +303,7 @@ export component SessionRow inherits Rectangle {
         }
 
         if root.compact: Rectangle {
-            width: 8px;
+            width: 8px * Theme.ui-scale;
         }
 
         // Natural-width label at the start of the row; trailing spacer absorbs
@@ -335,7 +335,7 @@ export component SessionRow inherits Rectangle {
                     width: SessionColLayout.icon-w;
                     height: SessionColLayout.icon-w;
                     y: (parent.height - self.height) / 2;
-                    border-radius: 3px;
+                    border-radius: 3px * Theme.ui-scale;
                     background: Theme.bg-elevated;
                     Text {
                         text: root.conn-icon;

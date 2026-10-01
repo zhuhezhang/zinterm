@@ -7,7 +7,7 @@ export component NavItem inherits Rectangle {
     in property <bool> active;
     callback clicked();
     height: 30px * Theme.ui-scale;
-    border-radius: 6px;
+    border-radius: 6px * Theme.ui-scale;
     background: root.active ? Theme.bg-active : (ta.has-hover ? Theme.bg-hover : transparent);
     ta := TouchArea {
         mouse-cursor: pointer;
@@ -15,8 +15,8 @@ export component NavItem inherits Rectangle {
     }
 
     HorizontalLayout {
-        padding-left: 10px;
-        spacing: 9px;
+        padding-left: 10px * Theme.ui-scale;
+        spacing: 9px * Theme.ui-scale;
         Text {
             text: root.icon;
             font-family: "Material Icons";
@@ -62,14 +62,14 @@ export component SettingRow inherits Rectangle {
     in property <bool> show-divider: true;
     VerticalLayout {
         HorizontalLayout {
-            spacing: 14px;
-            padding-top: 9px;
-            padding-bottom: 9px;
+            spacing: 14px * Theme.ui-scale;
+            padding-top: 9px * Theme.ui-scale;
+            padding-bottom: 9px * Theme.ui-scale;
             VerticalLayout {
                 horizontal-stretch: 1;
                 alignment: center;
                 // 5px (was 3) so CJK desc ascent doesn't collide with the label.
-                spacing: 5px;
+                spacing: 5px * Theme.ui-scale;
                 Text {
                     text: root.label;
                     font-size: 13px * Theme.ui-scale;
@@ -98,7 +98,7 @@ export component SettingRow inherits Rectangle {
         }
 
         if root.show-divider: Rectangle {
-            height: 1px;
+            height: 1px * Theme.ui-scale;
             background: Theme.border-subtle;
         }
     }
@@ -111,18 +111,18 @@ export component Switch inherits Rectangle {
     in property <bool> on;
     in property <bool> enabled: true;
     callback toggled(bool);
-    width: 38px;
-    height: 22px;
-    border-radius: 11px;
+    width: 38px * Theme.ui-scale;
+    height: 22px * Theme.ui-scale;
+    border-radius: 11px * Theme.ui-scale;
     opacity: root.enabled ? 1.0 : 0.45;
     background: root.on ? Theme.accent : Theme.bg-active;
     animate background { duration: 120ms; }
     Rectangle {
-        width: 16px;
-        height: 16px;
-        border-radius: 8px;
-        y: 3px;
-        x: root.on ? parent.width - self.width - 3px : 3px;
+        width: 16px * Theme.ui-scale;
+        height: 16px * Theme.ui-scale;
+        border-radius: 8px * Theme.ui-scale;
+        y: 3px * Theme.ui-scale;
+        x: root.on ? parent.width - self.width - 3px * Theme.ui-scale : 3px * Theme.ui-scale;
         background: white;
         animate x {
             duration: 120ms;
@@ -145,16 +145,16 @@ export component Stepper inherits Rectangle {
     in property <int> step: 1;
     in property <string> unit;
     callback changed(int);
-    width: 112px;
-    height: 26px;
-    border-radius: 6px;
+    width: 112px * Theme.ui-scale;
+    height: 26px * Theme.ui-scale;
+    border-radius: 6px * Theme.ui-scale;
     background: Theme.bg-elevated;
-    border-width: 1px;
+    border-width: 1px * Theme.ui-scale;
     border-color: Theme.border-subtle;
     clip: true;
     HorizontalLayout {
         Rectangle {
-            width: 30px;
+            width: 30px * Theme.ui-scale;
             border-top-left-radius: Theme.radius-md;
             border-bottom-left-radius: Theme.radius-md;
             background: minus-ta.has-hover ? Theme.bg-hover : transparent;
@@ -174,7 +174,7 @@ export component Stepper inherits Rectangle {
         }
 
         Rectangle {
-            width: 1px;
+            width: 1px * Theme.ui-scale;
             background: Theme.border-subtle;
         }
 
@@ -188,12 +188,12 @@ export component Stepper inherits Rectangle {
         }
 
         Rectangle {
-            width: 1px;
+            width: 1px * Theme.ui-scale;
             background: Theme.border-subtle;
         }
 
         Rectangle {
-            width: 30px;
+            width: 30px * Theme.ui-scale;
             border-top-right-radius: Theme.radius-md;
             border-bottom-right-radius: Theme.radius-md;
             background: plus-ta.has-hover ? Theme.bg-hover : transparent;
@@ -220,10 +220,10 @@ export component CursorStyleButton inherits Rectangle {
     in property <string> cursor-kind;
     in property <bool> selected;
     callback clicked();
-    width: 74px;
-    height: 30px;
-    border-radius: 6px;
-    border-width: 1px;
+    width: 74px * Theme.ui-scale;
+    height: 30px * Theme.ui-scale;
+    border-radius: 6px * Theme.ui-scale;
+    border-width: 1px * Theme.ui-scale;
     border-color: root.selected ? Theme.accent : Theme.border-subtle;
     background: root.selected ? Theme.bg-active : (cursor-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated);
     cursor-ta := TouchArea {
@@ -232,24 +232,24 @@ export component CursorStyleButton inherits Rectangle {
     }
 
     HorizontalLayout {
-        padding-left: 7px;
-        padding-right: 7px;
-        spacing: 6px;
+        padding-left: 7px * Theme.ui-scale;
+        padding-right: 7px * Theme.ui-scale;
+        spacing: 6px * Theme.ui-scale;
         alignment: center;
         Rectangle {
-            width: 14px;
+            width: 14px * Theme.ui-scale;
             height: 100%;
             background: transparent;
             Rectangle {
                 y: (parent.height - self.height) / 2;
-                width: 14px;
-                height: 18px;
+                width: 14px * Theme.ui-scale;
+                height: 18px * Theme.ui-scale;
                 background: Theme.term-bg;
                 Rectangle {
-                    x: 2px;
-                    y: root.cursor-kind == "underline" ? parent.height - 3px : 2px;
-                    width: root.cursor-kind == "bar" ? 2px : 10px;
-                    height: root.cursor-kind == "underline" ? 2px : 14px;
+                    x: 2px * Theme.ui-scale;
+                    y: root.cursor-kind == "underline" ? parent.height - 3px * Theme.ui-scale : 2px * Theme.ui-scale;
+                    width: root.cursor-kind == "bar" ? 2px * Theme.ui-scale : 10px * Theme.ui-scale;
+                    height: root.cursor-kind == "underline" ? 2px * Theme.ui-scale : 14px * Theme.ui-scale;
                     background: Theme.term-fg;
                 }
             }
@@ -269,10 +269,10 @@ export component CursorPaletteSwatch inherits Rectangle {
     in property <color> swatch-color;
     in property <bool> selected;
     callback chosen(string);
-    width: 26px;
-    height: 26px;
-    border-radius: 5px;
-    border-width: root.selected ? 2px : 1px;
+    width: 26px * Theme.ui-scale;
+    height: 26px * Theme.ui-scale;
+    border-radius: 5px * Theme.ui-scale;
+    border-width: root.selected ? 2px * Theme.ui-scale : 1px * Theme.ui-scale;
     border-color: root.selected ? Theme.accent : Theme.border-strong;
     background: root.swatch-color;
     swatch-ta := TouchArea {
@@ -286,19 +286,19 @@ export component CursorPaletteSwatch inherits Rectangle {
 export component CursorColorInput inherits Rectangle {
     in-out property <string> value;
     in property <color> preview-color;
-    in property <length> input-height: 29px;
+    in property <length> input-height: 29px * Theme.ui-scale;
     property <bool> valid: true;
     callback apply-color(string) -> bool;
-    width: 160px;
+    width: 160px * Theme.ui-scale;
     height: root.input-height;
 
     HorizontalLayout {
-        spacing: 6px;
+        spacing: 6px * Theme.ui-scale;
         Rectangle {
             width: root.input-height;
             height: root.input-height;
-            border-radius: 6px;
-            border-width: 1px;
+            border-radius: 6px * Theme.ui-scale;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
             background: root.preview-color;
             color-button := TouchArea {
@@ -310,7 +310,7 @@ export component CursorColorInput inherits Rectangle {
         color-input := BorderedLineInput {
             horizontal-stretch: 1;
             height: root.input-height;
-            pad-x: 8px;
+            pad-x: 8px * Theme.ui-scale;
             text <=> root.value;
             font-family: Theme.term-font-family;
             font-size: 12px * Theme.ui-scale;
@@ -321,19 +321,19 @@ export component CursorColorInput inherits Rectangle {
 
     color-picker := PopupWindow {
         x: parent.width - self.width;
-        y: parent.height + 4px;
-        width: 210px;
-        height: 160px;
+        y: parent.height + 4px * Theme.ui-scale;
+        width: 210px * Theme.ui-scale;
+        height: 160px * Theme.ui-scale;
         Rectangle {
             background: Theme.popup-bg;
-            border-radius: 8px;
-            border-width: 1px;
+            border-radius: 8px * Theme.ui-scale;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 12px;
+            drop-shadow-blur: 12px * Theme.ui-scale;
             drop-shadow-color: #00000060;
             VerticalLayout {
-                padding: 10px;
-                spacing: 7px;
+                padding: 10px * Theme.ui-scale;
+                spacing: 7px * Theme.ui-scale;
                 Text {
                     text: root.value;
                     color: Theme.text-secondary;
@@ -343,7 +343,7 @@ export component CursorColorInput inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    spacing: 6px;
+                    spacing: 6px * Theme.ui-scale;
                     CursorPaletteSwatch {
                         hex: "#D4D4D4";
                         swatch-color: #D4D4D4;
@@ -388,7 +388,7 @@ export component CursorColorInput inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    spacing: 6px;
+                    spacing: 6px * Theme.ui-scale;
                     CursorPaletteSwatch {
                         hex: "#00E676";
                         swatch-color: #00E676;
@@ -433,7 +433,7 @@ export component CursorColorInput inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    spacing: 6px;
+                    spacing: 6px * Theme.ui-scale;
                     CursorPaletteSwatch {
                         hex: "#F48FB1";
                         swatch-color: #F48FB1;
@@ -478,7 +478,7 @@ export component CursorColorInput inherits Rectangle {
                 }
 
                 HorizontalLayout {
-                    spacing: 6px;
+                    spacing: 6px * Theme.ui-scale;
                     CursorPaletteSwatch {
                         hex: "#B39DDB";
                         swatch-color: #B39DDB;
@@ -532,19 +532,19 @@ export component CursorColorInput inherits Rectangle {
 export component WallpaperSwatch inherits Rectangle {
     in property <bool> selected;
     callback clicked();
-    width: 120px;
-    height: 74px;
-    border-radius: 8px;
-    border-width: root.selected ? 3px : 1px;
+    width: 120px * Theme.ui-scale;
+    height: 74px * Theme.ui-scale;
+    border-radius: 8px * Theme.ui-scale;
+    border-width: root.selected ? 3px * Theme.ui-scale : 1px * Theme.ui-scale;
     border-color: root.selected ? Theme.accent : Theme.border-strong;
     clip: true;
     @children
     if root.selected: Rectangle {
-        x: parent.width - self.width - 5px;
-        y: 5px;
-        width: 18px;
-        height: 18px;
-        border-radius: 9px;
+        x: parent.width - self.width - 5px * Theme.ui-scale;
+        y: 5px * Theme.ui-scale;
+        width: 18px * Theme.ui-scale;
+        height: 18px * Theme.ui-scale;
+        border-radius: 9px * Theme.ui-scale;
         background: Theme.accent;
         Text {
             text: "\u{E5CA}"; // check

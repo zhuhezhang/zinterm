@@ -4,19 +4,19 @@ import { ScrollView } from "std-widgets.slint";
 component ShortcutRow inherits Rectangle {
     in property <string> keys;
     in property <string> desc;
-    height: 28px;
+    height: 28px * Theme.ui-scale;
     HorizontalLayout {
-        spacing: 10px;
+        spacing: 10px * Theme.ui-scale;
         Rectangle {
-            width: 116px;
+            width: 116px * Theme.ui-scale;
             chip := Rectangle {
                 x: 0;
                 y: (parent.height - self.height) / 2;
-                width: min(parent.width, kt.preferred-width + 16px);
-                height: 20px;
+                width: min(parent.width, kt.preferred-width + 16px * Theme.ui-scale);
+                height: 20px * Theme.ui-scale;
                 background: Theme.bg-root;
                 border-radius: Theme.radius-sm;
-                border-width: 1px;
+                border-width: 1px * Theme.ui-scale;
                 border-color: Theme.border-strong;
                 kt := Text {
                     text: root.keys;
@@ -71,19 +71,19 @@ export component ShortcutsDialog inherits Rectangle {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 424px;
-            height: 432px;
+            width: 424px * Theme.ui-scale;
+            height: 432px * Theme.ui-scale;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #000000a0;
             TouchArea { }
 
             VerticalLayout {
-                padding: 8px;
-                spacing: 5px;
+                padding: 8px * Theme.ui-scale;
+                spacing: 5px * Theme.ui-scale;
 
                 HorizontalLayout {
                     Text {
@@ -96,8 +96,8 @@ export component ShortcutsDialog inherits Rectangle {
                     }
 
                     Rectangle {
-                        width: 22px;
-                        height: 22px;
+                        width: 22px * Theme.ui-scale;
+                        height: 22px * Theme.ui-scale;
                         border-radius: Theme.radius-sm;
                         background: sc-close.has-hover ? Theme.bg-hover : transparent;
                         sc-close := TouchArea {
@@ -120,7 +120,7 @@ export component ShortcutsDialog inherits Rectangle {
                 ScrollView {
                     vertical-stretch: 1;
                     VerticalLayout {
-                        spacing: 5px;
+                        spacing: 5px * Theme.ui-scale;
 
                         Text {
                             text: @tr("Tabs");
@@ -155,7 +155,7 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Rectangle {
-                            height: 6px;
+                            height: 6px * Theme.ui-scale;
                         }
 
                         Text {
@@ -205,7 +205,7 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Rectangle {
-                            height: 6px;
+                            height: 6px * Theme.ui-scale;
                         }
 
                         Text {
@@ -230,7 +230,7 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Rectangle {
-                            height: 6px;
+                            height: 6px * Theme.ui-scale;
                         }
 
                         Text {
@@ -270,7 +270,7 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         Rectangle {
-                            height: 2px;
+                            height: 2px * Theme.ui-scale;
                         }
                     }
                 }

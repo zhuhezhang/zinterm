@@ -115,10 +115,14 @@ export global Theme {
     in-out property <bool> window-focused: true;
 
     // Global UI scale (#100/#117/#118). Rust sets this from the saved setting;
-    // all font sizes and spacing/radii below multiply by it, so the whole UI
-    // (including the settings panel) grows/shrinks live. The terminal font has
-    // its own size setting and is not affected by this.
+    // lengths across the UI multiply by it for a browser-like zoom. The terminal
+    // font has its own size setting and is not affected by this.
     in-out property <float> ui-scale: 1.0;
+
+    // Multiply a base length by the global UI zoom.
+    pure function sp(base: length) -> length {
+        return base * root.ui-scale;
+    }
 
     // --- Typography --------------------------------------------------------
     out property <length> fs-xs: 11px * root.ui-scale;
@@ -127,9 +131,9 @@ export global Theme {
     out property <length> fs-lg: 15px * root.ui-scale;
     out property <length> fs-xl: 18px * root.ui-scale;
     // Compact single-line input chrome (command bar min height, SFTP path bar, …).
-    out property <length> input-min-height: root.fs-md + 17px;
-    // Single-row toolbar (input + 6px pad top/bottom), e.g. SFTP collapsed bar.
-    out property <length> toolbar-row-height: root.input-min-height + 12px;
+    out property <length> input-min-height: root.fs-md + 17px * root.ui-scale;
+    // Single-row toolbar (input + pad top/bottom), e.g. SFTP collapsed bar.
+    out property <length> toolbar-row-height: root.input-min-height + 12px * root.ui-scale;
 
     // Embedded glyph-complete monospace (Cascadia Mono under a unique name, #114).
     out property <string> font-mono: "MeatShell Mono";
@@ -155,4 +159,12 @@ export global Theme {
     out property <length> gap-sm: 8px * root.ui-scale;
     out property <length> gap-md: 12px * root.ui-scale;
     out property <length> gap-lg: 16px * root.ui-scale;
+
+    // Common control / icon sizes (browser-like zoom targets).
+    out property <length> ctrl-height: 30px * root.ui-scale;
+    out property <length> ctrl-height-sm: 26px * root.ui-scale;
+    out property <length> icon-sm: 16px * root.ui-scale;
+    out property <length> icon-md: 18px * root.ui-scale;
+    out property <length> icon-lg: 22px * root.ui-scale;
+    out property <length> titlebar-height: 38px * root.ui-scale;
 }

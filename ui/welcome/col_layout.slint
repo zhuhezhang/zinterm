@@ -1,9 +1,11 @@
+import { Theme } from "../shared/theme.slint";
+
 export global SessionColLayout {
-    out property <length> pad-left: 10px;
-    out property <length> pad-right: 10px;
-    out property <length> icon-w: 18px;
+    out property <length> pad-left: 10px * Theme.ui-scale;
+    out property <length> pad-right: 10px * Theme.ui-scale;
+    out property <length> icon-w: 18px * Theme.ui-scale;
     // Gap between session/group icon and label (matches group-header spacing).
-    out property <length> icon-gap: 4px;
-    out property <length> split-w: 1px;
-    out property <length> col-min: 64px;
+    out property <length> icon-gap: 4px * Theme.ui-scale;
+    out property <length> split-w: 1px * Theme.ui-scale;
+    out property <length> col-min: 64px * Theme.ui-scale;
 }

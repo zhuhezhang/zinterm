@@ -5,8 +5,8 @@ export component WinBtn inherits Rectangle {
     in property <string> icon;
     in property <bool> danger: false;
     callback clicked();
-    width: 30px;
-    height: 30px;
+    width: 30px * Theme.ui-scale;
+    height: 30px * Theme.ui-scale;
     border-radius: Theme.radius-sm;
     background: ta.has-hover ? (root.danger ? #e81123 : Theme.bg-hover) : transparent;
     animate background { duration: 90ms; }
@@ -19,14 +19,15 @@ export component WinBtn inherits Rectangle {
         text: root.icon;
         font-family: "Material Icons";
         color: (root.danger && ta.has-hover) ? white : Theme.text-secondary;
-        font-size: 17px;
+        font-size: 17px * Theme.ui-scale;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
 }
 
 // A 30×30 top-bar icon button with a hover tooltip. `active` keeps the hover
-// background lit (e.g. while its popup is open).
+// background lit (e.g. while its popup is open). Size is fixed (not ui-scale)
+// so theme / download / settings stay stable in the title bar.
 export component IconBtn inherits Rectangle {
     in property <string> icon;
     in property <brush> icon-color: Theme.text-secondary;

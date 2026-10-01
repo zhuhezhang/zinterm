@@ -3,8 +3,8 @@ import { Theme } from "../shared/theme.slint";
 export component CollapseButton inherits Rectangle {
     in property <string> glyph;
     callback clicked();
-    width: 24px;
-    height: 24px;
+    width: 24px * Theme.ui-scale;
+    height: 24px * Theme.ui-scale;
     border-radius: Theme.radius-sm;
     background: ta.has-hover ? Theme.bg-hover : transparent;
     ta := TouchArea {
@@ -16,7 +16,7 @@ export component CollapseButton inherits Rectangle {
         text: root.glyph;
         font-family: "Material Icons";
         color: Theme.text-secondary;
-        font-size: 16px;
+        font-size: 16px * Theme.ui-scale;
         horizontal-alignment: center;
         vertical-alignment: center;
     }

@@ -1,6 +1,5 @@
 import { Theme } from "../shared/theme.slint";
-import { BorderedLineInput } from "../shared/widgets.slint";
-import { Button } from "std-widgets.slint";
+import { BorderedLineInput, GhostButton, PrimaryButton } from "../shared/widgets.slint";
 
 export component SftpPromptDialog inherits Rectangle {
     in-out property <string> sftp-prompt-kind;
@@ -35,19 +34,19 @@ export component SftpPromptDialog inherits Rectangle {
         Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 300px;
-            height: 150px;
+            width: 300px * Theme.ui-scale;
+            height: 150px * Theme.ui-scale;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #000000a0;
             TouchArea { }   // swallow inside clicks
 
             VerticalLayout {
-                padding: 8px;
-                spacing: 8px;
+                padding: 8px * Theme.ui-scale;
+                spacing: 8px * Theme.ui-scale;
                 Text {
                     text: root.sftp-prompt-kind == "rename"
                         ? @tr("Rename")
@@ -98,16 +97,15 @@ export component SftpPromptDialog inherits Rectangle {
 
                 HorizontalLayout {
                     alignment: end;
-                    spacing: 8px;
-                    Button {
+                    spacing: 8px * Theme.ui-scale;
+                    GhostButton {
                         text: @tr("Cancel");
                         clicked => { root.sftp-prompt-open = false; }
                     }
 
-                    Button {
+                    PrimaryButton {
                         text: @tr("OK");
-                        primary: true;
-                        enabled: root.sftp-prompt-value != "";
+                        disabled: root.sftp-prompt-value == "";
                         clicked => {
                             root.sftp-prompt-submit(
                                 root.sftp-prompt-tab, root.sftp-prompt-kind,

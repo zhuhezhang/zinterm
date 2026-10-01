@@ -41,16 +41,16 @@ export component DownloadPopup inherits Rectangle {
     Rectangle {
         // Drop below the title-bar download button (far-right on macOS,
         // left of caption buttons on Windows/Linux).
-        x: parent.width - 364px;
-        y: root.titlebar-bottom + 4px;
-        width: 350px;
-        height: 400px;
+        x: parent.width - 364px * Theme.ui-scale;
+        y: root.titlebar-bottom + 4px * Theme.ui-scale;
+        width: 350px * Theme.ui-scale;
+        height: 400px * Theme.ui-scale;
         visible: root.download-open;
         background: Theme.popup-bg;
         border-radius: Theme.radius-md;
-        border-width: 1px;
+        border-width: 1px * Theme.ui-scale;
         border-color: Theme.border-strong;
-        drop-shadow-blur: 16px;
+        drop-shadow-blur: 16px * Theme.ui-scale;
         drop-shadow-color: #00000070;
 
         // Swallow pointer events so right-clicks don't fall through to the
@@ -58,8 +58,8 @@ export component DownloadPopup inherits Rectangle {
         TouchArea { }
 
         VerticalLayout {
-            padding: 8px;
-            spacing: 8px;
+            padding: 8px * Theme.ui-scale;
+            spacing: 8px * Theme.ui-scale;
 
             HorizontalLayout {
                 Text {
@@ -72,8 +72,8 @@ export component DownloadPopup inherits Rectangle {
                 }
 
                 Rectangle {
-                    width: 20px;
-                    height: 20px;
+                    width: 20px * Theme.ui-scale;
+                    height: 20px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: close-ta.has-hover ? Theme.bg-hover : transparent;
                     close-ta := TouchArea {
@@ -100,12 +100,12 @@ export component DownloadPopup inherits Rectangle {
 
             // Current path display
             Rectangle {
-                height: 26px;
+                height: 26px * Theme.ui-scale;
                 background: Theme.bg-root;
                 border-radius: Theme.radius-sm;
                 Text {
-                    x: 8px;
-                    width: parent.width - 16px;
+                    x: 8px * Theme.ui-scale;
+                    width: parent.width - 16px * Theme.ui-scale;
                     height: parent.height;
                     text: root.download-dir == "" ? @tr("(ask every time)") : root.download-dir;
                     color: root.download-dir == "" ? Theme.text-muted : Theme.text-primary;
@@ -122,14 +122,14 @@ export component DownloadPopup inherits Rectangle {
             }
 
             HorizontalLayout {
-                spacing: 8px;
+                spacing: 8px * Theme.ui-scale;
                 alignment: end;
 
                 Rectangle {
-                    width: 28px;
-                    height: 28px;
+                    width: 28px * Theme.ui-scale;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
-                    border-width: 1px;
+                    border-width: 1px * Theme.ui-scale;
                     border-color: Theme.border-subtle;
                     background: restore-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
                     restore-ta := TooltipArea {
@@ -142,19 +142,19 @@ export component DownloadPopup inherits Rectangle {
                         text: "\u{E5D5}";
                         font-family: "Material Icons";
                         color: Theme.text-secondary;
-                        font-size: 18px;
+                        font-size: 18px * Theme.ui-scale;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
                 }
 
                 Rectangle {
-                    height: 28px;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: pick-ta.has-hover ? Theme.accent-hover : Theme.accent;
                     HorizontalLayout {
-                        padding-left: 10px;
-                        padding-right: 10px;
+                        padding-left: 10px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
                         Text {
                             text: @tr("Choose save path");
                             color: #ffffff;
@@ -172,12 +172,12 @@ export component DownloadPopup inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 28px;
+                    height: 28px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: open-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
                     HorizontalLayout {
-                        padding-left: 10px;
-                        padding-right: 10px;
+                        padding-left: 10px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
                         Text {
                             text: @tr("Open folder");
                             color: Theme.text-primary;
@@ -196,7 +196,7 @@ export component DownloadPopup inherits Rectangle {
             }
 
             Rectangle {
-                height: 1px;
+                height: 1px * Theme.ui-scale;
                 background: Theme.border-subtle;
             }
 
@@ -211,8 +211,8 @@ export component DownloadPopup inherits Rectangle {
                 }
 
                 Rectangle {
-                    width: 44px;
-                    height: 20px;
+                    width: 44px * Theme.ui-scale;
+                    height: 20px * Theme.ui-scale;
                     border-radius: Theme.radius-sm;
                     background: clr-ta.has-hover ? Theme.bg-hover : transparent;
                     clr-ta := TouchArea {
@@ -237,7 +237,7 @@ export component DownloadPopup inherits Rectangle {
                 viewport-height: max(self.visible-height, xfer-col.preferred-height);
                 xfer-col := VerticalLayout {
                     alignment: start;
-                    spacing: 4px;
+                    spacing: 4px * Theme.ui-scale;
 
                     if root.transfers.length == 0: Text {
                         text: @tr("No transfers yet");
@@ -246,17 +246,17 @@ export component DownloadPopup inherits Rectangle {
                     }
 
                     for t in root.transfers: Rectangle {
-                        height: 36px;
+                        height: 36px * Theme.ui-scale;
                         border-radius: Theme.radius-sm;
                         background: Theme.bg-root;
                         VerticalLayout {
-                            padding-left: 8px;
-                            padding-right: 8px;
-                            padding-top: 4px;
-                            padding-bottom: 4px;
-                            spacing: 3px;
+                            padding-left: 8px * Theme.ui-scale;
+                            padding-right: 8px * Theme.ui-scale;
+                            padding-top: 4px * Theme.ui-scale;
+                            padding-bottom: 4px * Theme.ui-scale;
+                            spacing: 3px * Theme.ui-scale;
                             HorizontalLayout {
-                                spacing: 4px;
+                                spacing: 4px * Theme.ui-scale;
                                 Text {
                                     text: (t.is-upload ? "↑ " : "↓ ") + t.name;
                                     color: Theme.text-primary;
@@ -277,8 +277,8 @@ export component DownloadPopup inherits Rectangle {
                                     // Cancel button — only while the transfer is
                                     // active (0) or preparing (3) (#100).
                                     if t.state == 0 || t.state == 3: Rectangle {
-                                    width: 16px;
-                                    height: 16px;
+                                    width: 16px * Theme.ui-scale;
+                                    height: 16px * Theme.ui-scale;
                                     border-radius: Theme.radius-sm;
                                     background: cancel-ta.has-hover ? Theme.danger.with-alpha(0.18) : transparent;
                                     cancel-ta := TouchArea {
@@ -298,15 +298,15 @@ export component DownloadPopup inherits Rectangle {
                             }
                                 // progress bar
                                 Rectangle {
-                                height: 4px;
-                                border-radius: 2px;
+                                height: 4px * Theme.ui-scale;
+                                border-radius: 2px * Theme.ui-scale;
                                 background: Theme.bg-elevated;
                                 Rectangle {
                                     x: 0;
                                     y: 0;
                                     height: parent.height;
                                     width: parent.width * clamp(t.percent, 0.0, 1.0);
-                                    border-radius: 2px;
+                                    border-radius: 2px * Theme.ui-scale;
                                     background: t.state == 2 ? Theme.danger
                                         : t.state == 1 ? Theme.success
                                         : Theme.accent;

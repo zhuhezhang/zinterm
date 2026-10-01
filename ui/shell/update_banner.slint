@@ -9,22 +9,22 @@ export component UpdateBanner inherits Rectangle {
     // A dismissible top-centre banner; the app stays usable on the current
     // version. "Download" opens the GitHub release page in the browser.
     if root.update-available: Rectangle {
-        x: (parent.width - 384px) / 2;
-        y: 8px;
-        width: 384px;
-        height: 38px;
+        x: (parent.width - 384px * Theme.ui-scale) / 2;
+        y: 8px * Theme.ui-scale;
+        width: 384px * Theme.ui-scale;
+        height: 38px * Theme.ui-scale;
         background: Theme.accent;
         border-radius: Theme.radius-md;
-        border-width: 1px;
+        border-width: 1px * Theme.ui-scale;
         border-color: Theme.border-strong;
-        drop-shadow-blur: 14px;
+        drop-shadow-blur: 14px * Theme.ui-scale;
         drop-shadow-color: #00000060;
         HorizontalLayout {
-            padding-left: 12px;
-            padding-right: 6px;
-            spacing: 5px;
+            padding-left: 12px * Theme.ui-scale;
+            padding-right: 6px * Theme.ui-scale;
+            spacing: 5px * Theme.ui-scale;
             HorizontalLayout {
-                spacing: 2px;
+                spacing: 2px * Theme.ui-scale;
                 Text {
                     text: "\u{E004}";
                     font-family: "Material Icons";
@@ -45,8 +45,8 @@ export component UpdateBanner inherits Rectangle {
             }
 
             Rectangle {
-                width: 68px;
-                height: 26px;
+                width: 68px * Theme.ui-scale;
+                height: 26px * Theme.ui-scale;
                 y: (parent.height - self.height) / 2;
                 border-radius: Theme.radius-sm;
                 background: upd-dl-ta.has-hover ? #ffffff45 : #ffffff28;
@@ -66,8 +66,8 @@ export component UpdateBanner inherits Rectangle {
 
             // close update panel button
             Rectangle {
-                width: 26px;
-                height: 26px;
+                width: 26px * Theme.ui-scale;
+                height: 26px * Theme.ui-scale;
                 y: (parent.height - self.height) / 2;
                 border-radius: Theme.radius-sm;
                 background: upd-cl-ta.has-hover ? #ffffff45 : transparent;

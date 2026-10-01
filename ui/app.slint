@@ -81,6 +81,9 @@ export component AppWindow inherits Window {
     // never tofus on glyph fallback (#54). Rust sets Theme.ui-font-family to a
     // system CJK font on startup; empty on Linux keeps the Slint default.
     default-font-family: Theme.ui-font-family;
+    // Drive std-widgets (Button, …) rem-based text from Theme so UI scale
+    // reaches Fluent chrome that never sets an explicit font-size.
+    default-font-size: Theme.fs-md;
 
     init => {
         Theme.window-width = root.width;
@@ -130,10 +133,11 @@ export component AppWindow inherits Window {
         : root.drag-ny > 0.78 ? "bottom"
         : "";
     // Spacing between theme / download / settings (independent of caption buttons).
+    // Keep fixed so it matches the unscaled title-bar IconBtn size.
     property <length> toolbar-btn-spacing: 8px;
     // Bottom edge of the title strip — popups for settings/download drop below it.
     property <length> titlebar-bottom:
-        root.custom-titlebar ? 38px : root.titlebar-inset;
+        root.custom-titlebar ? Theme.titlebar-height : root.titlebar-inset;
     in-out property <bool> about-open: false;     // centered About dialog
     callback open-repo();                          // open the project's GitHub page
     callback open-gitee();                         // open the project's Gitee mirror
@@ -173,8 +177,8 @@ export component AppWindow inherits Window {
     callback search-welcome-sessions(string /* query */); // filter the welcome session list
     in property <[QuickCmd]> qcm-manage-commands;
     in-out property <bool> quick-cmd-manage-open: false;  // manage dialog
-    in-out property <length> qcm-dialog-width: 560px;
-    in-out property <length> qcm-dialog-height: 560px;
+    in-out property <length> qcm-dialog-width: 560px * Theme.ui-scale;
+    in-out property <length> qcm-dialog-height: 560px * Theme.ui-scale;
     property <bool> qcm-dialog-resizing;
     property <length> qcm-resize-base-width;
     property <length> qcm-resize-base-height;
@@ -263,8 +267,8 @@ export component AppWindow inherits Window {
     // window so it can't leave the parent); init centered.
     // Centred, snapped to whole logical pixels: a half-pixel origin makes the
     // card's text render on subpixel offsets and look blurry (#v0.5).
-    property <length> ifd-w: min(root.width - 32px, max(700px, 750px * Theme.ui-scale));
-    property <length> ifd-h: min(root.height - 32px, max(320px, 480px * Theme.ui-scale));
+    property <length> ifd-w: min(root.width - 32px * Theme.ui-scale, max(700px * Theme.ui-scale, 750px * Theme.ui-scale));
+    property <length> ifd-h: min(root.height - 32px * Theme.ui-scale, max(320px * Theme.ui-scale, 480px * Theme.ui-scale));
     property <length> ifd-x: round((root.width - root.ifd-w) / 2 / 1px) * 1px;
     property <length> ifd-y: round((root.height - root.ifd-h) / 2 / 1px) * 1px;
     property <bool> ifd-dragging;
@@ -283,8 +287,8 @@ export component AppWindow inherits Window {
         if (root.interface-open) {
             root.ifd-dragging = false;
             root.ifd-resizing = false;
-            root.ifd-w = clamp(root.ifd-w, min(700px, root.width - 32px), max(700px, root.width - 32px));
-            root.ifd-h = clamp(root.ifd-h, min(320px, root.height - 32px), max(320px, root.height - 32px));
+            root.ifd-w = clamp(root.ifd-w, min(700px * Theme.ui-scale, root.width - 32px * Theme.ui-scale), max(700px * Theme.ui-scale, root.width - 32px * Theme.ui-scale));
+            root.ifd-h = clamp(root.ifd-h, min(320px * Theme.ui-scale, root.height - 32px * Theme.ui-scale), max(320px * Theme.ui-scale, root.height - 32px * Theme.ui-scale));
             root.ifd-x = round((root.width - root.ifd-w) / 2 / 1px) * 1px;
             root.ifd-y = round((root.height - root.ifd-h) / 2 / 1px) * 1px;
             root.begin-settings-edit();
@@ -387,7 +391,7 @@ export component AppWindow inherits Window {
     property <bool> welcome-sidebar-horizontal:
         root.welcome-sidebar-dock == "left" || root.welcome-sidebar-dock == "right";
     property <length> welcome-sidebar-taken:
-        root.welcome-collapsed ? 36px : root.welcome-sidebar-width;
+        root.welcome-collapsed ? 36px * Theme.ui-scale : root.welcome-sidebar-width;
     callback persist-welcome-sidebar-dock(string);
     // Welcome sidebar collapsed to the edge icon strip (IDEA-style), persisted.
     in-out property <bool> welcome-collapsed: false;
@@ -530,8 +534,8 @@ export component AppWindow inherits Window {
     // Editor card geometry: draggable by its title bar, resizable from the
     // bottom-right grip (same absolute-position pattern as the Interface
     // dialog). Defaults centre the card; user drags/resizes override them.
-    property <length> ed-w: 760px;
-    property <length> ed-h: 560px;
+    property <length> ed-w: 760px * Theme.ui-scale;
+    property <length> ed-h: 560px * Theme.ui-scale;
     property <length> ed-x: (root.width - root.ed-w) / 2;
     property <length> ed-y: (root.height - root.ed-h) / 2;
     property <bool> ed-dragging;

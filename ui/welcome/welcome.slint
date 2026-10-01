@@ -41,8 +41,8 @@ export component Welcome inherits Rectangle {
     callback dock-drag-move(length, length);
     callback dock-drag-end();
     // Non-compact session list column widths (name / host); user column fills the rest.
-    in-out property <length> session-col-name: 180px;
-    in-out property <length> session-col-host: 180px;
+    in-out property <length> session-col-name: 180px * Theme.ui-scale;
+    in-out property <length> session-col-host: 180px * Theme.ui-scale;
     callback persist-session-cols(length /* name */, length /* host */);
     // Drag session/group onto another group (or root) to re-parent.
     in-out property <string> welcome-drag-kind;    // "" | "session" | "group"
@@ -136,21 +136,21 @@ export component Welcome inherits Rectangle {
     }
 
     VerticalLayout {
-        spacing: root.compact ? 12px : 0px;
+        spacing: root.compact ? 12px * Theme.ui-scale : 0px;
 
         // Header (title + tagline) — pinned to the top at its natural height so
         // it can't grab the stretch space and spread apart (seen on macOS); the
         // quick-connect card below takes all the remaining height (#dock). Hidden
         // in compact/sidebar mode.
         if !root.compact: VerticalLayout {
-            padding: 8px;
+            padding: 8px * Theme.ui-scale;
             vertical-stretch: 0;
             alignment: start;
-            spacing: 4px;
+            spacing: 4px * Theme.ui-scale;
             Text {
                 text: "ZinTerm";
                 color: Theme.text-primary;
-                font-size: 28px;
+                font-size: 28px * Theme.ui-scale;
                 font-weight: 700;
             }
 
@@ -168,17 +168,17 @@ export component Welcome inherits Rectangle {
         Rectangle {
             vertical-stretch: 1;
             background: Theme.bg-panel;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-subtle;
 
             VerticalLayout {
-                padding: root.compact ? 8px : 12px;
-                spacing: root.compact ? 6px : 11px;
+                padding: root.compact ? 8px * Theme.ui-scale : 12px * Theme.ui-scale;
+                spacing: root.compact ? 6px * Theme.ui-scale : 11px * Theme.ui-scale;
 
                 // Compact: title→button gap is slightly tighter than the 12px below the
                 // button so it matches optically (title row is taller than the glyphs).
                 VerticalLayout {
-                    spacing: root.compact ? 8px : 0px;
+                    spacing: root.compact ? 8px * Theme.ui-scale : 0px;
                     vertical-stretch: 0;
 
                     Rectangle {
@@ -196,7 +196,7 @@ export component Welcome inherits Rectangle {
                         }
 
                         header-row := HorizontalLayout {
-                            spacing: 11px;
+                            spacing: 11px * Theme.ui-scale;
                             if root.compact && root.dock-edge != "left": CollapseButton {
                                 glyph: root.dock-edge == "right" ? "\u{E5CC}"
                                     : root.dock-edge == "top" ? "\u{E5CE}"
@@ -218,11 +218,11 @@ export component Welcome inherits Rectangle {
                             }
 
                             if !root.compact: BorderedLineInput {
-                                min-width: 140px;
-                                max-width: 260px;
+                                min-width: 140px * Theme.ui-scale;
+                                max-width: 260px * Theme.ui-scale;
                                 horizontal-stretch: 1;
-                                height: 30px;
-                                pad-x: 8px;
+                                height: 30px * Theme.ui-scale;
+                                pad-x: 8px * Theme.ui-scale;
                                 font-size: Theme.fs-sm;
                                 leading-icon: "\u{E8B6}";
                                 text <=> root.session-search;
@@ -267,11 +267,11 @@ export component Welcome inherits Rectangle {
                     }
 
                     if root.compact: HorizontalLayout {
-                        spacing: root.compact ? 6px : 0px;
+                        spacing: root.compact ? 6px * Theme.ui-scale : 0px;
                         BorderedLineInput {
                             horizontal-stretch: 1;
-                            height: 30px;
-                            pad-x: 8px;
+                            height: 30px * Theme.ui-scale;
+                            pad-x: 8px * Theme.ui-scale;
                             font-size: Theme.fs-sm;
                             leading-icon: "\u{E8B6}";
                             text <=> root.session-search;
@@ -317,12 +317,12 @@ export component Welcome inherits Rectangle {
                     vertical-stretch: 1;
                     background: Theme.bg-root;
                     border-radius: Theme.radius-sm;
-                    border-width: 1px;
+                    border-width: 1px * Theme.ui-scale;
                     border-color: Theme.border-subtle;
 
                     VerticalLayout {
                         alignment: center;
-                        spacing: 6px;
+                        spacing: 6px * Theme.ui-scale;
                         Text {
                             text: root.session-search != "" ? @tr("No match") : @tr("No sessions yet");
                             color: Theme.text-secondary;
@@ -340,7 +340,7 @@ export component Welcome inherits Rectangle {
                 }
 
                 if sessions.length > 0: VerticalLayout {
-                    spacing: root.compact ? 0 : 6px;
+                    spacing: root.compact ? 0 : 6px * Theme.ui-scale;
                     vertical-stretch: 1;
 
                     if !root.compact: SessionListHeader {
@@ -361,9 +361,9 @@ export component Welcome inherits Rectangle {
                         viewport-height: max(self.visible-height, sess-list.preferred-height);
                         sess-list := VerticalLayout {
                             width: sess-scroll.viewport-width;
-                            spacing: 2px;
+                            spacing: 2px * Theme.ui-scale;
                             for session[i] in sessions: VerticalLayout {
-                                spacing: 2px;
+                                spacing: 2px * Theme.ui-scale;
                                 vertical-stretch: 0;
                                 width: 100%;
                                 // Group header on the first row of each group (#41).
@@ -394,11 +394,11 @@ export component Welcome inherits Rectangle {
 
                                     grp-row := HorizontalLayout {
                                         width: 100%;
-                                        padding-top: 4px;
-                                        padding-bottom: 4px;
-                                        padding-left: SessionColLayout.pad-left + session.group-depth * 16px;
+                                        padding-top: 4px * Theme.ui-scale;
+                                        padding-bottom: 4px * Theme.ui-scale;
+                                        padding-left: SessionColLayout.pad-left + session.group-depth * 16px * Theme.ui-scale;
                                         padding-right: SessionColLayout.pad-right;
-                                        spacing: 4px;
+                                        spacing: 4px * Theme.ui-scale;
                                         // Slint 1.17+: stretch + trailing spacer (compact) keeps
                                         // the label left. Avoid cross-axis center — it clips glyphs.
                                         alignment: stretch;
@@ -418,7 +418,7 @@ export component Welcome inherits Rectangle {
                                             width: SessionColLayout.icon-w;
                                             height: SessionColLayout.icon-w;
                                             y: (parent.height - self.height) / 2;
-                                            border-radius: 3px;
+                                            border-radius: 3px * Theme.ui-scale;
                                             background: Theme.bg-elevated;
                                             Text {
                                                 text: "\u{E2C7}";   // folder glyph
@@ -492,8 +492,8 @@ export component Welcome inherits Rectangle {
                                         moved => {
                                             if (grp-pressing) {
                                                 if (!grp-moved
-                                                    && (abs(self.mouse-x - grp-grab-x) > 5px
-                                                    || abs(self.mouse-y - grp-grab-y) > 5px)) {
+                                                    && (abs(self.mouse-x - grp-grab-x) > 5px * Theme.ui-scale
+                                                    || abs(self.mouse-y - grp-grab-y) > 5px * Theme.ui-scale)) {
                                                     grp-moved = true;
                                                     root.welcome-drag-kind = "group";
                                                     root.welcome-drag-from = session.group;
@@ -520,16 +520,16 @@ export component Welcome inherits Rectangle {
                                         Rectangle {
                                             background: Theme.popup-bg;
                                             border-radius: Theme.radius-sm;
-                                            border-width: 1px;
+                                            border-width: 1px * Theme.ui-scale;
                                             border-color: Theme.border-strong;
-                                            drop-shadow-blur: 10px;
+                                            drop-shadow-blur: 10px * Theme.ui-scale;
                                             drop-shadow-color: #00000050;
                                             grp-menu-vl := VerticalLayout {
-                                                padding: 4px;
-                                                spacing: 1px;
+                                                padding: 4px * Theme.ui-scale;
+                                                spacing: 1px * Theme.ui-scale;
                                                 // New session in this group.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: ns-ta.has-hover ? Theme.bg-hover : transparent;
                                                     ns-ta := TouchArea {
@@ -539,9 +539,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E145}";
                                                             font-family: "Material Icons";
@@ -560,7 +560,7 @@ export component Welcome inherits Rectangle {
                                                 }
                                                 // Edit (rename) group.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: eg-ta.has-hover ? Theme.bg-hover : transparent;
                                                     eg-ta := TouchArea {
@@ -570,9 +570,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E3C9}";
                                                             font-family: "Material Icons";
@@ -591,7 +591,7 @@ export component Welcome inherits Rectangle {
                                                 }
                                                 // New child group (nested under this folder).
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: cg-ta.has-hover ? Theme.bg-hover : transparent;
                                                     cg-ta := TouchArea {
@@ -601,9 +601,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E2CC}";
                                                             font-family: "Material Icons";
@@ -622,7 +622,7 @@ export component Welcome inherits Rectangle {
                                                 }
                                                 // New sibling group (same parent path).
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: sg-ta.has-hover ? Theme.bg-hover : transparent;
                                                     sg-ta := TouchArea {
@@ -632,9 +632,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E2CC}";
                                                             font-family: "Material Icons";
@@ -652,12 +652,12 @@ export component Welcome inherits Rectangle {
                                                     }
                                                 }
                                                 if grp-nesting: Rectangle {
-                                                    height: 1px;
+                                                    height: 1px * Theme.ui-scale;
                                                     background: Theme.border-subtle;
                                                 }
                                                 // Expand every Quick Connect folder.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: eag-ta.has-hover ? Theme.bg-hover : transparent;
                                                     eag-ta := TouchArea {
@@ -667,9 +667,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E5D7}";
                                                             font-family: "Material Icons";
@@ -688,7 +688,7 @@ export component Welcome inherits Rectangle {
                                                 }
                                                 // Collapse every Quick Connect folder.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: cag-ta.has-hover ? Theme.bg-hover : transparent;
                                                     cag-ta := TouchArea {
@@ -698,9 +698,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E5D6}";
                                                             font-family: "Material Icons";
@@ -719,7 +719,7 @@ export component Welcome inherits Rectangle {
                                                 }
                                                 // Expand this folder and all nested children.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: egc-ta.has-hover ? Theme.bg-hover : transparent;
                                                     egc-ta := TouchArea {
@@ -729,9 +729,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E313}";
                                                             font-family: "Material Icons";
@@ -750,7 +750,7 @@ export component Welcome inherits Rectangle {
                                                 }
                                                 // Collapse nested children; keep this folder open.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: cgc-ta.has-hover ? Theme.bg-hover : transparent;
                                                     cgc-ta := TouchArea {
@@ -760,9 +760,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E316}";
                                                             font-family: "Material Icons";
@@ -780,12 +780,12 @@ export component Welcome inherits Rectangle {
                                                     }
                                                 }
                                                 if grp-nesting: Rectangle {
-                                                    height: 1px;
+                                                    height: 1px * Theme.ui-scale;
                                                     background: Theme.border-subtle;
                                                 }
                                                 // Delete group — cascades to child groups and sessions.
                                                 if grp-nesting: Rectangle {
-                                                    height: 28px;
+                                                    height: 28px * Theme.ui-scale;
                                                     border-radius: Theme.radius-sm;
                                                     background: dg-ta.has-hover ? #cc333320 : transparent;
                                                     dg-ta := TouchArea {
@@ -795,9 +795,9 @@ export component Welcome inherits Rectangle {
 
                                                     HorizontalLayout {
                                                         alignment: start;
-                                                        padding-left: 10px;
-                                                        padding-right: 10px;
-                                                        spacing: 8px;
+                                                        padding-left: 10px * Theme.ui-scale;
+                                                        padding-right: 10px * Theme.ui-scale;
+                                                        spacing: 8px * Theme.ui-scale;
                                                         Text {
                                                             text: "\u{E872}";
                                                             font-family: "Material Icons";

@@ -10,9 +10,9 @@ export component RendererSettingsPage inherits Rectangle {
     callback set-renderer-mode(string);
 
     VerticalLayout {
-        padding-left: 15px;
-        padding-right: 15px;
-        padding-top: 15px;
+        padding-left: 15px * Theme.ui-scale;
+        padding-right: 15px * Theme.ui-scale;
+        padding-top: 15px * Theme.ui-scale;
         spacing: 0;
         alignment: start;
 
@@ -27,8 +27,8 @@ export component RendererSettingsPage inherits Rectangle {
                 : (@tr("Auto tries GPU acceleration and lets Slint fall back to software. Software is best for VMs and compatibility"));
             show-divider: false;
             ComboBox {
-                width: 150px;
-                height: 30px;
+                width: 150px * Theme.ui-scale;
+                height: 30px * Theme.ui-scale;
                 model: Theme.is-mac
                     ? ["CPU", "FemtoVG", "Skia"]
                     : [@tr("Automatic"), "GPU", @tr("Software")];
@@ -77,7 +77,7 @@ export component RendererSettingsPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 10px;
+            height: 10px * Theme.ui-scale;
         }
 
         SettingHint {

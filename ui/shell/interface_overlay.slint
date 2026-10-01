@@ -150,9 +150,9 @@ export component InterfaceOverlay inherits Rectangle {
             // grey settings labels stay readable at a low overlay (user request).
             background: Theme.bg-panel-strong;
             border-radius: Theme.radius-md;
-            border-width: 1px;
+            border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
-            drop-shadow-blur: 24px;
+            drop-shadow-blur: 24px * Theme.ui-scale;
             drop-shadow-color: #000000a0;
             clip: true;
             TouchArea { }   // swallow inside clicks so they don't hit the backdrop
@@ -192,8 +192,8 @@ export component InterfaceOverlay inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        padding-left: 16px;
-                        padding-right: 10px;
+                        padding-left: 16px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
                         Text {
                             text: @tr("Settings");
                             color: Theme.text-primary;
@@ -232,7 +232,7 @@ export component InterfaceOverlay inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
@@ -367,17 +367,17 @@ export component InterfaceOverlay inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * Theme.ui-scale;
                     background: Theme.border-subtle;
                 }
 
                 // Cancel / Save / Save and close — edits preview live; disk write
                 // waits for Save (no more auto-persist on every toggle).
                 HorizontalLayout {
-                    padding-right: 15px; // clear the resize grip
-                    padding-top: 10px;
-                    padding-bottom: 10px;
-                    spacing: 8px;
+                    padding-right: 15px * Theme.ui-scale; // clear the resize grip
+                    padding-top: 10px * Theme.ui-scale;
+                    padding-bottom: 10px * Theme.ui-scale;
+                    spacing: 8px * Theme.ui-scale;
                     Rectangle { horizontal-stretch: 1; }
                     GhostButton {
                         text: @tr("Cancel");
@@ -401,16 +401,16 @@ export component InterfaceOverlay inherits Rectangle {
             }
 
             Rectangle {
-                x: parent.width - 18px;
-                y: parent.height - 18px;
-                width: 18px;
-                height: 18px;
+                x: parent.width - 18px * Theme.ui-scale;
+                y: parent.height - 18px * Theme.ui-scale;
+                width: 18px * Theme.ui-scale;
+                height: 18px * Theme.ui-scale;
                 background: resize-ta.has-hover || root.ifd-resizing ? Theme.bg-hover : transparent;
                 Text {
                     text: "\u{E3C2}";
                     font-family: "Material Icons";
                     color: Theme.text-muted;
-                    font-size: 14px;
+                    font-size: 14px * Theme.ui-scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
@@ -432,10 +432,10 @@ export component InterfaceOverlay inherits Rectangle {
                         if (root.ifd-resizing) {
                             root.ifd-w = clamp(
                                 round((root.ifd-base-w + (self.absolute-position.x + self.mouse-x - root.ifd-grab-x)) / 1px) * 1px,
-                                700px, max(700px, root.width - root.ifd-x));
+                                700px * Theme.ui-scale, max(700px * Theme.ui-scale, root.width - root.ifd-x));
                             root.ifd-h = clamp(
                                 round((root.ifd-base-h + (self.absolute-position.y + self.mouse-y - root.ifd-grab-y)) / 1px) * 1px,
-                                420px, max(420px, root.height - root.ifd-y));
+                                420px * Theme.ui-scale, max(420px * Theme.ui-scale, root.height - root.ifd-y));
                         }
                     }
                 }

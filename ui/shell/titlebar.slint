@@ -25,7 +25,7 @@ export component TitleBar inherits VerticalLayout {
         height: root.titlebar-inset;
         background: Theme.bg-panel;
         HorizontalLayout {
-            padding-right: 3px;
+            padding-right: 3px * Theme.ui-scale;
             Rectangle {
                 horizontal-stretch: 1;
             }
@@ -64,7 +64,7 @@ export component TitleBar inherits VerticalLayout {
     // (move window / double-click to maximize), then the toolbar icons and
     // window controls on the right.
     if root.custom-titlebar: Rectangle {
-        height: 38px;
+        height: Theme.titlebar-height;
         background: Theme.bg-panel;
         tb-drag := TouchArea {
             pointer-event(e) => {
@@ -76,9 +76,9 @@ export component TitleBar inherits VerticalLayout {
         }
 
         HorizontalLayout {
-            padding-left: 12px;
-            padding-right: 4px;
-            spacing: 8px;
+            padding-left: 12px * Theme.ui-scale;
+            padding-right: 4px * Theme.ui-scale;
+            spacing: 8px * Theme.ui-scale;
             // Vertical-centering wrappers so the icon and name line up (#119).
             VerticalLayout {
                 alignment: center;
@@ -86,8 +86,8 @@ export component TitleBar inherits VerticalLayout {
                 // the soft PNG alpha fringe that looks blurry on HiDPI title bars.
                 Image {
                     source: @image-url("../../assets/icon.svg");
-                    width: 18px;
-                    height: 18px;
+                    width: 18px * Theme.ui-scale;
+                    height: 18px * Theme.ui-scale;
                 }
             }
 

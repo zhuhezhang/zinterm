@@ -21,14 +21,14 @@ export component QuickDockPanel inherits Rectangle {
     callback dock-drag-end();
 
     background: Theme.bg-panel;
-    border-width: 1px;
+    border-width: 1px * Theme.ui-scale;
     border-color: Theme.border-subtle;
     clip: true;
 
     VerticalLayout {
         spacing: 0;
         Rectangle {
-            height: 34px;
+            height: 34px * Theme.ui-scale;
             background: Theme.bg-panel-alt;
             drag-area := TouchArea {
                 mouse-cursor: grab;
@@ -44,9 +44,9 @@ export component QuickDockPanel inherits Rectangle {
             }
 
             HorizontalLayout {
-                padding-left: 8px;
-                padding-right: 4px;
-                spacing: 6px;
+                padding-left: 8px * Theme.ui-scale;
+                padding-right: 4px * Theme.ui-scale;
+                spacing: 6px * Theme.ui-scale;
                 Text {
                     text: "\u{E25D}";
                     font-family: "Material Icons";
@@ -65,7 +65,7 @@ export component QuickDockPanel inherits Rectangle {
                 }
 
                 Rectangle {
-                    height: 25px;
+                    height: 25px * Theme.ui-scale;
                     y: (parent.height - self.height) / 2;
                     border-radius: Theme.radius-sm;
                     background: manage-ta.has-hover ? Theme.bg-hover : Theme.bg-panel-alt;
@@ -86,8 +86,8 @@ export component QuickDockPanel inherits Rectangle {
                 // Close docked panel → restore the command-bar Quick popup
                 // without clearing the "as sidebar" setting.
                 Rectangle {
-                    width: 25px;
-                    height: 25px;
+                    width: 25px * Theme.ui-scale;
+                    height: 25px * Theme.ui-scale;
                     y: (parent.height - self.height) / 2;
                     background: undock-ta.has-hover ? Theme.bg-hover : transparent;
                     border-radius: Theme.radius-sm;
@@ -107,8 +107,8 @@ export component QuickDockPanel inherits Rectangle {
                 }
 
                 Rectangle {
-                    width: 25px;
-                    height: 25px;
+                    width: 25px * Theme.ui-scale;
+                    height: 25px * Theme.ui-scale;
                     y: (parent.height - self.height) / 2;
                     background: close-ta.has-hover ? Theme.bg-hover : transparent;
                     border-radius: Theme.radius-sm;
@@ -155,7 +155,7 @@ export component QuickDockPanel inherits Rectangle {
                 }
                 list := VerticalLayout {
                     visible: root.commands.length > 0;
-                    padding: 6px;
+                    padding: 6px * Theme.ui-scale;
                     spacing: 0px;
                     alignment: start;
                 // Pin list height to content so ScrollView does not stretch rows
@@ -164,11 +164,11 @@ export component QuickDockPanel inherits Rectangle {
                     for q in root.commands: VerticalLayout {
                         alignment: start;
                         spacing: 0px;
-                        property <length> row-h: (q.group-header != "" ? 32px : 0px)
-                            + (!q.collapsed && q.orig-index >= 0 ? 32px : 0px);
-                        height: row-h > 0px ? row-h + 1px : 0px;
+                        property <length> row-h: (q.group-header != "" ? 32px * Theme.ui-scale : 0px)
+                            + (!q.collapsed && q.orig-index >= 0 ? 32px * Theme.ui-scale : 0px);
+                        height: row-h > 0px ? row-h + 1px * Theme.ui-scale : 0px;
                         if q.group-header != "": Rectangle {
-                            height: 32px;
+                            height: 32px * Theme.ui-scale;
                             border-radius: Theme.radius-sm;
                             background: group-ta.has-hover || dock-grp-menu.is-open ? Theme.bg-hover : transparent;
                             property <length> gmx;
@@ -186,8 +186,8 @@ export component QuickDockPanel inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                padding-left: 8px;
-                                padding-right: 4px;
+                                padding-left: 8px * Theme.ui-scale;
+                                padding-right: 4px * Theme.ui-scale;
                                 Text {
                                     text: q.collapsed ? "\u{E5CC}" : "\u{E5CF}";
                                     font-family: "Material Icons";
@@ -218,20 +218,20 @@ export component QuickDockPanel inherits Rectangle {
                             dock-grp-menu := PopupWindow {
                                 x: gmx;
                                 y: gmy;
-                                width: 150px;
-                                height: (q.orig-index == -1 ? 3 : 2) * 30px + 9px;
+                                width: 150px * Theme.ui-scale;
+                                height: (q.orig-index == -1 ? 3 : 2) * 30px * Theme.ui-scale + 9px * Theme.ui-scale;
                                 Rectangle {
                                     background: Theme.popup-bg;
                                     border-radius: Theme.radius-sm;
-                                    border-width: 1px;
+                                    border-width: 1px * Theme.ui-scale;
                                     border-color: Theme.border-strong;
-                                    drop-shadow-blur: 10px;
+                                    drop-shadow-blur: 10px * Theme.ui-scale;
                                     drop-shadow-color: #00000050;
                                     VerticalLayout {
-                                        padding: 4px;
-                                        spacing: 1px;
+                                        padding: 4px * Theme.ui-scale;
+                                        spacing: 1px * Theme.ui-scale;
                                         Rectangle {
-                                            height: 30px;
+                                            height: 30px * Theme.ui-scale;
                                             border-radius: Theme.radius-sm;
                                             background: dg-ren-ta.has-hover ? Theme.bg-hover : transparent;
                                             dg-ren-ta := TouchArea {
@@ -240,8 +240,8 @@ export component QuickDockPanel inherits Rectangle {
                                             }
 
                                             HorizontalLayout {
-                                                padding-left: 10px;
-                                                spacing: 8px;
+                                                padding-left: 10px * Theme.ui-scale;
+                                                spacing: 8px * Theme.ui-scale;
                                                 Text {
                                                     text: "\u{E3C9}";
                                                     font-family: "Material Icons";
@@ -261,7 +261,7 @@ export component QuickDockPanel inherits Rectangle {
                                         }
 
                                         if q.orig-index == -1: Rectangle {
-                                            height: 30px;
+                                            height: 30px * Theme.ui-scale;
                                             border-radius: Theme.radius-sm;
                                             background: dg-del-ta.has-hover ? #cc333320 : transparent;
                                             dg-del-ta := TouchArea {
@@ -270,8 +270,8 @@ export component QuickDockPanel inherits Rectangle {
                                             }
 
                                             HorizontalLayout {
-                                                padding-left: 10px;
-                                                spacing: 8px;
+                                                padding-left: 10px * Theme.ui-scale;
+                                                spacing: 8px * Theme.ui-scale;
                                                 Text {
                                                     text: "\u{E872}";
                                                     font-family: "Material Icons";
@@ -291,7 +291,7 @@ export component QuickDockPanel inherits Rectangle {
                                         }
 
                                         Rectangle {
-                                            height: 30px;
+                                            height: 30px * Theme.ui-scale;
                                             border-radius: Theme.radius-sm;
                                             background: dg-new-ta.has-hover ? Theme.bg-hover : transparent;
                                             dg-new-ta := TouchArea {
@@ -300,8 +300,8 @@ export component QuickDockPanel inherits Rectangle {
                                             }
 
                                             HorizontalLayout {
-                                                padding-left: 10px;
-                                                spacing: 8px;
+                                                padding-left: 10px * Theme.ui-scale;
+                                                spacing: 8px * Theme.ui-scale;
                                                 Text {
                                                     text: "\u{E2CC}";
                                                     font-family: "Material Icons";
@@ -324,14 +324,14 @@ export component QuickDockPanel inherits Rectangle {
                             }
                         }
                         if !q.collapsed && q.orig-index >= 0: Rectangle {
-                            height: 32px;
+                            height: 32px * Theme.ui-scale;
                             border-radius: Theme.radius-sm;
                             background: q-fill-ta.has-hover || q-run.has-hover || q-edit.has-hover
                                 ? Theme.bg-hover : transparent;
                             HorizontalLayout {
-                                padding-left: 4px;
-                                padding-right: 6px;
-                                spacing: 4px;
+                                padding-left: 4px * Theme.ui-scale;
+                                padding-right: 6px * Theme.ui-scale;
+                                spacing: 4px * Theme.ui-scale;
                                 Rectangle {
                                     horizontal-stretch: 1;
                                     q-fill-ta := TouchArea {
@@ -343,7 +343,7 @@ export component QuickDockPanel inherits Rectangle {
 
                                     VerticalLayout {
                                         alignment: center;
-                                        padding-left: 2px;
+                                        padding-left: 2px * Theme.ui-scale;
                                         Text {
                                             text: q.name;
                                             color: Theme.text-primary;
@@ -363,9 +363,9 @@ export component QuickDockPanel inherits Rectangle {
 
                                 // Run (▶) — execute immediately.
                                 Rectangle {
-                                    width: 24px;
+                                    width: 24px * Theme.ui-scale;
                                     y: (parent.height - self.height) / 2;
-                                    height: 28px;
+                                    height: 28px * Theme.ui-scale;
                                     border-radius: Theme.radius-sm;
                                     background: q-run.has-hover ? Theme.accent.with-alpha(0.25) : transparent;
                                     q-run := TouchArea {
@@ -385,9 +385,9 @@ export component QuickDockPanel inherits Rectangle {
 
                                 // Edit (✎) — open this command in the editor.
                                 Rectangle {
-                                    width: 24px;
+                                    width: 24px * Theme.ui-scale;
                                     y: (parent.height - self.height) / 2;
-                                    height: 28px;
+                                    height: 28px * Theme.ui-scale;
                                     border-radius: Theme.radius-sm;
                                     background: q-edit.has-hover ? Theme.bg-elevated : transparent;
                                     q-edit := TouchArea {
