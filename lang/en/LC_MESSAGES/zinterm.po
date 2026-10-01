@@ -597,6 +597,15 @@ msgstr "Zoom out terminal font"
 msgid "Zoom in terminal font"
 msgstr "Zoom in terminal font"
 
+msgid "⌘+Scroll"
+msgstr "⌘+Scroll"
+
+msgid "Ctrl+Scroll"
+msgstr "Ctrl+Scroll"
+
+msgid "Adjust terminal font size"
+msgstr "Adjust terminal font size"
+
 msgid "Copy selection"
 msgstr "Copy selection"
 
@@ -605,18 +614,6 @@ msgstr "Jump to command history search"
 
 msgid "Open find bar"
 msgstr "Open find bar"
-
-msgid "Drag"
-msgstr "Drag"
-
-msgid "Select text"
-msgstr "Select text"
-
-msgid "Wheel / Scrollbar"
-msgstr "Wheel / Scrollbar"
-
-msgid "Scroll history"
-msgstr "Scroll history"
 
 msgid "Find in terminal input"
 msgstr "Find in terminal input"

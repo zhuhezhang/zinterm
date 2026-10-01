@@ -597,6 +597,15 @@ msgstr "缩小终端字体"
 msgid "Zoom in terminal font"
 msgstr "放大终端字体"
 
+msgid "⌘+Scroll"
+msgstr "⌘+滚轮"
+
+msgid "Ctrl+Scroll"
+msgstr "Ctrl+滚轮"
+
+msgid "Adjust terminal font size"
+msgstr "调整终端字体大小"
+
 msgid "Copy selection"
 msgstr "复制选中内容"
 
@@ -605,18 +614,6 @@ msgstr "跳到命令历史搜索"
 
 msgid "Open find bar"
 msgstr "打开查找框"
-
-msgid "Drag"
-msgstr "鼠标拖动"
-
-msgid "Select text"
-msgstr "选择文本"
-
-msgid "Wheel / Scrollbar"
-msgstr "滚轮 / 滚动条"
-
-msgid "Scroll history"
-msgstr "滚动历史"
 
 msgid "Find in terminal input"
 msgstr "终端内容查找输入框"

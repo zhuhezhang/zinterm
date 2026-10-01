@@ -127,6 +127,7 @@ open /Applications/zinterm.app
 -  Known-hosts fingerprint check + first-connect confirmation; optional save host keys
 -  Data cleanup: clear saved passwords/keys, groups & sessions, host keys; restore default settings
 -  Terminal find, output-highlight rules, font / encoding / input-related settings
+-  Global UI scale for the whole interface; terminal font size adjustable separately (settings, or `Ctrl`/`⌘` + `-`/`=`, `Ctrl`/`⌘` + scroll)
 -  Session output log: plain text matching the screen per tab (default `Downloads/zinterm-session-log`); same tab reuses one file across reconnect; full-screen TUIs like vim are skipped
 -  UI language: follow system / 简体中文 / English (switchable at runtime)
 -  In-app update check (GitHub Releases)

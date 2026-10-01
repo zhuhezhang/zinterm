@@ -584,6 +584,12 @@ export component TerminalView inherits Rectangle {
                                             }
                                         }
                                         scroll-event(ev) => {
+                                            // ⌘/Ctrl+wheel: zoom terminal font (same as ⌘/Ctrl+/-).
+                                            // On macOS Slint maps Cmd → `control` (#158).
+                                            if (ev.modifiers.control) {
+                                                root.zoom-term-font(ev.delta-y > 0 ? 1 : -1);
+                                                return accept;
+                                            }
                                             // Positive delta-y = wheel up.
                                             if (root.is-alt-screen) {
                                                 // Alt-screen app (tmux/less/vim): forward the wheel
@@ -745,6 +751,11 @@ export component TerminalView inherits Rectangle {
                                             }
                                         }
                                         scroll-event(ev) => {
+                                            // ⌘/Ctrl+wheel: zoom terminal font (same as ⌘/Ctrl+/-).
+                                            if (ev.modifiers.control) {
+                                                root.zoom-term-font(ev.delta-y > 0 ? 1 : -1);
+                                                return accept;
+                                            }
                                             if (root.is-alt-screen) {
                                                 root.terminal-wheel(
                                                     ev.delta-y > 0 ? 1 : -1,

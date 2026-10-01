@@ -129,12 +129,12 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌃Tab" : "Ctrl+Tab";
+                            keys: root.is-mac ? "⌃+Tab" : "Ctrl+Tab";
                             desc: @tr("Next tab");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌃⇧Tab" : "Ctrl+Shift+Tab";
+                            keys: root.is-mac ? "⌃+⇧+Tab" : "Ctrl+Shift+Tab";
                             desc: @tr("Previous tab");
                         }
 
@@ -145,7 +145,7 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘F" : "Ctrl+F";
+                            keys: root.is-mac ? "⌘+F" : "Ctrl+F";
                             desc: @tr("Focus session search box");
                         }
 
@@ -165,43 +165,38 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘-" : "Ctrl+-";
+                            keys: root.is-mac ? "⌘+-" : "Ctrl+-";
                             desc: @tr("Zoom out terminal font");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘=" : "Ctrl+=";
+                            keys: root.is-mac ? "⌘+=" : "Ctrl+=";
                             desc: @tr("Zoom in terminal font");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘C" : "Ctrl+Shift+C";
+                            keys: root.is-mac ? @tr("⌘+Scroll") : @tr("Ctrl+Scroll");
+                            desc: @tr("Adjust terminal font size");
+                        }
+
+                        ShortcutRow {
+                            keys: root.is-mac ? "⌘+C" : "Ctrl+Shift+C";
                             desc: @tr("Copy selection");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘V" : "Ctrl+V";
+                            keys: root.is-mac ? "⌘+V" : "Ctrl+V";
                             desc: @tr("Paste");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘⇧R" : "Ctrl+Shift+R";
+                            keys: root.is-mac ? "⌘+⇧+R" : "Ctrl+Shift+R";
                             desc: @tr("Jump to command history search");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
+                            keys: root.is-mac ? "⌘+⇧+F" : "Ctrl+Shift+F";
                             desc: @tr("Open find bar");
-                        }
-
-                        ShortcutRow {
-                            keys: @tr("Drag");
-                            desc: @tr("Select text");
-                        }
-
-                        ShortcutRow {
-                            keys: @tr("Wheel / Scrollbar");
-                            desc: @tr("Scroll history");
                         }
 
                         Rectangle {
@@ -240,27 +235,27 @@ export component ShortcutsDialog inherits Rectangle {
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘R" : "Ctrl+R";
+                            keys: root.is-mac ? "⌘+R" : "Ctrl+R";
                             desc: @tr("Search command history");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘S" : "Ctrl+S";
+                            keys: root.is-mac ? "⌘+S" : "Ctrl+S";
                             desc: @tr("Move to start of line");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘E" : "Ctrl+E";
+                            keys: root.is-mac ? "⌘+E" : "Ctrl+E";
                             desc: @tr("Move to end of line");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘K" : "Ctrl+K";
+                            keys: root.is-mac ? "⌘+K" : "Ctrl+K";
                             desc: @tr("Delete to end of line");
                         }
 
                         ShortcutRow {
-                            keys: root.is-mac ? "⌘U" : "Ctrl+U";
+                            keys: root.is-mac ? "⌘+U" : "Ctrl+U";
                             desc: @tr("Delete to start of line");
                         }
 

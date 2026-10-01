@@ -30,6 +30,7 @@ pub(super) fn run_window_events(
     // but only when the file is dropped over the file-list area.
     {
         use i_slint_backend_winit::winit::event::{MouseScrollDelta, WindowEvent as WEvent};
+        use i_slint_backend_winit::winit::keyboard::ModifiersState;
         use i_slint_backend_winit::EventResult;
         let weak = window.as_weak();
         let sh = sftp_handles.clone();
@@ -42,6 +43,8 @@ pub(super) fn run_window_events(
         let ev_pending_window_size_restore = pending_window_size_restore.clone();
         let mut last_cursor_logical: Option<(f32, f32)> = None;
         let mut macos_wheel_accum = 0.0_f32;
+        // Tracked for ⌘+wheel font zoom (MouseWheel itself carries no modifiers).
+        let mut macos_mods = ModifiersState::empty();
         // Track the inputs that make up WinActivity; recompute on each change.
         let mut focused = true;
         let mut minimized = false;
@@ -133,6 +136,9 @@ pub(super) fn run_window_events(
                             last_cursor_logical = Some((p.x as f32, p.y as f32));
                         }
                     }
+                    WEvent::ModifiersChanged(mods) if cfg!(target_os = "macos") => {
+                        macos_mods = mods.state();
+                    }
                     WEvent::MouseWheel { delta, .. } if cfg!(target_os = "macos") => {
                         let Some((x, y)) = last_cursor_logical else {
                             return EventResult::Propagate;
@@ -157,6 +163,16 @@ pub(super) fn run_window_events(
                             return EventResult::Propagate;
                         }
                         macos_wheel_accum -= whole as f32;
+                        // ⌘+wheel over the terminal → font zoom (matches ⌘+/-).
+                        // winit reports Cmd as SUPER; Slint's macOS wheel fallback
+                        // would otherwise swallow this before TouchArea sees it.
+                        if macos_mods.super_key() {
+                            if terminal_wheel_hit(&win, &wheel_bufs, x, y).is_some() {
+                                win.invoke_zoom_term_font(whole.signum());
+                                return EventResult::PreventDefault;
+                            }
+                            return EventResult::Propagate;
+                        }
                         if handle_macos_terminal_wheel(&win, &wheel_bufs, x, y, whole) {
                             return EventResult::PreventDefault;
                         }
