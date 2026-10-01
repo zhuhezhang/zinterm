@@ -148,7 +148,6 @@ pub(super) fn apply_settings_prefs_to_window(
     w.set_output_highlight_preset(s.output_highlight_preset().into());
     w.set_output_highlight_rules(output_highlight_rule_model(s));
     w.set_ui_scale(s.ui_scale() as f32 / 100.0);
-    w.set_panel_font(s.panel_font() as f32 / 100.0);
     w.set_renderer_mode(s.renderer_mode().into());
 
     apply_wallpaper(w, s, bufs, s.wallpaper(), false);

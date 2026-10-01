@@ -145,7 +145,6 @@ export component ConfirmStack inherits Rectangle {
     callback set-language(string);
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
-    callback set-panel-font(int);
     callback set-paste-confirm-enabled(bool);
     callback set-quick-commands-as-sidebar(bool);
     callback set-renderer-mode(string);
@@ -415,7 +414,6 @@ export component ConfirmStack inherits Rectangle {
         set-language(a0) => { root.set-language(a0); }
         set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
-        set-panel-font(a0) => { root.set-panel-font(a0); }
         set-paste-confirm-enabled(a0) => { root.set-paste-confirm-enabled(a0); }
         set-quick-commands-as-sidebar(a0) => { root.set-quick-commands-as-sidebar(a0); }
         set-renderer-mode(a0) => { root.set-renderer-mode(a0); }

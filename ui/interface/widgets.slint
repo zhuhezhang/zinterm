@@ -6,7 +6,7 @@ export component NavItem inherits Rectangle {
     in property <string> label;
     in property <bool> active;
     callback clicked();
-    height: 30px;
+    height: 30px * Theme.ui-scale;
     border-radius: 6px;
     background: root.active ? Theme.bg-active : (ta.has-hover ? Theme.bg-hover : transparent);
     ta := TouchArea {
@@ -21,14 +21,14 @@ export component NavItem inherits Rectangle {
             text: root.icon;
             font-family: "Material Icons";
             color: root.active ? Theme.text-primary : Theme.text-secondary;
-            font-size: 15px * Theme.panel-font;
+            font-size: 15px * Theme.ui-scale;
             vertical-alignment: center;
         }
 
         Text {
             text: root.label;
             color: root.active ? Theme.text-primary : Theme.text-secondary;
-            font-size: 13px * Theme.panel-font;
+            font-size: 13px * Theme.ui-scale;
             vertical-alignment: center;
             horizontal-stretch: 1;
         }
@@ -38,20 +38,20 @@ export component NavItem inherits Rectangle {
 // Small muted group heading (字体 / 预览 / SFTP …).
 // Fixed height leaves CJK ascent room on macOS (Heiti/Songti metrics, #129).
 export component SectionHeader inherits Text {
-    font-size: 11px * Theme.panel-font;
+    font-size: 11px * Theme.ui-scale;
     font-weight: 700;
     color: Theme.text-muted;
     vertical-alignment: center;
-    height: 26px * Theme.panel-font;
+    height: 26px * Theme.ui-scale;
 }
 
 // Muted page-level hint under a section / setting (same metrics as SettingRow.desc).
 // Extra height: Slint preferred-height undershoots CJK descent on macOS (#129).
 export component SettingHint inherits Text {
     color: Theme.text-muted;
-    font-size: 11px * Theme.panel-font;
+    font-size: 11px * Theme.ui-scale;
     wrap: word-wrap;
-    height: max(15px * Theme.panel-font, self.preferred-height + 8px * Theme.panel-font);
+    height: max(15px * Theme.ui-scale, self.preferred-height + 8px * Theme.ui-scale);
 }
 
 // A settings row: label (+ optional description) on the left, a control slot on
@@ -72,18 +72,18 @@ export component SettingRow inherits Rectangle {
                 spacing: 5px;
                 Text {
                     text: root.label;
-                    font-size: 13px * Theme.panel-font;
+                    font-size: 13px * Theme.ui-scale;
                     color: Theme.text-primary;
                 }
 
                 // Pad height: preferred-height undershoots CJK ink on macOS (#129),
                 // so wrapped desc (e.g. keepalive) loses the last line's descent.
                 if root.desc != "": Rectangle {
-                    height: max(15px * Theme.panel-font, desc-text.preferred-height + 8px * Theme.panel-font);
+                    height: max(15px * Theme.ui-scale, desc-text.preferred-height + 8px * Theme.ui-scale);
                     desc-text := Text {
                         width: 100%;
                         text: root.desc;
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-muted;
                         wrap: word-wrap;
                         vertical-alignment: top;
@@ -166,7 +166,7 @@ export component Stepper inherits Rectangle {
             Text {
                 text: "\u{E15B}";
                 font-family: "Material Icons";
-                font-size: 14px * Theme.panel-font;
+                font-size: 14px * Theme.ui-scale;
                 color: Theme.text-secondary;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -181,7 +181,7 @@ export component Stepper inherits Rectangle {
         Text {
             text: root.value + root.unit;
             horizontal-stretch: 1;
-            font-size: 12px * Theme.panel-font;
+            font-size: 12px * Theme.ui-scale;
             color: Theme.text-primary;
             horizontal-alignment: center;
             vertical-alignment: center;
@@ -205,7 +205,7 @@ export component Stepper inherits Rectangle {
             Text {
                 text: "\u{E145}";
                 font-family: "Material Icons";
-                font-size: 14px * Theme.panel-font;
+                font-size: 14px * Theme.ui-scale;
                 color: Theme.text-secondary;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -258,7 +258,7 @@ export component CursorStyleButton inherits Rectangle {
         Text {
             text: root.label;
             color: root.selected ? Theme.text-primary : Theme.text-secondary;
-            font-size: 11px * Theme.panel-font;
+            font-size: 11px * Theme.ui-scale;
             vertical-alignment: center;
         }
     }
@@ -313,7 +313,7 @@ export component CursorColorInput inherits Rectangle {
             pad-x: 8px;
             text <=> root.value;
             font-family: Theme.term-font-family;
-            font-size: 12px * Theme.panel-font;
+            font-size: 12px * Theme.ui-scale;
             idle-border: root.valid ? Theme.border-subtle : #e05252;
             edited => { root.valid = root.apply-color(self.text); }
         }
@@ -338,7 +338,7 @@ export component CursorColorInput inherits Rectangle {
                     text: root.value;
                     color: Theme.text-secondary;
                     font-family: Theme.term-font-family;
-                    font-size: 11px * Theme.panel-font;
+                    font-size: 11px * Theme.ui-scale;
                     vertical-alignment: center;
                 }
 
@@ -550,7 +550,7 @@ export component WallpaperSwatch inherits Rectangle {
             text: "\u{E5CA}"; // check
             font-family: "Material Icons";
             color: white;
-            font-size: 13px * Theme.panel-font;
+            font-size: 13px * Theme.ui-scale;
             width: 100%;
             height: 100%;
             horizontal-alignment: center;

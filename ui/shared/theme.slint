@@ -116,11 +116,9 @@ export global Theme {
 
     // Global UI scale (#100/#117/#118). Rust sets this from the saved setting;
     // all font sizes and spacing/radii below multiply by it, so the whole UI
-    // grows/shrinks live (the terminal font has its own size setting).
+    // (including the settings panel) grows/shrinks live. The terminal font has
+    // its own size setting and is not affected by this.
     in-out property <float> ui-scale: 1.0;
-    // Settings-panel font scale (#v0.5). The settings card + its text multiply by
-    // this so the panel (which is exempt from ui-scale) can still be enlarged.
-    in-out property <float> panel-font: 1.0;
 
     // --- Typography --------------------------------------------------------
     out property <length> fs-xs: 11px * root.ui-scale;

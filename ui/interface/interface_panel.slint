@@ -141,7 +141,6 @@ export component InterfacePanel inherits Rectangle {
             root.highlight-draft-color-hex);
     }
     callback set-ui-scale(int);
-    callback set-panel-font(int);   // settings-panel font scale, percent
     callback set-renderer-mode(string);
     callback set-sftp-follow-cd(bool);
     callback set-collapse-sftp-default(bool);
@@ -307,7 +306,6 @@ export component InterfacePanel inherits Rectangle {
                         term-fonts: root.term-fonts;
                         terminal-line-spacing <=> root.terminal-line-spacing;
                         ui-scale: root.ui-scale;
-                        set-panel-font(a0) => { root.set-panel-font(a0); }
                         set-term-cursor-color(a0) => { return root.set-term-cursor-color(a0); }
                         set-term-cursor-style(a0) => { root.set-term-cursor-style(a0); }
                         set-term-font(a0) => { root.set-term-font(a0); }

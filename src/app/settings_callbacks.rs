@@ -773,20 +773,6 @@ pub(super) fn wire_settings_callbacks(
             }
         });
     }
-    {
-        let weak = window.as_weak();
-        let store = store.clone();
-        window.on_set_panel_font(move |percent: i32| {
-            let clamped = (percent.max(0) as u32).clamp(80, 160);
-            {
-                let mut s = store.borrow_mut();
-                s.set_panel_font(clamped);
-            }
-            if let Some(w) = weak.upgrade() {
-                w.set_panel_font(clamped as f32 / 100.0);
-            }
-        });
-    }
 
     // Wallpaper: pick a built-in / none, or open the file dialog for a custom one.
     {

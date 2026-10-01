@@ -597,12 +597,6 @@ impl ConfigStore {
                 changed = true;
             }
         }
-        if let Some(n) = json_u32(root.get("panel_font")) {
-            if (80..=160).contains(&n) {
-                self.set_panel_font(n);
-                changed = true;
-            }
-        }
         if let Some(b) = root
             .get("update_check_disabled")
             .and_then(|v| v.as_bool())

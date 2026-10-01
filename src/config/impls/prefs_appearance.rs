@@ -144,16 +144,6 @@ impl ConfigStore {
     pub fn set_wallpaper_overlay(&mut self, v: f32) {
         self.cache.wallpaper_overlay = v.clamp(0.30, 1.0);
     }
-    pub fn panel_font(&self) -> u32 {
-        if self.cache.panel_font == 0 {
-            100
-        } else {
-            self.cache.panel_font
-        }
-    }
-    pub fn set_panel_font(&mut self, percent: u32) {
-        self.cache.panel_font = percent.clamp(80, 160);
-    }
 }
 
 #[cfg(test)]

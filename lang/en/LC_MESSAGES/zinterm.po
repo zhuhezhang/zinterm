@@ -786,14 +786,8 @@ msgstr "Enter a hexadecimal RGB color"
 msgid "UI scale"
 msgstr "UI scale"
 
-msgid "Zooms the whole interface (not this panel)"
-msgstr "Zooms the whole interface (not this panel)"
-
-msgid "Settings font size"
-msgstr "Settings font size"
-
-msgid "Enlarges this settings panel (font + window)"
-msgstr "Enlarges this settings panel (font + window)"
+msgid "Zooms the whole interface, including this settings panel"
+msgstr "Zooms the whole interface, including this settings panel"
 
 msgid "PREVIEW"
 msgstr "PREVIEW"

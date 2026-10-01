@@ -81,7 +81,6 @@ impl ConfigStore {
         c.confirm_delete_session = snap.confirm_delete_session;
         c.welcome_single_click_connect = snap.welcome_single_click_connect;
         c.wallpaper_overlay = snap.wallpaper_overlay;
-        c.panel_font = snap.panel_font;
         c.update_check_disabled = snap.update_check_disabled;
         c.ssh_keepalive_secs = snap.ssh_keepalive_secs;
         c.algorithm_preferences = snap.algorithm_preferences.clone();

@@ -786,14 +786,8 @@ msgstr "输入十六进制 RGB 颜色"
 msgid "UI scale"
 msgstr "界面缩放"
 
-msgid "Zooms the whole interface (not this panel)"
-msgstr "缩放整个界面（不影响本面板）"
-
-msgid "Settings font size"
-msgstr "界面字体大小"
-
-msgid "Enlarges this settings panel (font + window)"
-msgstr "放大本设置面板的字体和窗口"
+msgid "Zooms the whole interface, including this settings panel"
+msgstr "缩放整个界面，包括本设置面板"
 
 msgid "PREVIEW"
 msgstr "预览"

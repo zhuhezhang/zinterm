@@ -106,7 +106,7 @@ export component SshSettingsPage inherits Rectangle {
         }
 
         for algo[index] in root.ssh-algorithm-rows: Rectangle {
-            height: 34px * Theme.panel-font;
+            height: 34px * Theme.ui-scale;
             HorizontalLayout {
                 spacing: 8px;
                 padding-top: 4px;
@@ -131,7 +131,7 @@ export component SshSettingsPage inherits Rectangle {
                         Text {
                             text: @tr("weak");
                             color: Theme.danger;
-                            font-size: 10px * Theme.panel-font;
+                            font-size: 10px * Theme.ui-scale;
                             vertical-alignment: center;
                         }
                     }
@@ -161,7 +161,7 @@ export component SshSettingsPage inherits Rectangle {
                         Text {
                             text: "↑";
                             color: Theme.text-secondary;
-                            font-size: 12px * Theme.panel-font;
+                            font-size: 12px * Theme.ui-scale;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                             width: 100%;
@@ -187,7 +187,7 @@ export component SshSettingsPage inherits Rectangle {
                         Text {
                             text: "↓";
                             color: Theme.text-secondary;
-                            font-size: 12px * Theme.panel-font;
+                            font-size: 12px * Theme.ui-scale;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                             width: 100%;

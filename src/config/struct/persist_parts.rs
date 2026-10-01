@@ -172,8 +172,6 @@ pub struct SettingsFile {
     #[serde(default)]
     pub wallpaper_overlay: f32,
     #[serde(default)]
-    pub panel_font: u32,
-    #[serde(default)]
     pub update_check_disabled: bool,
     #[serde(default)]
     pub ssh_keepalive_secs: u32,
@@ -225,7 +223,6 @@ impl SettingsFile {
             confirm_delete_session: cfg.confirm_delete_session,
             welcome_single_click_connect: cfg.welcome_single_click_connect,
             wallpaper_overlay: cfg.wallpaper_overlay,
-            panel_font: cfg.panel_font,
             update_check_disabled: cfg.update_check_disabled,
             ssh_keepalive_secs: cfg.ssh_keepalive_secs,
             algorithm_preferences: cfg.algorithm_preferences.clone(),
@@ -266,7 +263,6 @@ impl SettingsFile {
         cfg.confirm_delete_session = self.confirm_delete_session;
         cfg.welcome_single_click_connect = self.welcome_single_click_connect;
         cfg.wallpaper_overlay = self.wallpaper_overlay;
-        cfg.panel_font = self.panel_font;
         cfg.update_check_disabled = self.update_check_disabled;
         cfg.ssh_keepalive_secs = self.ssh_keepalive_secs;
         cfg.algorithm_preferences = self.algorithm_preferences.clone();

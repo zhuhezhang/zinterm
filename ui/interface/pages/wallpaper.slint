@@ -64,7 +64,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                                 text: "\u{E14C}"; // clear / none
                                     font-family: "Material Icons";
                                 color: Theme.text-muted;
-                                font-size: 22px * Theme.panel-font;
+                                font-size: 22px * Theme.ui-scale;
                                 width: 100%;
                                 height: 100%;
                                 horizontal-alignment: center;
@@ -75,7 +75,7 @@ export component WallpaperSettingsPage inherits Rectangle {
 
                     Text {
                         text: @tr("None");
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
                     }
@@ -105,7 +105,7 @@ export component WallpaperSettingsPage inherits Rectangle {
 
                     Text {
                         text: @tr("Meat Light");
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
                     }
@@ -135,7 +135,7 @@ export component WallpaperSettingsPage inherits Rectangle {
 
                     Text {
                         text: @tr("Meat Dark");
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
                     }
@@ -174,7 +174,7 @@ export component WallpaperSettingsPage inherits Rectangle {
 
                     Text {
                         text: @tr("Fantasy 3048");
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
                     }
@@ -196,7 +196,7 @@ export component WallpaperSettingsPage inherits Rectangle {
 
                     Text {
                         text: "MS";
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
                     }
@@ -218,7 +218,7 @@ export component WallpaperSettingsPage inherits Rectangle {
 
                     Text {
                         text: "Miku";
-                        font-size: 11px * Theme.panel-font;
+                        font-size: 11px * Theme.ui-scale;
                         color: Theme.text-secondary;
                         horizontal-alignment: center;
                     }
@@ -256,7 +256,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                         text: "\u{E2C6}"; // folder-open
                                 font-family: "Material Icons";
                         color: Theme.text-secondary;
-                        font-size: 22px * Theme.panel-font;
+                        font-size: 22px * Theme.ui-scale;
                         width: 100%;
                         height: 100%;
                         horizontal-alignment: center;
@@ -281,7 +281,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                     Text {
                         text: @tr("Choose file…");
                         color: white;
-                        font-size: 12px * Theme.panel-font;
+                        font-size: 12px * Theme.ui-scale;
                         width: 100%;
                         height: 100%;
                         horizontal-alignment: center;
@@ -292,7 +292,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                 if root.wp-is-custom: Text {
                     text: root.custom-wallpaper-name;
                     color: Theme.text-muted;
-                    font-size: 11px * Theme.panel-font;
+                    font-size: 11px * Theme.ui-scale;
                     width: 150px;
                     overflow: elide;
                 }
@@ -326,7 +326,7 @@ export component WallpaperSettingsPage inherits Rectangle {
                 Text {
                     text: "\{round((1.0 - root.wallpaper-overlay) * 100)}%";
                     color: Theme.text-secondary;
-                    font-size: 12px * Theme.panel-font;
+                    font-size: 12px * Theme.ui-scale;
                     vertical-alignment: center;
                     width: 34px;
                 }

@@ -69,7 +69,6 @@ export component InterfaceOverlay inherits Rectangle {
     callback set-language(string);
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
-    callback set-panel-font(int);
     callback set-paste-confirm-enabled(bool);
     callback set-quick-commands-as-sidebar(bool);
     callback set-renderer-mode(string);
@@ -144,7 +143,7 @@ export component InterfaceOverlay inherits Rectangle {
         Rectangle {
             x: root.ifd-x;
             y: root.ifd-y;
-            // Bigger base, and scales with the settings font size (#v0.5).
+            // Bigger base; scales with global UI zoom.
             width: root.ifd-w;
             height: root.ifd-h;
             // 20% less transparent than the welcome panel so the dense
@@ -161,7 +160,7 @@ export component InterfaceOverlay inherits Rectangle {
             VerticalLayout {
                 // Title bar — drag to move (clamped inside the window).
                 Rectangle {
-                    height: 44px;
+                    height: 44px * Theme.ui-scale;
                     // Transparent so the card's single frosted layer shows through
                     // — no extra stacked opacity, matching the welcome
                     // panel and following the wallpaper slider (#new-user-defaults
@@ -198,7 +197,7 @@ export component InterfaceOverlay inherits Rectangle {
                         Text {
                             text: @tr("Settings");
                             color: Theme.text-primary;
-                            font-size: 14px;
+                            font-size: 14px * Theme.ui-scale;
                             font-weight: 700;
                             horizontal-stretch: 1;
                             vertical-alignment: center;
@@ -207,8 +206,8 @@ export component InterfaceOverlay inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Rectangle {
-                                width: 24px;
-                                height: 24px;
+                                width: 24px * Theme.ui-scale;
+                                height: 24px * Theme.ui-scale;
                                 border-radius: Theme.radius-sm;
                                 background: if-close-ta.has-hover ? Theme.bg-hover : transparent;
                                 if-close-ta := TouchArea {
@@ -223,7 +222,7 @@ export component InterfaceOverlay inherits Rectangle {
                                     text: "\u{E5CD}";
                                     font-family: "Material Icons";
                                     color: Theme.text-secondary;
-                                    font-size: 15px;
+                                    font-size: 15px * Theme.ui-scale;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
@@ -315,7 +314,6 @@ export component InterfaceOverlay inherits Rectangle {
                         root.set-output-highlight-rule-enabled(index, enabled);
                     }
                     set-ui-scale(v) => { root.set-ui-scale(v); }
-                    set-panel-font(v) => { root.set-panel-font(v); }
                     set-renderer-mode(v) => { root.set-renderer-mode(v); }
                     set-sftp-follow-cd(v) => { root.set-sftp-follow-cd(v); }
                     set-collapse-sftp-default(v) => { root.set-collapse-sftp-default(v); }

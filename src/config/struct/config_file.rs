@@ -225,9 +225,6 @@ pub struct ConfigFile {
     /// Interface › Wallpaper opacity slider. 0 = use the current default.
     #[serde(default)]
     pub wallpaper_overlay: f32,
-    /// Settings-panel font scale, percent (80–160). 0 = 100% default (v0.5).
-    #[serde(default)]
-    pub panel_font: u32,
     /// Disable the startup "new version available" check (#184). New installs
     /// leave this true (no GitHub releases query / banner); enabling the
     /// Interface › Update check toggle clears it.

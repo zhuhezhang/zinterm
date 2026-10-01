@@ -11,7 +11,6 @@ import {
 
 export component FontSettingsPage inherits Rectangle {
     height: self.preferred-height;
-    callback set-panel-font(int);
     callback set-term-cursor-color(string) -> bool;
     callback set-term-cursor-style(string);
     callback set-term-font(string);
@@ -137,7 +136,8 @@ export component FontSettingsPage inherits Rectangle {
 
         SettingRow {
             label: @tr("UI scale");
-            desc: @tr("Zooms the whole interface (not this panel)");
+            desc: @tr("Zooms the whole interface, including this settings panel");
+            show-divider: false;
             Stepper {
                 value: round(root.ui-scale * 100);
                 minimum: 80;
@@ -145,20 +145,6 @@ export component FontSettingsPage inherits Rectangle {
                 step: 10;
                 unit: "%";
                 changed(v) => { root.set-ui-scale(v); }
-            }
-        }
-
-        SettingRow {
-            label: @tr("Settings font size");
-            desc: @tr("Enlarges this settings panel (font + window)");
-            show-divider: false;
-            Stepper {
-                value: round(Theme.panel-font * 100);
-                minimum: 80;
-                maximum: 160;
-                step: 10;
-                unit: "%";
-                changed(v) => { root.set-panel-font(v); }
             }
         }
 

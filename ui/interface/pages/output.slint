@@ -512,7 +512,7 @@ export component OutputSettingsPage inherits Rectangle {
                         text: rule.name;
                         color: rule.enabled ? Theme.text-primary : Theme.text-muted;
                         font-family: Theme.term-font-family;
-                        font-size: 12px * Theme.panel-font;
+                        font-size: 12px * Theme.ui-scale;
                         overflow: elide;
                     }
 
@@ -522,7 +522,7 @@ export component OutputSettingsPage inherits Rectangle {
                             + (rule.case-sensitive ? " · Aa" : "")
                             + (rule.whole-line ? (@tr(" · whole line")) : "");
                         color: Theme.text-muted;
-                        font-size: 10px * Theme.panel-font;
+                        font-size: 10px * Theme.ui-scale;
                         overflow: elide;
                     }
                 }
@@ -546,7 +546,7 @@ export component OutputSettingsPage inherits Rectangle {
                         text: "\u{E3C9}";
                         font-family: "Material Icons";
                         color: Theme.text-muted;
-                        font-size: 15px * Theme.panel-font;
+                        font-size: 15px * Theme.ui-scale;
                         width: 100%;
                         height: 100%;
                         horizontal-alignment: center;
@@ -575,7 +575,7 @@ export component OutputSettingsPage inherits Rectangle {
                         text: "\u{E872}";
                         font-family: "Material Icons";
                         color: Theme.text-muted;
-                        font-size: 15px * Theme.panel-font;
+                        font-size: 15px * Theme.ui-scale;
                         width: 100%;
                         height: 100%;
                         horizontal-alignment: center;
