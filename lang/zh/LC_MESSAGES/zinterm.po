@@ -276,9 +276,6 @@ msgstr "复制"
 msgid "Paste"
 msgstr "粘贴"
 
-msgid "Clear buffer"
-msgstr "清空缓存"
-
 msgid "Find"
 msgstr "查找"
 

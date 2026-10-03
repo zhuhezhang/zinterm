@@ -276,9 +276,6 @@ msgstr "Copy"
 msgid "Paste"
 msgstr "Paste"
 
-msgid "Clear buffer"
-msgstr "Clear buffer"
-
 msgid "Find"
 msgstr "Find"
 
