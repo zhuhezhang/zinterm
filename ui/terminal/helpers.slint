@@ -6,11 +6,14 @@ import { TooltipArea } from "../shared/widgets.slint";
 export component MenuItem inherits Rectangle {
     in property <string> icon;
     in property <string> label;
+    in property <bool> danger: false;
     callback clicked();
 
     height: 28px * Theme.ui-scale;
     border-radius: Theme.radius-sm;
-    background: ta.has-hover ? Theme.bg-hover : transparent;
+    background: ta.has-hover
+        ? (root.danger ? Theme.danger.with-alpha(0.18) : Theme.bg-hover)
+        : transparent;
 
     ta := TouchArea {
         mouse-cursor: pointer;
@@ -26,14 +29,14 @@ export component MenuItem inherits Rectangle {
         Text {
             text: root.icon;
             font-family: "Material Icons";
-            color: Theme.text-secondary;
+            color: root.danger ? Theme.danger : Theme.text-secondary;
             font-size: Theme.fs-sm;
             vertical-alignment: center;
         }
 
         Text {
             text: root.label;
-            color: Theme.text-primary;
+            color: root.danger ? Theme.danger : Theme.text-primary;
             font-size: Theme.fs-md;
             vertical-alignment: center;
         }

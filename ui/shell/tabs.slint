@@ -653,6 +653,7 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Clear screen");
+                    danger: true;
                     enabled: root.menu-target != "welcome";
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-clear(root.menu-target); tab-menu.close(); }
