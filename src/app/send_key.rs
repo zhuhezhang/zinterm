@@ -94,7 +94,7 @@ pub(super) fn wire_send_key(
         let last_shift_time: Arc<Mutex<Option<std::time::Instant>>> = Arc::new(Mutex::new(None));
         window.on_send_key(move |tab_id: SharedString, key: SharedString, ctrl: bool, alt: bool, shift: bool| {
             // ── R on a disconnected tab → reconnect in place (#79) ─────────
-            // FinalShell-style: the tab shows "按 R 重新连接";
+            // The tab shows "Press R to reconnect";
             // pressing R re-spawns the shell + SFTP workers in the SAME tab,
             // keeping scrollback and prior output intact.
             if key.eq_ignore_ascii_case("r") && !ctrl && !alt {
@@ -228,9 +228,9 @@ pub(super) fn wire_send_key(
             // inject a synthetic WM_CHAR 0x11 (Ctrl+Q) when Left Ctrl is
             // briefly tapped, WITHOUT sending a WM_KEYDOWN VK_Q beforehand.
             //
-            // FinalShell avoids this because it builds Ctrl+letter from
-            // WM_KEYDOWN (virtual-key codes).  Slint uses WM_CHAR, so it
-            // sees the injected byte and forwards it straight to us.
+            // Apps that build Ctrl+letter from WM_KEYDOWN (virtual-key
+            // codes) never see this.  Slint uses WM_CHAR, so it sees the
+            // injected byte and forwards it straight to us.
             //
             // Fix: for C0 control chars (Ctrl+A…Ctrl+Z, i.e. 0x01–0x1A),
             // use GetKeyState — which returns the key state *as of the last

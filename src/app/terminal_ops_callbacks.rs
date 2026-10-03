@@ -388,11 +388,10 @@ pub(super) fn wire_terminal_ops(
     }
 
     // Wheel inside an alt-screen program (tmux / less / vim): forward it to the PTY
-    // so the program scrolls, instead of doing nothing (#170 — FinalShell /
-    // MobaXterm behave this way). If the app is tracking the mouse (e.g. tmux with
-    // `mouse on`), send a real wheel mouse-event in the encoding it asked for;
-    // otherwise fall back to arrow keys (xterm "alternate scroll"), which scrolls
-    // less / man / vim.
+    // so the program scrolls, instead of doing nothing (#170). If the app is
+    // tracking the mouse (e.g. tmux with `mouse on`), send a real wheel mouse-event 
+    // in the encoding it asked for; otherwise fall back to arrow keys (xterm "alternate scroll"), 
+    // which scrolls less / man / vim
     {
         let bufs_wheel = bufs.clone();
         let handles_wheel = handles.clone();

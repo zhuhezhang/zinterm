@@ -40,7 +40,7 @@ ZinTerm 是一款基于 **Rust + [Slint](https://slint.dev)** 开发的轻量级
 | 关注点 | ZinTerm |
 | ------ | ------- |
 | 内存 | 原生 Rust UI，常见场景几十 MB，而非 Electron 的 200 MB+ |
-| UI | FinalShell 风格布局，深色 / 浅色 / 跟随系统 |
+| UI | 侧栏 + 多标签布局，深色 / 浅色 / 跟随系统 |
 | 协议 | SSH · SFTP · Telnet · 串口 · 本地 Shell 同窗口管理 |
 | 安全 | 凭据加密入库 + 系统钥匙串主密钥；已知主机指纹校验 |
 | 构建 | 纯 Rust 依赖链（SSH 用 `russh`，无 libssh / OpenSSL 硬依赖） |
@@ -112,7 +112,7 @@ open /Applications/zinterm.app
 
 ### 已实现
 
--  FinalShell 风格 UI；深色 / 浅色 / 跟随系统主题；可选自定义壁纸
+-  侧栏 + 多标签 UI；深色 / 浅色 / 跟随系统主题；可选自定义壁纸
 -  完整 VT/ANSI 终端模拟（btop / htop / vim 等全屏程序正常渲染）
 -  彩色 emoji（肤色、旗帜及 ZWJ 组合序列；嵌入 Twemoji PNG）
 -  多标签页（欢迎页 + 多个会话）；终端分屏（水平 / 垂直）

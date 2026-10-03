@@ -300,7 +300,7 @@ async fn run_session(
                 match msg {
                     Some(ChannelMsg::Data { data }) => {
                         // A `sz` in the terminal starts a ZMODEM send. Receive it
-                        // straight to the Downloads dir (FinalShell style, #76).
+                        // straight to the Downloads dir (#76).
                         // On any protocol error, cancel so the session recovers.
                         let zmodem_cooldown = zmodem_done_at
                             .is_some_and(|t| t.elapsed() < std::time::Duration::from_secs(2));

@@ -4,7 +4,7 @@
 //! send. We implement just enough of the protocol to receive: reply to ZRQINIT
 //! with ZRINIT, accept ZFILE, drive the transfer with ZRPOS/ZACK, collect the
 //! ZDATA subpackets into a local file, and finish on ZEOF/ZFIN. Files land in
-//! the user's Downloads directory (FinalShell style).
+//! the user's Downloads directory.
 //!
 //! We advertise CANFC32, so the sender uses CRC-32 binary frames; the CRC-16
 //! paths are implemented for completeness but rarely exercised.

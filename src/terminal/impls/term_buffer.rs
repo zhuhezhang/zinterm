@@ -504,7 +504,7 @@ impl TermBuffer {
     /// replaying the retained byte stream through a fresh parser. vt100 itself
     /// can't reflow (`set_size` just truncates/pads each row), and we only keep
     /// rendered grid rows in `history`, so replaying the raw stream is what lets
-    /// long lines rewrap to the new width like FinalShell. Used only on the normal
+    /// long lines rewrap to the new width. Used only on the normal
     /// screen — alt-screen programs (tmux/vim) get a SIGWINCH redraw from the
     /// remote instead.
     pub(crate) fn reflow(&mut self, new_rows: u16, new_cols: u16) {

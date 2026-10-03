@@ -40,7 +40,7 @@ Target platforms: Windows / Linux / macOS. Every `v*` tag is built for all three
 | Concern | ZinTerm |
 | ------- | ------- |
 | Memory | Native Rust UI — tens of MB in common use, not Electron’s 200+ MB |
-| UI | FinalShell-style layout; dark / light / follow system |
+| UI | Sidebar + tabs layout; dark / light / follow system |
 | Protocols | SSH · SFTP · Telnet · serial · local shell in one window |
 | Security | Encrypted credentials vault + OS keyring master key; known-hosts checks |
 | Build | Pure Rust stack (SSH via `russh`; no hard libssh / OpenSSL dependency) |
@@ -112,7 +112,7 @@ open /Applications/zinterm.app
 
 ### Done
 
--  FinalShell-style UI; dark / light / follow-system themes; optional custom wallpaper
+-  Sidebar + tabs UI; dark / light / follow-system themes; optional custom wallpaper
 -  Full VT/ANSI terminal emulation (btop / htop / vim and other full-screen apps render correctly)
 -  Color emoji (skin tones, flags, ZWJ sequences; embedded Twemoji PNGs)
 -  Tabs (welcome page + multiple sessions); terminal split panes (horizontal / vertical)
