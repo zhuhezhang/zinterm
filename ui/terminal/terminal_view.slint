@@ -193,6 +193,36 @@ export component TerminalView inherits Rectangle {
     callback select-word(int, int);         // double-click word → select + copy (#287)
     callback select-autoscroll(int);        // auto-scroll while dragging past edge (dir: -1 up / +1 down)
 
+    // Double-click word select on the *second press*, not Slint's `double-clicked`
+    // (which fires on the second release and feels laggy while the button is held).
+    property <duration> last-left-down-at: 0ms;
+    property <length> last-left-down-x: 0px;
+    property <length> last-left-down-y: 0px;
+    property <int> left-click-count: 0;
+
+    function begin-left-select(mx: length, my: length, ctrl: bool, shift: bool) {
+        if (animation-tick() - root.last-left-down-at < 500ms
+            && abs(mx - root.last-left-down-x) < 10px
+            && abs(my - root.last-left-down-y) < 10px) {
+            root.left-click-count += 1;
+        } else {
+            root.left-click-count = 1;
+        }
+        root.last-left-down-at = animation-tick();
+        root.last-left-down-x = mx;
+        root.last-left-down-y = my;
+        if (mod(root.left-click-count, 2) == 0) {
+            // Word is already copied in the Rust callback; do not stay in drag
+            // mode or a few pixels of jitter before mouse-up will replace it.
+            root.selecting = false;
+            root.autoscroll-dir = 0;
+            root.select-word(floor(my / root.cell-h), floor(mx / root.cell-w));
+        } else {
+            root.selecting = true;
+            root.select-start(floor(my / root.cell-h), floor(mx / root.cell-w), ctrl, shift);
+        }
+    }
+
     // Right-click context-menu anchor + find-bar visibility (private UI state).
     property <length> ctx-x;
     property <length> ctx-y;
@@ -531,10 +561,9 @@ export component TerminalView inherits Rectangle {
                                                         ctx-menu.show();
                                                     }
                                                 } else if (ev.button == PointerEventButton.left) {
-                                                    root.selecting = true;
-                                                    root.select-start(
-                                                        floor(self.mouse-y / root.cell-h),
-                                                        floor(self.mouse-x / root.cell-w),
+                                                    root.begin-left-select(
+                                                        self.mouse-x,
+                                                        self.mouse-y,
                                                         ev.modifiers.control,
                                                         ev.modifiers.shift);
                                                 }
@@ -549,11 +578,6 @@ export component TerminalView inherits Rectangle {
                                                     root.select-end();
                                                 }
                                             }
-                                        }
-                                        double-clicked => {
-                                            root.select-word(
-                                                floor(self.mouse-y / root.cell-h),
-                                                floor(self.mouse-x / root.cell-w));
                                         }
                                         moved => {
                                             if (root.selecting) {
@@ -709,10 +733,9 @@ export component TerminalView inherits Rectangle {
                                                         ctx-menu.show();
                                                     }
                                                 } else if (ev.button == PointerEventButton.left) {
-                                                    root.selecting = true;
-                                                    root.select-start(
-                                                        floor(self.mouse-y / root.cell-h),
-                                                        floor(self.mouse-x / root.cell-w),
+                                                    root.begin-left-select(
+                                                        self.mouse-x,
+                                                        self.mouse-y,
                                                         ev.modifiers.control,
                                                         ev.modifiers.shift);
                                                 }
@@ -727,11 +750,6 @@ export component TerminalView inherits Rectangle {
                                                     root.select-end();
                                                 }
                                             }
-                                        }
-                                        double-clicked => {
-                                            root.select-word(
-                                                floor(self.mouse-y / root.cell-h),
-                                                floor(self.mouse-x / root.cell-w));
                                         }
                                         moved => {
                                             if (root.selecting) {
