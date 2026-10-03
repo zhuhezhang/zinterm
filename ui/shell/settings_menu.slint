@@ -19,11 +19,12 @@ export component SettingsMenu inherits Rectangle {
         clicked => { root.settings-open = false; }
     }
     Rectangle {
-        // Keep fully inside the window (was width−196 with width 198 → 2px clip).
-        // 8px inset matches the title-bar button padding from the right edge.
+        // Keep fully inside the window. 8px inset matches the title-bar
+        // button padding from the right edge.
         x: parent.width - self.width - 8px * Theme.ui-scale;
         y: root.titlebar-bottom + 4px * Theme.ui-scale;
-        width: 198px * Theme.ui-scale;
+        // Hug content so short/long labels (per locale) don't leave empty width.
+        width: menu-vl.preferred-width;
         // Size to the menu's content so adding/removing items (or the
         // ~/.ssh/config import hint expanding) never overflows the card (#150-fix).
         height: menu-vl.preferred-height;
@@ -54,7 +55,9 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    alignment: start;
                     padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E429}";
@@ -69,7 +72,6 @@ export component SettingsMenu inherits Rectangle {
                         color: Theme.text-primary;
                         font-size: Theme.fs-md;
                         vertical-alignment: center;
-                        horizontal-stretch: 1;
                     }
                 }
             }
@@ -87,7 +89,9 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    alignment: start;
                     padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E5DB}";
@@ -102,7 +106,6 @@ export component SettingsMenu inherits Rectangle {
                         color: Theme.text-primary;
                         font-size: Theme.fs-md;
                         vertical-alignment: center;
-                        horizontal-stretch: 1;
                     }
                 }
             }
@@ -120,7 +123,9 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    alignment: start;
                     padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E5D8}";
@@ -135,7 +140,6 @@ export component SettingsMenu inherits Rectangle {
                         color: Theme.text-primary;
                         font-size: Theme.fs-md;
                         vertical-alignment: center;
-                        horizontal-stretch: 1;
                     }
                 }
             }
@@ -153,7 +157,9 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    alignment: start;
                     padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E894}";
@@ -168,7 +174,6 @@ export component SettingsMenu inherits Rectangle {
                         color: Theme.text-primary;
                         font-size: Theme.fs-md;
                         vertical-alignment: center;
-                        horizontal-stretch: 1;
                     }
                 }
             }
@@ -186,7 +191,9 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    alignment: start;
                     padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E312}";
@@ -201,7 +208,6 @@ export component SettingsMenu inherits Rectangle {
                         color: Theme.text-primary;
                         font-size: Theme.fs-md;
                         vertical-alignment: center;
-                        horizontal-stretch: 1;
                     }
                 }
             }
@@ -219,7 +225,9 @@ export component SettingsMenu inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    alignment: start;
                     padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 8px * Theme.ui-scale;
                     Text {
                         text: "\u{E88E}";
@@ -234,7 +242,6 @@ export component SettingsMenu inherits Rectangle {
                         color: Theme.text-primary;
                         font-size: Theme.fs-md;
                         vertical-alignment: center;
-                        horizontal-stretch: 1;
                     }
                 }
             }
