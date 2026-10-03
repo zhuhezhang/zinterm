@@ -2,7 +2,7 @@
 
 [简体中文](./README.md) | **English**
 
-Repository: [GitHub](https://github.com/zhuhezhang/zinterm) · [Gitee](https://gitee.com/zhuhezhang/zinterm)
+Repository: [https://github.com/zhuhezhang/zinterm](https://github.com/zhuhezhang/zinterm) · [https://gitee.com/zhuhezhang/zinterm](https://gitee.com/zhuhezhang/zinterm)
 
 ZinTerm is a lightweight, low-memory cross-platform terminal emulator built with **Rust + [Slint](https://slint.dev)**.
 It targets day-to-day ops and remote development, cutting Electron-class terminals from **200+ MB** of RAM

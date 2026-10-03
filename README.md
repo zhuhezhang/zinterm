@@ -2,7 +2,7 @@
 
 **简体中文** | [English](./README.en.md)
 
-项目地址：[GitHub](https://github.com/zhuhezhang/zinterm) · [Gitee](https://gitee.com/zhuhezhang/zinterm)
+项目地址：[https://github.com/zhuhezhang/zinterm](https://github.com/zhuhezhang/zinterm) · [https://gitee.com/zhuhezhang/zinterm](https://gitee.com/zhuhezhang/zinterm)
 
 ZinTerm 是一款基于 **Rust + [Slint](https://slint.dev)** 开发的轻量级、低内存跨平台终端模拟器。
 它面向日常运维与远程开发场景，把 Electron 类终端动辄 **200 MB+** 的内存占用压到原生级别的几十 MB，
