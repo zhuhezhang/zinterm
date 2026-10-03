@@ -18,8 +18,10 @@ export component MenuItem inherits Rectangle {
     }
 
     HorizontalLayout {
-        padding-left: 8px * Theme.ui-scale;
-        padding-right: 8px * Theme.ui-scale;
+        // Match welcome group/session menus so preferred-width hugs the label.
+        alignment: start;
+        padding-left: 10px * Theme.ui-scale;
+        padding-right: 10px * Theme.ui-scale;
         spacing: 8px * Theme.ui-scale;
         Text {
             text: root.icon;
@@ -34,7 +36,6 @@ export component MenuItem inherits Rectangle {
             color: Theme.text-primary;
             font-size: Theme.fs-md;
             vertical-alignment: center;
-            horizontal-stretch: 1;
         }
     }
 }

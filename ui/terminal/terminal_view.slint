@@ -772,7 +772,8 @@ export component TerminalView inherits Rectangle {
                                     ctx-menu := PopupWindow {
                                         x: root.ctx-x;
                                         y: root.ctx-y;
-                                        width: 132px * Theme.ui-scale;
+                                        // Hug content so short/long labels (per locale) don't leave empty width.
+                                        width: ctx-menu-vl.preferred-width;
                                         height: ctx-menu-vl.preferred-height;
                                         Rectangle {
                                             background: Theme.popup-bg;
