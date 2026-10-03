@@ -239,12 +239,19 @@ component TabMenuItem inherits Rectangle {
     in property <string> hint: "";
     // When true, `hint` is a Material Icons codepoint (e.g. submenu chevron).
     in property <bool> hint-icon: false;
+    // Shared column widths from the parent menu (0 = hug this row's content).
+    // Menu width = max(labels) + hint-gap + max(hints), not max(per-row sums).
+    in property <length> label-col-width: 0px;
+    in property <length> hint-col-width: 0px;
+    in property <length> hint-gap: 28px * Theme.ui-scale;
     in property <bool> enabled: true;
     in property <bool> danger: false;
     // Highlight as hovered even when the pointer is over a flyout submenu.
     in property <bool> force-hover: false;
     callback clicked();
     callback hovered(bool);
+    // Parent-supplied hint column, or this row has its own shortcut/icon.
+    property <bool> has-hint-col: root.hint-col-width > 0px || root.hint != "" || root.hint-icon;
     height: 28px * Theme.ui-scale;
     clip: true;
     border-radius: Theme.radius-sm;
@@ -253,24 +260,33 @@ component TabMenuItem inherits Rectangle {
         width: 100%;
         padding-left: 10px * Theme.ui-scale;
         padding-right: 10px * Theme.ui-scale;
-        spacing: 8px * Theme.ui-scale;
-        Text {
+        spacing: 0px;
+        label-txt := Text {
             text: label;
             color: enabled
                 ? (danger ? Theme.danger : Theme.text-primary)
                 : Theme.text-muted;
             font-size: Theme.fs-sm;
             vertical-alignment: center;
-            horizontal-stretch: 1;
-            overflow: elide;
+            horizontal-stretch: 0;
+            width: root.label-col-width > 0px ? root.label-col-width : self.preferred-width;
         }
-        if root.hint != "": Text {
+        // Fixed gap between the label column and the shortcut/icon column.
+        if root.has-hint-col: Rectangle {
+            width: root.hint-gap;
+            horizontal-stretch: 0;
+        }
+        if root.has-hint-col: hint-txt := Text {
             text: hint;
             color: Theme.text-muted;
             font-family: root.hint-icon ? "Material Icons" : Theme.ui-font-family;
             font-size: root.hint-icon ? Theme.fs-md : Theme.fs-xs;
             vertical-alignment: center;
+            horizontal-alignment: right;
             horizontal-stretch: 0;
+            width: root.hint-col-width > 0px
+                ? root.hint-col-width
+                : max(self.preferred-width, root.hint-icon ? Theme.fs-md : 0px);
         }
     }
 
@@ -579,13 +595,78 @@ export component TabBar inherits Rectangle {
     tab-menu := PopupWindow {
         x: root.menu-x;
         y: root.menu-y;
-        // Always reserve flyout width so opening the submenu does not resize
-        // (and shift) the primary menu.
-        width: 396px * Theme.ui-scale;
+        // Column widths: max(labels) + gap + max(hints). Grow right only when
+        // the Backspace flyout opens so the primary card does not shift.
+        property <length> flyout-overlap: 4px * Theme.ui-scale;
+        property <length> menu-hint-gap: 28px * Theme.ui-scale;
+        property <length> menu-label-w: max(m-l-close.preferred-width,
+            max(m-l-close-others.preferred-width,
+            max(m-l-close-left.preferred-width,
+            max(m-l-close-right.preferred-width,
+            max(m-l-close-all.preferred-width,
+            max(m-l-find.preferred-width,
+            max(m-l-save.preferred-width,
+            max(m-l-clear.preferred-width,
+            max(m-l-bs.preferred-width,
+            max(m-l-dup.preferred-width,
+            max(m-l-split-r.preferred-width,
+            max(m-l-split-d.preferred-width,
+                m-l-merge.preferred-width))))))))))));
+        property <length> menu-hint-w: max(m-h-find.preferred-width, m-h-chevron.preferred-width);
+        property <length> bs-label-w: max(m-bs-l-auto.preferred-width,
+            max(m-bs-l-del.preferred-width, m-bs-l-bs.preferred-width));
+        property <length> bs-hint-w: m-bs-h-check.preferred-width;
+        width: tab-menu-card.width
+            + (root.backspace-submenu-open
+                ? max(0px, bs-panel.width - self.flyout-overlap)
+                : 0px);
         height: tab-menu-card.preferred-height;
+
+        // Off-screen probes for locale-aware column widths.
+        Rectangle {
+            x: -10000px;
+            y: -10000px;
+            width: 0px;
+            height: 0px;
+            clip: true;
+            VerticalLayout {
+                m-l-close := Text { text: @tr("Close tab"); font-size: Theme.fs-sm; }
+                m-l-close-others := Text { text: @tr("Close other tabs"); font-size: Theme.fs-sm; }
+                m-l-close-left := Text { text: @tr("Close tabs to the left"); font-size: Theme.fs-sm; }
+                m-l-close-right := Text { text: @tr("Close tabs to the right"); font-size: Theme.fs-sm; }
+                m-l-close-all := Text { text: @tr("Close all tabs"); font-size: Theme.fs-sm; }
+                m-l-find := Text { text: @tr("Find in terminal"); font-size: Theme.fs-sm; }
+                m-l-save := Text { text: @tr("Save terminal output"); font-size: Theme.fs-sm; }
+                m-l-clear := Text { text: @tr("Clear screen"); font-size: Theme.fs-sm; }
+                m-l-bs := Text { text: @tr("Backspace mode"); font-size: Theme.fs-sm; }
+                m-l-dup := Text { text: @tr("Duplicate connection"); font-size: Theme.fs-sm; }
+                m-l-split-r := Text { text: @tr("Split right"); font-size: Theme.fs-sm; }
+                m-l-split-d := Text { text: @tr("Split down"); font-size: Theme.fs-sm; }
+                m-l-merge := Text { text: @tr("Cancel split"); font-size: Theme.fs-sm; }
+                m-h-find := Text {
+                    text: Theme.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
+                    font-size: Theme.fs-xs;
+                    font-family: Theme.ui-font-family;
+                }
+                m-h-chevron := Text {
+                    text: "\u{E5CC}";
+                    font-family: "Material Icons";
+                    font-size: Theme.fs-md;
+                }
+                m-bs-l-auto := Text { text: @tr("Auto"); font-size: Theme.fs-sm; }
+                m-bs-l-del := Text { text: @tr("DEL (0x7F)"); font-size: Theme.fs-sm; }
+                m-bs-l-bs := Text { text: @tr("BS (0x08)"); font-size: Theme.fs-sm; }
+                m-bs-h-check := Text {
+                    text: "\u{E5CA}";
+                    font-family: "Material Icons";
+                    font-size: Theme.fs-md;
+                }
+            }
+        }
+
         tab-menu-card := Rectangle {
             x: 0px;
-            width: 240px * Theme.ui-scale;
+            width: tab-menu-list.preferred-width;
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
             border-width: 1px * Theme.ui-scale;
@@ -597,6 +678,9 @@ export component TabBar inherits Rectangle {
                 spacing: 1px * Theme.ui-scale;
                 TabMenuItem {
                     label: @tr("Close tab");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.menu-target != "welcome";
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-closed(root.menu-target); tab-menu.close(); }
@@ -604,6 +688,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Close other tabs");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.can-close-others;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-others(root.menu-target); tab-menu.close(); }
@@ -611,6 +698,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Close tabs to the left");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.can-close-left;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-left(root.menu-target); tab-menu.close(); }
@@ -618,6 +708,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Close tabs to the right");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.can-close-right;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-close-right(root.menu-target); tab-menu.close(); }
@@ -625,6 +718,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Close all tabs");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     danger: true;
                     enabled: root.can-close-all;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
@@ -639,6 +735,9 @@ export component TabBar inherits Rectangle {
                 TabMenuItem {
                     label: @tr("Find in terminal");
                     hint: Theme.is-mac ? "⌘⇧F" : "Ctrl+Shift+F";
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.menu-target != "welcome";
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-find(root.menu-target); tab-menu.close(); }
@@ -646,6 +745,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Save terminal output");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.menu-target != "welcome";
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-save-output(root.menu-target); tab-menu.close(); }
@@ -653,6 +755,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Clear screen");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     danger: true;
                     enabled: root.menu-target != "welcome";
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
@@ -668,6 +773,9 @@ export component TabBar inherits Rectangle {
                     label: @tr("Backspace mode");
                     hint: "\u{E5CC}";
                     hint-icon: true;
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.menu-target != "welcome";
                     force-hover: root.backspace-submenu-open;
                     hovered(h) => {
@@ -690,6 +798,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Duplicate connection");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.menu-target != "welcome";
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-duplicate(root.menu-target); tab-menu.close(); }
@@ -702,6 +813,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Split right");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.tabs.length > 1;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-split(root.menu-target, "right"); tab-menu.close(); }
@@ -709,6 +823,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Split down");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.tabs.length > 1;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.tab-split(root.menu-target, "down"); tab-menu.close(); }
@@ -716,6 +833,9 @@ export component TabBar inherits Rectangle {
 
                 TabMenuItem {
                     label: @tr("Cancel split");
+                    label-col-width: tab-menu.menu-label-w;
+                    hint-col-width: tab-menu.menu-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     enabled: root.can-merge-pane;
                     hovered(h) => { if (h) { root.dismiss-backspace-submenu(); } }
                     clicked => { root.merge-pane(); tab-menu.close(); }
@@ -723,13 +843,15 @@ export component TabBar inherits Rectangle {
             }
         }
 
-        // Flyout aligned with the trigger; overlaps 4px so the pointer can
-        // travel from trigger → panel without closing (zauterm-style).
-        if root.backspace-submenu-open: bs-panel := Rectangle {
-            x: 236px * Theme.ui-scale;
+        // Flyout always exists so the popup can bind its width; visibility
+        // tracks `backspace-submenu-open`. Overlaps the primary card so the
+        // pointer can travel from trigger → panel without closing.
+        bs-panel := Rectangle {
+            x: tab-menu-card.width - tab-menu.flyout-overlap;
             y: bs-trigger.y;
-            width: 160px * Theme.ui-scale;
+            width: bs-panel-list.preferred-width;
             height: bs-panel-list.preferred-height;
+            visible: root.backspace-submenu-open;
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
             border-width: 1px * Theme.ui-scale;
@@ -740,6 +862,7 @@ export component TabBar inherits Rectangle {
             // Underlay first so menu items (drawn later) still receive clicks;
             // has-hover stays true while the pointer is anywhere on the panel.
             TouchArea {
+                enabled: root.backspace-submenu-open;
                 changed has-hover => {
                     root.bs-panel-hover = self.has-hover;
                     if (self.has-hover) {
@@ -757,6 +880,9 @@ export component TabBar inherits Rectangle {
                     label: @tr("Auto");
                     hint: root.menu-backspace-mode == "auto" ? "\u{E5CA}" : "";
                     hint-icon: true;
+                    label-col-width: tab-menu.bs-label-w;
+                    hint-col-width: tab-menu.bs-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     hovered(h) => {
                         root.bs-panel-hover = h;
                         if (h) {
@@ -776,6 +902,9 @@ export component TabBar inherits Rectangle {
                     label: @tr("DEL (0x7F)");
                     hint: root.menu-backspace-mode == "del" ? "\u{E5CA}" : "";
                     hint-icon: true;
+                    label-col-width: tab-menu.bs-label-w;
+                    hint-col-width: tab-menu.bs-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     hovered(h) => {
                         root.bs-panel-hover = h;
                         if (h) {
@@ -795,6 +924,9 @@ export component TabBar inherits Rectangle {
                     label: @tr("BS (0x08)");
                     hint: root.menu-backspace-mode == "bs" ? "\u{E5CA}" : "";
                     hint-icon: true;
+                    label-col-width: tab-menu.bs-label-w;
+                    hint-col-width: tab-menu.bs-hint-w;
+                    hint-gap: tab-menu.menu-hint-gap;
                     hovered(h) => {
                         root.bs-panel-hover = h;
                         if (h) {
