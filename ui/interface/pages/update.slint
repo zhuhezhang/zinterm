@@ -4,7 +4,7 @@ import { SectionHeader, SettingRow, Switch } from "../widgets.slint";
 export component UpdateSettingsPage inherits Rectangle {
     height: self.preferred-height;
     callback set-update-check-enabled(bool);
-    in-out property <bool> update-check-enabled: false;
+    in-out property <bool> update-check-enabled: true;
     // True when the binary was built with `--features intranet-version`.
     in property <bool> update-check-locked: false;
 

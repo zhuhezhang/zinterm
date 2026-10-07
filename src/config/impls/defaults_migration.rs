@@ -51,7 +51,7 @@ pub(super) fn default_output_highlight_rules() -> Vec<OutputHighlightRule> {
 /// A brand-new config (no file yet, or the old one was corrupt). Seeds the
 /// new-user default layout (#new-user-defaults): no wallpaper, welcome page as
 /// a left sidebar, 15% wallpaper transparency, bar cursor, collapsed SFTP,
-/// quick-command sidebar enabled, single-click connect, update check off,
+/// quick-command sidebar enabled, single-click connect, update check on,
 /// four starter custom highlight rules — and marks the migration done so it
 /// isn't re-applied.
 pub(super) fn fresh_config() -> ConfigFile {
@@ -63,7 +63,7 @@ pub(super) fn fresh_config() -> ConfigFile {
         collapse_sftp_default: true,
         quick_commands_as_sidebar: true,
         welcome_single_click_connect: true,
-        update_check_disabled: true,
+        update_check_disabled: false,
         output_highlight_rules: default_output_highlight_rules(),
         defaults_rev: DEFAULTS_REV,
         ..ConfigFile::default()
@@ -109,7 +109,8 @@ pub(super) fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
         cfg.wallpaper_overlay = DEFAULT_WALLPAPER_OVERLAY;
     }
     // rev 4: none wallpaper, bar cursor, collapse SFTP, quick-command sidebar,
-    // single-click connect, update check off — only for still-at-old-default.
+    // single-click connect, update check -> new default (enabled) — only for
+    // users still at the previous old default so explicit choices are preserved.
     if cfg.defaults_rev < 4 {
         if cfg.wallpaper == "builtin:ms" {
             cfg.wallpaper = String::new();
@@ -126,8 +127,11 @@ pub(super) fn migrate_defaults(cfg: &mut ConfigFile) -> bool {
         if !cfg.welcome_single_click_connect {
             cfg.welcome_single_click_connect = true;
         }
-        if !cfg.update_check_disabled {
-            cfg.update_check_disabled = true;
+        // Old default was `update_check_disabled = true`. Only flip this to
+        // the new default (false) when the user is still at that old default
+        // value — don't overwrite explicit user choices.
+        if cfg.update_check_disabled {
+            cfg.update_check_disabled = false;
         }
     }
     // rev 5: seed the four starter custom highlight rules when the list is
@@ -270,7 +274,10 @@ mod tests {
         assert!(cfg.collapse_sftp_default);
         assert!(cfg.quick_commands_as_sidebar);
         assert!(cfg.welcome_single_click_connect);
-        assert!(cfg.update_check_disabled);
+        // Previously the old default was `true` (disabled). After migration
+        // users who remained at that old default should be updated to the
+        // new default (enabled -> `false`).
+        assert!(!cfg.update_check_disabled);
         assert_eq!(cfg.defaults_rev, DEFAULTS_REV);
 
         let mut custom = ConfigFile {
@@ -284,14 +291,17 @@ mod tests {
             ..ConfigFile::default()
         };
         // Bool old-defaults are advanced; an explicit non-default wallpaper /
-        // cursor style is preserved.
+        // cursor style is preserved. Explicit user choice for update-check must
+        // also be preserved (don't overwrite a non-default value).
         assert!(migrate_defaults(&mut custom));
         assert_eq!(custom.wallpaper, "builtin:dark");
         assert_eq!(custom.terminal_cursor_style, "block");
         assert!(custom.collapse_sftp_default);
         assert!(custom.quick_commands_as_sidebar);
         assert!(custom.welcome_single_click_connect);
-        assert!(custom.update_check_disabled);
+        // `custom.update_check_disabled` was explicitly false; migration must
+        // not clobber it.
+        assert!(!custom.update_check_disabled);
     }
 
     #[test]

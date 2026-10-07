@@ -183,7 +183,7 @@ export component ConfirmStack inherits Rectangle {
     in-out property <float> terminal-line-spacing: 1.0;
     callback toggle-ssh-algorithm(string);
     in-out property <float> ui-scale;   // global UI zoom (#100);
-    in-out property <bool> update-check-enabled: false;   // startup new-version check (#184);
+    in-out property <bool> update-check-enabled: true;   // startup new-version check (#184);
     in property <bool> update-check-locked: false;         // compile-time lock (--features intranet-version);
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
     in-out property <float> wallpaper-overlay;

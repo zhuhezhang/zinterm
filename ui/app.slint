@@ -372,7 +372,7 @@ export component AppWindow inherits Window {
     callback restore-settings-defaults();
     callback import-settings();
     callback export-settings();
-    in-out property <bool> update-check-enabled: false;   // startup new-version check (#184)
+    in-out property <bool> update-check-enabled: true;   // startup new-version check (#184)
     in property <bool> update-check-locked: false;         // compile-time lock (--features intranet-version)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).

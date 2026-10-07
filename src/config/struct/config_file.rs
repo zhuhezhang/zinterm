@@ -226,8 +226,7 @@ pub struct ConfigFile {
     #[serde(default)]
     pub wallpaper_overlay: f32,
     /// Disable the startup "new version available" check (#184). New installs
-    /// leave this true (no GitHub releases query / banner); enabling the
-    /// Interface › Update check toggle clears it.
+    /// leave this false (GitHub releases query / banner).
     #[serde(default)]
     pub update_check_disabled: bool,
     /// SSH keepalive interval in seconds. 0 = off (default). A positive value
