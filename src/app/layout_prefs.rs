@@ -186,7 +186,7 @@ pub(super) fn apply_settings_prefs_to_window(
     w.set_save_passwords(s.save_passwords());
     w.set_credentials_vault_available(crate::config::is_encryption_available());
     w.set_update_check_enabled(s.update_check_enabled());
-    w.set_update_check_locked(cfg!(feature = "no-update-check"));
+    w.set_update_check_locked(cfg!(feature = "intranet-version"));
     w.set_wallpaper_overlay(s.wallpaper_overlay());
 
     let collapse_sftp = s.collapse_sftp_default();

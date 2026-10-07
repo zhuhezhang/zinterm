@@ -365,7 +365,7 @@ pub(super) fn wire_settings_callbacks(
         window.set_welcome_session_col_host(s.welcome_session_col_host());
         window.set_wallpaper_overlay(s.wallpaper_overlay());
         window.set_update_check_enabled(s.update_check_enabled()); // #184
-        window.set_update_check_locked(cfg!(feature = "no-update-check"));
+        window.set_update_check_locked(cfg!(feature = "intranet-version"));
         window.set_ssh_keepalive_secs(s.ssh_keepalive_secs() as i32);
         window.set_save_passwords(s.save_passwords());
         if collapse_sftp {

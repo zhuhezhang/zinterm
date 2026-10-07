@@ -5,7 +5,7 @@ export component UpdateSettingsPage inherits Rectangle {
     height: self.preferred-height;
     callback set-update-check-enabled(bool);
     in-out property <bool> update-check-enabled: false;
-    // True when the binary was built with `--features no-update-check`.
+    // True when the binary was built with `--features intranet-version`.
     in property <bool> update-check-locked: false;
 
     VerticalLayout {

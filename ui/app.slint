@@ -139,6 +139,7 @@ export component AppWindow inherits Window {
     property <length> titlebar-bottom:
         root.custom-titlebar ? Theme.titlebar-height : root.titlebar-inset;
     in-out property <bool> about-open: false;     // centered About dialog
+    in property <bool> repo-links-disabled: false;
     callback open-repo();                          // open the project's GitHub page
     callback open-gitee();                         // open the project's Gitee mirror
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103)
@@ -372,7 +373,7 @@ export component AppWindow inherits Window {
     callback import-settings();
     callback export-settings();
     in-out property <bool> update-check-enabled: false;   // startup new-version check (#184)
-    in property <bool> update-check-locked: false;         // compile-time lock (--features no-update-check)
+    in property <bool> update-check-locked: false;         // compile-time lock (--features intranet-version)
     callback set-update-check-enabled(bool);       // apply + persist
     // SSH keepalive interval in seconds. 0 = off (default).
     in-out property <int> ssh-keepalive-secs: 0;
@@ -1172,6 +1173,7 @@ export component AppWindow inherits Window {
         height: 100%;
         about-open <=> root.about-open;
         app-version: root.app-version;
+        repo-links-disabled: root.repo-links-disabled;
         open-repo => { root.open-repo(); }
         open-gitee => { root.open-gitee(); }
     }

@@ -159,6 +159,7 @@ pub fn run() -> Result<()> {
 
     // Show the crate version (from Cargo.toml at compile time) in About.
     window.set_app_version(env!("CARGO_PKG_VERSION").into());
+    window.set_repo_links_disabled(cfg!(feature = "intranet-version"));
 
     // Set the window icon from the PNG embedded in the binary so the dock
     // shows the correct icon even without a system-installed .desktop entry

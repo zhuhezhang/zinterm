@@ -91,16 +91,16 @@ impl ConfigStore {
     }
 
     /// Whether the startup new-version check is enabled (#184).
-    /// Always false when built with `--features no-update-check`.
+    /// Always false when built with `--features intranet-version`.
     pub fn update_check_enabled(&self) -> bool {
-        if cfg!(feature = "no-update-check") {
+        if cfg!(feature = "intranet-version") {
             false
         } else {
             !self.cache.update_check_disabled
         }
     }
     pub fn set_update_check_enabled(&mut self, enabled: bool) {
-        if cfg!(feature = "no-update-check") {
+        if cfg!(feature = "intranet-version") {
             return;
         }
         self.cache.update_check_disabled = !enabled;

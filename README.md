@@ -200,13 +200,13 @@ cargo check
 cargo run --release -- --version
 ```
 
-### 编译开关 `no-update-check`
+### 编译开关 `intranet-version`
 
-默认构建保留「设置 → 新版本提示」开关，可在启动时查询 GitHub Releases。
-考虑到内网环境，若需要打一个**永久关闭**更新检查的定制包（不再请求 GitHub，界面开关灰显且标注「该版本不支持」）：
+默认版本可通过「设置 → 新版本提示」控制是否在启动时检查 GitHub Releases。
+面向内网环境，可使用此开关构建定制版本：该版本不会检查更新，更新开关会标注「该版本不支持」，“关于”页面中的 GitHub / Gitee 链接也将不可点击。
 
 ```bash
-cargo build --release --features no-update-check
+cargo build --release --features intranet-version
 ```
 
 ## 导入连接与密码字段

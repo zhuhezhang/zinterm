@@ -200,13 +200,13 @@ cargo check
 cargo run --release -- --version
 ```
 
-### Compile flag `no-update-check`
+### Compile flag `intranet-version`
 
 By default the build keeps **Settings → Update check**, which can query GitHub Releases on startup.
-For intranet environments, to ship a build where update checks are **permanently disabled** (no GitHub request; the toggle is greyed out and marked “not supported in this build”):
+For intranet environments, to ship a build where update checks are **permanently disabled** (no GitHub request; the toggle is greyed out and marked “not supported in this build”, and the GitHub/Gitee links in About are disabled):
 
 ```bash
-cargo build --release --features no-update-check
+cargo build --release --features intranet-version
 ```
 
 ## Importing connections and password fields

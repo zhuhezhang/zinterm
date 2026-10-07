@@ -3,6 +3,7 @@ import { Theme } from "../shared/theme.slint";
 export component AboutDialog inherits Rectangle {
     in-out property <bool> about-open: false;     // centered About dialog;
     in property <string> app-version;
+    in property <bool> repo-links-disabled: false;
     callback open-repo();
     callback open-gitee();
 
@@ -125,34 +126,36 @@ export component AboutDialog inherits Rectangle {
 
                         Rectangle {
                             border-radius: Theme.radius-sm;
-                            background: github-ta.has-hover ? Theme.bg-hover : transparent;
+                            background: !root.repo-links-disabled && github-ta.has-hover ? Theme.bg-hover : transparent;
                             HorizontalLayout {
                                 Text {
                                     text: "https://github.com/zhuhezhang/zinterm";
-                                    color: Theme.accent;
+                                    color: root.repo-links-disabled ? Theme.text-muted : Theme.accent;
                                     font-size: Theme.fs-sm;
                                     vertical-alignment: center;
                                 }
                             }
                             github-ta := TouchArea {
-                                mouse-cursor: pointer;
+                                enabled: !root.repo-links-disabled;
+                                mouse-cursor: root.repo-links-disabled ? default : pointer;
                                 clicked => { root.open-repo(); }
                             }
                         }
 
                         Rectangle {
                             border-radius: Theme.radius-sm;
-                            background: gitee-ta.has-hover ? Theme.bg-hover : transparent;
+                            background: !root.repo-links-disabled && gitee-ta.has-hover ? Theme.bg-hover : transparent;
                             HorizontalLayout {
                                 Text {
                                     text: "https://gitee.com/zhuhezhang/zinterm";
-                                    color: Theme.accent;
+                                    color: root.repo-links-disabled ? Theme.text-muted : Theme.accent;
                                     font-size: Theme.fs-sm;
                                     vertical-alignment: center;
                                 }
                             }
                             gitee-ta := TouchArea {
-                                mouse-cursor: pointer;
+                                enabled: !root.repo-links-disabled;
+                                mouse-cursor: root.repo-links-disabled ? default : pointer;
                                 clicked => { root.open-gitee(); }
                             }
                         }
