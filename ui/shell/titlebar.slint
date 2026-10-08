@@ -4,8 +4,8 @@ import { WinBtn, IconBtn } from "chrome.slint";
 export component TitleBar inherits VerticalLayout {
     spacing: 0;
     in-out property <bool> custom-titlebar: true;
-    in-out property <bool> download-open: false;  // download manager popup;
-    in-out property <bool> settings-open: false;  // settings menu popup;
+    in-out property <bool> download-open: false;  // download manager popup
+    in-out property <bool> settings-open: false;  // settings menu popup
     in-out property <length> titlebar-inset;
     callback toggle-theme();
     in-out property <length> toolbar-btn-spacing: 8px;
@@ -25,7 +25,7 @@ export component TitleBar inherits VerticalLayout {
         height: root.titlebar-inset;
         background: Theme.bg-panel;
         HorizontalLayout {
-            padding-right: 3px * Theme.ui-scale;
+            padding-right: 2px;
             Rectangle {
                 horizontal-stretch: 1;
             }
