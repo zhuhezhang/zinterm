@@ -39,7 +39,7 @@ export component ChmodDialog inherits Rectangle {
         chmod-wrap := Rectangle {
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            width: 320px * Theme.ui-scale;
+            width: 300px * Theme.ui-scale;
             height: chmod-card.preferred-height;
             background: Theme.popup-bg;
             border-radius: Theme.radius-md;
@@ -50,7 +50,7 @@ export component ChmodDialog inherits Rectangle {
             TouchArea { }
 
             chmod-card := VerticalLayout {
-                padding: 12px * Theme.ui-scale;
+                padding: 8px * Theme.ui-scale;
                 spacing: 10px * Theme.ui-scale;
                 Text {
                     text: @tr("Change permissions");
