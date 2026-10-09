@@ -111,8 +111,8 @@ export component FileEditorOverlay inherits Rectangle {
                                 padding-right: 8px * Theme.ui-scale;
                                 // Centre the 28px buttons inside the 40px bar so the
                                 // Save button isn't glued to the top edge (#70).
-                                padding-top: 6px * Theme.ui-scale;
-                                padding-bottom: 6px * Theme.ui-scale;
+                                padding-top: 8px * Theme.ui-scale;
+                                padding-bottom: 8px * Theme.ui-scale;
                                 spacing: 8px * Theme.ui-scale;
                                 Text {
                                     text: root.editor-name
@@ -175,10 +175,7 @@ export component FileEditorOverlay inherits Rectangle {
                             // Lightweight find/replace (#287). Replacement is
                             // explicit; closing the editor never writes the file.
                             HorizontalLayout {
-                                padding-left: 8px * Theme.ui-scale;
-                                padding-right: 8px * Theme.ui-scale;
-                                padding-top: 5px * Theme.ui-scale;
-                                padding-bottom: 5px * Theme.ui-scale;
+                                padding: 8px * Theme.ui-scale;
                                 spacing: 8px * Theme.ui-scale;
                                 Text {
                                     text: @tr("Find");
