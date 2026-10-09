@@ -264,7 +264,7 @@ export component LabeledInput inherits HorizontalLayout {
     callback accepted();   // Enter pressed in the field
     callback canceled();   // Esc pressed in the field (#140-3)
     // HorizontalLayout already owns `spacing`; expose an overridable alias.
-    in property <length> gap: 10px * Theme.ui-scale;
+    in property <length> gap: 8px * Theme.ui-scale;
     spacing: root.gap;
     property <bool> focus-pending: false;
     // Bump from outside to grab focus after layout (dialogs, shortcuts).
@@ -381,7 +381,7 @@ export component EditableCombo inherits HorizontalLayout {
     in property <[string]> items;
     callback accepted();   // Enter pressed in the field
     callback canceled();   // Esc pressed in the field (#140-3)
-    spacing: 10px * Theme.ui-scale;
+    spacing: 8px * Theme.ui-scale;
 
     if root.label != "": Rectangle {
         width: root.label-width > 0px ? root.label-width : label-text.preferred-width;
@@ -520,7 +520,7 @@ export component LabeledCombo inherits HorizontalLayout {
     in property <length> label-width: 0px;
     in property <[string]> model;
     in-out property <string> current-value;
-    spacing: 10px * Theme.ui-scale;
+    spacing: 8px * Theme.ui-scale;
 
     if root.label != "": Rectangle {
         width: root.label-width > 0px ? root.label-width : label-text.preferred-width;

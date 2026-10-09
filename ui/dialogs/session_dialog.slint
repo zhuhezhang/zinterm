@@ -333,7 +333,7 @@ export component SessionDialog inherits Rectangle {
         }
 
         Rectangle {
-            width: 600px * Theme.ui-scale;
+            width: 605px * Theme.ui-scale;
             // Height follows the content, but never exceeds the window — past that
             // the body scrolls.
             height: min(body.preferred-height + 53px * Theme.ui-scale, parent.height - 40px * Theme.ui-scale);
@@ -359,15 +359,15 @@ export component SessionDialog inherits Rectangle {
 
                 Rectangle {
                     width: 100%;
-                    height: 52px * Theme.ui-scale;
+                    height: 48px * Theme.ui-scale;
                     background: Theme.bg-panel-alt;
                     border-top-left-radius: Theme.radius-lg;
                     border-top-right-radius: Theme.radius-lg;
 
                     HorizontalLayout {
                         padding-left: 16px * Theme.ui-scale;
-                        padding-right: 10px * Theme.ui-scale;
-                        spacing: 10px * Theme.ui-scale;
+                        padding-right: 8px * Theme.ui-scale;
+                        spacing: 8px * Theme.ui-scale;
 
                         Text {
                             text: is-editing ? @tr("Edit session") : @tr("New session");
@@ -414,12 +414,15 @@ export component SessionDialog inherits Rectangle {
                     viewport-width: self.width;
                     viewport-height: body.preferred-height;
                     body := VerticalLayout {
-                        padding: 16px * Theme.ui-scale;
-                        spacing: 12px * Theme.ui-scale;
+                        padding-top: 8px * Theme.ui-scale;
+                        padding-bottom: 5px * Theme.ui-scale;
+                        padding-right: 9px * Theme.ui-scale;
+                        padding-left: 8px * Theme.ui-scale;
+                        spacing: 8px * Theme.ui-scale;
 
                         // Session type selector (always shown).
                         HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 Text {
@@ -434,7 +437,7 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 6px * Theme.ui-scale;
+                                spacing: 8px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 SegOption {
                                     label: "SSH";
@@ -521,7 +524,7 @@ export component SessionDialog inherits Rectangle {
 
                         // ── SSH / Telnet share host + port ──────────────────────────────
                         if root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             LabeledInput {
                                 input-background: Theme.bg-elevated;
                                 idle-border: Theme.border-strong;
@@ -549,7 +552,7 @@ export component SessionDialog inherits Rectangle {
 
                         // Inline error when a host-less SSH/Telnet session is submitted (#110).
                         if root.host-missing && root.draft-host == "" && root.draft-kind != "serial" && root.draft-kind != "local": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             Text {
                                 width: root.form-label-width;
                             }
@@ -573,7 +576,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         if root.draft-kind == "ssh": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 Text {
@@ -588,7 +591,7 @@ export component SessionDialog inherits Rectangle {
                             }
 
                             HorizontalLayout {
-                                spacing: 6px * Theme.ui-scale;
+                                spacing: 8px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 SegOption {
                                     label: @tr("Password");
@@ -617,7 +620,7 @@ export component SessionDialog inherits Rectangle {
 
                         // Path vs pasted PEM/PPK is detected automatically from the text (#auto-key).
                         if root.draft-kind == "ssh" && root.draft-auth == "key": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 height: key-label.preferred-height;
@@ -700,7 +703,7 @@ export component SessionDialog inherits Rectangle {
 
                         // ── Serial-only fields ──────────────────────────────────────────
                         if root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             Rectangle {
                                 width: root.form-label-width;
                                 Text {
@@ -752,7 +755,7 @@ export component SessionDialog inherits Rectangle {
 
                         // Inline error when a serial session is submitted without a port.
                         if root.serial-port-missing && root.draft-serial-port == "" && root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             Text {
                                 width: root.form-label-width;
                             }
@@ -793,7 +796,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         if root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             EditableCombo {
                                 horizontal-stretch: 1;
                                 label: @tr("Data bits");
@@ -813,7 +816,7 @@ export component SessionDialog inherits Rectangle {
                         }
 
                         if root.draft-kind == "serial": HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             LabeledCombo {
                                 horizontal-stretch: 1;
                                 label: @tr("Parity");
@@ -832,10 +835,10 @@ export component SessionDialog inherits Rectangle {
 
                         // ── Backspace mode + terminal encoding (all connection kinds) ──
                         HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
 
                             HorizontalLayout {
-                                spacing: 10px * Theme.ui-scale;
+                                spacing: 8px * Theme.ui-scale;
                                 horizontal-stretch: 1;
                                 Rectangle {
                                     height: 32px * Theme.ui-scale;
@@ -888,7 +891,7 @@ export component SessionDialog inherits Rectangle {
 
                         // ── Optional panels (SFTP for SSH; quick commands for all kinds) ─
                         HorizontalLayout {
-                            spacing: 10px * Theme.ui-scale;
+                            spacing: 8px * Theme.ui-scale;
                             alignment: start;
                             cross-axis-alignment: center;
                             Rectangle {
