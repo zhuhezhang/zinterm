@@ -154,6 +154,7 @@ export component AppWindow inherits Window {
     in-out property <length> quick-panel-width: 260px;
     in-out property <length> quick-panel-height: 220px;
     in-out property <string> quick-panel-dock: "right";
+    callback persist-quick-panel-dock(string);
     // Focused terminal opted into the command panel; welcome keeps the docked panel.
     in-out property <bool> active-command-panel-available: true;
     property <bool> quick-panel-effective: root.quick-panel-open && root.active-command-panel-available;
@@ -435,6 +436,7 @@ export component AppWindow inherits Window {
     in-out property <length> sftp-saved-height: 220px;  // restore height on un-collapse
     in-out property <length> sftp-tree-width: 160px;
     callback persist-sftp-tree-width(length);
+    callback persist-sftp-dock(string);
     // Per-session SFTP state: persist the collapse + sizes into that tab's
     // TerminalState so split panes / other tabs keep their own (#v0.5).
     callback set-pane-sftp-collapsed(string /* tab-id */, bool);
@@ -871,6 +873,8 @@ export component AppWindow inherits Window {
                 panes: root.panes;
                 paste-from-clipboard(tab-id) => { root.paste-from-clipboard(tab-id); }
                 persist-sftp-tree-width(a0) => { root.persist-sftp-tree-width(a0); }
+                persist-sftp-dock(a0) => { root.persist-sftp-dock(a0); }
+                persist-quick-panel-dock(a0) => { root.persist-quick-panel-dock(a0); }
                 persist-welcome-session-cols(a0, a1) => { root.persist-welcome-session-cols(a0, a1); }
                 persist-welcome-sidebar-dock(a0) => { root.persist-welcome-sidebar-dock(a0); }
                 persist-welcome-sidebar-width(a0) => { root.persist-welcome-sidebar-width(a0); }

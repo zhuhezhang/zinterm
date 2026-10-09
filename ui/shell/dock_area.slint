@@ -78,6 +78,8 @@ export component DockArea inherits Rectangle {
     in property <[PaneInfo]> panes;
     callback paste-from-clipboard(string /* tab-id */);
     callback persist-sftp-tree-width(length);
+    callback persist-sftp-dock(string);
+    callback persist-quick-panel-dock(string);
     callback persist-welcome-session-cols(length, length);
     callback persist-welcome-sidebar-dock(string);
     callback persist-welcome-sidebar-width(float);
@@ -664,6 +666,7 @@ export component DockArea inherits Rectangle {
                                     set-sftp-saved-height(v) => { root.set-pane-sftp-saved-height(term.id, v); }
                                     sftp-tree-width: root.sftp-tree-width;
                                     persist-sftp-tree-width(v) => { root.persist-sftp-tree-width(v); }
+                                    persist-sftp-dock(dock) => { root.persist-sftp-dock(dock); }
                                     sftp-path: term.sftp-path;
                                     sftp-entries: term.sftp-entries;
                                     sftp-status: term.sftp-status;
@@ -713,6 +716,7 @@ export component DockArea inherits Rectangle {
                                     quick-dock-drag-end() => {
                                         if (root.dock-target != "") {
                                             root.quick-panel-dock = root.dock-target;
+                                            root.persist-quick-panel-dock(root.quick-panel-dock);
                                             root.quick-panel-open = true;
                                             root.quick-panel-collapsed = false;
                                             if (root.welcome-as-sidebar
@@ -912,6 +916,7 @@ export component DockArea inherits Rectangle {
                 dock-drag-end => {
                     if (root.dock-target != "") {
                         root.quick-panel-dock = root.dock-target;
+                        root.persist-quick-panel-dock(root.quick-panel-dock);
                         if (root.welcome-as-sidebar
                             && root.welcome-sidebar-dock == root.dock-target) {
                             root.welcome-collapsed = true;

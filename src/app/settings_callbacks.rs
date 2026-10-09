@@ -710,6 +710,22 @@ pub(super) fn wire_settings_callbacks(
     }
     {
         let store = store.clone();
+        window.on_persist_sftp_dock(move |dock| {
+            let mut s = store.borrow_mut();
+            s.set_sftp_dock(dock.to_string());
+            s.save_later(SaveKind::UI);
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_persist_quick_panel_dock(move |dock| {
+            let mut s = store.borrow_mut();
+            s.set_quick_panel_dock(dock.to_string());
+            s.save_later(SaveKind::UI);
+        });
+    }
+    {
+        let store = store.clone();
         window.on_persist_welcome_session_cols(move |name, host| {
             let mut s = store.borrow_mut();
             s.set_welcome_session_col_name(name);
