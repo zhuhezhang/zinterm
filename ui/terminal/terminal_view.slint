@@ -975,8 +975,8 @@ export component TerminalView inherits Rectangle {
                         if root.scroll-max > 0 && !root.is-alt-screen: Rectangle {
                             property <bool> expanded: track-ta.has-hover || track-ta.pressed;
                             // Distance from flickable right edge to the thumb's right edge.
-                            property <length> edge-inset: 12px * Theme.ui-scale;
-                            property <length> thumb-w: self.expanded ? 6px * Theme.ui-scale : 2px * Theme.ui-scale;
+                            property <length> edge-inset: 12px;
+                            property <length> thumb-w: self.expanded ? 6px : 2px;
                             width: self.edge-inset + self.thumb-w + 4px * Theme.ui-scale;
                             x: flickable.x + flickable.width - self.width;
                             y: flickable.y + 4px * Theme.ui-scale;
