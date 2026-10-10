@@ -52,7 +52,8 @@ export component CommandBar inherits Rectangle {
     in property <bool> zen-mode: false;
 
     visible: !root.zen-mode && root.command-panel-available;
-    height: root.zen-mode || !root.command-panel-available ? 0px : root.cmd-bar-input-height + 13px * Theme.ui-scale;
+    // 2px splitter + 4px pad-top + 5px pad-bottom.
+    height: root.zen-mode || !root.command-panel-available ? 0px : root.cmd-bar-input-height + 11px * Theme.ui-scale;
     background: Theme.bg-panel-alt;
     border-width: 0;
 
@@ -70,13 +71,14 @@ export component CommandBar inherits Rectangle {
         spacing: 0;
 
         // Top-edge resize handle: drag up/down to change input height.
+        // Visual bar is 2px; hit area stays wider.
         Rectangle {
             width: parent.width;
-            height: 4px * Theme.ui-scale;
+            height: 2px * Theme.ui-scale;
             background: cmd-bar-resize-ta.has-hover || root.cmd-bar-resizing
                 ? Theme.accent : Theme.border-subtle;
             cmd-bar-resize-ta := TouchArea {
-                y: -4px * Theme.ui-scale;
+                y: -5px * Theme.ui-scale;
                 width: parent.width;
                 height: 12px * Theme.ui-scale;
                 mouse-cursor: ns-resize;

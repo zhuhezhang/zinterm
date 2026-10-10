@@ -458,7 +458,7 @@ export component TerminalView inherits Rectangle {
             property <length> sf-h: root.zen-mode || !root.sftp-available ? 0px
                 : root.sftp-shut ? (root.sftp-horizontal ? 36px * Theme.ui-scale : Theme.toolbar-row-height)
                 : root.sftp-panel-height;
-            property <length> sp: root.zen-mode || !root.sftp-available || root.sftp-shut ? 0px : 4px * Theme.ui-scale;
+            property <length> sp: root.zen-mode || !root.sftp-available || root.sftp-shut ? 0px : 2px * Theme.ui-scale;
             // The collapsed bar (sf-h) already reserves the bottom strip now.
             property <length> bottom-strip-h: 0px;
 

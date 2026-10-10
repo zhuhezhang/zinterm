@@ -61,23 +61,24 @@ export component SftpHost inherits Rectangle {
     in property <string> tab-id;
 
     // --- SFTP resize splitter (orientation follows the dock edge) -------
+    // Visual bar is 2px; hit area stays wider.
     Rectangle {
         visible: root.sftp-available && !root.sftp-shut;
         x: root.sftp-dock == "left" ? root.sf-w
-            : root.sftp-dock == "right" ? parent.width - root.sf-w - 4px * Theme.ui-scale
+            : root.sftp-dock == "right" ? parent.width - root.sf-w - 2px * Theme.ui-scale
             : 0px;
         y: root.sftp-dock == "top" ? root.sf-h
-            : root.sftp-dock == "bottom" ? parent.height - root.sf-h - 4px * Theme.ui-scale
+            : root.sftp-dock == "bottom" ? parent.height - root.sf-h - 2px * Theme.ui-scale
             : 0px;
-        width: root.sftp-horizontal ? 4px * Theme.ui-scale : parent.width;
-        height: root.sftp-horizontal ? parent.height : 4px * Theme.ui-scale;
+        width: root.sftp-horizontal ? 2px * Theme.ui-scale : parent.width;
+        height: root.sftp-horizontal ? parent.height : 2px * Theme.ui-scale;
         background: divider-ta.has-hover || root.sftp-dragging
             ? Theme.accent : Theme.border-subtle;
         divider-ta := TouchArea {
             // Hit area extends a few px past the thin visual bar so it's easy
             // to grab without landing on the terminal / SFTP edge.
-            x: root.sftp-horizontal ? -4px * Theme.ui-scale : 0px;
-            y: root.sftp-horizontal ? 0px : -4px * Theme.ui-scale;
+            x: root.sftp-horizontal ? -5px * Theme.ui-scale : 0px;
+            y: root.sftp-horizontal ? 0px : -5px * Theme.ui-scale;
             width: root.sftp-horizontal ? 12px * Theme.ui-scale : parent.width;
             height: root.sftp-horizontal ? parent.height : 12px * Theme.ui-scale;
             mouse-cursor: root.sftp-horizontal ? ew-resize : ns-resize;
