@@ -76,9 +76,9 @@ export component TitleBar inherits VerticalLayout {
         }
 
         HorizontalLayout {
-            padding-left: 12px * Theme.ui-scale;
-            padding-right: 4px * Theme.ui-scale;
-            spacing: 8px * Theme.ui-scale;
+            padding-left: 12px;
+            padding-right: 4px;
+            spacing: 8px;
             // Vertical-centering wrappers so the icon and name line up (#119).
             VerticalLayout {
                 alignment: center;
@@ -86,8 +86,8 @@ export component TitleBar inherits VerticalLayout {
                 // the soft PNG alpha fringe that looks blurry on HiDPI title bars.
                 Image {
                     source: @image-url("../../assets/icon.svg");
-                    width: 18px * Theme.ui-scale;
-                    height: 18px * Theme.ui-scale;
+                    width: 18px;
+                    height: 18px;
                 }
             }
 

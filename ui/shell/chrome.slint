@@ -5,8 +5,8 @@ export component WinBtn inherits Rectangle {
     in property <string> icon;
     in property <bool> danger: false;
     callback clicked();
-    width: 30px * Theme.ui-scale;
-    height: 30px * Theme.ui-scale;
+    width: 30px;
+    height: 30px;
     border-radius: Theme.radius-sm;
     background: ta.has-hover ? (root.danger ? #e81123 : Theme.bg-hover) : transparent;
     animate background { duration: 90ms; }
@@ -19,7 +19,7 @@ export component WinBtn inherits Rectangle {
         text: root.icon;
         font-family: "Material Icons";
         color: (root.danger && ta.has-hover) ? white : Theme.text-secondary;
-        font-size: 17px * Theme.ui-scale;
+        font-size: 17px;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
