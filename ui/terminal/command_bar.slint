@@ -52,6 +52,11 @@ export component CommandBar inherits Rectangle {
     in property <bool> zen-mode: false;
 
     visible: !root.zen-mode && root.command-panel-available;
+    // Parent VerticalLayout assigns our width; keep preferred-width fixed so
+    // children that read parent.width cannot form a layoutinfo-h binding loop.
+    min-width: 0;
+    preferred-width: 0;
+    horizontal-stretch: 1;
     // 2px splitter + 4px pad-top + 5px pad-bottom.
     height: root.zen-mode || !root.command-panel-available ? 0px : root.cmd-bar-input-height + 11px * Theme.ui-scale;
     background: Theme.bg-panel-alt;
@@ -72,8 +77,10 @@ export component CommandBar inherits Rectangle {
 
         // Top-edge resize handle: drag up/down to change input height.
         // Visual bar is 2px; hit area stays wider.
+        // preferred-width 0: VerticalLayout stretches us; avoid width↔layoutinfo loop.
         Rectangle {
-            width: parent.width;
+            min-width: 0;
+            preferred-width: 0;
             height: 2px * Theme.ui-scale;
             background: cmd-bar-resize-ta.has-hover || root.cmd-bar-resizing
                 ? Theme.accent : Theme.border-subtle;
@@ -116,7 +123,6 @@ export component CommandBar inherits Rectangle {
             // sidebar/icon strip becomes its only entry point (#215).
             if !root.quick-panel-docked: Rectangle {
                 height: 29px * Theme.ui-scale;
-                width: qc-row.preferred-width + 16px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: qc-ta.has-hover || root.quick-open ? Theme.bg-hover : Theme.bg-elevated;
                 qc-ta := TouchArea {
@@ -124,8 +130,9 @@ export component CommandBar inherits Rectangle {
                     clicked => { root.history-open = false; root.quick-open = !root.quick-open; }
                 }
 
-                qc-row := HorizontalLayout {
-                    width: parent.width;
+                HorizontalLayout {
+                    padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     height: parent.height;
                     alignment: center;
                     spacing: 3px * Theme.ui-scale;
@@ -220,7 +227,6 @@ export component CommandBar inherits Rectangle {
             // History toggle.
             Rectangle {
                 height: 29px * Theme.ui-scale;
-                width: hc-row.preferred-width + 16px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: hist-ta.has-hover || root.history-open ? Theme.bg-hover : Theme.bg-elevated;
                 hist-ta := TouchArea {
@@ -232,8 +238,9 @@ export component CommandBar inherits Rectangle {
                     }
                 }
 
-                hc-row := HorizontalLayout {
-                    width: parent.width;
+                HorizontalLayout {
+                    padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     height: parent.height;
                     alignment: center;
                     spacing: 3px * Theme.ui-scale;
@@ -257,20 +264,18 @@ export component CommandBar inherits Rectangle {
             // Send-to-all toggle.
             Rectangle {
                 height: 29px * Theme.ui-scale;
-                width: all-row.preferred-width + 14px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: root.send-to-all ? Theme.accent
                     : all-ta.has-hover ? Theme.bg-hover : Theme.bg-elevated;
                 all-ta := TooltipArea {
-                    width: parent.width;
-                    height: parent.height;
                     mouse-cursor: pointer;
                     tooltip-text: @tr("When selected, commands are sent to all sessions");
                     activate => { root.send-to-all = !root.send-to-all; }
                 }
 
-                all-row := HorizontalLayout {
-                    width: parent.width;
+                HorizontalLayout {
+                    padding-left: 7px * Theme.ui-scale;
+                    padding-right: 7px * Theme.ui-scale;
                     height: parent.height;
                     alignment: center;
                     Text {
@@ -285,7 +290,6 @@ export component CommandBar inherits Rectangle {
             // Send button.
             Rectangle {
                 height: 29px * Theme.ui-scale;
-                width: send-row.preferred-width + 18px * Theme.ui-scale;
                 border-radius: Theme.radius-sm;
                 background: send-ta.has-hover ? Theme.accent-hover : Theme.accent;
                 send-ta := TouchArea {
@@ -298,8 +302,9 @@ export component CommandBar inherits Rectangle {
                     }
                 }
 
-                send-row := HorizontalLayout {
-                    width: parent.width;
+                HorizontalLayout {
+                    padding-left: 9px * Theme.ui-scale;
+                    padding-right: 9px * Theme.ui-scale;
                     height: parent.height;
                     alignment: center;
                     Text {
