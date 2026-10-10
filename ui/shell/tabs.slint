@@ -406,12 +406,56 @@ export component TabBar inherits Rectangle {
     property <length> tab-scroll-range:
         max(0px, flick.viewport-width - flick.width);
 
+    // New tabs append at the end — when the strip overflows, keep the newest
+    // tab in view by pinning the viewport to the right edge after layout.
+    property <int> tracked-tab-count: -1;
+    property <bool> pending-scroll-to-end: false;
+
     // Pan the strip horizontally. Vertical mouse-wheel deltas are treated as
     // horizontal so a normal wheel can move the overflow scrollbar thumb.
     function scroll-strip(delta: length) {
         if (root.tab-scroll-range <= 0px || delta == 0px) { return; }
         flick.viewport-x = clamp(
             flick.viewport-x + delta, -root.tab-scroll-range, 0px);
+    }
+
+    function scroll-strip-to-end() {
+        if (root.tab-scroll-range > 0px) {
+            flick.viewport-x = -root.tab-scroll-range;
+        }
+    }
+
+    changed tabs => {
+        if (root.tracked-tab-count >= 0 && root.tabs.length > root.tracked-tab-count) {
+            root.pending-scroll-to-end = true;
+            // Layout may already include the new tab; otherwise the range /
+            // timer handlers below finish the scroll after preferred-width updates.
+            root.scroll-strip-to-end();
+            scroll-to-end-timer.running = false;
+            scroll-to-end-timer.running = true;
+        }
+        root.tracked-tab-count = root.tabs.length;
+    }
+
+    // Fires when the new tab widens the strip (including first overflow).
+    changed tab-scroll-range => {
+        if (root.pending-scroll-to-end) {
+            root.scroll-strip-to-end();
+            root.pending-scroll-to-end = false;
+            scroll-to-end-timer.running = false;
+        }
+    }
+
+    scroll-to-end-timer := Timer {
+        interval: 16ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            if (root.pending-scroll-to-end) {
+                root.scroll-strip-to-end();
+                root.pending-scroll-to-end = false;
+            }
+        }
     }
 
     HorizontalLayout {
