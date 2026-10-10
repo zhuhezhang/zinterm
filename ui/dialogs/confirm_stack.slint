@@ -13,6 +13,8 @@ export component ConfirmStack inherits Rectangle {
     callback clear-known-hosts();
     callback clear-saved-passwords();
     in-out property <bool> collapse-sftp-default: true;
+    in-out property <bool> confirm-close-all-open: false;
+    in-out property <int> confirm-close-all-pane: 0;
     in-out property <bool> confirm-close-open: false;
     in-out property <bool> confirm-delete-batch: false;   // delete checked entries (#100);
     in-out property <bool> confirm-delete-group-enabled: true;
@@ -102,6 +104,7 @@ export component ConfirmStack inherits Rectangle {
     in-out property <string> output-highlight-preset: "log";
     in-out property <string> output-highlight-rule-status;
     in property <[OutputRuleItem]> output-highlight-rules;
+    callback pane-tab-close-all(int /* pane-id */);
     callback paste-confirm-cancelled();
     in-out property <bool> paste-confirm-enabled: true;
     in-out property <bool> paste-confirm-large: false;
@@ -259,6 +262,22 @@ export component ConfirmStack inherits Rectangle {
             root.confirm-delete-open = false;
         }
         cancel => { root.confirm-delete-batch = false; root.confirm-delete-open = false; }
+    }
+
+    // Tab context menu › Close all tabs — confirm before disconnecting sessions.
+    ConfirmDialog {
+        width: parent.width;
+        height: parent.height;
+        is-open <=> root.confirm-close-all-open;
+        covered: root.confirm-close-open;
+        title: @tr("Close all tabs?");
+        message: @tr("Close every tab in this pane? Active sessions will be disconnected");
+        confirm-label: @tr("Close all");
+        confirm => {
+            root.pane-tab-close-all(root.confirm-close-all-pane);
+            root.confirm-close-all-open = false;
+        }
+        cancel => { root.confirm-close-all-open = false; }
     }
 
     // Welcome list: optional confirm before deleting a group or session.

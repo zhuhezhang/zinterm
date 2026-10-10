@@ -22,6 +22,8 @@ export component DockArea inherits Rectangle {
     callback collapse-all-groups();
     callback collapse-group-children(string /* group */);
     in property <[string]> command-history;          // oldest first (newest last, #113);
+    in-out property <bool> confirm-close-all-open: false;
+    in-out property <int> confirm-close-all-pane: 0;
     in-out property <bool> confirm-delete-batch: false;   // delete checked entries (#100);
     in-out property <bool> confirm-delete-group-enabled: true;
     in-out property <bool> confirm-delete-open: false;
@@ -506,7 +508,10 @@ export component DockArea inherits Rectangle {
                                     tab-close-others(id) => { root.pane-tab-close-others(pane.id, id); }
                                     tab-close-left(id) => { root.pane-tab-close-left(pane.id, id); }
                                     tab-close-right(id) => { root.pane-tab-close-right(pane.id, id); }
-                                    tab-close-all() => { root.pane-tab-close-all(pane.id); }
+                                    tab-close-all() => {
+                                        root.confirm-close-all-pane = pane.id;
+                                        root.confirm-close-all-open = true;
+                                    }
                                     tab-find(id) => {
                                         root.pane-tab-selected(pane.id, id);
                                         root.find-request-tab = id;

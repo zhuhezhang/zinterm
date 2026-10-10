@@ -604,6 +604,9 @@ export component AppWindow inherits Window {
     in-out property <bool> confirm-delete-batch: false;   // delete checked entries (#100)
     in-out property <string> confirm-delete-tab;
     in-out property <string> confirm-delete-path;
+    // Confirm before closing every tab in a pane (tab context menu).
+    in-out property <bool> confirm-close-all-open: false;
+    in-out property <int> confirm-close-all-pane: 0;
 
     // --- Callbacks up to Rust ---------------------------------------------
     callback new-session-clicked(string /* host */);
@@ -817,6 +820,8 @@ export component AppWindow inherits Window {
                 collapse-all-groups => { root.collapse-all-groups(); }
                 collapse-group-children(group) => { root.collapse-group-children(group); }
                 command-history: root.command-history;
+                confirm-close-all-open <=> root.confirm-close-all-open;
+                confirm-close-all-pane <=> root.confirm-close-all-pane;
                 confirm-delete-batch <=> root.confirm-delete-batch;
                 confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
                 confirm-delete-open <=> root.confirm-delete-open;
@@ -1191,6 +1196,8 @@ export component AppWindow inherits Window {
         clear-known-hosts => { root.clear-known-hosts(); }
         clear-saved-passwords => { root.clear-saved-passwords(); }
         collapse-sftp-default <=> root.collapse-sftp-default;
+        confirm-close-all-open <=> root.confirm-close-all-open;
+        confirm-close-all-pane <=> root.confirm-close-all-pane;
         confirm-close-open <=> root.confirm-close-open;
         confirm-delete-batch <=> root.confirm-delete-batch;
         confirm-delete-group-enabled <=> root.confirm-delete-group-enabled;
@@ -1280,6 +1287,7 @@ export component AppWindow inherits Window {
         output-highlight-preset <=> root.output-highlight-preset;
         output-highlight-rule-status <=> root.output-highlight-rule-status;
         output-highlight-rules: root.output-highlight-rules;
+        pane-tab-close-all(pane-id) => { root.pane-tab-close-all(pane-id); }
         paste-confirm-cancelled => { root.paste-confirm-cancelled(); }
         paste-confirm-enabled <=> root.paste-confirm-enabled;
         paste-confirm-large <=> root.paste-confirm-large;

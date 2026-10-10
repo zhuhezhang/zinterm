@@ -459,6 +459,15 @@ msgstr "Close tabs to the right"
 msgid "Close all tabs"
 msgstr "Close all tabs"
 
+msgid "Close all tabs?"
+msgstr "Close all tabs?"
+
+msgid "Close every tab in this pane? Active sessions will be disconnected"
+msgstr "Close every tab in this pane? Active sessions will be disconnected"
+
+msgid "Close all"
+msgstr "Close all"
+
 msgid "Find in terminal"
 msgstr "Find in terminal"
 

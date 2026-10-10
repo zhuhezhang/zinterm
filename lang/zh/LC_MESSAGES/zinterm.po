@@ -459,6 +459,15 @@ msgstr "关闭右侧标签页"
 msgid "Close all tabs"
 msgstr "关闭所有标签页"
 
+msgid "Close all tabs?"
+msgstr "关闭所有标签页？"
+
+msgid "Close every tab in this pane? Active sessions will be disconnected"
+msgstr "将关闭此窗格中的所有标签页，活动会话会被断开"
+
+msgid "Close all"
+msgstr "全部关闭"
+
 msgid "Find in terminal"
 msgstr "查找终端内容"
 
