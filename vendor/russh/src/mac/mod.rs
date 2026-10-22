@@ -18,7 +18,9 @@ use std::convert::TryFrom;
 use std::marker::PhantomData;
 
 use delegate::delegate;
-use digest::typenum::{U16, U20, U32, U64};
+use digest::typenum::{U20, U32, U64};
+#[cfg(feature = "md5-mac")]
+use digest::typenum::U16;
 use hmac::Hmac;
 #[cfg(feature = "md5-mac")]
 use md5_digest::Md5;
