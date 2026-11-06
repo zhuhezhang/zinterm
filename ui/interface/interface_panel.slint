@@ -194,7 +194,10 @@ export component InterfacePanel inherits Rectangle {
                 viewport-height: max(self.visible-height, nav-items.preferred-height);
                 nav-items := VerticalLayout {
                     width: nav-scroll.visible-width;
-                    padding: 8px * Theme.ui-scale;
+                    padding-top: 7px * Theme.ui-scale;
+                    padding-bottom: 8px * Theme.ui-scale;
+                    padding-left: 8px * Theme.ui-scale;
+                    padding-right: 8px * Theme.ui-scale;
                     spacing: 2px * Theme.ui-scale;
                     alignment: start;
                     NavItem {
