@@ -6,8 +6,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Download settings"
-msgstr "下载设置"
+msgid "Transfer management"
+msgstr "传输管理"
 
 msgid "Save downloads to:"
 msgstr "下载保存到："
