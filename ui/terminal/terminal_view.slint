@@ -51,7 +51,9 @@ export component TerminalView inherits Rectangle {
     in property <int> scroll-max;       // scrollback depth (max offset) (#103)
     in property <int> scroll-offset;    // current offset (0 = live bottom) (#103)
     in property <bool> is-alt-screen;
-    in property <[TermMatch]> find-matches; // search-highlight rectangles
+    in property <[TermMatch]> find-matches; // visible-window search highlights
+    in property <int> find-match-count: 0;  // total hits across the tab buffer
+    in property <int> find-match-index: 0;  // 1-based active hit; 0 when none
     in property <[TermMatch]> selection;    // drag-selection highlight rectangles
 
     in property <string> sftp-path: "/";
@@ -180,6 +182,7 @@ export component TerminalView inherits Rectangle {
     callback copy-terminal-text();
     callback clear-terminal();              // wipe this session's screen buffer
     callback find-query-changed(string /* query */, bool /* case */, bool /* whole */, bool /* regex */);
+    callback find-navigate(bool /* forward */);
     callback terminal-scroll(int);          // scroll history by N lines (+ = up)
     // Wheel inside an alt-screen app (tmux/less/vim): forward to the program so it
     // scrolls, instead of doing nothing (#170). dir = +1 up / -1 down; col/row =
@@ -235,7 +238,6 @@ export component TerminalView inherits Rectangle {
     property <bool> find-case-sensitive: false;
     property <bool> find-whole-word: false;
     property <bool> find-regex: false;
-    property <int> find-match-index: 0; // 1-based; 0 when no selection yet
     property <bool> selecting: false;
     // Auto-scroll direction while drag-selecting past the visible edge.
     // 0 = none, -1 = above top (scroll to older), +1 = below bottom (newer).
@@ -271,38 +273,16 @@ export component TerminalView inherits Rectangle {
 
     function close-find() {
         root.emit-find-query("");
-        root.find-match-index = 0;
         root.find-active = false;
         ime-input.focus();
     }
 
     function find-next() {
-        if (root.find-matches.length <= 0) {
-            root.find-match-index = 0;
-            return;
-        }
-        root.find-match-index = root.find-match-index >= root.find-matches.length
-            ? 1
-            : root.find-match-index + 1;
+        root.find-navigate(true);
     }
 
     function find-prev() {
-        if (root.find-matches.length <= 0) {
-            root.find-match-index = 0;
-            return;
-        }
-        root.find-match-index = root.find-match-index <= 1
-            ? root.find-matches.length
-            : root.find-match-index - 1;
-    }
-
-    changed find-matches => {
-        if (root.find-matches.length <= 0) {
-            root.find-match-index = 0;
-        } else if (root.find-match-index <= 0
-            || root.find-match-index > root.find-matches.length) {
-            root.find-match-index = 1;
-        }
+        root.find-navigate(false);
     }
 
     changed find-request-seq => { root.open-find-from-request(); }
@@ -641,12 +621,12 @@ export component TerminalView inherits Rectangle {
                                     }
 
                                     // Search-match highlights (behind the text).
-                                    for m[idx] in root.find-matches: Rectangle {
+                                    for m in root.find-matches: Rectangle {
                                         x: m.col * root.cell-w;
                                         y: m.row * root.cell-h;
                                         width: m.len * root.cell-w;
                                         height: root.cell-h;
-                                        background: (idx + 1 == root.find-match-index)
+                                        background: m.current
                                             ? Theme.accent.with-alpha(0.55)
                                             : Theme.warning.with-alpha(0.40);
                                         border-radius: 2px * Theme.ui-scale;
@@ -1020,8 +1000,8 @@ export component TerminalView inherits Rectangle {
                             find-active <=> root.find-active;
                             find-case-sensitive <=> root.find-case-sensitive;
                             find-focus-pending <=> root.find-focus-pending;
-                            find-match-index <=> root.find-match-index;
-                            find-matches: root.find-matches;
+                            find-match-index: root.find-match-index;
+                            find-match-count: root.find-match-count;
                             find-regex <=> root.find-regex;
                             find-whole-word <=> root.find-whole-word;
                         }

@@ -29,7 +29,7 @@ mod term_buffer;
 pub(crate) mod zmodem;
 
 pub(crate) use encoding::TerminalEncoding;
-pub(crate) use find::{compute_find_matches, line_has_find_match};
+pub(crate) use find::compute_find_matches;
 #[cfg(windows)]
 pub(crate) use input::c0_letter_key_down;
 #[cfg(test)]

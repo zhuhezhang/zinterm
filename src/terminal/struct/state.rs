@@ -23,6 +23,10 @@ pub(crate) struct TermBuffer {
     pub(crate) parser: vt100::Parser,
     pub(crate) find_query: String,
     pub(crate) find_options: FindOptions,
+    /// Absolute (history++live) find hits; `row` is a combined-buffer index.
+    pub(crate) find_abs_matches: Vec<crate::ui::TermMatch>,
+    /// 1-based index into `find_abs_matches`; 0 when there is no active hit.
+    pub(crate) find_match_index: usize,
     pub(crate) is_dark: bool,
     pub(crate) output_highlight: OutputHighlightPreset,
     pub(crate) custom_highlight_rules: Vec<CompiledOutputRule>,

@@ -26,7 +26,9 @@ export struct TerminalState {
     scroll-max: int,       // scrollback depth (max offset) — terminal scrollbar (#103)
     scroll-offset: int,    // current scrollback offset (0 = live bottom)
     is-alt-screen: bool,
-    find-matches: [TermMatch], // search-highlight rectangles
+    find-matches: [TermMatch], // visible-window search highlights
+    find-match-count: int,     // total hits across scrollback + live screen
+    find-match-index: int,     // 1-based active hit; 0 when none
     selection: [TermMatch],    // drag-selection highlight rectangles
 
     // SFTP panel state

@@ -109,40 +109,139 @@ impl TermBuffer {
                     row: vis as i32,
                     col: c0 as i32,
                     len: (c1.saturating_sub(c0) + 1) as i32,
+                    current: false,
                 });
             }
         }
         out
     }
 
-    /// If the current find query is outside the visible window, jump to the
-    /// first matching row in scrollback/live content so old serial output can be
-    /// found without manually scrolling back first (#233).
-    pub(crate) fn scroll_to_first_find_match(&mut self, query: &str) -> bool {
-        if query.is_empty() || self.parser.screen().alternate_screen() {
+    /// Plain-text rows for find: full scrollback + live screen, or just the
+    /// alternate screen when that buffer is active.
+    fn combined_plain_rows(&self) -> Vec<String> {
+        let (live, _) = self.live_rows();
+        if self.parser.screen().alternate_screen() {
+            return live
+                .into_iter()
+                .map(|line| line.0.trim_end().to_string())
+                .collect();
+        }
+        self.history
+            .iter()
+            .map(|line| line.0.trim_end().to_string())
+            .chain(live.into_iter().map(|line| line.0.trim_end().to_string()))
+            .collect()
+    }
+
+    /// Recompute absolute find hits across the whole tab buffer and clamp the
+    /// active index.
+    pub(crate) fn refresh_find_matches(&mut self) {
+        self.find_abs_matches = crate::terminal::compute_find_matches(
+            &self.combined_plain_rows(),
+            &self.find_query,
+            &self.find_options,
+        );
+        let n = self.find_abs_matches.len();
+        if n == 0 {
+            self.find_match_index = 0;
+        } else if self.find_match_index == 0 || self.find_match_index > n {
+            self.find_match_index = 1;
+        }
+    }
+
+    /// Map absolute find hits into the current visible window for painting.
+    pub(crate) fn find_matches_visible(&self) -> Vec<TermMatch> {
+        let rows = self.parser.screen().size().0 as usize;
+        let top = if self.parser.screen().alternate_screen() {
+            0
+        } else {
+            let (_, live_used) = self.live_rows();
+            self.view_top_abs(live_used)
+        };
+        let current = self
+            .find_match_index
+            .checked_sub(1)
+            .and_then(|i| self.find_abs_matches.get(i))
+            .map(|m| (m.row, m.col, m.len));
+        self.find_abs_matches
+            .iter()
+            .filter_map(|m| {
+                let abs = m.row as usize;
+                if abs < top || abs >= top + rows {
+                    return None;
+                }
+                Some(TermMatch {
+                    row: (abs - top) as i32,
+                    col: m.col,
+                    len: m.len,
+                    current: current == Some((m.row, m.col, m.len)),
+                })
+            })
+            .collect()
+    }
+
+    /// Scroll so `abs_row` lies in the visible window (near the top when
+    /// possible). No-op on the alternate screen or when already visible.
+    pub(crate) fn scroll_to_abs_row(&mut self, abs_row: usize) -> bool {
+        if self.parser.screen().alternate_screen() {
             return false;
         }
-        let opts = self.find_options;
-        let (live, _) = self.live_rows();
         let rows = self.parser.screen().size().0 as usize;
-        let hist_len = self.history.len();
-        let combined_len = hist_len + live.len();
-        let Some(match_idx) = self
-            .history
-            .iter()
-            .map(|line| &line.0)
-            .chain(live.iter().map(|line| &line.0))
-            .position(|line| crate::terminal::line_has_find_match(line, query, &opts))
-        else {
+        let (live, live_used) = self.live_rows();
+        let combined_len = self.history.len() + live.len();
+        if combined_len == 0 || rows == 0 {
             return false;
-        };
-        let top = match_idx.min(combined_len.saturating_sub(rows));
+        }
+        let view_top = self.view_top_abs(live_used);
+        let view_bot = view_top + rows - 1;
+        if abs_row >= view_top && abs_row <= view_bot {
+            return false;
+        }
+        let top = abs_row.min(combined_len.saturating_sub(rows));
         let new_offset = combined_len.saturating_sub(rows + top);
         if self.view_offset == new_offset {
             return false;
         }
         self.view_offset = new_offset;
         true
+    }
+
+    /// Ensure the active find hit is on screen; used after a fresh query (#233).
+    pub(crate) fn scroll_to_active_find_match(&mut self) -> bool {
+        let Some(m) = self
+            .find_match_index
+            .checked_sub(1)
+            .and_then(|i| self.find_abs_matches.get(i))
+        else {
+            return false;
+        };
+        self.scroll_to_abs_row(m.row as usize)
+    }
+
+    /// Advance or reverse the active find hit and scroll it into view.
+    /// Returns whether the scrollback offset changed.
+    pub(crate) fn find_navigate(&mut self, forward: bool) -> bool {
+        let n = self.find_abs_matches.len();
+        if n == 0 {
+            self.find_match_index = 0;
+            return false;
+        }
+        if self.find_match_index == 0 {
+            self.find_match_index = if forward { 1 } else { n };
+        } else if forward {
+            self.find_match_index = if self.find_match_index >= n {
+                1
+            } else {
+                self.find_match_index + 1
+            };
+        } else {
+            self.find_match_index = if self.find_match_index <= 1 {
+                n
+            } else {
+                self.find_match_index - 1
+            };
+        }
+        self.scroll_to_active_find_match()
     }
 
     /// Extract the selected text from the combined buffer (whole selection,
@@ -692,6 +791,8 @@ mod export_committed_tests {
             parser: vt100::Parser::new(rows, cols, 0),
             find_query: String::new(),
             find_options: FindOptions::default(),
+            find_abs_matches: Vec::new(),
+            find_match_index: 0,
             is_dark: false,
             output_highlight: OutputHighlightPreset::Off,
             custom_highlight_rules: Vec::new(),

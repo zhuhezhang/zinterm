@@ -298,6 +298,8 @@ pub(super) fn wire_terminal_ops(
                 buf.parser = vt100::Parser::new(rows, cols, 5000);
                 buf.find_query.clear();
                 buf.find_options = FindOptions::default();
+                buf.find_abs_matches.clear();
+                buf.find_match_index = 0;
                 buf.history = VecDeque::new(); // recycle the session scrollback
                 buf.prev = Vec::new();
                 buf.view_offset = 0;
@@ -311,6 +313,8 @@ pub(super) fn wire_terminal_ops(
                 set_terminal_row(&win, &tid, |row| {
                     row.spans = ModelRc::from(Rc::new(VecModel::<TermSpan>::default()));
                     row.find_matches = ModelRc::from(Rc::new(VecModel::<TermMatch>::default()));
+                    row.find_match_count = 0;
+                    row.find_match_index = 0;
                     row.selection = ModelRc::from(Rc::new(VecModel::<TermMatch>::default()));
                     row.cursor_row = 0;
                     row.cursor_col = 0;
@@ -325,7 +329,7 @@ pub(super) fn wire_terminal_ops(
         });
     }
 
-    // Context menu → 查找: store the query and recompute highlight rectangles.
+    // Context menu → 查找: search the whole tab buffer (scrollback + live).
     {
         let bufs_find = bufs.clone();
         let weak = window.as_weak();
@@ -342,30 +346,84 @@ pub(super) fn wire_terminal_ops(
                     whole_word,
                     regex: use_regex,
                 };
-                let (matches, jumped) = with_term_buf(&bufs_find, &tid, |buf| {
+                let jumped = with_term_buf(&bufs_find, &tid, |buf| {
                     buf.find_query = q.clone();
                     buf.find_options = opts;
-                    let mut matches = compute_find_matches(&buf.displayed_text, &q, &opts);
-                    let jumped = matches.is_empty() && buf.scroll_to_first_find_match(&q);
+                    buf.refresh_find_matches();
+                    let jumped = buf.scroll_to_active_find_match();
                     if jumped {
                         buf.render();
-                        matches = compute_find_matches(&buf.displayed_text, &q, &opts);
                     }
-                    (matches, jumped)
+                    jumped
                 })
-                .unwrap_or_default();
+                .unwrap_or(false);
                 if let Some(win) = weak.upgrade() {
                     if jumped {
                         rebuild_tab_display(&win, &bufs_find, &tid);
                         return;
                     }
+                    let data = with_term_buf(&bufs_find, &tid, |buf| {
+                        (
+                            buf.find_matches_visible(),
+                            buf.find_abs_matches.len() as i32,
+                            buf.find_match_index as i32,
+                        )
+                    });
+                    let Some((matches, count, index)) = data else {
+                        return;
+                    };
                     let model = ModelRc::from(Rc::new(VecModel::from(matches)));
                     set_terminal_row(&win, &tid, |row| {
                         row.find_matches = model.clone();
+                        row.find_match_count = count;
+                        row.find_match_index = index;
                     });
                 }
             },
         );
+    }
+
+    // Find bar → next/prev: cycle absolute hits and scroll into view.
+    {
+        let bufs_nav = bufs.clone();
+        let weak = window.as_weak();
+        window.on_find_navigate(move |tab_id: SharedString, forward: bool| {
+            let tid = tab_id.to_string();
+            let jumped = with_term_buf(&bufs_nav, &tid, |buf| {
+                if buf.find_query.is_empty() {
+                    return false;
+                }
+                buf.refresh_find_matches();
+                let jumped = buf.find_navigate(forward);
+                if jumped {
+                    buf.render();
+                }
+                jumped
+            })
+            .unwrap_or(false);
+            if let Some(win) = weak.upgrade() {
+                if jumped {
+                    rebuild_tab_display(&win, &bufs_nav, &tid);
+                    return;
+                }
+                let data = with_term_buf(&bufs_nav, &tid, |buf| {
+                    (
+                        buf.find_matches_visible(),
+                        buf.find_abs_matches.len() as i32,
+                        buf.find_match_index as i32,
+                    )
+                });
+                let Some((matches, count, index)) = data else {
+                    return;
+                };
+                let model = ModelRc::from(Rc::new(VecModel::from(matches)));
+                set_terminal_row(&win, &tid, |row| {
+                    row.find_matches = model.clone();
+                    row.find_match_count = count;
+                    row.find_match_index = index;
+                });
+            }
+        });
     }
 
     // Mouse-wheel → scroll the scrollback history.

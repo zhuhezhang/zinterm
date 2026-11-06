@@ -16,11 +16,13 @@ export struct TermSpan {
     emoji-image: image,
 }
 
-// A find-match highlight rectangle on the terminal grid.
+// A find-match / selection highlight rectangle on the terminal grid.
+// `current` marks the active find hit (ignored for drag-selection).
 export struct TermMatch {
     row: int,
     col: int,
     len: int,
+    current: bool,
 }
 
 // One saved quick command (#55): a name shown on the chip + the text to send.

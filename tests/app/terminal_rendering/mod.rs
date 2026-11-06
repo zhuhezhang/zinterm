@@ -21,6 +21,8 @@ fn make_buf(
         parser,
         find_query: String::new(),
         find_options: FindOptions::default(),
+        find_abs_matches: Vec::new(),
+        find_match_index: 0,
         is_dark: false,
         output_highlight: OutputHighlightPreset::Log,
         custom_highlight_rules: Vec::new(),

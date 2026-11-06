@@ -25,9 +25,10 @@ fn build_find_regex(query: &str, opts: &FindOptions) -> Option<regex::Regex> {
         .ok()
 }
 
-/// Find every occurrence of `query` across the currently displayed rows and
-/// return highlight rectangles in GRID-COLUMN space (wide CJK glyphs count as
-/// two columns, so highlights line up over the text #132).
+/// Find every occurrence of `query` across `rows` and return highlight
+/// rectangles in GRID-COLUMN space (wide CJK glyphs count as two columns, so
+/// highlights line up over the text #132). `TermMatch.row` is the index into
+/// `rows` (absolute combined-buffer index when searching scrollback+live).
 pub(crate) fn compute_find_matches(
     rows: &[String],
     query: &str,
@@ -56,6 +57,7 @@ pub(crate) fn compute_find_matches(
                     row: r as i32,
                     col: prefix[start] as i32,
                     len: (prefix[end] - prefix[start]) as i32,
+                    current: false,
                 });
             }
         }
@@ -88,6 +90,7 @@ pub(crate) fn compute_find_matches(
                     row: r as i32,
                     col,
                     len,
+                    current: false,
                 });
                 i += q.len();
             } else {
@@ -98,6 +101,3 @@ pub(crate) fn compute_find_matches(
     out
 }
 
-pub(crate) fn line_has_find_match(line: &str, query: &str, opts: &FindOptions) -> bool {
-    !compute_find_matches(&[line.to_string()], query, opts).is_empty()
-}

@@ -1,7 +1,6 @@
 import { Theme } from "../shared/theme.slint";
 import { BorderedLineInput, IconButton } from "../shared/widgets.slint";
 import { FindToggle } from "helpers.slint";
-import { TermMatch } from "../types/terminal.slint";
 
 export component FindBar inherits Rectangle {
     // Floating find bar — positioned by the parent terminal area.
@@ -12,8 +11,8 @@ export component FindBar inherits Rectangle {
     in-out property <bool> find-active: false;
     in-out property <bool> find-case-sensitive: false;
     in-out property <bool> find-focus-pending: false;
-    in-out property <int> find-match-index: 0; // 1-based; 0 when no selection yet;
-    in property <[TermMatch]> find-matches; // search-highlight rectangles;
+    in property <int> find-match-index: 0; // 1-based; 0 when no selection yet;
+    in property <int> find-match-count: 0; // total hits across the tab buffer;
     in-out property <bool> find-regex: false;
     in-out property <bool> find-whole-word: false;
 
@@ -57,7 +56,6 @@ export component FindBar inherits Rectangle {
             // Windows when opened from right-click (#343).
             init => { root.find-focus-pending = true; }
             edited => {
-                root.find-match-index = 0;
                 root.emit-find-query(self.text);
             }
             key-pressed(e) => {
@@ -82,8 +80,8 @@ export component FindBar inherits Rectangle {
             min-width: 40px * Theme.ui-scale;
             text: find-input.text == "" ? ""
                 : (root.find-match-index > 0
-                ? root.find-match-index + "/" + root.find-matches.length
-                : "" + root.find-matches.length);
+                ? root.find-match-index + "/" + root.find-match-count
+                : "" + root.find-match-count);
             color: Theme.text-muted;
             font-size: Theme.fs-sm;
             vertical-alignment: center;
@@ -95,7 +93,6 @@ export component FindBar inherits Rectangle {
             tip: @tr("Match case");
             on <=> root.find-case-sensitive;
             toggled(_) => {
-                root.find-match-index = 0;
                 root.emit-find-query(find-input.text);
             }
         }
@@ -105,7 +102,6 @@ export component FindBar inherits Rectangle {
             tip: @tr("Match whole word");
             on <=> root.find-whole-word;
             toggled(_) => {
-                root.find-match-index = 0;
                 root.emit-find-query(find-input.text);
             }
         }
@@ -115,7 +111,6 @@ export component FindBar inherits Rectangle {
             tip: @tr("Use regular expression");
             on <=> root.find-regex;
             toggled(_) => {
-                root.find-match-index = 0;
                 root.emit-find-query(find-input.text);
             }
         }

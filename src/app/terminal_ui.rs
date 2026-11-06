@@ -341,11 +341,14 @@ pub(super) fn rebuild_tab_display(win: &AppWindow, bufs: &TermBuffers, tab_id: &
     let data = with_term_buf(bufs, tab_id, |buf| {
         let cols = buf.parser.screen().size().1;
         let b = buf.render(); // also refreshes buf.displayed_text
-        let matches = compute_find_matches(&buf.displayed_text, &buf.find_query, &buf.find_options);
+        buf.refresh_find_matches();
+        let matches = buf.find_matches_visible();
+        let find_count = buf.find_abs_matches.len() as i32;
+        let find_index = buf.find_match_index as i32;
         let sel = buf.selection_rects_visible(cols);
-        (b, matches, sel)
+        (b, matches, find_count, find_index, sel)
     });
-    let Some((b, matches, sel)) = data else {
+    let Some((b, matches, find_count, find_index, sel)) = data else {
         return;
     };
     let spans = ModelRc::from(Rc::new(VecModel::from(b.spans)));
@@ -360,6 +363,8 @@ pub(super) fn rebuild_tab_display(win: &AppWindow, bufs: &TermBuffers, tab_id: &
         row.rows_used = ru;
         row.is_alt_screen = alt;
         row.find_matches = fm.clone();
+        row.find_match_count = find_count;
+        row.find_match_index = find_index;
         row.selection = sm.clone();
         row.scroll_max = smax;
         row.scroll_offset = soff;

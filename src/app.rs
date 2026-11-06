@@ -83,15 +83,15 @@ use crate::ssh::{
 use crate::terminal::c0_letter_key_down;
 use crate::terminal::{
     apply_backspace_mode, bare_ctrl_marker_workaround_enabled, compile_output_rules,
-    compute_find_matches, encode_command_bar_input, encode_pasted_text, key_to_pty_bytes,
+    encode_command_bar_input, encode_pasted_text, key_to_pty_bytes,
     normalize_backspace_mode, paste_requires_large_review, should_drop_bare_ctrl_marker,
     terminal_uses_bracketed_paste, CsiState, FindOptions, OutputHighlightPreset, RenderGates,
     TabRenderGate, TermBuffer, TermBufferHandle, TermBuffers,
 };
 #[cfg(test)]
 use crate::terminal::{
-    build_row, highlight_plain_output, log_level_marker, normalize_pasted_newlines,
-    text_cell_width, vt_span_colors, CompiledOutputRule, HistSpan, Line,
+    build_row, compute_find_matches, highlight_plain_output, log_level_marker,
+    normalize_pasted_newlines, text_cell_width, vt_span_colors, CompiledOutputRule, HistSpan, Line,
 };
 #[cfg(any(target_os = "windows", test))]
 use crate::terminal::{windows_process_ctrl_release, CtrlKeySide};

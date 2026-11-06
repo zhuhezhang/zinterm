@@ -738,8 +738,10 @@ export component AppWindow inherits Window {
     callback clear-terminal(string /* tab-id */);
     // Save a session's scrollback + live screen to a text file.
     callback save-terminal-output(string /* tab-id */);
-    // Recompute search highlights for a session's visible screen.
+    // Recompute search highlights across a session's full scrollback + live screen.
     callback find-query-changed(string /* tab-id */, string /* query */, bool /* case */, bool /* whole */, bool /* regex */);
+    // Cycle find hits (+forward / -backward) and scroll the active hit into view.
+    callback find-navigate(string /* tab-id */, bool /* forward */);
     // Scroll a session's scrollback history by N lines (+ = up/older).
     callback terminal-scroll(string /* tab-id */, int /* delta-lines */);
     // Wheel forwarded to an alt-screen program (#170): tab-id, dir (+1 up/-1 down), col, row.
@@ -859,6 +861,7 @@ export component AppWindow inherits Window {
                 expand-group-children(group) => { root.expand-group-children(group); }
                 extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
                 find-query-changed(tab-id, query, case, whole, regex) => { root.find-query-changed(tab-id, query, case, whole, regex); }
+                find-navigate(tab-id, forward) => { root.find-navigate(tab-id, forward); }
                 find-request-seq <=> root.find-request-seq;
                 find-request-tab <=> root.find-request-tab;
                 history-view: root.history-view;

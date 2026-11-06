@@ -149,3 +149,47 @@ fn find_matches_report_grid_columns_past_cjk() {
     assert_eq!(m2[0].col, 0);
     assert_eq!(m2[0].len, 4, "two wide glyphs span four grid cells");
 }
+
+#[test]
+fn find_searches_full_scrollback_not_just_viewport() {
+    // 3 history + 2 live rows on a 2-row screen → only the live window is
+    // visible at offset 0, but find must still hit the scrolled-away history.
+    let mut buf = make_buf(2, 20, &["alpha one", "beta two", "gamma three"], &["LIVE0", "needle here"], 0);
+    buf.find_query = "beta".into();
+    buf.refresh_find_matches();
+    assert_eq!(buf.find_abs_matches.len(), 1);
+    assert_eq!(buf.find_abs_matches[0].row, 1, "history row 1");
+    assert_eq!(buf.find_match_index, 1);
+    assert!(
+        buf.find_matches_visible().is_empty(),
+        "hit is above the live viewport"
+    );
+    assert!(buf.scroll_to_active_find_match());
+    buf.render();
+    let visible = buf.find_matches_visible();
+    assert_eq!(visible.len(), 1);
+    assert!(visible[0].current);
+    assert_eq!(visible[0].row, 0, "scrolled so the hit is on-screen");
+}
+
+#[test]
+fn find_navigate_cycles_across_full_buffer() {
+    let mut buf = make_buf(
+        2,
+        20,
+        &["hit A", "pad", "hit B"],
+        &["LIVE0", "hit C"],
+        0,
+    );
+    buf.find_query = "hit".into();
+    buf.refresh_find_matches();
+    assert_eq!(buf.find_abs_matches.len(), 3);
+    assert_eq!(buf.find_match_index, 1);
+
+    assert!(buf.find_navigate(true)); // → hit B
+    assert_eq!(buf.find_match_index, 2);
+    assert!(buf.find_navigate(true)); // → hit C (may already be near live view)
+    assert_eq!(buf.find_match_index, 3);
+    buf.find_navigate(true); // wrap → hit A
+    assert_eq!(buf.find_match_index, 1);
+}

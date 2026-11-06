@@ -61,6 +61,7 @@ export component DockArea inherits Rectangle {
     callback expand-group-children(string /* group */);
     in-out property <bool> extra-paste-shortcuts-enabled: true;
     callback find-query-changed(string /* tab-id */, string /* query */, bool /* case */, bool /* whole */, bool /* regex */);
+    callback find-navigate(string /* tab-id */, bool /* forward */);
     in-out property <int> find-request-seq;
     in-out property <string> find-request-tab;
     in property <[HistoryViewItem]> history-view;    // filtered dropdown, newest first (#101, #331);
@@ -659,6 +660,8 @@ export component DockArea inherits Rectangle {
                                     scroll-offset: term.scroll-offset;
                                     is-alt-screen: term.is-alt-screen;
                                     find-matches: term.find-matches;
+                                    find-match-count: term.find-match-count;
+                                    find-match-index: term.find-match-index;
                                     selection: term.selection;
                                     sftp-panel-height: term.sftp-panel-height;
                                     set-sftp-panel-height(v) => { root.set-pane-sftp-height(term.id, v); }
@@ -811,6 +814,9 @@ export component DockArea inherits Rectangle {
                                     clear-terminal() => { root.clear-terminal(term.id); }
                                     find-query-changed(q, case-sensitive, whole-word, use-regex) => {
                                         root.find-query-changed(term.id, q, case-sensitive, whole-word, use-regex);
+                                    }
+                                    find-navigate(forward) => {
+                                        root.find-navigate(term.id, forward);
                                     }
                                     terminal-scroll(d) => { root.terminal-scroll(term.id, d); }
                                     terminal-wheel(d, c, r) => { root.terminal-wheel(term.id, d, c, r); }
