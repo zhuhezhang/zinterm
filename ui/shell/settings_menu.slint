@@ -8,6 +8,8 @@ export component SettingsMenu inherits Rectangle {
     in-out property <bool> lang-en: false;  // effective UI language (false = 中文);
     callback set-language(string);
     in-out property <bool> settings-open: false;  // settings menu popup;
+    // Window-absolute left edge of the title-bar settings icon (IconBtn is 30px).
+    in-out property <length> settings-anchor-x: 0px;
     in-out property <bool> shortcuts-open: false; // centered keyboard-shortcuts dialog (#103);
     in-out property <length> titlebar-bottom;
 
@@ -19,10 +21,14 @@ export component SettingsMenu inherits Rectangle {
         clicked => { root.settings-open = false; }
     }
     Rectangle {
-        // Keep fully inside the window. 8px inset matches the title-bar
-        // button padding from the right edge.
-        x: parent.width - self.width - 8px * Theme.ui-scale;
-        y: root.titlebar-bottom + 4px * Theme.ui-scale;
+        // Center under the settings IconBtn; if the right edge would leave
+        // the window, shift left to keep a 2px gap (same rule as IconBtn tip).
+        property <length> icon-w: 30px;
+        property <length> edge-margin: 2px;
+        property <length> ideal-x: root.settings-anchor-x + (icon-w - self.width) / 2;
+        property <length> max-x: parent.width - edge-margin - self.width;
+        x: min(ideal-x, max-x);
+        y: root.titlebar-bottom + 3px;
         // Hug content so short/long labels (per locale) don't leave empty width.
         width: menu-vl.preferred-width;
         // Size to the menu's content so adding/removing items (or the

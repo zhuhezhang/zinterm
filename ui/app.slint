@@ -103,6 +103,8 @@ export component AppWindow inherits Window {
     in property <string> app-version;
     in-out property <bool> download-open: false;  // download manager popup
     in-out property <bool> settings-open: false;  // settings menu popup
+    in-out property <length> download-anchor-x: 0px;
+    in-out property <length> settings-anchor-x: 0px;
 
     // Immersive custom title bar (#119). Rust sets `custom-titlebar` true on
     // Windows/Linux (frameless); macOS keeps native decorations. The callbacks
@@ -807,7 +809,9 @@ export component AppWindow inherits Window {
                 z: 1;
                 custom-titlebar <=> root.custom-titlebar;
                 download-open <=> root.download-open;
+                download-anchor-x <=> root.download-anchor-x;
                 settings-open <=> root.settings-open;
+                settings-anchor-x <=> root.settings-anchor-x;
                 titlebar-inset <=> root.titlebar-inset;
                 toolbar-btn-spacing <=> root.toolbar-btn-spacing;
                 window-maximized <=> root.window-maximized;
@@ -1058,6 +1062,7 @@ export component AppWindow inherits Window {
         clear-transfers => { root.clear-transfers(); }
         download-dir: root.download-dir;
         download-open <=> root.download-open;
+        download-anchor-x <=> root.download-anchor-x;
         open-download-dir => { root.open-download-dir(); }
         pick-download-dir => { root.pick-download-dir(); }
         restore-download-dir => { root.restore-download-dir(); }
@@ -1075,6 +1080,7 @@ export component AppWindow inherits Window {
         interface-open <=> root.interface-open;
         set-language(a0) => { root.set-language(a0); }
         settings-open <=> root.settings-open;
+        settings-anchor-x <=> root.settings-anchor-x;
         shortcuts-open <=> root.shortcuts-open;
         titlebar-bottom <=> root.titlebar-bottom;
     }

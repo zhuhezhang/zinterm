@@ -11,6 +11,8 @@ export component DownloadPopup inherits Rectangle {
     callback open-download-dir();
     callback pick-download-dir();
     callback restore-download-dir();
+    // Window-absolute left edge of the title-bar transfer icon (IconBtn is 30px).
+    in-out property <length> download-anchor-x: 0px;
     in-out property <length> titlebar-bottom;
     in property <[TransferInfo]> transfers;
 
@@ -39,10 +41,14 @@ export component DownloadPopup inherits Rectangle {
     // Always present; toggled via `visible` (avoids destroying interactive
     // elements mid-event, which crashes when created/removed at the Window root).
     Rectangle {
-        // Drop below the title-bar download button (far-right on macOS,
-        // left of caption buttons on Windows/Linux).
-        x: parent.width - 364px * Theme.ui-scale;
-        y: root.titlebar-bottom + 4px * Theme.ui-scale;
+        // Center under the transfer IconBtn; if the right edge would leave
+        // the window, shift left to keep a 2px gap (same rule as IconBtn tip).
+        property <length> icon-w: 30px;
+        property <length> edge-margin: 2px;
+        property <length> ideal-x: root.download-anchor-x + (icon-w - self.width) / 2;
+        property <length> max-x: parent.width - edge-margin - self.width;
+        x: min(ideal-x, max-x);
+        y: root.titlebar-bottom + 3px;
         width: 350px * Theme.ui-scale;
         height: 400px * Theme.ui-scale;
         visible: root.download-open;

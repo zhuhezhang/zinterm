@@ -6,6 +6,9 @@ export component TitleBar inherits VerticalLayout {
     in-out property <bool> custom-titlebar: true;
     in-out property <bool> download-open: false;  // download manager popup
     in-out property <bool> settings-open: false;  // settings menu popup
+    // Window-absolute left edge of the icon that opened each popup (for centering).
+    in-out property <length> download-anchor-x: 0px;
+    in-out property <length> settings-anchor-x: 0px;
     in-out property <length> titlebar-inset;
     callback toggle-theme();
     in-out property <length> toolbar-btn-spacing: 8px;
@@ -47,7 +50,11 @@ export component TitleBar inherits VerticalLayout {
                         tooltip: @tr("Transfer management");
                         window-width: root.width;
                         active: root.download-open;
-                        clicked => { root.download-open = !root.download-open; root.settings-open = false; }
+                        clicked => {
+                            root.download-anchor-x = self.absolute-position.x;
+                            root.download-open = !root.download-open;
+                            root.settings-open = false;
+                        }
                     }
 
                     IconBtn {
@@ -55,7 +62,11 @@ export component TitleBar inherits VerticalLayout {
                         tooltip: @tr("Settings");
                         window-width: root.width;
                         active: root.settings-open;
-                        clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
+                        clicked => {
+                            root.settings-anchor-x = self.absolute-position.x;
+                            root.settings-open = !root.settings-open;
+                            root.download-open = false;
+                        }
                     }
                 }
             }
@@ -127,7 +138,11 @@ export component TitleBar inherits VerticalLayout {
                         tooltip: @tr("Transfer management");
                         window-width: root.width;
                         active: root.download-open;
-                        clicked => { root.download-open = !root.download-open; root.settings-open = false; }
+                        clicked => {
+                            root.download-anchor-x = self.absolute-position.x;
+                            root.download-open = !root.download-open;
+                            root.settings-open = false;
+                        }
                     }
 
                     IconBtn {
@@ -135,7 +150,11 @@ export component TitleBar inherits VerticalLayout {
                         tooltip: @tr("Settings");
                         window-width: root.width;
                         active: root.settings-open;
-                        clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
+                        clicked => {
+                            root.settings-anchor-x = self.absolute-position.x;
+                            root.settings-open = !root.settings-open;
+                            root.download-open = false;
+                        }
                     }
                 }
             }
