@@ -6,7 +6,7 @@ Repository: [https://github.com/zhuhezhang/zinterm](https://github.com/zhuhezhan
 
 ZinTerm is a lightweight, low-memory cross-platform terminal emulator built with **Rust + [Slint](https://slint.dev)**.
 It targets day-to-day ops and remote development, cutting Electron-class terminals from **200+ MB** of RAM
-down to tens of MB at native performance, while keeping multi-protocol sessions, file transfer, and quick commands. This project is a fork of [meatshell](https://github.com/yituorou/meatshell/) v0.6.12, further developed around the author's MobaXterm habits and day-to-day workflows. Thanks to yituorou for the open-source work!
+down to tens of MB at native performance, while keeping multi-protocol sessions, file transfer, and quick commands. This project is a fork of [meatshell](https://github.com/yituorou/meatshell/) v0.6.12, further developed and optimized around the author's MobaXterm habits and day-to-day workflows (network operations, large device fleets, and diverse device types). Thanks to yituorou for the open-source work!
 
 Supported connection types:
 
