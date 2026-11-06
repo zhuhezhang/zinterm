@@ -498,22 +498,11 @@ impl Session {
                             )
                             .await
                     }
-                    "keepalive@openssh.com" => {
-                        let wants_reply = map_err!(u8::decode(&mut r))?;
-                        if wants_reply == 1 {
-                            if let Some(ref mut enc) = self.common.encrypted {
-                                trace!("Received channel keep alive message: {req:?}",);
-                                self.common.wants_reply = false;
-                                push_packet!(enc.write, {
-                                    map_err!(msg::CHANNEL_SUCCESS.encode(&mut enc.write))?;
-                                    map_err!(channel_num.encode(&mut enc.write))?;
-                                });
-                            }
-                        } else {
-                            warn!("Received keepalive without reply request!");
-                        }
-                        Ok(())
-                    }
+                    // Keepalives fall through with other unknown requests: reply
+                    // CHANNEL_FAILURE (OpenSSH / PuTTY), not CHANNEL_SUCCESS.
+                    // Some appliances (e.g. Hillstone SG-6000) only treat FAILURE
+                    // as a ClientAlive acknowledgement and drop the TCP session
+                    // after ClientAliveCountMax "unanswered" probes (~10s).
                     _ => {
                         let wants_reply = map_err!(u8::decode(&mut r))?;
                         if wants_reply == 1 {
@@ -525,7 +514,11 @@ impl Session {
                                 })
                             }
                         }
-                        info!("Unknown channel request {req:?} {wants_reply:?}",);
+                        if req.starts_with("keepalive") {
+                            trace!("Received channel keep alive message: {req:?}");
+                        } else {
+                            info!("Unknown channel request {req:?} {wants_reply:?}",);
+                        }
                         Ok(())
                     }
                 }
@@ -558,11 +551,15 @@ impl Session {
                 let req = map_err!(String::decode(&mut r))?;
                 let wants_reply = map_err!(u8::decode(&mut r))?;
                 if let Some(ref mut enc) = self.common.encrypted {
+                    // OpenSSH / PuTTY reply REQUEST_FAILURE to server ClientAlive
+                    // (`keepalive@openssh.com`). Sending REQUEST_SUCCESS here made
+                    // Hillstone SG-6000 (StoneOS 5.x) answer with UNIMPLEMENTED and
+                    // still count the probe as unanswered → TCP FIN after ~3×3s.
                     if req.starts_with("keepalive") {
                         if wants_reply == 1 {
-                            trace!("Received keep alive message: {req:?}",);
+                            trace!("Received keep alive message: {req:?}");
                             self.common.wants_reply = false;
-                            push_packet!(enc.write, enc.write.push(msg::REQUEST_SUCCESS));
+                            push_packet!(enc.write, enc.write.push(msg::REQUEST_FAILURE));
                         } else {
                             warn!("Received keepalive without reply request!");
                         }
