@@ -1080,6 +1080,12 @@ msgstr "Shortcuts"
 msgid "Toggle theme"
 msgstr "Toggle theme"
 
+msgid "Pin window"
+msgstr "Pin window"
+
+msgid "Unpin window"
+msgstr "Unpin window"
+
 msgid "CPU is the default renderer on macOS"
 msgstr "CPU is the default renderer on macOS"
 

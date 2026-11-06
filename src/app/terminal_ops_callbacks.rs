@@ -181,7 +181,8 @@ pub(super) fn wire_terminal_ops(
             }
             let tab_title = tab_title_by_id(tabs_model.as_ref(), &tid);
             let default_name = terminal_output_default_filename(&tab_title);
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = DialogOwner::of_weak(&weak)
+                .file()
                 .set_title(t("保存终端输出", "Save terminal output"))
                 .set_file_name(&default_name)
                 .save_file()

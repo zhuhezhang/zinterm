@@ -1,6 +1,10 @@
 use super::*;
 
-fn choose_download_conflict(remote: &str, local_dir: &str) -> Option<DownloadConflict> {
+fn choose_download_conflict(
+    owner: DialogOwner,
+    remote: &str,
+    local_dir: &str,
+) -> Option<DownloadConflict> {
     let target = download_target_path(remote, local_dir);
     if !target.is_file() {
         return Some(DownloadConflict::Replace);
@@ -8,7 +12,8 @@ fn choose_download_conflict(remote: &str, local_dir: &str) -> Option<DownloadCon
     let replace = t("替换", "Replace");
     let keep_both = t("共存", "Keep both");
     let cancel = t("取消", "Cancel");
-    let result = rfd::MessageDialog::new()
+    let result = owner
+        .message()
         .set_title(t("文件已存在", "File already exists"))
         .set_description(format!(
             "{}\n{}",
@@ -133,13 +138,14 @@ pub(super) fn wire_sftp_callbacks(
                     )
                 })
                 .unwrap_or_default();
+            let owner = DialogOwner::of_weak(&weak);
             if !always_ask && !preset.is_empty() {
                 if let Ok(handles) = sftp_handles.lock() {
                     if let Some(h) = handles.get(&tab_id) {
                         if let Some(ref dir) = arc_dir {
                             h.download_archive(dir.clone(), arc_names.clone(), preset);
                         } else if let Some(conflict) =
-                            choose_download_conflict(&remote_path, &preset)
+                            choose_download_conflict(owner, &remote_path, &preset)
                         {
                             h.download(remote_path, preset, conflict);
                         }
@@ -155,14 +161,14 @@ pub(super) fn wire_sftp_callbacks(
             let sftp_handles = sftp_handles.clone();
             let weak = weak.clone();
             std::thread::spawn(move || {
-                if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                if let Some(dir) = owner.file().pick_folder() {
                     let local_dir = dir.to_string_lossy().to_string();
                     if let Ok(handles) = sftp_handles.lock() {
                         if let Some(h) = handles.get(&tab_id) {
                             if let Some(ref rdir) = arc_dir {
                                 h.download_archive(rdir.clone(), arc_names.clone(), local_dir);
                             } else if let Some(conflict) =
-                                choose_download_conflict(&remote_path, &local_dir)
+                                choose_download_conflict(owner, &remote_path, &local_dir)
                             {
                                 h.download(remote_path, local_dir, conflict);
                             }
@@ -177,22 +183,26 @@ pub(super) fn wire_sftp_callbacks(
     // Upload a local file into the current remote directory.
     {
         let sftp_handles = sftp_handles.clone();
+        let weak = window.as_weak();
         window.on_sftp_upload_clicked(
             move |tab_id: SharedString, remote_dir: SharedString, folder: bool| {
                 let tab_id = tab_id.to_string();
                 let remote_dir = remote_dir.to_string();
                 let sftp_handles = sftp_handles.clone();
+                let owner = DialogOwner::of_weak(&weak);
                 std::thread::spawn(move || {
                     // The remote SFTP upload handles a file or a whole directory;
                     // only the local picker differs (#85). Folder uploads one dir;
                     // file mode allows selecting several at once.
                     let locals: Vec<std::path::PathBuf> = if folder {
-                        rfd::FileDialog::new()
+                        owner
+                            .file()
                             .pick_folder()
                             .map(|p| vec![p])
                             .unwrap_or_default()
                     } else {
-                        rfd::FileDialog::new()
+                        owner
+                            .file()
                             .pick_files()
                             .map(|v| v.into_iter().collect())
                             .unwrap_or_default()
@@ -380,11 +390,14 @@ pub(super) fn wire_sftp_callbacks(
                 .collect();
             let preset = w.get_download_dir().to_string();
             let always_ask = w.get_download_always_ask();
+            let owner = DialogOwner::of(w.window());
             if !always_ask && !preset.is_empty() {
                 if let Ok(handles) = sftp_handles.lock() {
                     if let Some(h) = handles.get(tab_id.as_str()) {
                         if single {
-                            if let Some(conflict) = choose_download_conflict(&paths[0], &preset) {
+                            if let Some(conflict) =
+                                choose_download_conflict(owner, &paths[0], &preset)
+                            {
                                 h.download(paths[0].clone(), preset.clone(), conflict);
                             }
                         } else {
@@ -398,13 +411,13 @@ pub(super) fn wire_sftp_callbacks(
                 let weak2 = weak.clone();
                 let tab = tab_id.to_string();
                 std::thread::spawn(move || {
-                    if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                    if let Some(dir) = owner.file().pick_folder() {
                         let dir = dir.to_string_lossy().to_string();
                         if let Ok(handles) = sftp_handles.lock() {
                             if let Some(h) = handles.get(&tab) {
                                 if single {
                                     if let Some(conflict) =
-                                        choose_download_conflict(&paths[0], &dir)
+                                        choose_download_conflict(owner, &paths[0], &dir)
                                     {
                                         h.download(paths[0].clone(), dir.clone(), conflict);
                                     }

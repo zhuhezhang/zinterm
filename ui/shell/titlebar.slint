@@ -11,6 +11,8 @@ export component TitleBar inherits VerticalLayout {
     in-out property <length> settings-anchor-x: 0px;
     in-out property <length> titlebar-inset;
     callback toggle-theme();
+    // Keep this window above other apps (#450 / meatshell). Per window, not persisted.
+    in-out property <bool> pinned: false;
     in-out property <length> toolbar-btn-spacing: 8px;
     callback win-close();
     callback win-drag();
@@ -37,6 +39,15 @@ export component TitleBar inherits VerticalLayout {
                 alignment: center;
                 HorizontalLayout {
                     spacing: root.toolbar-btn-spacing;
+                    IconBtn {
+                        icon: "\u{F10D}";   // Material "push_pin" — always on top
+                        icon-color: root.pinned ? Theme.accent : Theme.text-secondary;
+                        tooltip: root.pinned ? @tr("Unpin window") : @tr("Pin window");
+                        window-width: root.width;
+                        active: root.pinned;
+                        clicked => { root.pinned = !root.pinned; }
+                    }
+
                     IconBtn {
                         icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
                         icon-color: Theme.dark ? #f5c542 : #5856d6;
@@ -117,7 +128,7 @@ export component TitleBar inherits VerticalLayout {
             Rectangle {
                 horizontal-stretch: 1;
             }
-            // App toolbar (theme / download / settings) — own spacing via
+            // App toolbar (pin / theme / download / settings) — own spacing via
             // toolbar-btn-spacing; outer layout spacing keeps caption gaps at 8px.
             // Icon code points: https://fonts.google.com/icons?icon.set=Material+Icons
             // local file: fonts/MaterialIcons-Regular.ttf
@@ -125,6 +136,15 @@ export component TitleBar inherits VerticalLayout {
                 alignment: center;
                 HorizontalLayout {
                     spacing: root.toolbar-btn-spacing;
+                    IconBtn {
+                        icon: "\u{F10D}";   // Material "push_pin" — always on top
+                        icon-color: root.pinned ? Theme.accent : Theme.text-secondary;
+                        tooltip: root.pinned ? @tr("Unpin window") : @tr("Pin window");
+                        window-width: root.width;
+                        active: root.pinned;
+                        clicked => { root.pinned = !root.pinned; }
+                    }
+
                     IconBtn {
                         icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
                         icon-color: Theme.dark ? #f5c542 : #5856d6;

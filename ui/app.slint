@@ -69,6 +69,8 @@ export component AppWindow inherits Window {
     // Frameless when we draw our own title bar (#119); Rust sets custom-titlebar
     // true on Windows/Linux. Slint maps no-frame → winit set_decorations(false).
     no-frame: root.custom-titlebar;
+    // Keep this window above other applications. Per window and not persisted.
+    always-on-top: root.pinned;
     min-width: 720px;
     min-height: 420px;
     preferred-width: 1440px;
@@ -501,6 +503,8 @@ export component AppWindow inherits Window {
     callback collapse-group-children(string /* group */);
     callback submit-group(string /* orig */, string /* segment */, string /* parent */) -> string;
     callback toggle-theme();               // flip dark ↔ light
+    // Keep this window above other applications. Per window and not persisted.
+    in-out property <bool> pinned: false;
     in-out property <length> sftp-panel-height: 220px; // shared; lets Rust locate the drop zone
     in-out property <length> sftp-panel-width: 380px;  // SFTP extent when docked left/right
     in-out property <string> sftp-dock: "bottom";      // SFTP dock edge, shared across tabs
@@ -815,6 +819,7 @@ export component AppWindow inherits Window {
                 titlebar-inset <=> root.titlebar-inset;
                 toolbar-btn-spacing <=> root.toolbar-btn-spacing;
                 window-maximized <=> root.window-maximized;
+                pinned <=> root.pinned;
                 toggle-theme => { root.toggle-theme(); }
                 win-close => { root.win-close(); }
                 win-drag => { root.win-drag(); }

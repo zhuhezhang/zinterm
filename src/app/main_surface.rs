@@ -117,7 +117,8 @@ pub(super) fn wire_main_surface(
         let weak = window.as_weak();
         let store = store.clone();
         window.on_export_settings(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = DialogOwner::of_weak(&weak)
+                .file()
                 .set_file_name(
                     chrono::Local::now()
                         .format("zinterm-settings-%Y%m%d-%H%M%S.json")
@@ -426,7 +427,8 @@ pub(super) fn wire_main_surface(
         let panes_model = panes_model.clone();
         let splitters_model = splitters_model.clone();
         window.on_import_settings(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = DialogOwner::of_weak(&weak)
+                .file()
                 .add_filter("JSON", &["json"])
                 .pick_file()
             {
@@ -550,8 +552,9 @@ pub(super) fn wire_main_surface(
     {
         let weak = window.as_weak();
         window.on_cred_pick_key(move || {
-            let mut dialog =
-                rfd::FileDialog::new().set_title(t("选择私钥文件", "Choose private key file"));
+            let mut dialog = DialogOwner::of_weak(&weak)
+                .file()
+                .set_title(t("选择私钥文件", "Choose private key file"));
             #[cfg(not(target_os = "macos"))]
             {
                 dialog =
@@ -589,7 +592,7 @@ pub(super) fn wire_main_surface(
         let weak = window.as_weak();
         let store = store.clone();
         window.on_pick_download_dir(move || {
-            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+            if let Some(folder) = DialogOwner::of_weak(&weak).file().pick_folder() {
                 let dir = folder.to_string_lossy().to_string();
                 {
                     let mut s = store.borrow_mut();

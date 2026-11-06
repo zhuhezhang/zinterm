@@ -540,8 +540,9 @@ pub(super) fn wire_session_dialog(
     {
         let weak = window.as_weak();
         window.on_session_dialog_pick_key(move || {
-            let mut dialog =
-                rfd::FileDialog::new().set_title(t("选择私钥文件", "Choose private key file"));
+            let mut dialog = DialogOwner::of_weak(&weak)
+                .file()
+                .set_title(t("选择私钥文件", "Choose private key file"));
             // OpenSSH's standard macOS key names (id_ed25519, id_rsa, …) have
             // no extension. A native macOS extension filter makes those files
             // visible but disabled, so leave the picker unfiltered there (#325).

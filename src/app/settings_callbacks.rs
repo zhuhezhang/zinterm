@@ -55,7 +55,7 @@ pub(super) fn wire_settings_callbacks(
         let store = store.clone();
         let logs = session_logs.clone();
         window.on_pick_session_log_dir(move || {
-            if let Some(folder) = rfd::FileDialog::new().pick_folder() {
+            if let Some(folder) = DialogOwner::of_weak(&weak).file().pick_folder() {
                 let dir = folder.to_string_lossy().to_string();
                 {
                     let mut s = store.borrow_mut();
@@ -819,7 +819,8 @@ pub(super) fn wire_settings_callbacks(
         let store = store.clone();
         let bufs_wp = bufs.clone();
         window.on_pick_wallpaper_file(move || {
-            let picked = rfd::FileDialog::new()
+            let picked = DialogOwner::of_weak(&weak)
+                .file()
                 .set_title("选择壁纸 / Choose wallpaper")
                 .add_filter("Images", &["png", "jpg", "jpeg", "webp", "bmp"])
                 .pick_file();

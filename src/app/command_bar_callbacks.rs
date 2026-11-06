@@ -504,7 +504,8 @@ pub(super) fn wire_command_bar(
         let weak = window.as_weak();
         let store = store.clone();
         window.on_export_quick_commands(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = DialogOwner::of_weak(&weak)
+                .file()
                 .set_file_name(
                     chrono::Local::now()
                         .format("zinterm-commands-%Y%m%d-%H%M%S.json")
@@ -539,7 +540,8 @@ pub(super) fn wire_command_bar(
         let quick_query = quick_query.clone();
         let qcm_manage_query = qcm_manage_query.clone();
         window.on_import_quick_commands(move || {
-            if let Some(path) = rfd::FileDialog::new()
+            if let Some(path) = DialogOwner::of_weak(&weak)
+                .file()
                 .add_filter("JSON", &["json"])
                 .pick_file()
             {

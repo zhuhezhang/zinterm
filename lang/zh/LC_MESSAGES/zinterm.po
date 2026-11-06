@@ -1080,6 +1080,12 @@ msgstr "快捷键"
 msgid "Toggle theme"
 msgstr "切换主题"
 
+msgid "Pin window"
+msgstr "窗口置顶"
+
+msgid "Unpin window"
+msgstr "取消置顶"
+
 msgid "CPU is the default renderer on macOS"
 msgstr "macOS 默认使用 CPU 渲染器"
 
