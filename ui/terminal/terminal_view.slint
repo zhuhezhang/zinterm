@@ -1052,7 +1052,10 @@ export component TerminalView inherits Rectangle {
                 }
             }
 
+            // Above `central` so side-docked toolbar tips that spill past the
+            // panel edge paint over the terminal (same stacking as TitleBar).
             SftpHost {
+                z: 1;
                 // Bind to dock-region's laid-out size (not 100%) so the overlay
                 // keeps a real size after the SFTP host was extracted.
                 x: 0;

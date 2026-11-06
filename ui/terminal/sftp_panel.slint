@@ -1,5 +1,5 @@
 import { Theme } from "../shared/theme.slint";
-import { TooltipArea, BorderedLineInput } from "../shared/widgets.slint";
+import { BorderedLineInput } from "../shared/widgets.slint";
 import { ScrollView } from "std-widgets.slint";
 import { TabInfo } from "../shell/tabs.slint";
 
@@ -51,7 +51,10 @@ component SftpMenuItem inherits Rectangle {
     }
 }
 
-// Small toolbar icon with a hover tooltip that does not block clicks.
+// Small toolbar icon with a hover tip centered above the icon. Cursor-anchored
+// Tooltip sits under the pointer and gets covered on the right-edge actions;
+// this overflow tip stays click-through. Tips open upward so they stay clear
+// of the file list and the side-docked terminal.
 component SftpToolBtn inherits Rectangle {
     in property <string> glyph;
     in property <string> tooltip;
@@ -78,14 +81,41 @@ component SftpToolBtn inherits Rectangle {
 
     @children
 
-    touch := TooltipArea {
-        x: 0;
-        y: 0;
-        width: parent.width;
-        height: parent.height;
+    touch := TouchArea {
         mouse-cursor: pointer;
-        tooltip-text: root.tooltip;
-        activate => { root.clicked(); }
+        clicked => { root.clicked(); }
+    }
+
+    if touch.has-hover && root.tooltip != "" : Rectangle {
+        property <length> tip-w: tip-txt.preferred-width + 16px * Theme.ui-scale;
+        property <length> tip-h: 22px * Theme.ui-scale;
+        property <length> tip-margin: 4px * Theme.ui-scale;
+        property <length> tip-gap: 5px * Theme.ui-scale;
+        property <length> center-x: (root.width - tip-w) / 2;
+        // Largest local x that keeps the tip's right edge inside the window.
+        property <length> max-x: Theme.window-width - tip-margin - tip-w - root.absolute-position.x;
+
+        y: -(tip-h + tip-gap);
+        x: min(center-x, max-x);   // center; shift left if past the right edge
+        width: tip-w;
+        height: tip-h;
+        z: 1;
+        background: Theme.tooltip-bg;
+        border-radius: Theme.radius-sm;
+        border-width: 1px * Theme.ui-scale;
+        border-color: Theme.border-strong;
+        drop-shadow-blur: 8px * Theme.ui-scale;
+        drop-shadow-color: #00000070;
+        tip-txt := Text {
+            text: root.tooltip;
+            color: Theme.text-primary;
+            font-family: Theme.ui-font-family;
+            font-size: Theme.fs-xs;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
     }
 }
 
@@ -196,7 +226,10 @@ export component SftpPanel inherits Rectangle {
 
     // -----------------------------------------------------------------------
     background: Theme.bg-panel;
-    clip: true;
+    // Do not clip: toolbar tips (and the upload menu) overflow past the panel
+    // edge — below into the file list, above when bottom-collapsed, and sideways
+    // into the terminal when side-docked. List/tree regions clip themselves.
+    clip: false;
 
     // Keep the editable path bar in sync when the directory changes elsewhere
     // (tree click, file double-click, terminal cd) (#54).
@@ -229,7 +262,10 @@ export component SftpPanel inherits Rectangle {
         spacing: 0;
 
         // --- Toolbar (full width) ------------------------------------------
+        // z above the tree/file-list so IconBtn-style overflow tips paint on
+        // top (same reason TitleBar is z:1 above DockArea in app.slint).
         Rectangle {
+            z: 1;
             height: root.narrow-toolbar
                 ? (6px * Theme.ui-scale + root.path-input-height + root.path-row-gutter + root.path-input-height + root.path-row-pad-bottom)
                 : root.toolbar-row-height;
@@ -240,7 +276,10 @@ export component SftpPanel inherits Rectangle {
                 padding-bottom: root.side-narrow-path ? root.path-row-pad-bottom : 0px;
                 spacing: root.side-narrow-path ? root.path-row-gutter : 6px * Theme.ui-scale;
 
+                // Above the narrow path row so tips under the action icons are
+                // not covered by the second-row path field.
                 HorizontalLayout {
+                    z: 1;
                     height: root.side-narrow-path ? root.path-input-height : root.toolbar-row-height;
                     cross-axis-alignment: center;
                     // Collapsed top/bottom: leave 4px after the overlay folder icon
@@ -400,11 +439,20 @@ export component SftpPanel inherits Rectangle {
                         tooltip: @tr("Upload");
                         clicked => { ul-menu.show(); }
 
+                        // Same placement as SftpToolBtn hover tip: centered above
+                        // the icon, shift left at the window edge.
                         ul-menu := PopupWindow {
-                            x: 0;
-                            y: parent.height + 2px * Theme.ui-scale;
-                            width: 124px * Theme.ui-scale;
-                            height: 2 * 27px * Theme.ui-scale + 8px * Theme.ui-scale;
+                            property <length> menu-w: 124px * Theme.ui-scale;
+                            property <length> menu-h: 2 * 27px * Theme.ui-scale + 8px * Theme.ui-scale;
+                            property <length> menu-gap: 5px * Theme.ui-scale;
+                            property <length> edge-margin: 4px * Theme.ui-scale;
+                            property <length> center-x: (parent.width - menu-w) / 2;
+                            property <length> max-x: Theme.window-width - edge-margin - menu-w - parent.absolute-position.x;
+
+                            x: min(center-x, max-x);
+                            y: -(menu-h + menu-gap);
+                            width: menu-w;
+                            height: menu-h;
                             Rectangle {
                                 background: Theme.popup-bg;
                                 border-radius: Theme.radius-sm;
