@@ -1,5 +1,4 @@
 import { Theme } from "../shared/theme.slint";
-import { TooltipArea } from "../shared/widgets.slint";
 
 export component WinBtn inherits Rectangle {
     in property <string> icon;
@@ -25,19 +24,23 @@ export component WinBtn inherits Rectangle {
     }
 }
 
-// A 30×30 top-bar icon button with a hover tooltip. `active` keeps the hover
-// background lit (e.g. while its popup is open). Size is fixed (not ui-scale)
-// so theme / download / settings stay stable in the title bar.
+// A 30×30 top-bar icon button with a hover tooltip centered under the icon.
+// If the tip would spill past the window's right edge it shifts left.
+// `window-width` should be the enclosing Window width (TitleBar passes
+// its own width). `active` keeps the hover background lit (e.g. while its
+// popup is open). Size is fixed (not ui-scale) so theme / download /
+// settings stay stable in the title bar.
 export component IconBtn inherits Rectangle {
     in property <string> icon;
     in property <brush> icon-color: Theme.text-secondary;
     in property <string> tooltip;
     in property <bool> active;
+    in property <length> window-width;
     callback clicked();
     width: 30px;
     height: 30px;
     border-radius: Theme.radius-sm;
-    background: touch.has-hover || root.active ? Theme.bg-hover : transparent;
+    background: ta.has-hover || root.active ? Theme.bg-hover : transparent;
 
     Text {
         text: root.icon;
@@ -48,11 +51,42 @@ export component IconBtn inherits Rectangle {
         vertical-alignment: center;
     }
 
-    touch := TooltipArea {
-        width: parent.width;
-        height: parent.height;
+    ta := TouchArea {
         mouse-cursor: pointer;
-        tooltip-text: root.tooltip;
-        activate => { root.clicked(); }
+        clicked => { root.clicked(); }
+    }
+
+    // Custom tip instead of Slint's cursor-anchored Tooltip — the built-in
+    // popup sits under the pointer and gets covered by the arrow on the
+    // top-right toolbar icons. TitleBar is stacked above DockArea (app.slint)
+    // so this overflow tip is not covered by the tab strip.
+    if ta.has-hover && root.tooltip != "" : Rectangle {
+        property <length> tip-w: tip-txt.preferred-width + 16px;
+        property <length> tip-margin: 2px;
+        property <length> center-x: (root.width - tip-w) / 2;
+        // Largest local x that keeps the tip's right edge inside the window.
+        property <length> max-x: root.window-width - tip-margin - tip-w - root.absolute-position.x;
+
+        y: parent.height + 5px;
+        x: min(center-x, max-x);   // center; shift left if past the right edge
+        width: tip-w;
+        height: 22px;
+        z: 1;
+        background: Theme.tooltip-bg;
+        border-radius: Theme.radius-sm;
+        border-width: 1px;
+        border-color: Theme.border-strong;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: #00000070;
+        tip-txt := Text {
+            text: root.tooltip;
+            color: Theme.text-primary;
+            font-family: Theme.ui-font-family;
+            font-size: Theme.fs-xs;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
     }
 }

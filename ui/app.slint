@@ -799,7 +799,12 @@ export component AppWindow inherits Window {
             height: 100%;
             spacing: 0;
 
+            // Above DockArea so IconBtn hover tips (which drop below the
+            // title bar into the tab strip) paint on top of the tabs —
+            // meatshell avoids this by floating the toolbar over the tabs;
+            // we keep icons in the title bar and raise its stack order instead.
             TitleBar {
+                z: 1;
                 custom-titlebar <=> root.custom-titlebar;
                 download-open <=> root.download-open;
                 settings-open <=> root.settings-open;

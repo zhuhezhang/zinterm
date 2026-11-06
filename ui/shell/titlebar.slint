@@ -38,12 +38,14 @@ export component TitleBar inherits VerticalLayout {
                         icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
                         icon-color: Theme.dark ? #f5c542 : #5856d6;
                         tooltip: @tr("Toggle theme");
+                        window-width: root.width;
                         clicked => { root.toggle-theme(); }
                     }
 
                     IconBtn {
                         icon: "\u{E2C4}";
                         tooltip: @tr("Download");
+                        window-width: root.width;
                         active: root.download-open;
                         clicked => { root.download-open = !root.download-open; root.settings-open = false; }
                     }
@@ -51,6 +53,7 @@ export component TitleBar inherits VerticalLayout {
                     IconBtn {
                         icon: "\u{E8B8}";
                         tooltip: @tr("Settings");
+                        window-width: root.width;
                         active: root.settings-open;
                         clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
                     }
@@ -115,12 +118,14 @@ export component TitleBar inherits VerticalLayout {
                         icon: Theme.dark ? "\u{E518}" : "\u{E51C}";
                         icon-color: Theme.dark ? #f5c542 : #5856d6;
                         tooltip: @tr("Toggle theme");
+                        window-width: root.width;
                         clicked => { root.toggle-theme(); }
                     }
 
                     IconBtn {
                         icon: "\u{E2C4}";
                         tooltip: @tr("Download");
+                        window-width: root.width;
                         active: root.download-open;
                         clicked => { root.download-open = !root.download-open; root.settings-open = false; }
                     }
@@ -128,6 +133,7 @@ export component TitleBar inherits VerticalLayout {
                     IconBtn {
                         icon: "\u{E8B8}";
                         tooltip: @tr("Settings");
+                        window-width: root.width;
                         active: root.settings-open;
                         clicked => { root.settings-open = !root.settings-open; root.download-open = false; }
                     }
