@@ -117,6 +117,10 @@ export component SessionDialog inherits Rectangle {
     in-out property <bool> focus-host-on-open: false;
     // Bumped when focus-host-on-open fires so the Host LabeledInput grabs focus.
     property <int> host-focus-seq: 0;
+    // Password reveal: new session always; edit only when no saved secret was
+    // present at open. Clearing a saved secret does not unlock reveal.
+    property <bool> password-reveal-unlocked: true;
+    property <bool> key-passphrase-reveal-unlocked: true;
 
     // Shared left-column width = longest form label (locale-aware via @tr).
     property <length> form-label-width: max(m-conn.preferred-width,
@@ -152,6 +156,9 @@ export component SessionDialog inherits Rectangle {
         if (self.is-open) {
             self.host-missing = false;
             self.serial-port-missing = false;
+            // Edit + saved secret at open → lock for this dialog lifetime.
+            self.password-reveal-unlocked = !self.is-editing || self.draft-password == "";
+            self.key-passphrase-reveal-unlocked = !self.is-editing || self.draft-key-passphrase == "";
             if (self.focus-host-on-open
                 && self.draft-kind != "serial"
                 && self.draft-kind != "local") {
@@ -614,6 +621,8 @@ export component SessionDialog inherits Rectangle {
                             label-width: root.form-label-width;
                             placeholder: @tr("Prompted on connect if blank");
                             password: true;
+                            // New / no saved secret: revealable. Edit with saved secret: locked.
+                            allow-password-reveal: root.password-reveal-unlocked;
                             value <=> root.draft-password;
                             canceled => { root.cancel(); }
                         }
@@ -697,6 +706,8 @@ export component SessionDialog inherits Rectangle {
                             label-width: root.form-label-width;
                             placeholder: @tr("Leave blank if the key isn't encrypted");
                             password: true;
+                            // New / no saved secret: revealable. Edit with saved secret: locked.
+                            allow-password-reveal: root.key-passphrase-reveal-unlocked;
                             value <=> root.draft-key-passphrase;
                             canceled => { root.cancel(); }
                         }

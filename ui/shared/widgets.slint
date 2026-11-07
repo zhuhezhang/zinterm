@@ -258,6 +258,9 @@ export component LabeledInput inherits HorizontalLayout {
     in property <string> placeholder;
     in-out property <string> value;
     in property <bool> password: false;
+    // When password=true: whether the eye toggle may reveal plaintext.
+    // Edit-session forms set this false while a saved secret is present.
+    in property <bool> allow-password-reveal: true;
     in property <bool> auto-focus: false;   // grab focus when shown (dialog fields)
     in property <brush> input-background: Theme.bg-root;
     in property <brush> idle-border: Theme.border-subtle;
@@ -270,6 +273,15 @@ export component LabeledInput inherits HorizontalLayout {
     // Bump from outside to grab focus after layout (dialogs, shortcuts).
     in property <int> focus-request: 0;
     property <int> focus-request-seen: 0;
+    // Local reveal state for password fields (masked by default).
+    property <bool> password-revealed: false;
+    // Always show the eye for password fields; clicks are gated by allow-*.
+    property <bool> show-password-toggle: root.password;
+    property <length> pad-x: 10px * Theme.ui-scale;
+    property <length> toggle-width: 28px * Theme.ui-scale;
+    property <length> text-inset-right: root.show-password-toggle
+        ? root.toggle-width + 2px * Theme.ui-scale
+        : root.pad-x;
     public function focus-input() { root.focus-pending = true; }
 
     // A LabeledInput is often created inside a conditional dialog. Focusing its
@@ -281,6 +293,12 @@ export component LabeledInput inherits HorizontalLayout {
         if (root.focus-request != root.focus-request-seen) {
             root.focus-request-seen = root.focus-request;
             root.focus-pending = true;
+        }
+    }
+    // Locking reveal (edit + saved secret) must also clear any leftover plaintext.
+    changed allow-password-reveal => {
+        if (!root.allow-password-reveal) {
+            root.password-revealed = false;
         }
     }
     focus-timer := Timer {
@@ -320,8 +338,8 @@ export component LabeledInput inherits HorizontalLayout {
         // Viewport — same horizontal-scroll pattern as BorderedLineInput so
         // long values (paths, passwords, hostnames) are not clipped.
         Rectangle {
-            x: 10px * Theme.ui-scale;
-            width: parent.width - 20px * Theme.ui-scale;
+            x: root.pad-x;
+            width: parent.width - root.pad-x - root.text-inset-right;
             height: parent.height;
             clip: true;
 
@@ -340,7 +358,9 @@ export component LabeledInput inherits HorizontalLayout {
                 font-size: Theme.fs-md;
                 vertical-alignment: center;
                 single-line: true;
-                input-type: root.password ? InputType.password : InputType.text;
+                input-type: root.password && !root.password-revealed
+                    ? InputType.password
+                    : InputType.text;
                 accepted => { root.accepted(); }
                 key-pressed(e) => {
                     if (e.text == Key.Escape) { root.canceled(); accept }
@@ -358,13 +378,49 @@ export component LabeledInput inherits HorizontalLayout {
 
         // Lightweight placeholder — shown when value is empty.
         if value == "": Text {
-            x: 10px * Theme.ui-scale;
+            x: root.pad-x;
             y: 0px;
+            width: parent.width - root.pad-x - root.text-inset-right;
             height: parent.height;
             text: placeholder;
             color: Theme.text-muted;
             font-size: Theme.fs-md;
             vertical-alignment: center;
+            overflow: elide;
+        }
+
+        // Eye toggle — inside the field on the right (common password UX).
+        if root.show-password-toggle: Rectangle {
+            x: parent.width - root.toggle-width;
+            y: 0px;
+            width: root.toggle-width;
+            height: parent.height;
+            Text {
+                width: 100%;
+                height: 100%;
+                // Material "visibility" / "visibility_off"
+                text: root.password-revealed ? "\u{E8F5}" : "\u{E8F4}";
+                font-family: "Material Icons";
+                color: !root.allow-password-reveal && !root.password-revealed
+                    ? Theme.text-muted.with-alpha(0.35)
+                    : reveal-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+                font-size: Theme.fs-md;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            reveal-ta := TouchArea {
+                mouse-cursor: root.allow-password-reveal || root.password-revealed
+                    ? pointer
+                    : default;
+                clicked => {
+                    if (root.password-revealed) {
+                        root.password-revealed = false;
+                    } else if (root.allow-password-reveal) {
+                        root.password-revealed = true;
+                    }
+                }
+            }
         }
     }
 }
