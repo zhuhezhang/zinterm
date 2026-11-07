@@ -67,7 +67,10 @@ pub(super) fn update_tab_backspace_mode(win: &AppWindow, tab_id: &str, mode: &st
     });
 }
 
-fn mutate_tab_info(win: &AppWindow, tab_id: &str, mutator: &dyn Fn(&mut TabInfo)) {
+/// Mutate a tab in the root model and every pane's tab copy. Pane strips bind
+/// to those copies; updating only the root leaves the visible title/state stale
+/// (e.g. welcome-tab retranslation on language switch).
+pub(super) fn mutate_tab_info(win: &AppWindow, tab_id: &str, mutator: &dyn Fn(&mut TabInfo)) {
     let tabs_rc = win.get_tabs();
     let tabs = tabs_rc
         .as_any()

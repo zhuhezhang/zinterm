@@ -88,7 +88,6 @@ pub(super) fn wire_main_surface(
         let ssh_keepalive_secs = ssh_keepalive_secs.clone();
         let ssh_algorithm_prefs = ssh_algorithm_prefs.clone();
         let session_logs = session_logs.clone();
-        let tabs_model = tabs_model.clone();
         window.on_restore_settings_defaults(move || {
             {
                 let mut s = store.borrow_mut();
@@ -105,7 +104,6 @@ pub(super) fn wire_main_surface(
                 &ssh_keepalive_secs,
                 &ssh_algorithm_prefs,
                 &session_logs,
-                &tabs_model,
             );
             // Preview only — disk write waits for Save / Save and close.
             // Keep the open-panel snapshot so Cancel can undo the restore.
@@ -317,30 +315,34 @@ pub(super) fn wire_main_surface(
     // Switch UI language at runtime.  Preference is "auto" / "zh" / "en"
     // (auto follows the OS; non-Chinese OS locales → English).  Static
     // `@tr(...)` text updates live via select_bundled_translation; we also
-    // refresh Rust-driven dynamic strings (welcome tab title).
+    // refresh Rust-driven dynamic strings (welcome tab title on every pane copy).
     {
         let weak = window.as_weak();
         let store = store.clone();
-        let tabs_model = tabs_model.clone();
         window.on_set_language(move |code| {
             let pref = crate::i18n::normalize_pref(&code).to_string();
             crate::i18n::set_language(&pref);
+            // Title-bar settings menu has no Save — persist immediately.
+            // While the Interface panel is open, language is part of the prefs
+            // draft and waits for Save (same as other settings toggles).
+            let persist_now = weak
+                .upgrade()
+                .map(|w| !w.get_interface_open())
+                .unwrap_or(true);
             {
                 let mut s = store.borrow_mut();
                 s.set_language(pref.clone());
-            }
-            // Re-translate the welcome tab's dynamic title.
-            for i in 0..tabs_model.row_count() {
-                if let Some(mut row) = tabs_model.row_data(i) {
-                    if row.id.as_str() == "welcome" {
-                        row.title = t("欢迎页", "Welcome page").into();
-                        tabs_model.set_row_data(i, row);
-                    }
+                if persist_now {
+                    s.save_later(SaveKind::SETTINGS);
                 }
             }
             if let Some(w) = weak.upgrade() {
                 w.set_language_pref(pref.into());
                 w.set_lang_en(crate::i18n::is_en());
+                // Root tabs_model alone is not enough — TabBar binds pane.tabs.
+                mutate_tab_info(&w, "welcome", &|row| {
+                    row.title = t("欢迎页", "Welcome page").into();
+                });
             }
         });
     }
@@ -394,7 +396,6 @@ pub(super) fn wire_main_surface(
                 &ssh_keepalive_secs,
                 &ssh_algorithm_prefs,
                 &session_logs,
-                &tabs_model,
             );
             let welcome_as_sidebar = store.borrow().welcome_as_sidebar();
             {
@@ -444,7 +445,6 @@ pub(super) fn wire_main_surface(
                                 &ssh_keepalive_secs,
                                 &ssh_algorithm_prefs,
                                 &session_logs,
-                                &tabs_model,
                             );
                             // 主题偏好可能已变，同步暗色模式
                             apply_dark_mode(&w, &bufs, theme_pref_is_dark(&store.borrow()));

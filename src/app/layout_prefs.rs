@@ -93,21 +93,16 @@ pub(super) fn apply_settings_prefs_to_window(
     ssh_keepalive_secs: &Arc<std::sync::atomic::AtomicU32>,
     ssh_algorithm_prefs: &Arc<std::sync::Mutex<crate::config::AlgorithmPreferences>>,
     session_logs: &SessionLoggers,
-    tabs_model: &VecModel<TabInfo>,
 ) {
     let lang_pref = s.language().to_string();
     crate::i18n::set_language(&lang_pref);
     crate::i18n::apply_to_slint();
     w.set_language_pref(lang_pref.into());
     w.set_lang_en(crate::i18n::is_en());
-    for i in 0..tabs_model.row_count() {
-        if let Some(mut row) = tabs_model.row_data(i) {
-            if row.id.as_str() == "welcome" {
-                row.title = t("欢迎页", "Welcome page").into();
-                tabs_model.set_row_data(i, row);
-            }
-        }
-    }
+    // Root + every pane copy — TabBar binds pane.tabs, not the root model alone.
+    mutate_tab_info(w, "welcome", &|row| {
+        row.title = t("欢迎页", "Welcome page").into();
+    });
 
     let fam = s.font_family();
     w.set_term_font_family(if fam.is_empty() {
