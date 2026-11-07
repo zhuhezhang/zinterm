@@ -1,3 +1,4 @@
+import { ScrollView } from "std-widgets.slint";
 import { Theme } from "../shared/theme.slint";
 import { IconButton, TooltipArea } from "../shared/widgets.slint";
 
@@ -618,6 +619,9 @@ export component TabBar inherits Rectangle {
         y: root.height;
         width: 230px * Theme.ui-scale;
         height: min(308px * Theme.ui-scale, root.tabs.length * 29px * Theme.ui-scale + 8px * Theme.ui-scale);
+        // Default close-on-click also fires on scrollbar thumb mouse-up; only
+        // dismiss on outside click / Esc. Tab rows still call close() themselves.
+        close-policy: close-on-click-outside;
         Rectangle {
             background: Theme.popup-bg;
             border-radius: Theme.radius-sm;
@@ -626,15 +630,18 @@ export component TabBar inherits Rectangle {
             drop-shadow-blur: 12px * Theme.ui-scale;
             drop-shadow-color: #00000060;
             clip: true;
-            Flickable {
+            // ScrollView (not bare Flickable) so a scrollbar appears when the
+            // tab list exceeds the capped popup height.
+            ScrollView {
                 x: 4px * Theme.ui-scale;
                 y: 4px * Theme.ui-scale;
                 width: parent.width - 8px * Theme.ui-scale;
                 height: parent.height - 8px * Theme.ui-scale;
-                content-width: self.width;
-                content-height: max(self.height, all-tabs-list.preferred-height);
+                content-width: self.visible-width;
+                content-height: max(self.visible-height, all-tabs-list.preferred-height);
                 all-tabs-list := VerticalLayout {
                     width: parent.width;
+                    alignment: start;
                     spacing: 1px * Theme.ui-scale;
                     for tab[i] in root.tabs: TabMenuItem {
                         width: parent.width;
