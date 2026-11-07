@@ -18,17 +18,23 @@ pub(super) fn wire_main_surface(
 ) {
     let sessions_model: Rc<VecModel<SessionInfo>> = Rc::new(VecModel::default());
     let welcome_session_query: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
+    // Temporary fold overrides while the welcome search box is non-empty.
+    // Cleared on every query change; never written to ui-state.json.
+    let welcome_search_collapsed: Rc<RefCell<HashSet<String>>> =
+        Rc::new(RefCell::new(HashSet::new()));
     window.set_sessions(ModelRc::from(sessions_model.clone()));
     sync_welcome_sessions(
         &store.borrow(),
         &sessions_model,
         &welcome_session_query.borrow(),
+        &welcome_search_collapsed.borrow(),
     );
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_clear_all_sessions(move |clear_credentials| {
             {
                 let mut s = store.borrow_mut();
@@ -43,6 +49,7 @@ pub(super) fn wire_main_surface(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -53,12 +60,16 @@ pub(super) fn wire_main_surface(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_search_welcome_sessions(move |query: SharedString| {
             *welcome_session_query.borrow_mut() = query.to_string();
+            // New query → drop ephemeral folds so results start fully expanded.
+            welcome_search_collapsed.borrow_mut().clear();
             sync_welcome_sessions(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
         });
     }
@@ -292,6 +303,7 @@ pub(super) fn wire_main_surface(
         store.clone(),
         sessions_model.clone(),
         welcome_session_query.clone(),
+        welcome_search_collapsed.clone(),
         tabs_model.clone(),
         terminals_model.clone(),
         layout.clone(),

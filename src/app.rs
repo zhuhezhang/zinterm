@@ -291,6 +291,7 @@ fn wire_session_callbacks(
     store: Rc<RefCell<ConfigStore>>,
     sessions_model: Rc<VecModel<SessionInfo>>,
     welcome_session_query: Rc<RefCell<String>>,
+    welcome_search_collapsed: Rc<RefCell<HashSet<String>>>,
     tabs_model: Rc<VecModel<TabInfo>>,
     terminals_model: Rc<VecModel<TerminalState>>,
     layout: Rc<RefCell<crate::layout::Layout>>,
@@ -315,12 +316,14 @@ fn wire_session_callbacks(
         store.clone(),
         sessions_model.clone(),
         welcome_session_query.clone(),
+        welcome_search_collapsed.clone(),
     );
     wire_session_dialog(
         window,
         store,
         sessions_model,
         welcome_session_query,
+        welcome_search_collapsed,
         tabs_model,
         terminals_model,
         layout,

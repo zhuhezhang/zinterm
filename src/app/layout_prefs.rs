@@ -5,13 +5,14 @@ pub(super) fn apply_session_group_collapse(
     store: &Rc<RefCell<ConfigStore>>,
     sessions_model: &Rc<VecModel<SessionInfo>>,
     search_query: &str,
+    search_collapsed: &HashSet<String>,
     mutate: impl FnOnce(&mut ConfigStore),
 ) {
     {
         let mut store = store.borrow_mut();
         mutate(&mut store);
         store.save_later(SaveKind::UI);
-        sync_welcome_sessions(&store, sessions_model, search_query);
+        sync_welcome_sessions(&store, sessions_model, search_query, search_collapsed);
     }
     if let Some(w) = weak.upgrade() {
         let _ = w.get_sessions();

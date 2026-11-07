@@ -5,6 +5,7 @@ pub(super) fn wire_session_tree(
     store: Rc<RefCell<ConfigStore>>,
     sessions_model: Rc<VecModel<SessionInfo>>,
     welcome_session_query: Rc<RefCell<String>>,
+    welcome_search_collapsed: Rc<RefCell<HashSet<String>>>,
 ) {
     // New session -> open dialog with blank draft (host prefilled from search Enter).
     let weak = window.as_weak();
@@ -66,6 +67,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_import_sessions(move || {
             if let Some(path) = DialogOwner::of_weak(&weak)
                 .file()
@@ -76,7 +78,12 @@ pub(super) fn wire_session_tree(
                 if let Some(w) = weak.upgrade() {
                     let hint = match res {
                         Ok((added, skipped)) => {
-                            sync_welcome_sessions(&store.borrow(), &sessions_model, &welcome_session_query.borrow());
+                            sync_welcome_sessions(
+                                &store.borrow(),
+                                &sessions_model,
+                                &welcome_session_query.borrow(),
+                                &welcome_search_collapsed.borrow(),
+                            );
                             if crate::i18n::is_en() {
                                 format!(
                                     "Import succeeded - imported {added} session(s)/skipped {skipped} duplicate(s)"
@@ -168,6 +175,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_remove_session(move |id: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -178,6 +186,7 @@ pub(super) fn wire_session_tree(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
             if let Some(w) = weak.upgrade() {
                 // Touch a property so the list re-renders reliably.
@@ -192,6 +201,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_duplicate_session(move |id: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -218,6 +228,7 @@ pub(super) fn wire_session_tree(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -225,28 +236,51 @@ pub(super) fn wire_session_tree(
         });
     }
 
-    // Collapse / expand a group in the welcome list (#41). Persists fold state
-    // to ui-state.json on the background thread (not the full sessions file).
+    // Collapse / expand a group in the welcome list (#41). Outside search this
+    // persists to ui-state.json; while the search box is non-empty the fold is
+    // runtime-only and cleared on the next query change.
     {
         let weak = window.as_weak();
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_toggle_group(move |group: SharedString| {
             let target = group.to_string();
-            let new_state = {
-                let store = store.borrow();
-                let collapsed = store
-                    .collapsed_session_groups()
-                    .map(|groups| groups.iter().any(|g| g == &target))
-                    .unwrap_or(true);
-                !collapsed
-            };
-            {
-                let mut store = store.borrow_mut();
-                store.set_session_group_collapsed(&target, new_state);
-                store.save_later(SaveKind::UI);
-                sync_welcome_sessions(&store, &sessions_model, &welcome_session_query.borrow());
+            let searching = !welcome_session_query.borrow().trim().is_empty();
+            if searching {
+                {
+                    let mut collapsed = welcome_search_collapsed.borrow_mut();
+                    if !collapsed.remove(&target) {
+                        collapsed.insert(target);
+                    }
+                }
+                sync_welcome_sessions(
+                    &store.borrow(),
+                    &sessions_model,
+                    &welcome_session_query.borrow(),
+                    &welcome_search_collapsed.borrow(),
+                );
+            } else {
+                let new_state = {
+                    let store = store.borrow();
+                    let collapsed = store
+                        .collapsed_session_groups()
+                        .map(|groups| groups.iter().any(|g| g == &target))
+                        .unwrap_or(true);
+                    !collapsed
+                };
+                {
+                    let mut store = store.borrow_mut();
+                    store.set_session_group_collapsed(&target, new_state);
+                    store.save_later(SaveKind::UI);
+                    sync_welcome_sessions(
+                        &store,
+                        &sessions_model,
+                        &welcome_session_query.borrow(),
+                        &welcome_search_collapsed.borrow(),
+                    );
+                }
             }
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -260,12 +294,14 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_expand_all_groups(move || {
             apply_session_group_collapse(
                 &weak,
                 &store,
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
                 |s| {
                     s.set_all_session_groups_collapsed(false);
                 },
@@ -277,12 +313,14 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_collapse_all_groups(move || {
             apply_session_group_collapse(
                 &weak,
                 &store,
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
                 |s| {
                     s.set_all_session_groups_collapsed(true);
                 },
@@ -294,6 +332,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_expand_group_children(move |group: SharedString| {
             let path = group.to_string();
             apply_session_group_collapse(
@@ -301,6 +340,7 @@ pub(super) fn wire_session_tree(
                 &store,
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
                 |s| {
                     s.set_session_group_children_collapsed(&path, false);
                 },
@@ -312,6 +352,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_collapse_group_children(move |group: SharedString| {
             let path = group.to_string();
             apply_session_group_collapse(
@@ -319,6 +360,7 @@ pub(super) fn wire_session_tree(
                 &store,
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
                 |s| {
                     s.set_session_group_children_collapsed(&path, true);
                 },
@@ -371,6 +413,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_submit_group(
             move |orig: SharedString, segment: SharedString, parent: SharedString| {
                 let segment = segment.trim();
@@ -414,6 +457,7 @@ pub(super) fn wire_session_tree(
                     &store.borrow(),
                     &sessions_model,
                     &welcome_session_query.borrow(),
+                    &welcome_search_collapsed.borrow(),
                 );
                 if let Some(w) = weak.upgrade() {
                     let _ = w.get_sessions();
@@ -428,6 +472,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_delete_group(move |name: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -438,6 +483,7 @@ pub(super) fn wire_session_tree(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -451,6 +497,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_drop_welcome_session(move |id: SharedString, target_group: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -463,6 +510,7 @@ pub(super) fn wire_session_tree(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();
@@ -475,6 +523,7 @@ pub(super) fn wire_session_tree(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         window.on_drop_welcome_group(move |path: SharedString, target_parent: SharedString| {
             {
                 let mut s = store.borrow_mut();
@@ -487,6 +536,7 @@ pub(super) fn wire_session_tree(
                 &store.borrow(),
                 &sessions_model,
                 &welcome_session_query.borrow(),
+                &welcome_search_collapsed.borrow(),
             );
             if let Some(w) = weak.upgrade() {
                 let _ = w.get_sessions();

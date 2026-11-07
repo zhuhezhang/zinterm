@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use pinyin::ToPinyin;
 
@@ -287,9 +287,14 @@ fn emit_group_branch_search(
     rows: &mut Vec<SessionInfo>,
     query: &str,
     visible_groups: &BTreeSet<String>,
+    search_collapsed: &HashSet<String>,
 ) {
     let group = node.full_path.as_str();
     if !visible_groups.contains(group) {
+        return;
+    }
+    // Temporary fold state while filtering — not the persisted Quick Connect folds.
+    if ancestor_collapsed(group, &|g| search_collapsed.contains(g)) {
         return;
     }
 
@@ -311,10 +316,22 @@ fn emit_group_branch_search(
         return;
     }
 
-    rows.push(group_header_row(group, depth, label, false));
+    let collapsed = search_collapsed.contains(group);
+    rows.push(group_header_row(group, depth, label, collapsed));
+
+    if collapsed {
+        return;
+    }
 
     for child in siblings_in_pinyin_order(&node.children) {
-        emit_group_branch_search(sessions, child, rows, query, visible_groups);
+        emit_group_branch_search(
+            sessions,
+            child,
+            rows,
+            query,
+            visible_groups,
+            search_collapsed,
+        );
     }
 
     for s in direct {
@@ -323,10 +340,15 @@ fn emit_group_branch_search(
 }
 
 /// Rebuild the welcome session list, optionally filtered by a search query.
+///
+/// `search_collapsed` is runtime-only fold state used while the search box is
+/// non-empty: toggles must not touch `collapsed_session_groups` / ui-state.json,
+/// and callers clear the set whenever the query string changes.
 pub(super) fn sync_welcome_sessions(
     store: &ConfigStore,
     model: &VecModel<SessionInfo>,
     search_query: &str,
+    search_collapsed: &HashSet<String>,
 ) {
     let query = search_query.trim().to_lowercase();
     if query.is_empty() {
@@ -340,7 +362,14 @@ pub(super) fn sync_welcome_sessions(
     let mut rows: Vec<SessionInfo> = Vec::new();
 
     for root in siblings_in_pinyin_order(&user_tree) {
-        emit_group_branch_search(sessions, root, &mut rows, &query, &visible_groups);
+        emit_group_branch_search(
+            sessions,
+            root,
+            &mut rows,
+            &query,
+            &visible_groups,
+            search_collapsed,
+        );
     }
 
     let mut root_sessions: Vec<&Session> = sessions

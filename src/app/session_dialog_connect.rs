@@ -386,6 +386,7 @@ pub(super) fn wire_session_dialog(
     store: Rc<RefCell<ConfigStore>>,
     sessions_model: Rc<VecModel<SessionInfo>>,
     welcome_session_query: Rc<RefCell<String>>,
+    welcome_search_collapsed: Rc<RefCell<HashSet<String>>>,
     tabs_model: Rc<VecModel<TabInfo>>,
     terminals_model: Rc<VecModel<TerminalState>>,
     layout: Rc<RefCell<crate::layout::Layout>>,
@@ -411,6 +412,7 @@ pub(super) fn wire_session_dialog(
         let store = store.clone();
         let sessions_model = sessions_model.clone();
         let welcome_session_query = welcome_session_query.clone();
+        let welcome_search_collapsed = welcome_search_collapsed.clone();
         let tab_statuses = tab_statuses.clone();
         let tabs_model = tabs_model.clone();
         let terminals_model = terminals_model.clone();
@@ -463,6 +465,7 @@ pub(super) fn wire_session_dialog(
                         &store.borrow(),
                         &sessions_model,
                         &welcome_session_query.borrow(),
+                        &welcome_search_collapsed.borrow(),
                     );
                     if let Some(w) = weak.upgrade() {
                         let saved_backspace = new_session.backspace_mode.clone();
