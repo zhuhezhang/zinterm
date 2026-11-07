@@ -418,8 +418,8 @@ export component SessionDialog inherits Rectangle {
                 Flickable {
                     width: 100%;
                     vertical-stretch: 1;
-                    viewport-width: self.width;
-                    viewport-height: body.preferred-height;
+                    content-width: self.width;
+                    content-height: body.preferred-height;
                     body := VerticalLayout {
                         padding-top: 8px * Theme.ui-scale;
                         padding-bottom: 5px * Theme.ui-scale;

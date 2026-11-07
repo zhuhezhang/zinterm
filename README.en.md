@@ -176,7 +176,7 @@ under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See
 
 ## Running from source
 
-Requires Rust **1.75+** (see `rust-version` in `Cargo.toml`), plus the Linux system packages above when applicable.
+Requires Rust **1.92+** (see `rust-version` in `Cargo.toml`), plus the Linux system packages above when applicable.
 
 ```bash
 git clone https://github.com/zhuhezhang/zinterm.git

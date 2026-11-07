@@ -176,7 +176,7 @@ open /Applications/zinterm.app
 
 ## 从源码运行
 
-要求：Rust **1.75+**（见 `Cargo.toml` 的 `rust-version`），以及上方 Linux 系统依赖（若适用）。
+要求：Rust **1.92+**（见 `Cargo.toml` 的 `rust-version`），以及上方 Linux 系统依赖（若适用）。
 
 ```bash
 git clone https://github.com/zhuhezhang/zinterm.git

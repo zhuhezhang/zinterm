@@ -303,7 +303,7 @@ export component FileEditorOverlay inherits Rectangle {
                     // word-wrap is OFF so one logical line == one display line and
                     // the numbers line up (long lines scroll horizontally); the
                     // gutter is pinned horizontally but tracks the editor's
-                    // vertical scroll via ed-scroll.viewport-y (#81).
+                    // vertical scroll via ed-scroll.content-y (#81).
                     Rectangle {
                         vertical-stretch: 1;
                         border-bottom-left-radius: Theme.radius-md;
@@ -320,7 +320,7 @@ export component FileEditorOverlay inherits Rectangle {
                                 clip: true;
                                 Text {
                                     x: 0;
-                                    y: ed-scroll.viewport-y + 8px * Theme.ui-scale;
+                                    y: ed-scroll.content-y + 8px * Theme.ui-scale;
                                     width: parent.width - 6px * Theme.ui-scale;
                                     height: edit-input.preferred-height;
                                     text: root.editor-line-numbers;
@@ -339,8 +339,8 @@ export component FileEditorOverlay inherits Rectangle {
                             ed-scroll := ScrollView {
                                 horizontal-stretch: 1;
                                 vertical-stretch: 1;
-                                viewport-width: max(self.visible-width, edit-input.preferred-width + 16px * Theme.ui-scale);
-                                viewport-height: max(self.visible-height, edit-input.preferred-height + 16px * Theme.ui-scale);
+                                content-width: max(self.visible-width, edit-input.preferred-width + 16px * Theme.ui-scale);
+                                content-height: max(self.visible-height, edit-input.preferred-height + 16px * Theme.ui-scale);
                                 edit-input := TextInput {
                                     x: 8px * Theme.ui-scale;
                                     y: 8px * Theme.ui-scale;
@@ -362,15 +362,15 @@ export component FileEditorOverlay inherits Rectangle {
                                     }
 
                                     cursor-position-changed(cpos) => {
-                                        if (cpos.x + ed-scroll.viewport-x < 12px * Theme.ui-scale) {
-                                            ed-scroll.viewport-x = min(0px, max(ed-scroll.visible-width - self.width, -cpos.x + 12px * Theme.ui-scale));
-                                        } else if (cpos.x + ed-scroll.viewport-x > ed-scroll.visible-width - 12px * Theme.ui-scale) {
-                                            ed-scroll.viewport-x = min(0px, max(ed-scroll.visible-width - self.width, ed-scroll.visible-width - cpos.x - 12px * Theme.ui-scale));
+                                        if (cpos.x + ed-scroll.content-x < 12px * Theme.ui-scale) {
+                                            ed-scroll.content-x = min(0px, max(ed-scroll.visible-width - self.width, -cpos.x + 12px * Theme.ui-scale));
+                                        } else if (cpos.x + ed-scroll.content-x > ed-scroll.visible-width - 12px * Theme.ui-scale) {
+                                            ed-scroll.content-x = min(0px, max(ed-scroll.visible-width - self.width, ed-scroll.visible-width - cpos.x - 12px * Theme.ui-scale));
                                         }
-                                        if (cpos.y + ed-scroll.viewport-y < 12px * Theme.ui-scale) {
-                                            ed-scroll.viewport-y = min(0px, max(ed-scroll.visible-height - self.height, -cpos.y + 12px * Theme.ui-scale));
-                                        } else if (cpos.y + ed-scroll.viewport-y > ed-scroll.visible-height - 12px * Theme.ui-scale - 20px * Theme.ui-scale) {
-                                            ed-scroll.viewport-y = min(0px, max(ed-scroll.visible-height - self.height, ed-scroll.visible-height - cpos.y - 12px * Theme.ui-scale - 20px * Theme.ui-scale));
+                                        if (cpos.y + ed-scroll.content-y < 12px * Theme.ui-scale) {
+                                            ed-scroll.content-y = min(0px, max(ed-scroll.visible-height - self.height, -cpos.y + 12px * Theme.ui-scale));
+                                        } else if (cpos.y + ed-scroll.content-y > ed-scroll.visible-height - 12px * Theme.ui-scale - 20px * Theme.ui-scale) {
+                                            ed-scroll.content-y = min(0px, max(ed-scroll.visible-height - self.height, ed-scroll.visible-height - cpos.y - 12px * Theme.ui-scale - 20px * Theme.ui-scale));
                                         }
                                     }
                                 }

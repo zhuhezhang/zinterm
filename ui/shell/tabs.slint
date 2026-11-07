@@ -404,7 +404,7 @@ export component TabBar inherits Rectangle {
     property <bool> tab-overflow:
         strip.preferred-width > root.width - root.reserve-right - 34px * Theme.ui-scale;
     property <length> tab-scroll-range:
-        max(0px, flick.viewport-width - flick.width);
+        max(0px, flick.content-width - flick.width);
 
     // New tabs append at the end — when the strip overflows, keep the newest
     // tab in view by pinning the viewport to the right edge after layout.
@@ -415,13 +415,13 @@ export component TabBar inherits Rectangle {
     // horizontal so a normal wheel can move the overflow scrollbar thumb.
     function scroll-strip(delta: length) {
         if (root.tab-scroll-range <= 0px || delta == 0px) { return; }
-        flick.viewport-x = clamp(
-            flick.viewport-x + delta, -root.tab-scroll-range, 0px);
+        flick.content-x = clamp(
+            flick.content-x + delta, -root.tab-scroll-range, 0px);
     }
 
     function scroll-strip-to-end() {
         if (root.tab-scroll-range > 0px) {
-            flick.viewport-x = -root.tab-scroll-range;
+            flick.content-x = -root.tab-scroll-range;
         }
     }
 
@@ -473,11 +473,11 @@ export component TabBar inherits Rectangle {
         flick := Flickable {
             interactive: false;
             horizontal-stretch: 1;
-            viewport-height: self.height;
-            viewport-width: max(self.width, strip.preferred-width);
+            content-height: self.height;
+            content-width: max(self.width, strip.preferred-width);
             // Behind the tabs: wheel over empty strip padding still pans.
             TouchArea {
-                width: flick.viewport-width;
+                width: flick.content-width;
                 height: 100%;
                 scroll-event(ev) => {
                     root.scroll-strip(
@@ -555,13 +555,13 @@ export component TabBar inherits Rectangle {
         y: root.height - self.height - 1px * Theme.ui-scale;
         animate height { duration: 100ms; }
         property <length> thumb-w:
-            max(28px * Theme.ui-scale, self.width * flick.width / max(1px * Theme.ui-scale, flick.viewport-width));
+            max(28px * Theme.ui-scale, self.width * flick.width / max(1px * Theme.ui-scale, flick.content-width));
         property <length> usable: max(1px * Theme.ui-scale, self.width - self.thumb-w);
         track-ta := TouchArea {
             mouse-cursor: default;
             moved => {
                 if (self.pressed && root.tab-scroll-range > 0px) {
-                    flick.viewport-x = -clamp(
+                    flick.content-x = -clamp(
                         (self.mouse-x - sb.thumb-w / 2) / sb.usable, 0.0, 1.0)
                         * root.tab-scroll-range;
                 }
@@ -569,7 +569,7 @@ export component TabBar inherits Rectangle {
             pointer-event(e) => {
                 if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left
                     && root.tab-scroll-range > 0px) {
-                    flick.viewport-x = -clamp(
+                    flick.content-x = -clamp(
                         (self.mouse-x - sb.thumb-w / 2) / sb.usable, 0.0, 1.0)
                         * root.tab-scroll-range;
                 }
@@ -583,7 +583,7 @@ export component TabBar inherits Rectangle {
 
         Rectangle {
             x: root.tab-scroll-range > 0px
-                ? (parent.width - self.width) * (-flick.viewport-x / root.tab-scroll-range)
+                ? (parent.width - self.width) * (-flick.content-x / root.tab-scroll-range)
                 : 0px;
             y: (parent.height - self.height) / 2;
             width: sb.thumb-w;
@@ -614,8 +614,8 @@ export component TabBar inherits Rectangle {
                 y: 4px * Theme.ui-scale;
                 width: parent.width - 8px * Theme.ui-scale;
                 height: parent.height - 8px * Theme.ui-scale;
-                viewport-width: self.width;
-                viewport-height: max(self.height, all-tabs-list.preferred-height);
+                content-width: self.width;
+                content-height: max(self.height, all-tabs-list.preferred-height);
                 all-tabs-list := VerticalLayout {
                     width: parent.width;
                     spacing: 1px * Theme.ui-scale;

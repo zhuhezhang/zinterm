@@ -137,8 +137,8 @@ export component ConfirmDialog inherits Rectangle {
                     y: 1px * Theme.ui-scale;
                     width: parent.width - 2px * Theme.ui-scale;
                     height: parent.height - 2px * Theme.ui-scale;
-                    viewport-width: max(self.visible-width, compact-detail-text.preferred-width + 16px * Theme.ui-scale);
-                    viewport-height: max(self.visible-height, compact-detail-text.preferred-height + 16px * Theme.ui-scale);
+                    content-width: max(self.visible-width, compact-detail-text.preferred-width + 16px * Theme.ui-scale);
+                    content-height: max(self.visible-height, compact-detail-text.preferred-height + 16px * Theme.ui-scale);
 
                     compact-detail-text := Text {
                         x: 8px * Theme.ui-scale;
@@ -167,10 +167,10 @@ export component ConfirmDialog inherits Rectangle {
                     y: 1px * Theme.ui-scale;
                     width: parent.width - 2px * Theme.ui-scale;
                     height: parent.height - 2px * Theme.ui-scale;
-                    viewport-width: root.detail-wrap
+                    content-width: root.detail-wrap
                         ? self.visible-width
                         : max(self.visible-width, detail-text.preferred-width + 16px * Theme.ui-scale);
-                    viewport-height: max(self.visible-height, detail-text.preferred-height + 16px * Theme.ui-scale);
+                    content-height: max(self.visible-height, detail-text.preferred-height + 16px * Theme.ui-scale);
 
                     detail-text := Text {
                         x: 8px * Theme.ui-scale;

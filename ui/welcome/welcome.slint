@@ -355,12 +355,12 @@ export component Welcome inherits Rectangle {
                         vertical-stretch: 1;
                         // Compact sidebar: grow the viewport with the longest
                         // session/group label so names scroll instead of eliding.
-                        viewport-width: root.compact
+                        content-width: root.compact
                             ? max(self.visible-width, sess-list.preferred-width)
                             : self.visible-width;
-                        viewport-height: max(self.visible-height, sess-list.preferred-height);
+                        content-height: max(self.visible-height, sess-list.preferred-height);
                         sess-list := VerticalLayout {
-                            width: sess-scroll.viewport-width;
+                            width: sess-scroll.content-width;
                             spacing: 2px * Theme.ui-scale;
                             for session[i] in sessions: VerticalLayout {
                                 spacing: 2px * Theme.ui-scale;

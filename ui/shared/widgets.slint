@@ -755,7 +755,7 @@ export component BorderedTextArea inherits Rectangle {
     // Fluent bars overlay the flickable (~14px) — caret follow insets by that
     // gutter so the caret is not drawn under a bar.
     // TextInput sizing follows stock TextEdit (no fixed width): preferred-*
-    // drives viewport-*, and cursor-position-changed scrolls the viewport.
+    // drives content-*, and cursor-position-changed scrolls the viewport.
     scroll := ScrollView {
         x: 8px * Theme.ui-scale;
         y: 6px * Theme.ui-scale;
@@ -764,8 +764,8 @@ export component BorderedTextArea inherits Rectangle {
         property <length> sb: 14px * Theme.ui-scale;
         property <length> caret-margin: 4px * Theme.ui-scale;
         property <length> line-h: max(20px * Theme.ui-scale, root.font-size + 6px * Theme.ui-scale);
-        viewport-width: max(self.visible-width, input.preferred-width + self.caret-margin + 2px * Theme.ui-scale);
-        viewport-height: max(self.visible-height, input.preferred-height + self.caret-margin);
+        content-width: max(self.visible-width, input.preferred-width + self.caret-margin + 2px * Theme.ui-scale);
+        content-height: max(self.visible-height, input.preferred-height + self.caret-margin);
 
         input := TextInput {
             text-cursor-width: 2px * Theme.ui-scale;
@@ -780,18 +780,18 @@ export component BorderedTextArea inherits Rectangle {
             key-pressed(e) => { root.key-pressed(e) }
 
             cursor-position-changed(cpos) => {
-                if (cpos.x + scroll.viewport-x < scroll.caret-margin) {
-                    scroll.viewport-x = min(0px, max(scroll.visible-width - self.width,
+                if (cpos.x + scroll.content-x < scroll.caret-margin) {
+                    scroll.content-x = min(0px, max(scroll.visible-width - self.width,
                         -cpos.x + scroll.caret-margin));
-                } else if (cpos.x + scroll.viewport-x > scroll.visible-width - scroll.sb - scroll.caret-margin - self.text-cursor-width) {
-                    scroll.viewport-x = min(0px, max(scroll.visible-width - self.width,
+                } else if (cpos.x + scroll.content-x > scroll.visible-width - scroll.sb - scroll.caret-margin - self.text-cursor-width) {
+                    scroll.content-x = min(0px, max(scroll.visible-width - self.width,
                         scroll.visible-width - scroll.sb - cpos.x - scroll.caret-margin - self.text-cursor-width));
                 }
-                if (cpos.y + scroll.viewport-y < scroll.caret-margin) {
-                    scroll.viewport-y = min(0px, max(scroll.visible-height - self.height,
+                if (cpos.y + scroll.content-y < scroll.caret-margin) {
+                    scroll.content-y = min(0px, max(scroll.visible-height - self.height,
                         -cpos.y + scroll.caret-margin));
-                } else if (cpos.y + scroll.viewport-y > scroll.visible-height - scroll.sb - scroll.caret-margin - scroll.line-h) {
-                    scroll.viewport-y = min(0px, max(scroll.visible-height - self.height,
+                } else if (cpos.y + scroll.content-y > scroll.visible-height - scroll.sb - scroll.caret-margin - scroll.line-h) {
+                    scroll.content-y = min(0px, max(scroll.visible-height - self.height,
                         scroll.visible-height - scroll.sb - cpos.y - scroll.caret-margin - scroll.line-h));
                 }
             }

@@ -190,8 +190,8 @@ export component InterfacePanel inherits Rectangle {
             nav-scroll := ScrollView {
                 width: 100%;
                 height: 100%;
-                viewport-width: self.visible-width;
-                viewport-height: max(self.visible-height, nav-items.preferred-height);
+                content-width: self.visible-width;
+                content-height: max(self.visible-height, nav-items.preferred-height);
                 nav-items := VerticalLayout {
                     width: nav-scroll.visible-width;
                     padding-top: 7px * Theme.ui-scale;
@@ -291,8 +291,8 @@ export component InterfacePanel inherits Rectangle {
             settings-scroll := ScrollView {
                 width: 100%;
                 height: 100%;
-                viewport-width: self.visible-width;
-                viewport-height: max(self.visible-height, settings-pages.preferred-height);
+                content-width: self.visible-width;
+                content-height: max(self.visible-height, settings-pages.preferred-height);
 
                 settings-pages := VerticalLayout {
                     width: settings-scroll.visible-width;

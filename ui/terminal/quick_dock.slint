@@ -135,7 +135,7 @@ export component QuickDockPanel inherits Rectangle {
         // ScrollView (not bare Flickable) so a scrollbar appears when the list overflows.
         quick-scroll := ScrollView {
             vertical-stretch: 1;
-            viewport-width: self.visible-width;
+            content-width: self.visible-width;
             scroll-content := VerticalLayout {
                 min-height: quick-scroll.visible-height;
                 alignment: start;
@@ -409,7 +409,7 @@ export component QuickDockPanel inherits Rectangle {
                     }
                 }
             }
-            viewport-height: max(self.visible-height, scroll-content.preferred-height);
+            content-height: max(self.visible-height, scroll-content.preferred-height);
         }
     }
 }

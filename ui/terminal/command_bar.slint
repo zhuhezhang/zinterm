@@ -338,8 +338,8 @@ export component CommandBar inherits Rectangle {
             // the list exceeds the capped height.
             ScrollView {
                 height: min(228px * Theme.ui-scale, max(28px * Theme.ui-scale, qc-col.preferred-height));
-                viewport-width: self.visible-width;
-                viewport-height: max(self.visible-height, qc-col.preferred-height);
+                content-width: self.visible-width;
+                content-height: max(self.visible-height, qc-col.preferred-height);
                 qc-col := VerticalLayout {
                     alignment: start;
                     padding-bottom: 1px * Theme.ui-scale;
@@ -722,8 +722,8 @@ export component CommandBar inherits Rectangle {
                 height: root.history-autocomplete
                     ? min(172px * Theme.ui-scale, max(28px * Theme.ui-scale, h-col.preferred-height))
                     : min(228px * Theme.ui-scale, max(28px * Theme.ui-scale, h-col.preferred-height));
-                viewport-width: self.visible-width;
-                viewport-height: max(self.visible-height, h-col.preferred-height);
+                content-width: self.visible-width;
+                content-height: max(self.visible-height, h-col.preferred-height);
                 h-col := VerticalLayout {
                     alignment: start;
                     if root.history-view.length == 0: Text {
