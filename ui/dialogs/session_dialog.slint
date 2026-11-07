@@ -366,29 +366,29 @@ export component SessionDialog inherits Rectangle {
 
                 Rectangle {
                     width: 100%;
-                    height: 48px * Theme.ui-scale;
+                    height: 44px * Theme.ui-scale;
                     background: Theme.bg-panel-alt;
                     border-top-left-radius: Theme.radius-lg;
                     border-top-right-radius: Theme.radius-lg;
 
                     HorizontalLayout {
                         padding-left: 16px * Theme.ui-scale;
-                        padding-right: 8px * Theme.ui-scale;
+                        padding-right: 10px * Theme.ui-scale;
                         spacing: 8px * Theme.ui-scale;
 
                         Text {
                             text: is-editing ? @tr("Edit session") : @tr("New session");
                             color: Theme.text-primary;
-                            font-size: Theme.fs-lg;
-                            font-weight: 600;
+                            font-size: 14px * Theme.ui-scale;
+                            font-weight: 700;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
                             overflow: elide;
                         }
 
                         Rectangle {
-                            width: 32px * Theme.ui-scale;
-                            height: 32px * Theme.ui-scale;
+                            width: 24px * Theme.ui-scale;
+                            height: 24px * Theme.ui-scale;
                             y: (parent.height - self.height) / 2;
                             border-radius: Theme.radius-sm;
                             background: close-ta.has-hover ? Theme.bg-hover : transparent;
@@ -401,7 +401,7 @@ export component SessionDialog inherits Rectangle {
                                 text: "\u{E5CD}";
                                 font-family: "Material Icons";
                                 color: Theme.text-secondary;
-                                font-size: 18px * Theme.ui-scale;
+                                font-size: 15px * Theme.ui-scale;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }
@@ -422,7 +422,7 @@ export component SessionDialog inherits Rectangle {
                     content-height: body.preferred-height;
                     body := VerticalLayout {
                         padding-top: 8px * Theme.ui-scale;
-                        padding-bottom: 5px * Theme.ui-scale;
+                        padding-bottom: 1px * Theme.ui-scale;
                         padding-right: 9px * Theme.ui-scale;
                         padding-left: 8px * Theme.ui-scale;
                         spacing: 8px * Theme.ui-scale;
