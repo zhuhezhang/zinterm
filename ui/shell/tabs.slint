@@ -425,6 +425,23 @@ export component TabBar inherits Rectangle {
         }
     }
 
+    // Bring tab `index` into the flickable viewport (all-tabs menu / overflow).
+    // Slot math matches SingleTab.tab-width + strip.spacing.
+    function scroll-tab-into-view(index: int) {
+        if (root.tab-scroll-range <= 0px || index < 0) { return; }
+        let tab-w = 160px * Theme.ui-scale;
+        let slot = tab-w + 2px * Theme.ui-scale;
+        let tab-left = index * slot;
+        let tab-right = tab-left + tab-w;
+        let view-left = -flick.content-x;
+        let view-right = view-left + flick.width;
+        if (tab-left < view-left) {
+            flick.content-x = clamp(-tab-left, -root.tab-scroll-range, 0px);
+        } else if (tab-right > view-right) {
+            flick.content-x = clamp(-(tab-right - flick.width), -root.tab-scroll-range, 0px);
+        }
+    }
+
     changed tabs => {
         if (root.tracked-tab-count >= 0 && root.tabs.length > root.tracked-tab-count) {
             root.pending-scroll-to-end = true;
@@ -619,10 +636,11 @@ export component TabBar inherits Rectangle {
                 all-tabs-list := VerticalLayout {
                     width: parent.width;
                     spacing: 1px * Theme.ui-scale;
-                    for tab in root.tabs: TabMenuItem {
+                    for tab[i] in root.tabs: TabMenuItem {
                         width: parent.width;
                         label: (tab.id == root.active-id ? "●  " : "    ") + tab.title;
                         clicked => {
+                            root.scroll-tab-into-view(i);
                             root.tab-selected(tab.id);
                             all-tabs-menu.close();
                         }
