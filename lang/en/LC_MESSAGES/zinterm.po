@@ -996,6 +996,21 @@ msgstr "All defaults"
 msgid "weak"
 msgstr "weak"
 
+msgid "Move to top"
+msgstr "Move to top"
+
+msgid "Move to bottom"
+msgstr "Move to bottom"
+
+msgid "Select all"
+msgstr "Select all"
+
+msgid "Invert selection"
+msgstr "Invert selection"
+
+msgid "Select only this"
+msgstr "Select only this"
+
 msgid "SFTP follows terminal cd"
 msgstr "SFTP follows terminal cd"
 

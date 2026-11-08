@@ -996,6 +996,21 @@ msgstr "全部默认"
 msgid "weak"
 msgstr "不安全"
 
+msgid "Move to top"
+msgstr "移到最上面"
+
+msgid "Move to bottom"
+msgstr "移到最下面"
+
+msgid "Select all"
+msgstr "全选"
+
+msgid "Invert selection"
+msgstr "反选"
+
+msgid "Select only this"
+msgstr "只选中当前"
+
 msgid "SFTP follows terminal cd"
 msgstr "SFTP 跟随 cd 更新"
 

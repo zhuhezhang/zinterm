@@ -227,16 +227,22 @@ pub fn sanitize_algorithm_preferences(prefs: &AlgorithmPreferences) -> Algorithm
     out
 }
 
-pub fn toggle_algorithm(prefs: &mut AlgorithmPreferences, category: AlgorithmCategory, name: &str) {
+/// Toggle selection of `name`. Returns `false` when refusing to clear the last
+/// algorithm in a required category (everything except compression).
+pub fn toggle_algorithm(
+    prefs: &mut AlgorithmPreferences,
+    category: AlgorithmCategory,
+    name: &str,
+) -> bool {
     let pool = option_pool(category);
     if !pool.contains(&name) {
-        return;
+        return false;
     }
     let list = list_mut(prefs, category);
     if let Some(i) = list.iter().position(|n| n == name) {
         // Refuse clearing the last entry for required categories.
         if list.len() == 1 && category != AlgorithmCategory::Compress {
-            return;
+            return false;
         }
         list.remove(i);
         if category == AlgorithmCategory::Compress && list.is_empty() {
@@ -245,6 +251,7 @@ pub fn toggle_algorithm(prefs: &mut AlgorithmPreferences, category: AlgorithmCat
     } else {
         list.push(name.to_string());
     }
+    true
 }
 
 pub fn move_algorithm(
@@ -262,6 +269,117 @@ pub fn move_algorithm(
         return;
     }
     list.swap(i, j as usize);
+}
+
+/// Ensure `name` is selected, then place it first among selected algorithms.
+pub fn move_algorithm_to_top(
+    prefs: &mut AlgorithmPreferences,
+    category: AlgorithmCategory,
+    name: &str,
+) {
+    let pool = option_pool(category);
+    if !pool.contains(&name) {
+        return;
+    }
+    let list = list_mut(prefs, category);
+    if let Some(i) = list.iter().position(|n| n == name) {
+        if i == 0 {
+            return;
+        }
+        let item = list.remove(i);
+        list.insert(0, item);
+    } else {
+        list.insert(0, name.to_string());
+    }
+}
+
+/// Ensure `name` is selected, then place it last among selected algorithms.
+pub fn move_algorithm_to_bottom(
+    prefs: &mut AlgorithmPreferences,
+    category: AlgorithmCategory,
+    name: &str,
+) {
+    let pool = option_pool(category);
+    if !pool.contains(&name) {
+        return;
+    }
+    let list = list_mut(prefs, category);
+    if let Some(i) = list.iter().position(|n| n == name) {
+        if i + 1 == list.len() {
+            return;
+        }
+        let item = list.remove(i);
+        list.push(item);
+    } else {
+        list.push(name.to_string());
+    }
+}
+
+/// Select every algorithm in the category pool, keeping current preference order
+/// for already-selected entries and appending the rest in catalog order.
+pub fn select_all_algorithms(prefs: &mut AlgorithmPreferences, category: AlgorithmCategory) {
+    let pool = option_pool(category);
+    let list = list_mut(prefs, category);
+    let mut seen = HashSet::new();
+    let mut new_list = Vec::new();
+    for name in list.iter() {
+        if pool.contains(&name.as_str()) && seen.insert(name.clone()) {
+            new_list.push(name.clone());
+        }
+    }
+    for name in pool {
+        if seen.insert(name.to_string()) {
+            new_list.push(name.to_string());
+        }
+    }
+    *list = new_list;
+}
+
+/// Invert selection. Previously unselected entries become selected in catalog
+/// order. If that would leave a required category empty, keep `prefer` when
+/// valid, otherwise the first previously selected entry.
+pub fn invert_algorithm_selection(
+    prefs: &mut AlgorithmPreferences,
+    category: AlgorithmCategory,
+    prefer: &str,
+) {
+    let pool = option_pool(category);
+    let list = list_mut(prefs, category);
+    let selected: HashSet<String> = list.iter().cloned().collect();
+    let mut new_list: Vec<String> = pool
+        .iter()
+        .filter(|name| !selected.contains(**name))
+        .map(|name| (*name).to_string())
+        .collect();
+
+    if new_list.is_empty() {
+        if pool.contains(&prefer) {
+            new_list.push(prefer.to_string());
+        } else if let Some(first) = list.first() {
+            new_list.push(first.clone());
+        } else if let Some(first) = pool.first() {
+            new_list.push((*first).to_string());
+        }
+    }
+
+    if category == AlgorithmCategory::Compress && new_list.is_empty() {
+        new_list.push("none".to_string());
+    }
+
+    *list = new_list;
+}
+
+/// Select only `name` (replaces the current selection for the category).
+pub fn select_only_algorithm(
+    prefs: &mut AlgorithmPreferences,
+    category: AlgorithmCategory,
+    name: &str,
+) {
+    let pool = option_pool(category);
+    if !pool.contains(&name) {
+        return;
+    }
+    *list_mut(prefs, category) = vec![name.to_string()];
 }
 
 pub fn reset_algorithm_section(prefs: &mut AlgorithmPreferences, category: AlgorithmCategory) {
@@ -472,7 +590,11 @@ mod tests {
             kex: vec!["curve25519-sha256".into()],
             ..AlgorithmPreferences::builtin_default()
         };
-        toggle_algorithm(&mut prefs, AlgorithmCategory::Kex, "curve25519-sha256");
+        assert!(!toggle_algorithm(
+            &mut prefs,
+            AlgorithmCategory::Kex,
+            "curve25519-sha256"
+        ));
         assert_eq!(prefs.kex, vec!["curve25519-sha256".to_string()]);
     }
 
@@ -500,6 +622,136 @@ mod tests {
         let preferred = to_preferred(&prefs);
         let names: Vec<&str> = preferred.mac.iter().map(|n| n.as_ref()).collect();
         assert_eq!(names, vec!["hmac-md5"]);
+    }
+
+    #[test]
+    fn move_to_edge_selects_when_unchecked() {
+        let mut prefs = AlgorithmPreferences {
+            cipher: vec!["aes128-ctr".into()],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        move_algorithm_to_top(&mut prefs, AlgorithmCategory::Cipher, "aes256-ctr");
+        assert_eq!(
+            prefs.cipher,
+            vec!["aes256-ctr".to_string(), "aes128-ctr".to_string()]
+        );
+        move_algorithm_to_bottom(&mut prefs, AlgorithmCategory::Cipher, "chacha20-poly1305@openssh.com");
+        assert_eq!(
+            prefs.cipher.last().map(String::as_str),
+            Some("chacha20-poly1305@openssh.com")
+        );
+        assert!(prefs.cipher.iter().any(|n| n == "aes256-ctr"));
+    }
+
+    #[test]
+    fn select_all_invert_and_select_only() {
+        let mut prefs = AlgorithmPreferences {
+            hmac: vec!["hmac-sha2-256".into()],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        select_all_algorithms(&mut prefs, AlgorithmCategory::Hmac);
+        assert_eq!(prefs.hmac.len(), option_pool(AlgorithmCategory::Hmac).len());
+        assert_eq!(prefs.hmac[0], "hmac-sha2-256");
+
+        invert_algorithm_selection(&mut prefs, AlgorithmCategory::Hmac, "hmac-sha2-256");
+        // All were selected → invert keeps prefer for required categories.
+        assert_eq!(prefs.hmac, vec!["hmac-sha2-256".to_string()]);
+
+        prefs.hmac = vec!["hmac-sha2-256".into(), "hmac-sha1".into()];
+        invert_algorithm_selection(&mut prefs, AlgorithmCategory::Hmac, "hmac-md5");
+        assert!(!prefs.hmac.iter().any(|n| n == "hmac-sha2-256"));
+        assert!(!prefs.hmac.iter().any(|n| n == "hmac-sha1"));
+        assert!(prefs.hmac.iter().any(|n| n == "hmac-md5"));
+
+        select_only_algorithm(&mut prefs, AlgorithmCategory::Hmac, "hmac-sha1");
+        assert_eq!(prefs.hmac, vec!["hmac-sha1".to_string()]);
+    }
+
+    #[test]
+    fn move_to_top_selects_unselected_and_reorders() {
+        let mut prefs = AlgorithmPreferences {
+            cipher: vec!["aes256-ctr".into(), "aes128-ctr".into()],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        move_algorithm_to_top(&mut prefs, AlgorithmCategory::Cipher, "aes128-ctr");
+        assert_eq!(
+            prefs.cipher,
+            vec!["aes128-ctr".to_string(), "aes256-ctr".to_string()]
+        );
+        move_algorithm_to_top(&mut prefs, AlgorithmCategory::Cipher, "aes256-cbc");
+        assert_eq!(
+            prefs.cipher,
+            vec![
+                "aes256-cbc".to_string(),
+                "aes128-ctr".to_string(),
+                "aes256-ctr".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn move_to_bottom_selects_unselected_and_reorders() {
+        let mut prefs = AlgorithmPreferences {
+            cipher: vec!["aes256-ctr".into(), "aes128-ctr".into()],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        move_algorithm_to_bottom(&mut prefs, AlgorithmCategory::Cipher, "aes256-ctr");
+        assert_eq!(
+            prefs.cipher,
+            vec!["aes128-ctr".to_string(), "aes256-ctr".to_string()]
+        );
+        move_algorithm_to_bottom(&mut prefs, AlgorithmCategory::Cipher, "3des-cbc");
+        assert_eq!(
+            prefs.cipher,
+            vec![
+                "aes128-ctr".to_string(),
+                "aes256-ctr".to_string(),
+                "3des-cbc".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn select_all_keeps_order_then_appends_pool() {
+        let mut prefs = AlgorithmPreferences {
+            compress: vec!["zlib".into()],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        select_all_algorithms(&mut prefs, AlgorithmCategory::Compress);
+        assert_eq!(
+            prefs.compress,
+            vec![
+                "zlib".to_string(),
+                "none".to_string(),
+                "zlib@openssh.com".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn invert_and_select_only() {
+        let mut prefs = AlgorithmPreferences {
+            compress: vec!["none".into(), "zlib".into()],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        invert_algorithm_selection(&mut prefs, AlgorithmCategory::Compress, "none");
+        assert_eq!(prefs.compress, vec!["zlib@openssh.com".to_string()]);
+
+        select_only_algorithm(&mut prefs, AlgorithmCategory::Compress, "zlib");
+        assert_eq!(prefs.compress, vec!["zlib".to_string()]);
+    }
+
+    #[test]
+    fn invert_all_selected_keeps_prefer() {
+        let mut prefs = AlgorithmPreferences {
+            compress: option_pool(AlgorithmCategory::Compress)
+                .into_iter()
+                .map(|n| n.to_string())
+                .collect(),
+            ..AlgorithmPreferences::builtin_default()
+        };
+        invert_algorithm_selection(&mut prefs, AlgorithmCategory::Compress, "zlib");
+        assert_eq!(prefs.compress, vec!["zlib".to_string()]);
     }
 
     #[test]

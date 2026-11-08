@@ -10,6 +10,8 @@ export component CompactCheckBox {
     in property <length> gap: 4px * Theme.ui-scale;
     in-out property <bool> checked;
     callback toggled();
+    // Absolute pointer position (for parent PopupWindow anchors).
+    callback right-clicked(length, length);
 
     min-height: 18px * Theme.ui-scale;
     vertical-stretch: 0;
@@ -64,6 +66,13 @@ export component CompactCheckBox {
         clicked => {
             root.checked = !root.checked;
             root.toggled();
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                root.right-clicked(
+                    self.absolute-position.x + self.mouse-x,
+                    self.absolute-position.y + self.mouse-y);
+            }
         }
     }
 }

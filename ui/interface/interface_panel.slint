@@ -159,6 +159,11 @@ export component InterfacePanel inherits Rectangle {
     callback set-ssh-algorithm-category(string);
     callback toggle-ssh-algorithm(string);
     callback move-ssh-algorithm(string, int);
+    callback move-ssh-algorithm-to-top(string);
+    callback move-ssh-algorithm-to-bottom(string);
+    callback select-all-ssh-algorithms();
+    callback invert-ssh-algorithm-selection(string);
+    callback select-only-ssh-algorithm(string);
     callback reset-ssh-algorithm-section();
     callback reset-ssh-algorithms();
     callback set-language(string);             // "auto" / "zh" / "en"
@@ -379,6 +384,11 @@ export component InterfacePanel inherits Rectangle {
                         ssh-algorithm-rows: root.ssh-algorithm-rows;
                         ssh-keepalive-secs <=> root.ssh-keepalive-secs;
                         move-ssh-algorithm(a0, a1) => { root.move-ssh-algorithm(a0, a1); }
+                        move-ssh-algorithm-to-top(a0) => { root.move-ssh-algorithm-to-top(a0); }
+                        move-ssh-algorithm-to-bottom(a0) => { root.move-ssh-algorithm-to-bottom(a0); }
+                        select-all-ssh-algorithms => { root.select-all-ssh-algorithms(); }
+                        invert-ssh-algorithm-selection(a0) => { root.invert-ssh-algorithm-selection(a0); }
+                        select-only-ssh-algorithm(a0) => { root.select-only-ssh-algorithm(a0); }
                         reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
                         reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
                         set-download-always-ask(a0) => { root.set-download-always-ask(a0); }

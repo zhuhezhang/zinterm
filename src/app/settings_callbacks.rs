@@ -162,7 +162,19 @@ pub(super) fn wire_settings_callbacks(
                     .unwrap_or(AlgorithmCategory::Kex);
                 let mut s = store.borrow_mut();
                 let mut current = s.algorithm_preferences();
-                crate::ssh::toggle_algorithm(&mut current, cat, name.as_str());
+                if !crate::ssh::toggle_algorithm(&mut current, cat, name.as_str()) {
+                    // Checkbox already flipped locally — refresh rows to restore it,
+                    // then tell the user a required category cannot be emptied.
+                    w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+                    w.set_ssh_import_hint(
+                        t(
+                            "此类算法至少需要保留一个。",
+                            "At least one algorithm must remain selected for this category.",
+                        )
+                        .into(),
+                    );
+                    return;
+                }
                 s.set_algorithm_preferences(current.clone());
                 if let Ok(mut g) = prefs.lock() {
                     *g = current.clone();
@@ -182,6 +194,101 @@ pub(super) fn wire_settings_callbacks(
                 let mut s = store.borrow_mut();
                 let mut current = s.algorithm_preferences();
                 crate::ssh::move_algorithm(&mut current, cat, name.as_str(), delta);
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_move_ssh_algorithm_to_top(move |name: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::move_algorithm_to_top(&mut current, cat, name.as_str());
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_move_ssh_algorithm_to_bottom(move |name: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::move_algorithm_to_bottom(&mut current, cat, name.as_str());
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_select_all_ssh_algorithms(move || {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::select_all_algorithms(&mut current, cat);
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_invert_ssh_algorithm_selection(move |name: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::invert_algorithm_selection(&mut current, cat, name.as_str());
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
+        window.on_select_only_ssh_algorithm(move |name: SharedString| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::select_only_algorithm(&mut current, cat, name.as_str());
                 s.set_algorithm_preferences(current.clone());
                 if let Ok(mut g) = prefs.lock() {
                     *g = current.clone();

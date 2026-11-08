@@ -9,11 +9,17 @@ import {
     Stepper,
 } from "../widgets.slint";
 import { AlgorithmOptionRow } from "../../types/settings.slint";
+import { MenuItem } from "../../terminal/helpers.slint";
 
 export component SshSettingsPage inherits Rectangle {
     height: self.preferred-height;
     in-out property <bool> download-always-ask;
     callback move-ssh-algorithm(string, int);
+    callback move-ssh-algorithm-to-top(string);
+    callback move-ssh-algorithm-to-bottom(string);
+    callback select-all-ssh-algorithms();
+    callback invert-ssh-algorithm-selection(string);
+    callback select-only-ssh-algorithm(string);
     callback reset-ssh-algorithm-section();
     callback reset-ssh-algorithms();
     callback set-download-always-ask(bool);
@@ -105,8 +111,22 @@ export component SshSettingsPage inherits Rectangle {
             }
         }
 
-        for algo[index] in root.ssh-algorithm-rows: Rectangle {
+        for algo[index] in root.ssh-algorithm-rows: algo-row := Rectangle {
             height: 34px * Theme.ui-scale;
+            property <length> ctx-x;
+            property <length> ctx-y;
+
+            // Underlay: right-click on empty / badge / spacer areas.
+            TouchArea {
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                        algo-row.ctx-x = self.mouse-x;
+                        algo-row.ctx-y = self.mouse-y;
+                        ctx-menu.show();
+                    }
+                }
+            }
+
             HorizontalLayout {
                 spacing: 8px * Theme.ui-scale;
                 padding-top: 4px * Theme.ui-scale;
@@ -118,6 +138,11 @@ export component SshSettingsPage inherits Rectangle {
                     text: algo.name;
                     checked: algo.checked;
                     toggled => { root.toggle-ssh-algorithm(algo.name); }
+                    right-clicked(ax, ay) => {
+                        algo-row.ctx-x = ax - algo-row.absolute-position.x;
+                        algo-row.ctx-y = ay - algo-row.absolute-position.y;
+                        ctx-menu.show();
+                    }
                 }
 
                 if algo.weak: Rectangle {
@@ -202,6 +227,62 @@ export component SshSettingsPage inherits Rectangle {
                 width: 100%;
                 height: 1px * Theme.ui-scale;
                 background: Theme.border-subtle;
+            }
+
+            ctx-menu := PopupWindow {
+                x: algo-row.ctx-x;
+                y: algo-row.ctx-y;
+                width: menu-vl.preferred-width;
+                height: menu-vl.preferred-height;
+
+                Rectangle {
+                    background: Theme.popup-bg;
+                    border-radius: Theme.radius-sm;
+                    border-width: 1px * Theme.ui-scale;
+                    border-color: Theme.border-strong;
+                    drop-shadow-blur: 10px * Theme.ui-scale;
+                    drop-shadow-color: #00000050;
+
+                    menu-vl := VerticalLayout {
+                        padding: 4px * Theme.ui-scale;
+                        spacing: 2px * Theme.ui-scale;
+
+                        MenuItem {
+                            icon: "\u{E25A}";
+                            label: @tr("Move to top");
+                            clicked => { root.move-ssh-algorithm-to-top(algo.name); }
+                        }
+
+                        MenuItem {
+                            icon: "\u{E258}";
+                            label: @tr("Move to bottom");
+                            clicked => { root.move-ssh-algorithm-to-bottom(algo.name); }
+                        }
+
+                        MenuItem {
+                            icon: "\u{E837}";
+                            label: @tr("Select only this");
+                            clicked => { root.select-only-ssh-algorithm(algo.name); }
+                        }
+
+                        Rectangle {
+                            height: 1px * Theme.ui-scale;
+                            background: Theme.border-subtle;
+                        }
+
+                        MenuItem {
+                            icon: "\u{E162}";
+                            label: @tr("Select all");
+                            clicked => { root.select-all-ssh-algorithms(); }
+                        }
+
+                        MenuItem {
+                            icon: "\u{E8D4}";
+                            label: @tr("Invert selection");
+                            clicked => { root.invert-ssh-algorithm-selection(algo.name); }
+                        }
+                    }
+                }
             }
         }
 

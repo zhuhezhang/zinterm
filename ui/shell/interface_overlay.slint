@@ -38,6 +38,11 @@ export component InterfaceOverlay inherits Rectangle {
     in property <string> session-log-dir;
     in-out property <string> language-pref: "auto";
     callback move-ssh-algorithm(string, int);
+    callback move-ssh-algorithm-to-top(string);
+    callback move-ssh-algorithm-to-bottom(string);
+    callback select-all-ssh-algorithms();
+    callback invert-ssh-algorithm-selection(string);
+    callback select-only-ssh-algorithm(string);
     in-out property <bool> output-highlight-enabled: true;
     in-out property <string> output-highlight-preset: "log";
     in-out property <string> output-highlight-rule-status;
@@ -339,6 +344,11 @@ export component InterfaceOverlay inherits Rectangle {
                     set-ssh-algorithm-category(v) => { root.set-ssh-algorithm-category(v); }
                     toggle-ssh-algorithm(v) => { root.toggle-ssh-algorithm(v); }
                     move-ssh-algorithm(name, delta) => { root.move-ssh-algorithm(name, delta); }
+                    move-ssh-algorithm-to-top(name) => { root.move-ssh-algorithm-to-top(name); }
+                    move-ssh-algorithm-to-bottom(name) => { root.move-ssh-algorithm-to-bottom(name); }
+                    select-all-ssh-algorithms => { root.select-all-ssh-algorithms(); }
+                    invert-ssh-algorithm-selection(name) => { root.invert-ssh-algorithm-selection(name); }
+                    select-only-ssh-algorithm(name) => { root.select-only-ssh-algorithm(name); }
                     reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
                     reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
                     set-save-passwords(v) => { root.set-save-passwords(v); }
