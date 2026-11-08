@@ -398,6 +398,12 @@ export component AppWindow inherits Window {
     // Drag-resizable width of that welcome sidebar (logical px), persisted.
     in-out property <length> welcome-sidebar-width: 350px;
     callback persist-welcome-sidebar-width(float);
+    // All-tabs overflow popup size (logical px), persisted to ui-state.json.
+    // Height 0 / user-sized false = auto-fit the tab list.
+    in-out property <length> all-tabs-menu-w: 230px * Theme.ui-scale;
+    in-out property <length> all-tabs-menu-h: 0px;
+    in-out property <bool> all-tabs-menu-user-sized: false;
+    callback persist-all-tabs-menu-size(float /* w */, float /* h */);
     in-out property <string> welcome-sidebar-dock: "left";
     property <bool> welcome-sidebar-horizontal:
         root.welcome-sidebar-dock == "left" || root.welcome-sidebar-dock == "right";
@@ -905,6 +911,10 @@ export component AppWindow inherits Window {
                 persist-welcome-session-cols(a0, a1) => { root.persist-welcome-session-cols(a0, a1); }
                 persist-welcome-sidebar-dock(a0) => { root.persist-welcome-sidebar-dock(a0); }
                 persist-welcome-sidebar-width(a0) => { root.persist-welcome-sidebar-width(a0); }
+                persist-all-tabs-menu-size(a0, a1) => { root.persist-all-tabs-menu-size(a0, a1); }
+                all-tabs-menu-w <=> root.all-tabs-menu-w;
+                all-tabs-menu-h <=> root.all-tabs-menu-h;
+                all-tabs-menu-user-sized <=> root.all-tabs-menu-user-sized;
                 qcg-name <=> root.qcg-name;
                 qcg-open <=> root.qcg-open;
                 qcg-orig <=> root.qcg-orig;

@@ -221,6 +221,12 @@ pub struct ConfigFile {
     pub welcome_session_col_name: f32,
     #[serde(default = "default_welcome_session_col_host")]
     pub welcome_session_col_host: f32,
+    /// All-tabs overflow popup size (logical px). Width 0 = default (~230);
+    /// height 0 = auto-fit the tab list (user has not resized yet).
+    #[serde(default)]
+    pub all_tabs_menu_width: f32,
+    #[serde(default)]
+    pub all_tabs_menu_height: f32,
     /// Frosted-panel opacity over a wallpaper (0.30–1.00); user-adjustable via the
     /// Interface › Wallpaper opacity slider. 0 = use the current default.
     #[serde(default)]

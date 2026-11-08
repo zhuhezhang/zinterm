@@ -86,6 +86,10 @@ export component DockArea inherits Rectangle {
     callback persist-welcome-session-cols(length, length);
     callback persist-welcome-sidebar-dock(string);
     callback persist-welcome-sidebar-width(float);
+    callback persist-all-tabs-menu-size(float /* w */, float /* h */);
+    in-out property <length> all-tabs-menu-w: 230px * Theme.ui-scale;
+    in-out property <length> all-tabs-menu-h: 0px;
+    in-out property <bool> all-tabs-menu-user-sized: false;
     in-out property <string> qcg-name;                       // group dialog: name field;
     in-out property <bool> qcg-open: false;           // group name dialog open;
     in-out property <string> qcg-orig;                       // group dialog: "" = new, else rename target;
@@ -495,6 +499,12 @@ export component DockArea inherits Rectangle {
                                     can-merge-pane: root.panes.length > 1;
                                     tabs: pane.tabs;
                                     active-id: pane.active-id;
+                                    all-tabs-w <=> root.all-tabs-menu-w;
+                                    all-tabs-h <=> root.all-tabs-menu-h;
+                                    all-tabs-user-sized <=> root.all-tabs-menu-user-sized;
+                                    persist-all-tabs-menu-size(w, h) => {
+                                        root.persist-all-tabs-menu-size(w, h);
+                                    }
                                     tab-selected(id) => { root.pane-tab-selected(pane.id, id); }
                                     tab-closed(id) => { root.pane-tab-closed(pane.id, id); }
                                     tab-reorder(tab-id, direction) => {

@@ -318,6 +318,10 @@ pub struct UiStateFile {
     pub welcome_session_col_name: f32,
     #[serde(default = "default_welcome_session_col_host")]
     pub welcome_session_col_host: f32,
+    #[serde(default)]
+    pub all_tabs_menu_width: f32,
+    #[serde(default)]
+    pub all_tabs_menu_height: f32,
 }
 
 impl Default for UiStateFile {
@@ -346,6 +350,8 @@ impl UiStateFile {
             welcome_collapsed: cfg.welcome_collapsed,
             welcome_session_col_name: cfg.welcome_session_col_name,
             welcome_session_col_host: cfg.welcome_session_col_host,
+            all_tabs_menu_width: cfg.all_tabs_menu_width,
+            all_tabs_menu_height: cfg.all_tabs_menu_height,
         }
     }
 
@@ -367,5 +373,7 @@ impl UiStateFile {
         cfg.welcome_collapsed = self.welcome_collapsed;
         cfg.welcome_session_col_name = self.welcome_session_col_name;
         cfg.welcome_session_col_host = self.welcome_session_col_host;
+        cfg.all_tabs_menu_width = self.all_tabs_menu_width;
+        cfg.all_tabs_menu_height = self.all_tabs_menu_height;
     }
 }

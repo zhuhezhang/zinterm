@@ -470,6 +470,16 @@ pub(super) fn wire_settings_callbacks(
         window.set_welcome_collapsed(welcome_collapsed);
         window.set_welcome_session_col_name(s.welcome_session_col_name());
         window.set_welcome_session_col_host(s.welcome_session_col_host());
+        // All-tabs popup size (0 height = auto-fit until the user resizes).
+        let at_w = s.all_tabs_menu_width();
+        let at_h = s.all_tabs_menu_height();
+        if at_w > 0.0 {
+            window.set_all_tabs_menu_w(at_w);
+        }
+        if at_h > 0.0 {
+            window.set_all_tabs_menu_h(at_h);
+            window.set_all_tabs_menu_user_sized(true);
+        }
         window.set_wallpaper_overlay(s.wallpaper_overlay());
         window.set_update_check_enabled(s.update_check_enabled()); // #184
         window.set_update_check_locked(cfg!(feature = "intranet-version"));
@@ -516,6 +526,15 @@ pub(super) fn wire_settings_callbacks(
         window.on_persist_welcome_sidebar_width(move |w| {
             let mut s = store.borrow_mut();
             s.set_welcome_sidebar_width(w);
+            s.save_later(SaveKind::UI);
+        });
+    }
+    {
+        let store = store.clone();
+        window.on_persist_all_tabs_menu_size(move |w, h| {
+            let mut s = store.borrow_mut();
+            s.set_all_tabs_menu_width(w);
+            s.set_all_tabs_menu_height(h);
             s.save_later(SaveKind::UI);
         });
     }

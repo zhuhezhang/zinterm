@@ -92,6 +92,28 @@ impl ConfigStore {
     pub fn set_welcome_session_col_host(&mut self, v: f32) {
         self.cache.welcome_session_col_host = v.clamp(64.0, 600.0);
     }
+    /// All-tabs popup width in logical px; `0` means use the UI default.
+    pub fn all_tabs_menu_width(&self) -> f32 {
+        self.cache.all_tabs_menu_width
+    }
+    pub fn set_all_tabs_menu_width(&mut self, v: f32) {
+        self.cache.all_tabs_menu_width = if v <= 0.0 {
+            0.0
+        } else {
+            v.clamp(160.0, 1200.0)
+        };
+    }
+    /// All-tabs popup height in logical px; `0` means auto-fit the tab list.
+    pub fn all_tabs_menu_height(&self) -> f32 {
+        self.cache.all_tabs_menu_height
+    }
+    pub fn set_all_tabs_menu_height(&mut self, v: f32) {
+        self.cache.all_tabs_menu_height = if v <= 0.0 {
+            0.0
+        } else {
+            v.clamp(40.0, 800.0)
+        };
+    }
     pub fn sftp_panel_width(&self) -> f32 {
         let w = self.cache.sftp_panel_width;
         if w <= 0.0 {

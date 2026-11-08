@@ -36,6 +36,10 @@ pub(super) fn save_layout(win: &AppWindow, store: &Rc<RefCell<ConfigStore>>) {
     s.set_welcome_sidebar_width(win.get_welcome_sidebar_width());
     s.set_welcome_sidebar_dock(win.get_welcome_sidebar_dock().to_string());
     s.set_welcome_collapsed(win.get_welcome_collapsed());
+    if win.get_all_tabs_menu_user_sized() {
+        s.set_all_tabs_menu_width(win.get_all_tabs_menu_w());
+        s.set_all_tabs_menu_height(win.get_all_tabs_menu_h());
+    }
     // A maximized size isn't a useful "preferred" size to restore to, so only
     // remember the windowed size. Ask the native window too, because the Slint
     // property can lag during startup/shutdown on frameless Windows (#234).

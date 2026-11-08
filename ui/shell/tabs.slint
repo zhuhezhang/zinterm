@@ -240,6 +240,10 @@ component TabMenuItem inherits Rectangle {
     in property <string> hint: "";
     // When true, `hint` is a Material Icons codepoint (e.g. submenu chevron).
     in property <bool> hint-icon: false;
+    // Fixed-width leading column (e.g. active-tab ●). Keeps titles left-aligned
+    // whether the marker is shown or empty — unlike prefixing the label string.
+    in property <bool> reserve-marker: false;
+    in property <bool> marked: false;
     // Shared column widths from the parent menu (0 = hug this row's content).
     // Menu width = max(labels) + hint-gap + max(hints), not max(per-row sums).
     in property <length> label-col-width: 0px;
@@ -257,11 +261,25 @@ component TabMenuItem inherits Rectangle {
     clip: true;
     border-radius: Theme.radius-sm;
     background: enabled && (ta.has-hover || root.force-hover) ? Theme.bg-hover : transparent;
-    HorizontalLayout {
-        width: 100%;
+    // Hug label (+ optional hint). Do not put width: 100% on `row` — that makes
+    // preferred-width follow the parent, so all-tabs long titles get clipped with
+    // no horizontal scrollbar. Layouts still fill the item's assigned width.
+    preferred-width: row.preferred-width;
+    row := HorizontalLayout {
+        alignment: start;
         padding-left: 10px * Theme.ui-scale;
         padding-right: 10px * Theme.ui-scale;
         spacing: 0px;
+        if root.reserve-marker: Text {
+            text: root.marked ? "●" : "";
+            color: Theme.text-secondary;
+            font-size: Theme.fs-sm;
+            vertical-alignment: center;
+            horizontal-alignment: left;
+            horizontal-stretch: 0;
+            // Wider than the glyph so ● and the title stay visibly separated.
+            width: 18px * Theme.ui-scale;
+        }
         label-txt := Text {
             text: label;
             color: enabled
@@ -306,6 +324,12 @@ export component TabBar inherits Rectangle {
     in property <bool> can-merge-pane: false;
     // Optional right inset (toolbar icons are in the title bar now; usually 0).
     in property <length> reserve-right: 0px;
+    // Shared all-tabs popup size (hoisted so every pane TabBar stays in sync
+    // and Rust can persist it to ui-state.json). Height 0 = auto-fit.
+    in-out property <length> all-tabs-w: 230px * Theme.ui-scale;
+    in-out property <length> all-tabs-h: 0px;
+    in-out property <bool> all-tabs-user-sized: false;
+    callback persist-all-tabs-menu-size(float /* w */, float /* h */);
     callback tab-selected(string);
     callback tab-closed(string);
     // Drag-to-reorder: move `tab-id` by `dir` slots (#v0.5).
@@ -363,6 +387,17 @@ export component TabBar inherits Rectangle {
         root.menu-target != "welcome" && root.bs-submenu-armed;
     // Tab currently being drag-reordered (highlight + id for drag-move/drop).
     property <string> drag-id;
+
+    // Drag state for the all-tabs-menu bottom-left resize grip.
+    property <bool> all-tabs-resizing: false;
+    property <length> all-tabs-resize-base-w;
+    property <length> all-tabs-resize-base-h;
+    property <length> all-tabs-resize-grab-x;
+    property <length> all-tabs-resize-grab-y;
+    property <length> all-tabs-auto-h:
+        min(308px * Theme.ui-scale,
+            max(36px * Theme.ui-scale,
+                root.tabs.length * 29px * Theme.ui-scale + 8px * Theme.ui-scale));
 
     function arm-backspace-submenu() {
         bs-close-timer.running = false;
@@ -548,7 +583,8 @@ export component TabBar inherits Rectangle {
             clicked => {
                 if (all-tabs-menu.is-open) {
                     all-tabs-menu.close();
-                } else {
+                } else if (root.tabs.length > 0) {
+                    // Empty pane: nothing to list — keep the menu closed.
                     all-tabs-menu.show();
                 }
             }
@@ -615,10 +651,11 @@ export component TabBar inherits Rectangle {
     }
 
     all-tabs-menu := PopupWindow {
+        // Right-anchored under the ▾ button so growing width extends leftward.
         x: max(4px * Theme.ui-scale, root.width - root.reserve-right - self.width - 4px * Theme.ui-scale);
         y: root.height;
-        width: 230px * Theme.ui-scale;
-        height: min(308px * Theme.ui-scale, root.tabs.length * 29px * Theme.ui-scale + 8px * Theme.ui-scale);
+        width: root.all-tabs-w;
+        height: root.all-tabs-user-sized ? root.all-tabs-h : root.all-tabs-auto-h;
         // Default close-on-click also fires on scrollbar thumb mouse-up; only
         // dismiss on outside click / Esc. Tab rows still call close() themselves.
         close-policy: close-on-click-outside;
@@ -630,26 +667,85 @@ export component TabBar inherits Rectangle {
             drop-shadow-blur: 12px * Theme.ui-scale;
             drop-shadow-color: #00000060;
             clip: true;
-            // ScrollView (not bare Flickable) so a scrollbar appears when the
-            // tab list exceeds the capped popup height.
-            ScrollView {
+            // ScrollView (not bare Flickable): vertical when the list is taller
+            // than the popup, horizontal when a tab title is wider than the popup.
+            all-tabs-scroll := ScrollView {
                 x: 4px * Theme.ui-scale;
                 y: 4px * Theme.ui-scale;
                 width: parent.width - 8px * Theme.ui-scale;
                 height: parent.height - 8px * Theme.ui-scale;
-                content-width: self.visible-width;
+                // Prefer the longest title; never narrower than the viewport
+                // (visible-width already excludes the vertical scrollbar).
+                content-width: max(self.visible-width, all-tabs-list.preferred-width);
                 content-height: max(self.visible-height, all-tabs-list.preferred-height);
                 all-tabs-list := VerticalLayout {
-                    width: parent.width;
                     alignment: start;
                     spacing: 1px * Theme.ui-scale;
                     for tab[i] in root.tabs: TabMenuItem {
-                        width: parent.width;
-                        label: (tab.id == root.active-id ? "●  " : "    ") + tab.title;
+                        // Hug the title (drives content-width / horizontal scroll).
+                        // Floor at visible-width so short rows still fill the popup;
+                        // avoid width: 100% which would collapse preferred-width.
+                        width: max(all-tabs-scroll.visible-width, self.preferred-width);
+                        reserve-marker: true;
+                        marked: tab.id == root.active-id;
+                        label: tab.title;
                         clicked => {
                             root.scroll-tab-into-view(i);
                             root.tab-selected(tab.id);
                             all-tabs-menu.close();
+                        }
+                    }
+                }
+            }
+
+            // Bottom-left resize grip. Hidden when there are no tabs to list.
+            // Drag left/down to grow (right edge stays put via the x binding).
+            if root.tabs.length > 0: Rectangle {
+                x: 0px;
+                y: parent.height - 18px * Theme.ui-scale;
+                width: 18px * Theme.ui-scale;
+                height: 18px * Theme.ui-scale;
+                background: all-tabs-resize-ta.has-hover || root.all-tabs-resizing
+                    ? Theme.bg-hover : transparent;
+                Text {
+                    text: "◣";
+                    color: all-tabs-resize-ta.has-hover || root.all-tabs-resizing
+                        ? Theme.text-secondary : Theme.text-muted;
+                    font-size: 10px * Theme.ui-scale;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                all-tabs-resize-ta := TouchArea {
+                    mouse-cursor: nesw-resize;
+                    pointer-event(e) => {
+                        if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                            root.all-tabs-resizing = true;
+                            root.all-tabs-resize-base-w = all-tabs-menu.width;
+                            root.all-tabs-resize-base-h = all-tabs-menu.height;
+                            root.all-tabs-resize-grab-x = self.absolute-position.x + self.mouse-x;
+                            root.all-tabs-resize-grab-y = self.absolute-position.y + self.mouse-y;
+                        } else if (e.kind == PointerEventKind.up) {
+                            if (root.all-tabs-resizing && root.all-tabs-user-sized) {
+                                root.persist-all-tabs-menu-size(
+                                    root.all-tabs-w / 1px, root.all-tabs-h / 1px);
+                            }
+                            root.all-tabs-resizing = false;
+                        }
+                    }
+                    moved => {
+                        if (root.all-tabs-resizing) {
+                            // Invert X: drag left grows width (right edge fixed).
+                            root.all-tabs-w = clamp(
+                                root.all-tabs-resize-base-w
+                                    - (self.absolute-position.x + self.mouse-x - root.all-tabs-resize-grab-x),
+                                160px * Theme.ui-scale,
+                                max(160px * Theme.ui-scale, root.width - 8px * Theme.ui-scale));
+                            root.all-tabs-h = clamp(
+                                root.all-tabs-resize-base-h
+                                    + (self.absolute-position.y + self.mouse-y - root.all-tabs-resize-grab-y),
+                                40px * Theme.ui-scale,
+                                480px * Theme.ui-scale);
+                            root.all-tabs-user-sized = true;
                         }
                     }
                 }
