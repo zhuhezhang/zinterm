@@ -113,7 +113,7 @@ export component SshSettingsPage inherits Rectangle {
 
         for algo[index] in root.ssh-algorithm-rows: algo-row := Rectangle {
             height: 34px * Theme.ui-scale;
-            border-radius: Theme.radius-sm;
+            border-radius: Theme.radius-md;
             clip: true;
             // Match welcome SessionRow: hover + open context menu share Theme.bg-hover.
             background: row-ta.has-hover || cb.has-hover || up-ta.has-hover || down-ta.has-hover || ctx-menu.is-open

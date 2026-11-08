@@ -7,7 +7,7 @@ export component NavItem inherits Rectangle {
     in property <bool> active;
     callback clicked();
     height: 30px * Theme.ui-scale;
-    border-radius: 6px * Theme.ui-scale;
+    border-radius: Theme.radius-md;
     background: root.active ? Theme.bg-active : (ta.has-hover ? Theme.bg-hover : transparent);
     ta := TouchArea {
         mouse-cursor: pointer;
@@ -148,7 +148,7 @@ export component Stepper inherits Rectangle {
     in property <string> unit;
     callback changed(int);
     width: 112px * Theme.ui-scale;
-    height: 26px * Theme.ui-scale;
+    height: 28px * Theme.ui-scale;
     border-radius: 6px * Theme.ui-scale;
     background: Theme.bg-elevated;
     border-width: 1px * Theme.ui-scale;
@@ -223,7 +223,7 @@ export component CursorStyleButton inherits Rectangle {
     in property <bool> selected;
     callback clicked();
     width: 74px * Theme.ui-scale;
-    height: 30px * Theme.ui-scale;
+    height: 29px * Theme.ui-scale;
     border-radius: 6px * Theme.ui-scale;
     border-width: 1px * Theme.ui-scale;
     border-color: root.selected ? Theme.accent : Theme.border-subtle;
@@ -299,7 +299,7 @@ export component CursorColorInput inherits Rectangle {
         Rectangle {
             width: root.input-height;
             height: root.input-height;
-            border-radius: 6px * Theme.ui-scale;
+            border-radius: Theme.radius-md;
             border-width: 1px * Theme.ui-scale;
             border-color: Theme.border-strong;
             background: root.preview-color;
