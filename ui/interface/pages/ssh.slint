@@ -113,11 +113,18 @@ export component SshSettingsPage inherits Rectangle {
 
         for algo[index] in root.ssh-algorithm-rows: algo-row := Rectangle {
             height: 34px * Theme.ui-scale;
+            border-radius: Theme.radius-sm;
+            clip: true;
+            // Match welcome SessionRow: hover + open context menu share Theme.bg-hover.
+            background: row-ta.has-hover || cb.has-hover || up-ta.has-hover || down-ta.has-hover || ctx-menu.is-open
+                ? Theme.bg-hover : transparent;
+            animate background { duration: 120ms; }
+
             property <length> ctx-x;
             property <length> ctx-y;
 
-            // Underlay: right-click on empty / badge / spacer areas.
-            TouchArea {
+            // Underlay: hover / right-click on empty / badge / spacer areas.
+            row-ta := TouchArea {
                 pointer-event(e) => {
                     if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
                         algo-row.ctx-x = self.mouse-x;
@@ -129,11 +136,13 @@ export component SshSettingsPage inherits Rectangle {
 
             HorizontalLayout {
                 spacing: 8px * Theme.ui-scale;
+                padding-left: 6px * Theme.ui-scale;
+                padding-right: 4px * Theme.ui-scale;
                 padding-top: 4px * Theme.ui-scale;
                 padding-bottom: 4px * Theme.ui-scale;
                 cross-axis-alignment: center;
 
-                CompactCheckBox {
+                cb := CompactCheckBox {
                     horizontal-stretch: 1;
                     text: algo.name;
                     checked: algo.checked;
@@ -166,16 +175,21 @@ export component SshSettingsPage inherits Rectangle {
                     horizontal-stretch: 1;
                 }
 
-                if algo.checked: HorizontalLayout {
+                // Always present so ↑↓ has-hover can light the row; collapsed when unchecked.
+                HorizontalLayout {
                     spacing: 4px * Theme.ui-scale;
+                    opacity: algo.checked ? 1.0 : 0.0;
+                    width: algo.checked ? 56px * Theme.ui-scale : 0px;
+
                     Rectangle {
                         width: 26px * Theme.ui-scale;
                         height: 26px * Theme.ui-scale;
-                        border-radius: 5px * Theme.ui-scale;
+                        border-radius: Theme.radius-sm;
                         opacity: algo.can-move-up ? 1.0 : 0.35;
-                        background: up-ta.has-hover && algo.can-move-up ? Theme.bg-hover : transparent;
+                        background: up-ta.has-hover && algo.can-move-up ? Theme.bg-active : transparent;
                         up-ta := TouchArea {
-                            mouse-cursor: algo.can-move-up ? pointer : default;
+                            enabled: algo.checked;
+                            mouse-cursor: algo.checked && algo.can-move-up ? pointer : default;
                             clicked => {
                                 if (algo.can-move-up) {
                                     root.move-ssh-algorithm(algo.name, -1);
@@ -197,11 +211,12 @@ export component SshSettingsPage inherits Rectangle {
                     Rectangle {
                         width: 26px * Theme.ui-scale;
                         height: 26px * Theme.ui-scale;
-                        border-radius: 5px * Theme.ui-scale;
+                        border-radius: Theme.radius-sm;
                         opacity: algo.can-move-down ? 1.0 : 0.35;
-                        background: down-ta.has-hover && algo.can-move-down ? Theme.bg-hover : transparent;
+                        background: down-ta.has-hover && algo.can-move-down ? Theme.bg-active : transparent;
                         down-ta := TouchArea {
-                            mouse-cursor: algo.can-move-down ? pointer : default;
+                            enabled: algo.checked;
+                            mouse-cursor: algo.checked && algo.can-move-down ? pointer : default;
                             clicked => {
                                 if (algo.can-move-down) {
                                     root.move-ssh-algorithm(algo.name, 1);
@@ -220,13 +235,6 @@ export component SshSettingsPage inherits Rectangle {
                         }
                     }
                 }
-            }
-
-            Rectangle {
-                y: parent.height - 1px * Theme.ui-scale;
-                width: 100%;
-                height: 1px * Theme.ui-scale;
-                background: Theme.border-subtle;
             }
 
             ctx-menu := PopupWindow {

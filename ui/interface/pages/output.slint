@@ -478,23 +478,27 @@ export component OutputSettingsPage inherits Rectangle {
         if root.output-highlight-rules.length > 0: Rectangle {
             height: 8px * Theme.ui-scale;
         }
-        for rule[index] in root.output-highlight-rules: Rectangle {
+        for rule[index] in root.output-highlight-rules: rule-row := Rectangle {
             height: 44px * Theme.ui-scale;
-            background: root.rule-edit-index == index
-                ? Theme.bg-active : transparent;
-            border-radius: Theme.radius-md;
-            Rectangle {
-                y: 0px;
-                width: 100%;
-                height: 1px * Theme.ui-scale;
-                background: Theme.border-subtle;
+            border-radius: Theme.radius-sm;
+            clip: true;
+            // Match welcome SessionRow / SSH algorithm rows: hover uses Theme.bg-hover;
+            // the rule currently being edited stays on Theme.bg-active.
+            background: root.rule-edit-index == index ? Theme.bg-active
+                : (row-ta.has-hover || rule-sw.has-hover || edit-ta.has-hover || delete-ta.has-hover
+                    ? Theme.bg-hover : transparent);
+            animate background { duration: 120ms; }
+
+            row-ta := TouchArea {
+                mouse-cursor: pointer;
+                double-clicked => { root.load-rule-into-form(index); }
             }
 
             HorizontalLayout {
                 spacing: 9px * Theme.ui-scale;
+                padding-left: 6px * Theme.ui-scale;
+                padding-right: 4px * Theme.ui-scale;
                 cross-axis-alignment: center;
-
-                Text { }
 
                 Rectangle {
                     width: 8px * Theme.ui-scale;
@@ -527,7 +531,7 @@ export component OutputSettingsPage inherits Rectangle {
                     }
                 }
 
-                Switch {
+                rule-sw := Switch {
                     on: rule.enabled;
                     toggled(v) => { root.set-output-highlight-rule-enabled(index, v); }
                 }
@@ -535,8 +539,8 @@ export component OutputSettingsPage inherits Rectangle {
                 Rectangle {
                     width: 28px * Theme.ui-scale;
                     height: 28px * Theme.ui-scale;
-                    border-radius: 5px * Theme.ui-scale;
-                    background: edit-ta.has-hover ? Theme.bg-hover : transparent;
+                    border-radius: Theme.radius-sm;
+                    background: edit-ta.has-hover ? Theme.bg-active : transparent;
                     edit-ta := TouchArea {
                         mouse-cursor: pointer;
                         clicked => { root.load-rule-into-form(index); }
@@ -557,8 +561,8 @@ export component OutputSettingsPage inherits Rectangle {
                 Rectangle {
                     width: 28px * Theme.ui-scale;
                     height: 28px * Theme.ui-scale;
-                    border-radius: 5px * Theme.ui-scale;
-                    background: delete-ta.has-hover ? Theme.bg-hover : transparent;
+                    border-radius: Theme.radius-sm;
+                    background: delete-ta.has-hover ? Theme.bg-active : transparent;
                     delete-ta := TouchArea {
                         mouse-cursor: pointer;
                         clicked => {

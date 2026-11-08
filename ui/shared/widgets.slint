@@ -9,6 +9,8 @@ export component CompactCheckBox {
     in property <bool> enabled: true;
     in property <length> gap: 4px * Theme.ui-scale;
     in-out property <bool> checked;
+    // Forwarded so parents can keep a row highlight while the checkbox is hovered.
+    out property <bool> has-hover: ta.has-hover;
     callback toggled();
     // Absolute pointer position (for parent PopupWindow anchors).
     callback right-clicked(length, length);
@@ -60,7 +62,7 @@ export component CompactCheckBox {
         }
     }
 
-    TouchArea {
+    ta := TouchArea {
         enabled: root.enabled;
         mouse-cursor: pointer;
         clicked => {

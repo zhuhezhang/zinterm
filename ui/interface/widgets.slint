@@ -110,6 +110,8 @@ export component SettingRow inherits Rectangle {
 export component Switch inherits Rectangle {
     in property <bool> on;
     in property <bool> enabled: true;
+    // Forwarded so parents can keep a row highlight while the switch is hovered.
+    out property <bool> has-hover: ta.has-hover;
     callback toggled(bool);
     width: 38px * Theme.ui-scale;
     height: 22px * Theme.ui-scale;
@@ -130,7 +132,7 @@ export component Switch inherits Rectangle {
         }
     }
 
-    TouchArea {
+    ta := TouchArea {
         enabled: root.enabled;
         mouse-cursor: root.enabled ? pointer : default;
         clicked => { root.toggled(!root.on); }
