@@ -69,11 +69,11 @@ jobs:
             target: aarch64-unknown-linux-gnu  # builds the Linux ARM64 .tar.gz (#82)
             name: linux-aarch64
             bin: zinterm
-          - os: macos-14               # Apple Silicon
+          - os: macos-15               # Apple Silicon
             target: aarch64-apple-darwin
             name: macos-aarch64
             bin: zinterm
-          - os: macos-14               # Apple Silicon runner — cross-compiles the
+          - os: macos-15               # Apple Silicon runner — cross-compiles the
             target: x86_64-apple-darwin # x86_64 Mac binary. (Dedicated Intel
             name: macos-x86_64          # macos-13 runners queue for ages / time out.)
             bin: zinterm
@@ -365,14 +365,14 @@ jobs:
           set -eu
           # Use HTTPS for the Debian archive and disable stale Release checks.
           sed -i \
-            -e 's|http://deb.debian.org/debian|https://archive.debian.org/debian|g' \
-            -e 's|http://security.debian.org/debian-security|https://archive.debian.org/debian-security|g' \
+            -e 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' \
+            -e 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' \
             -e '/buster-updates/d' \
             /etc/apt/sources.list
           printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99archive
 
           export DEBIAN_FRONTEND=noninteractive
-          apt-get -o Acquire::Retries=3 update || true
+          apt-get -o Acquire::Retries=3 update
           apt-get -o Acquire::Retries=3 install -y --no-install-recommends --fix-missing \
             ca-certificates curl git xz-utils file tar \
             build-essential pkg-config cmake \
@@ -456,14 +456,14 @@ jobs:
           set -eu
           # Use HTTPS for the Debian archive and disable stale Release checks.
           sed -i \
-            -e 's|http://deb.debian.org/debian|https://archive.debian.org/debian|g' \
-            -e 's|http://security.debian.org/debian-security|https://archive.debian.org/debian-security|g' \
+            -e 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' \
+            -e 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' \
             -e '/buster-updates/d' \
             /etc/apt/sources.list
           printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99archive
 
           export DEBIAN_FRONTEND=noninteractive
-          apt-get -o Acquire::Retries=3 update || true
+          apt-get -o Acquire::Retries=3 update
           apt-get -o Acquire::Retries=3 install -y --no-install-recommends --fix-missing \
             ca-certificates curl git xz-utils file tar \
             build-essential pkg-config cmake \
