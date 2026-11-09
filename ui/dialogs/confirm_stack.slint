@@ -35,8 +35,9 @@ export component ConfirmStack inherits Rectangle {
     in-out property <string> current-wallpaper: "";
     in-out property <string> custom-wallpaper-name: "";
     in-out property <bool> data-clear-also-passwords: false;
-    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings";
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings" | "ssh-algo-section" | "ssh-algo-all" | "output-highlight-rules";
     in-out property <bool> data-clear-open: false;
+    in-out property <int> output-rule-form-reset-seq: 0;
     callback delete-group(string /* name */);
     in-out property <string> dialog-auth: "password";
     in-out property <string> dialog-backspace-mode: "auto";
@@ -391,6 +392,7 @@ export component ConfirmStack inherits Rectangle {
         data-clear-also-passwords <=> root.data-clear-also-passwords;
         data-clear-kind <=> root.data-clear-kind;
         data-clear-open <=> root.data-clear-open;
+        output-rule-form-reset-seq <=> root.output-rule-form-reset-seq;
         download-always-ask <=> root.download-always-ask;
         extra-paste-shortcuts-enabled <=> root.extra-paste-shortcuts-enabled;
         highlight-draft-color-hex <=> root.highlight-draft-color-hex;
@@ -432,8 +434,6 @@ export component ConfirmStack inherits Rectangle {
         quick-panel-open <=> root.quick-panel-open;
         remove-output-highlight-rule(a0) => { root.remove-output-highlight-rule(a0); }
         renderer-mode <=> root.renderer-mode;
-        reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
-        reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
         import-settings => { root.import-settings(); }
         export-settings => { root.export-settings(); }
         save-passwords <=> root.save-passwords;
@@ -460,7 +460,6 @@ export component ConfirmStack inherits Rectangle {
         select-only-output-highlight-rule(a0) => { root.select-only-output-highlight-rule(a0); }
         select-all-output-highlight-rules => { root.select-all-output-highlight-rules(); }
         invert-output-highlight-rule-selection => { root.invert-output-highlight-rule-selection(); }
-        reset-output-highlight-rules => { root.reset-output-highlight-rules(); }
         set-paste-confirm-enabled(a0) => { root.set-paste-confirm-enabled(a0); }
         set-quick-commands-as-sidebar(a0) => { root.set-quick-commands-as-sidebar(a0); }
         set-renderer-mode(a0) => { root.set-renderer-mode(a0); }
@@ -503,13 +502,17 @@ export component ConfirmStack inherits Rectangle {
         welcome-single-click-connect <=> root.welcome-single-click-connect;
         zen-mode <=> root.zen-mode;
     }
-    // Settings › Data destructive clears / restore — stacked above the settings overlay.
+    // Settings › Data destructive clears / restore / SSH & output resets —
+    // stacked above the settings overlay.
     ConfirmDialog {
         width: parent.width;
         height: parent.height;
         is-open <=> root.data-clear-open;
         covered: root.confirm-close-open;
         title: root.data-clear-kind == "restore-settings"
+            || root.data-clear-kind == "ssh-algo-section"
+            || root.data-clear-kind == "ssh-algo-all"
+            || root.data-clear-kind == "output-highlight-rules"
             ? (@tr("Restore defaults"))
             : @tr("Confirm delete");
         message: root.data-clear-kind == "known-hosts"
@@ -518,12 +521,21 @@ export component ConfirmStack inherits Rectangle {
             ? (@tr("Clear every saved password, private-keys? This cannot be undone"))
             : root.data-clear-kind == "restore-settings"
             ? (@tr("Restore settings preferences to defaults? Saved sessions, commands, passwords, private-keys, and SSH known hosts which are not in the settings interface will be kept"))
+            : root.data-clear-kind == "ssh-algo-section"
+            ? (@tr("Restore this SSH algorithm category to the built-in defaults?"))
+            : root.data-clear-kind == "ssh-algo-all"
+            ? (@tr("Restore every SSH algorithm list to the built-in defaults?"))
+            : root.data-clear-kind == "output-highlight-rules"
+            ? (@tr("Restore custom output highlight rules to the built-in defaults?"))
             : (@tr("Delete every saved group and session? This cannot be undone. Open tabs stay open"));
         option-label: root.data-clear-kind == "sessions"
             ? (@tr("Also clear saved passwords / private keys"))
             : "";
         option-checked <=> root.data-clear-also-passwords;
         confirm-label: root.data-clear-kind == "restore-settings"
+            || root.data-clear-kind == "ssh-algo-section"
+            || root.data-clear-kind == "ssh-algo-all"
+            || root.data-clear-kind == "output-highlight-rules"
             ? (@tr("Restore"))
             : (@tr("Clear"));
         confirm => {
@@ -533,6 +545,13 @@ export component ConfirmStack inherits Rectangle {
                 root.clear-saved-passwords();
             } else if (root.data-clear-kind == "restore-settings") {
                 root.restore-settings-defaults();
+            } else if (root.data-clear-kind == "ssh-algo-section") {
+                root.reset-ssh-algorithm-section();
+            } else if (root.data-clear-kind == "ssh-algo-all") {
+                root.reset-ssh-algorithms();
+            } else if (root.data-clear-kind == "output-highlight-rules") {
+                root.reset-output-highlight-rules();
+                root.output-rule-form-reset-seq += 1;
             } else {
                 root.clear-all-sessions(root.data-clear-also-passwords);
             }

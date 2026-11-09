@@ -21,8 +21,8 @@ export component SshSettingsPage inherits Rectangle {
     callback select-all-ssh-algorithms();
     callback invert-ssh-algorithm-selection(string);
     callback select-only-ssh-algorithm(string);
-    callback reset-ssh-algorithm-section();
-    callback reset-ssh-algorithms();
+    callback request-reset-ssh-algorithm-section();
+    callback request-reset-ssh-algorithms();
     callback set-download-always-ask(bool);
     callback set-sftp-follow-cd(bool);
     callback set-ssh-algorithm-category(string);
@@ -158,12 +158,12 @@ export component SshSettingsPage inherits Rectangle {
                 spacing: 8px * Theme.ui-scale;
                 GhostButton {
                     text: @tr("This category");
-                    clicked => { root.reset-ssh-algorithm-section(); }
+                    clicked => { root.request-reset-ssh-algorithm-section(); }
                 }
 
                 GhostButton {
                     text: @tr("All defaults");
-                    clicked => { root.reset-ssh-algorithms(); }
+                    clicked => { root.request-reset-ssh-algorithms(); }
                 }
             }
         }

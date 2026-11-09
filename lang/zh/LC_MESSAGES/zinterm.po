@@ -996,6 +996,15 @@ msgstr "当前类别"
 msgid "All defaults"
 msgstr "全部默认"
 
+msgid "Restore this SSH algorithm category to the built-in defaults?"
+msgstr "确定将当前 SSH 算法类别恢复为内置默认？"
+
+msgid "Restore every SSH algorithm list to the built-in defaults?"
+msgstr "确定将全部 SSH 算法列表恢复为内置默认？"
+
+msgid "Restore custom output highlight rules to the built-in defaults?"
+msgstr "确定将自定义输出高亮规则恢复为内置默认？"
+
 msgid "weak"
 msgstr "不安全"
 

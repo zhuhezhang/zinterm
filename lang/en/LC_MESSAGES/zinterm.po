@@ -996,6 +996,15 @@ msgstr "This category"
 msgid "All defaults"
 msgstr "All defaults"
 
+msgid "Restore this SSH algorithm category to the built-in defaults?"
+msgstr "Restore this SSH algorithm category to the built-in defaults?"
+
+msgid "Restore every SSH algorithm list to the built-in defaults?"
+msgstr "Restore every SSH algorithm list to the built-in defaults?"
+
+msgid "Restore custom output highlight rules to the built-in defaults?"
+msgstr "Restore custom output highlight rules to the built-in defaults?"
+
 msgid "weak"
 msgstr "weak"
 

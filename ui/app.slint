@@ -372,7 +372,7 @@ export component AppWindow inherits Window {
     // "save passwords" off does not wipe credentials already stored — only
     // the explicit clear does.
     in-out property <bool> data-clear-open: false;
-    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings"
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings" | "ssh-algo-section" | "ssh-algo-all" | "output-highlight-rules"
     // Only used when data-clear-kind == "sessions": also wipe vault credentials.
     in-out property <bool> data-clear-also-passwords: false;
     in-out property <bool> save-passwords: false;

@@ -100,7 +100,10 @@ export component InterfacePanel inherits Rectangle {
     callback select-only-output-highlight-rule(int);
     callback select-all-output-highlight-rules();
     callback invert-output-highlight-rule-selection();
-    callback reset-output-highlight-rules();
+    callback request-reset-output-highlight-rules();
+    // Bumped by ConfirmStack after a confirmed rules reset so the draft form clears.
+    in property <int> output-rule-form-reset-seq;
+    changed output-rule-form-reset-seq => { root.reset-rule-form(); }
 
     function reset-rule-form() {
         root.rule-edit-index = -1;
@@ -173,8 +176,8 @@ export component InterfacePanel inherits Rectangle {
     callback select-all-ssh-algorithms();
     callback invert-ssh-algorithm-selection(string);
     callback select-only-ssh-algorithm(string);
-    callback reset-ssh-algorithm-section();
-    callback reset-ssh-algorithms();
+    callback request-reset-ssh-algorithm-section();
+    callback request-reset-ssh-algorithms();
     callback set-language(string);             // "auto" / "zh" / "en"
     callback persist-wallpaper-overlay(float);   // save the overlay opacity
     callback set-wallpaper(string);    // none / builtin selection
@@ -382,7 +385,7 @@ export component InterfacePanel inherits Rectangle {
                         select-only-output-highlight-rule(a0) => { root.select-only-output-highlight-rule(a0); }
                         select-all-output-highlight-rules => { root.select-all-output-highlight-rules(); }
                         invert-output-highlight-rule-selection => { root.invert-output-highlight-rule-selection(); }
-                        reset-output-highlight-rules => { root.reset-output-highlight-rules(); }
+                        request-reset-output-highlight-rules => { root.request-reset-output-highlight-rules(); }
                     }
                     if root.ifd-page == "wallpaper": WallpaperSettingsPage {
                         width: 100%;
@@ -407,8 +410,8 @@ export component InterfacePanel inherits Rectangle {
                         select-all-ssh-algorithms => { root.select-all-ssh-algorithms(); }
                         invert-ssh-algorithm-selection(a0) => { root.invert-ssh-algorithm-selection(a0); }
                         select-only-ssh-algorithm(a0) => { root.select-only-ssh-algorithm(a0); }
-                        reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
-                        reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
+                        request-reset-ssh-algorithm-section => { root.request-reset-ssh-algorithm-section(); }
+                        request-reset-ssh-algorithms => { root.request-reset-ssh-algorithms(); }
                         set-download-always-ask(a0) => { root.set-download-always-ask(a0); }
                         set-sftp-follow-cd(a0) => { root.set-sftp-follow-cd(a0); }
                         set-ssh-algorithm-category(a0) => { root.set-ssh-algorithm-category(a0); }

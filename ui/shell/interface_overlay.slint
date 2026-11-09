@@ -13,8 +13,9 @@ export component InterfaceOverlay inherits Rectangle {
     in-out property <string> current-wallpaper: "";
     in-out property <string> custom-wallpaper-name: "";
     in-out property <bool> data-clear-also-passwords: false;
-    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings";
+    in-out property <string> data-clear-kind; // "known-hosts" | "sessions" | "passwords" | "restore-settings" | "ssh-algo-section" | "ssh-algo-all" | "output-highlight-rules";
     in-out property <bool> data-clear-open: false;
+    in-out property <int> output-rule-form-reset-seq: 0;
     in-out property <bool> download-always-ask: false;
     in-out property <bool> extra-paste-shortcuts-enabled: true;
     in-out property <string> highlight-draft-color-hex: "#F14C4C";
@@ -56,8 +57,6 @@ export component InterfaceOverlay inherits Rectangle {
     in-out property <bool> quick-panel-open: false;
     callback remove-output-highlight-rule(int);
     in-out property <string> renderer-mode: "software";
-    callback reset-ssh-algorithm-section();
-    callback reset-ssh-algorithms();
     in-out property <bool> save-passwords: false;
     callback save-settings();
     in-out property <bool> select-copy-right-paste-enabled: true;
@@ -82,7 +81,6 @@ export component InterfaceOverlay inherits Rectangle {
     callback select-only-output-highlight-rule(int);
     callback select-all-output-highlight-rules();
     callback invert-output-highlight-rule-selection();
-    callback reset-output-highlight-rules();
     callback set-paste-confirm-enabled(bool);
     callback set-quick-commands-as-sidebar(bool);
     callback set-renderer-mode(string);
@@ -273,6 +271,7 @@ export component InterfaceOverlay inherits Rectangle {
                     output-highlight-preset <=> root.output-highlight-preset;
                     output-highlight-rules: root.output-highlight-rules;
                     output-highlight-rule-status <=> root.output-highlight-rule-status;
+                    output-rule-form-reset-seq: root.output-rule-form-reset-seq;
                     ui-scale: root.ui-scale;
                     sftp-follow-cd <=> root.sftp-follow-cd;
                     collapse-sftp-default <=> root.collapse-sftp-default;
@@ -348,8 +347,9 @@ export component InterfaceOverlay inherits Rectangle {
                     invert-output-highlight-rule-selection => {
                         root.invert-output-highlight-rule-selection();
                     }
-                    reset-output-highlight-rules => {
-                        root.reset-output-highlight-rules();
+                    request-reset-output-highlight-rules => {
+                        root.data-clear-kind = "output-highlight-rules";
+                        root.data-clear-open = true;
                     }
                     set-ui-scale(v) => { root.set-ui-scale(v); }
                     set-renderer-mode(v) => { root.set-renderer-mode(v); }
@@ -383,8 +383,14 @@ export component InterfaceOverlay inherits Rectangle {
                     select-all-ssh-algorithms => { root.select-all-ssh-algorithms(); }
                     invert-ssh-algorithm-selection(name) => { root.invert-ssh-algorithm-selection(name); }
                     select-only-ssh-algorithm(name) => { root.select-only-ssh-algorithm(name); }
-                    reset-ssh-algorithm-section => { root.reset-ssh-algorithm-section(); }
-                    reset-ssh-algorithms => { root.reset-ssh-algorithms(); }
+                    request-reset-ssh-algorithm-section => {
+                        root.data-clear-kind = "ssh-algo-section";
+                        root.data-clear-open = true;
+                    }
+                    request-reset-ssh-algorithms => {
+                        root.data-clear-kind = "ssh-algo-all";
+                        root.data-clear-open = true;
+                    }
                     set-save-passwords(v) => { root.set-save-passwords(v); }
                     set-language(v) => { root.set-language(v); }
                     persist-wallpaper-overlay(v) => { root.persist-wallpaper-overlay(v); }
