@@ -75,6 +75,14 @@ export component InterfaceOverlay inherits Rectangle {
     callback set-language(string);
     callback set-output-highlight(bool, string);
     callback set-output-highlight-rule-enabled(int, bool);
+    callback move-output-highlight-rule(int, int);
+    callback reorder-output-highlight-rule(int, int);
+    callback move-output-highlight-rule-to-top(int);
+    callback move-output-highlight-rule-to-bottom(int);
+    callback select-only-output-highlight-rule(int);
+    callback select-all-output-highlight-rules();
+    callback invert-output-highlight-rule-selection();
+    callback reset-output-highlight-rules();
     callback set-paste-confirm-enabled(bool);
     callback set-quick-commands-as-sidebar(bool);
     callback set-renderer-mode(string);
@@ -318,6 +326,30 @@ export component InterfaceOverlay inherits Rectangle {
                     }
                     set-output-highlight-rule-enabled(index, enabled) => {
                         root.set-output-highlight-rule-enabled(index, enabled);
+                    }
+                    move-output-highlight-rule(index, delta) => {
+                        root.move-output-highlight-rule(index, delta);
+                    }
+                    reorder-output-highlight-rule(from, to) => {
+                        root.reorder-output-highlight-rule(from, to);
+                    }
+                    move-output-highlight-rule-to-top(index) => {
+                        root.move-output-highlight-rule-to-top(index);
+                    }
+                    move-output-highlight-rule-to-bottom(index) => {
+                        root.move-output-highlight-rule-to-bottom(index);
+                    }
+                    select-only-output-highlight-rule(index) => {
+                        root.select-only-output-highlight-rule(index);
+                    }
+                    select-all-output-highlight-rules => {
+                        root.select-all-output-highlight-rules();
+                    }
+                    invert-output-highlight-rule-selection => {
+                        root.invert-output-highlight-rule-selection();
+                    }
+                    reset-output-highlight-rules => {
+                        root.reset-output-highlight-rules();
                     }
                     set-ui-scale(v) => { root.set-ui-scale(v); }
                     set-renderer-mode(v) => { root.set-renderer-mode(v); }

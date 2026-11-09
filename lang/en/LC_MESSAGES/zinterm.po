@@ -885,6 +885,9 @@ msgstr "Whole line"
 msgid "Add rule"
 msgstr "Add rule"
 
+msgid "Reset rules"
+msgstr "Reset rules"
+
 msgid "No custom rules yet"
 msgstr "No custom rules yet"
 
@@ -1010,6 +1013,9 @@ msgstr "Invert selection"
 
 msgid "Select only this"
 msgstr "Select only this"
+
+msgid "Only enable this"
+msgstr "Only enable this"
 
 msgid "SFTP follows terminal cd"
 msgstr "SFTP follows terminal cd"

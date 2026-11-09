@@ -1,4 +1,5 @@
 use super::super::structs::*;
+use super::defaults_migration::default_output_highlight_rules;
 use super::normalize::*;
 
 impl ConfigStore {
@@ -157,10 +158,103 @@ impl ConfigStore {
         }
     }
 
+    /// Replace custom highlight rules with the built-in starter set.
+    pub fn reset_output_highlight_rules(&mut self) {
+        self.cache.output_highlight_rules = default_output_highlight_rules();
+    }
+
     pub fn set_output_highlight_rule_enabled(&mut self, index: usize, enabled: bool) {
-        if let Some(rule) = self.cache.output_highlight_rules.get_mut(index) {
-            rule.enabled = enabled;
+        let Some(rule) = self.cache.output_highlight_rules.get_mut(index) else {
+            return;
+        };
+        rule.enabled = enabled;
+        if !enabled {
+            // Disabled rules always sit after enabled ones (matching order).
+            let item = self.cache.output_highlight_rules.remove(index);
+            self.cache.output_highlight_rules.push(item);
         }
+    }
+
+    /// Stable-partition: enabled rules keep their relative order first, then
+    /// disabled rules (also stable). Used after bulk enable/disable changes.
+    fn park_disabled_output_highlight_rules_at_end(&mut self) {
+        let mut enabled = Vec::new();
+        let mut disabled = Vec::new();
+        for rule in self.cache.output_highlight_rules.drain(..) {
+            if rule.enabled {
+                enabled.push(rule);
+            } else {
+                disabled.push(rule);
+            }
+        }
+        enabled.append(&mut disabled);
+        self.cache.output_highlight_rules = enabled;
+    }
+
+    /// Swap a rule with its neighbour (`delta` of -1 or +1). Out-of-range no-ops.
+    pub fn move_output_highlight_rule(&mut self, index: usize, delta: i32) {
+        let len = self.cache.output_highlight_rules.len();
+        if index >= len {
+            return;
+        }
+        let j = index as i32 + delta;
+        if j < 0 || j as usize >= len {
+            return;
+        }
+        self.cache.output_highlight_rules.swap(index, j as usize);
+    }
+
+    /// Move the rule at `from` to `to` (0-based). Out-of-range no-ops.
+    pub fn reorder_output_highlight_rule(&mut self, from: usize, to: usize) {
+        let len = self.cache.output_highlight_rules.len();
+        if from >= len || to >= len || from == to {
+            return;
+        }
+        let item = self.cache.output_highlight_rules.remove(from);
+        self.cache.output_highlight_rules.insert(to, item);
+    }
+
+    pub fn move_output_highlight_rule_to_top(&mut self, index: usize) {
+        if index == 0 || index >= self.cache.output_highlight_rules.len() {
+            return;
+        }
+        let item = self.cache.output_highlight_rules.remove(index);
+        self.cache.output_highlight_rules.insert(0, item);
+    }
+
+    pub fn move_output_highlight_rule_to_bottom(&mut self, index: usize) {
+        let len = self.cache.output_highlight_rules.len();
+        if index + 1 >= len {
+            return;
+        }
+        let item = self.cache.output_highlight_rules.remove(index);
+        self.cache.output_highlight_rules.push(item);
+    }
+
+    /// Enable only the rule at `index`; disable every other rule.
+    pub fn select_only_output_highlight_rule(&mut self, index: usize) {
+        if index >= self.cache.output_highlight_rules.len() {
+            return;
+        }
+        for (i, rule) in self.cache.output_highlight_rules.iter_mut().enumerate() {
+            rule.enabled = i == index;
+        }
+        self.park_disabled_output_highlight_rules_at_end();
+    }
+
+    pub fn select_all_output_highlight_rules(&mut self) {
+        for rule in &mut self.cache.output_highlight_rules {
+            rule.enabled = true;
+        }
+    }
+
+    /// Invert each rule's enabled flag. Empty (all disabled) is allowed.
+    /// Disabled rules are then parked at the end of the list.
+    pub fn invert_output_highlight_rule_selection(&mut self) {
+        for rule in &mut self.cache.output_highlight_rules {
+            rule.enabled = !rule.enabled;
+        }
+        self.park_disabled_output_highlight_rules_at_end();
     }
 }
 
@@ -271,6 +365,83 @@ mod tests {
         assert!(!store.output_highlight_rules()[0].enabled);
         store.remove_output_highlight_rule(0);
         assert!(store.output_highlight_rules().is_empty());
+
+        store.add_output_highlight_rule(OutputHighlightRule {
+            name: "a".into(),
+            pattern: "a".into(),
+            regex: false,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F14C4C".into(),
+            enabled: true,
+        });
+        store.add_output_highlight_rule(OutputHighlightRule {
+            name: "b".into(),
+            pattern: "b".into(),
+            regex: false,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F14C4C".into(),
+            enabled: true,
+        });
+        store.add_output_highlight_rule(OutputHighlightRule {
+            name: "c".into(),
+            pattern: "c".into(),
+            regex: false,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F14C4C".into(),
+            enabled: true,
+        });
+        store.move_output_highlight_rule(1, -1);
+        assert_eq!(store.output_highlight_rules()[0].name, "b");
+        assert_eq!(store.output_highlight_rules()[1].name, "a");
+        store.reorder_output_highlight_rule(0, 2);
+        assert_eq!(store.output_highlight_rules()[0].name, "a");
+        assert_eq!(store.output_highlight_rules()[2].name, "b");
+        store.move_output_highlight_rule_to_top(2);
+        assert_eq!(store.output_highlight_rules()[0].name, "b");
+        store.move_output_highlight_rule_to_bottom(0);
+        assert_eq!(store.output_highlight_rules()[2].name, "b");
+        // [a, c, b] — disable middle rule → parks at end.
+        store.set_output_highlight_rule_enabled(1, false);
+        assert_eq!(store.output_highlight_rules()[0].name, "a");
+        assert_eq!(store.output_highlight_rules()[1].name, "b");
+        assert_eq!(store.output_highlight_rules()[2].name, "c");
+        assert!(!store.output_highlight_rules()[2].enabled);
+        store.set_output_highlight_rule_enabled(2, true);
+        // [a, b, c] all enabled again; select only b → b first, then a, c.
+        store.select_only_output_highlight_rule(1);
+        assert_eq!(store.output_highlight_rules()[0].name, "b");
+        assert!(store.output_highlight_rules()[0].enabled);
+        assert_eq!(store.output_highlight_rules()[1].name, "a");
+        assert!(!store.output_highlight_rules()[1].enabled);
+        assert_eq!(store.output_highlight_rules()[2].name, "c");
+        assert!(!store.output_highlight_rules()[2].enabled);
+        store.select_all_output_highlight_rules();
+        assert!(store.output_highlight_rules().iter().all(|r| r.enabled));
+        store.invert_output_highlight_rule_selection();
+        // All were enabled → invert may leave every rule disabled.
+        assert!(store.output_highlight_rules().iter().all(|r| !r.enabled));
+        store.remove_output_highlight_rule(0);
+        store.remove_output_highlight_rule(0);
+        store.remove_output_highlight_rule(0);
+
+        store.add_output_highlight_rule(OutputHighlightRule {
+            name: "custom".into(),
+            pattern: "custom".into(),
+            regex: false,
+            case_sensitive: false,
+            whole_line: false,
+            color: "#F14C4C".into(),
+            enabled: true,
+        });
+        store.reset_output_highlight_rules();
+        assert_eq!(store.output_highlight_rules().len(), 4);
+        assert_eq!(store.output_highlight_rules()[0].name, "error");
+        assert_eq!(store.output_highlight_rules()[1].name, "success");
+        assert_eq!(store.output_highlight_rules()[2].name, "warning");
+        assert_eq!(store.output_highlight_rules()[3].name, "IP");
 
         // An older settings file without either field retains the feature that
         // shipped in the previous version: enabled with the log preset.

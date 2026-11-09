@@ -885,6 +885,9 @@ msgstr "高亮整行"
 msgid "Add rule"
 msgstr "添加规则"
 
+msgid "Reset rules"
+msgstr "重置规则"
+
 msgid "No custom rules yet"
 msgstr "暂无自定义规则"
 
@@ -1010,6 +1013,9 @@ msgstr "反选"
 
 msgid "Select only this"
 msgstr "只选中当前"
+
+msgid "Only enable this"
+msgstr "只启用当前"
 
 msgid "SFTP follows terminal cd"
 msgstr "SFTP 跟随 cd 更新"

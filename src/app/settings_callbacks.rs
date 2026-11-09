@@ -768,6 +768,103 @@ pub(super) fn wire_settings_callbacks(
             apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
         });
     }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_move_output_highlight_rule(move |index, delta| {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.move_output_highlight_rule(index.max(0) as usize, delta);
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_reorder_output_highlight_rule(move |from, to| {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.reorder_output_highlight_rule(from.max(0) as usize, to.max(0) as usize);
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_move_output_highlight_rule_to_top(move |index| {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.move_output_highlight_rule_to_top(index.max(0) as usize);
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_move_output_highlight_rule_to_bottom(move |index| {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.move_output_highlight_rule_to_bottom(index.max(0) as usize);
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_select_only_output_highlight_rule(move |index| {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.select_only_output_highlight_rule(index.max(0) as usize);
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_select_all_output_highlight_rules(move || {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.select_all_output_highlight_rules();
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_invert_output_highlight_rule_selection(move || {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.invert_output_highlight_rule_selection();
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+        });
+    }
+    {
+        let weak = window.as_weak();
+        let store = store.clone();
+        let bufs = bufs.clone();
+        window.on_reset_output_highlight_rules(move || {
+            let Some(w) = weak.upgrade() else { return };
+            let mut s = store.borrow_mut();
+            s.reset_output_highlight_rules();
+            w.set_output_highlight_rules(output_highlight_rule_model(&s));
+            apply_custom_output_rules(&w, &bufs, s.output_highlight_rules());
+            w.set_output_highlight_rule_status("".into());
+        });
+    }
     // Interface settings: apply + persist the terminal font family / size.
     {
         let weak = window.as_weak();

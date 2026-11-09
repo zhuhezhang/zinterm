@@ -93,6 +93,14 @@ export component InterfacePanel inherits Rectangle {
     callback update-output-highlight-rule(int, string, string, bool, bool, bool, string) -> bool;
     callback remove-output-highlight-rule(int);
     callback set-output-highlight-rule-enabled(int, bool);
+    callback move-output-highlight-rule(int, int);
+    callback reorder-output-highlight-rule(int, int);
+    callback move-output-highlight-rule-to-top(int);
+    callback move-output-highlight-rule-to-bottom(int);
+    callback select-only-output-highlight-rule(int);
+    callback select-all-output-highlight-rules();
+    callback invert-output-highlight-rule-selection();
+    callback reset-output-highlight-rules();
 
     function reset-rule-form() {
         root.rule-edit-index = -1;
@@ -367,6 +375,14 @@ export component InterfacePanel inherits Rectangle {
                         restore-session-log-dir => { root.restore-session-log-dir(); }
                         set-output-highlight(a0, a1) => { root.set-output-highlight(a0, a1); }
                         set-output-highlight-rule-enabled(a0, a1) => { root.set-output-highlight-rule-enabled(a0, a1); }
+                        move-output-highlight-rule(a0, a1) => { root.move-output-highlight-rule(a0, a1); }
+                        reorder-output-highlight-rule(a0, a1) => { root.reorder-output-highlight-rule(a0, a1); }
+                        move-output-highlight-rule-to-top(a0) => { root.move-output-highlight-rule-to-top(a0); }
+                        move-output-highlight-rule-to-bottom(a0) => { root.move-output-highlight-rule-to-bottom(a0); }
+                        select-only-output-highlight-rule(a0) => { root.select-only-output-highlight-rule(a0); }
+                        select-all-output-highlight-rules => { root.select-all-output-highlight-rules(); }
+                        invert-output-highlight-rule-selection => { root.invert-output-highlight-rule-selection(); }
+                        reset-output-highlight-rules => { root.reset-output-highlight-rules(); }
                     }
                     if root.ifd-page == "wallpaper": WallpaperSettingsPage {
                         width: 100%;

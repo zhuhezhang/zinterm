@@ -141,10 +141,12 @@ pub(super) fn history_model(store: &ConfigStore) -> ModelRc<SharedString> {
 }
 
 pub(super) fn output_highlight_rule_model(store: &ConfigStore) -> ModelRc<OutputRuleItem> {
-    let rows: Vec<OutputRuleItem> = store
-        .output_highlight_rules()
+    let rules = store.output_highlight_rules();
+    let len = rules.len();
+    let rows: Vec<OutputRuleItem> = rules
         .iter()
-        .map(|rule| {
+        .enumerate()
+        .map(|(i, rule)| {
             let color = crate::config::normalize_highlight_color(&rule.color);
             let swatch = parse_hex_color(&color)
                 .unwrap_or_else(|| slint::Color::from_rgb_u8(0xf1, 0x4c, 0x4c));
@@ -157,6 +159,8 @@ pub(super) fn output_highlight_rule_model(store: &ConfigStore) -> ModelRc<Output
                 color: color.into(),
                 swatch,
                 enabled: rule.enabled,
+                can_move_up: i > 0,
+                can_move_down: i + 1 < len,
             }
         })
         .collect();
