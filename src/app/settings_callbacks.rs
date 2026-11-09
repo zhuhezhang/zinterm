@@ -206,6 +206,25 @@ pub(super) fn wire_settings_callbacks(
         let store = store.clone();
         let prefs = ssh_algorithm_prefs.clone();
         let weak = window.as_weak();
+        window.on_reorder_ssh_algorithm(move |name: SharedString, to_index: i32| {
+            if let Some(w) = weak.upgrade() {
+                let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())
+                    .unwrap_or(AlgorithmCategory::Kex);
+                let mut s = store.borrow_mut();
+                let mut current = s.algorithm_preferences();
+                crate::ssh::reorder_algorithm(&mut current, cat, name.as_str(), to_index);
+                s.set_algorithm_preferences(current.clone());
+                if let Ok(mut g) = prefs.lock() {
+                    *g = current.clone();
+                }
+                w.set_ssh_algorithm_rows(ssh_algorithm_row_model(&current, cat.as_str()));
+            }
+        });
+    }
+    {
+        let store = store.clone();
+        let prefs = ssh_algorithm_prefs.clone();
+        let weak = window.as_weak();
         window.on_move_ssh_algorithm_to_top(move |name: SharedString| {
             if let Some(w) = weak.upgrade() {
                 let cat = AlgorithmCategory::from_str_key(w.get_ssh_algorithm_category().as_str())

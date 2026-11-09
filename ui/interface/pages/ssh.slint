@@ -1,6 +1,6 @@
 import { Theme } from "../../shared/theme.slint";
 import { ComboBox } from "std-widgets.slint";
-import { GhostButton, CompactCheckBox } from "../../shared/widgets.slint";
+import { GhostButton } from "../../shared/widgets.slint";
 import {
     SectionHeader,
     SettingHint,
@@ -17,6 +17,7 @@ export component SshSettingsPage inherits Rectangle {
     callback move-ssh-algorithm(string, int);
     callback move-ssh-algorithm-to-top(string);
     callback move-ssh-algorithm-to-bottom(string);
+    callback reorder-ssh-algorithm(string, int);
     callback select-all-ssh-algorithms();
     callback invert-ssh-algorithm-selection(string);
     callback select-only-ssh-algorithm(string);
@@ -31,6 +32,62 @@ export component SshSettingsPage inherits Rectangle {
     in property <[AlgorithmOptionRow]> ssh-algorithm-rows;
     in-out property <int> ssh-keepalive-secs: 0;
     callback toggle-ssh-algorithm(string);
+
+    // Drag-reorder state: any row can start a drag for feedback, but only a
+    // checked source actually reorders — and only within the selected prefix.
+    property <int> algo-drag-from: -1;
+    property <string> algo-drag-name;
+    property <int> algo-drop-before: -1;
+    property <int> algo-selected-count: 0;
+    property <bool> algo-drag-checked: false;
+    property <bool> algo-dragging: false;
+    property <length> algo-row-h: 34px * Theme.ui-scale;
+
+    function update-algo-drop(pointer-y: length) {
+        // Unchecked drags are visual-only; keep drop-before pinned to source.
+        if (!root.algo-dragging || root.algo-drag-from < 0 || !root.algo-drag-checked) {
+            return;
+        }
+        let selected = root.algo-selected-count;
+        if (selected <= 0) {
+            return;
+        }
+        let rel = pointer-y - algo-list.absolute-position.y;
+        if (rel < 0px) {
+            root.algo-drop-before = 0;
+            return;
+        }
+        // Drop slots are 0..=selected (before each selected row, or after the last).
+        let idx = floor(rel / root.algo-row-h);
+        // Which half of the row decides before vs after.
+        let local-y = rel - idx * root.algo-row-h;
+        let before = local-y < root.algo-row-h / 2 ? idx : idx + 1;
+        root.algo-drop-before = before < 0 ? 0 : (before > selected ? selected : before);
+    }
+
+    function finish-algo-drag() {
+        if (root.algo-dragging
+            && root.algo-drag-checked
+            && root.algo-drag-from >= 0
+            && root.algo-drop-before >= 0
+            && root.algo-drag-name != "") {
+            // drop-before → final index after removing the source row.
+            let to = root.algo-drop-before > root.algo-drag-from
+                ? root.algo-drop-before - 1
+                : root.algo-drop-before;
+            if (to != root.algo-drag-from
+                && to >= 0
+                && to < root.algo-selected-count) {
+                root.reorder-ssh-algorithm(root.algo-drag-name, to);
+            }
+        }
+        root.algo-dragging = false;
+        root.algo-drag-from = -1;
+        root.algo-drag-name = "";
+        root.algo-drop-before = -1;
+        root.algo-selected-count = 0;
+        root.algo-drag-checked = false;
+    }
 
     VerticalLayout {
         padding-left: 15px * Theme.ui-scale;
@@ -111,183 +168,247 @@ export component SshSettingsPage inherits Rectangle {
             }
         }
 
-        for algo[index] in root.ssh-algorithm-rows: algo-row := Rectangle {
-            height: 34px * Theme.ui-scale;
-            border-radius: Theme.radius-md;
-            clip: true;
-            // Match welcome SessionRow: hover + open context menu share Theme.bg-hover.
-            background: row-ta.has-hover || cb.has-hover || up-ta.has-hover || down-ta.has-hover || ctx-menu.is-open
-                ? Theme.bg-hover : transparent;
-            animate background { duration: 120ms; }
+        algo-list := VerticalLayout {
+            spacing: 0;
+            for algo[index] in root.ssh-algorithm-rows: algo-row := Rectangle {
+                height: root.algo-row-h;
+                border-radius: Theme.radius-md;
+                clip: true;
+                // Drag source / drop target chrome, else welcome-style hover.
+                background: root.algo-dragging && root.algo-drag-from == index ? Theme.bg-active
+                    : (root.algo-dragging
+                        && root.algo-drop-before == index
+                        && root.algo-drag-from != index
+                        && root.algo-drop-before != root.algo-drag-from + 1
+                        ? Theme.accent.with-alpha(0.12)
+                        : (row-ta.has-hover || up-ta.has-hover || down-ta.has-hover || ctx-menu.is-open
+                            ? Theme.bg-hover : transparent));
+                animate background { duration: 120ms; }
 
-            property <length> ctx-x;
-            property <length> ctx-y;
+                property <length> ctx-x;
+                property <length> ctx-y;
+                property <bool> press-dragging: false;
+                property <bool> did-drag: false;
+                property <length> grab-x;
+                property <length> grab-y;
 
-            // Underlay: hover / right-click on empty / badge / spacer areas.
-            row-ta := TouchArea {
-                pointer-event(e) => {
-                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
-                        algo-row.ctx-x = self.mouse-x;
-                        algo-row.ctx-y = self.mouse-y;
-                        ctx-menu.show();
+                // Whole-row press: any row can drag for feedback; only checked
+                // rows reorder on release. Click without movement toggles.
+                row-ta := TouchArea {
+                    mouse-cursor: root.algo-dragging && root.algo-drag-from == index
+                        ? grabbing : grab;
+                    pointer-event(e) => {
+                        if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                            algo-row.ctx-x = self.mouse-x;
+                            algo-row.ctx-y = self.mouse-y;
+                            ctx-menu.show();
+                        } else if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) {
+                            algo-row.press-dragging = true;
+                            algo-row.did-drag = false;
+                            algo-row.grab-x = self.mouse-x;
+                            algo-row.grab-y = self.mouse-y;
+                        } else if (e.kind == PointerEventKind.up && e.button == PointerEventButton.left) {
+                            if (algo-row.press-dragging && !algo-row.did-drag) {
+                                root.toggle-ssh-algorithm(algo.name);
+                            } else if (algo-row.press-dragging && algo-row.did-drag) {
+                                root.finish-algo-drag();
+                            }
+                            algo-row.press-dragging = false;
+                            algo-row.did-drag = false;
+                        }
                     }
-                }
-            }
-
-            HorizontalLayout {
-                spacing: 8px * Theme.ui-scale;
-                padding-left: 6px * Theme.ui-scale;
-                padding-right: 4px * Theme.ui-scale;
-                padding-top: 4px * Theme.ui-scale;
-                padding-bottom: 4px * Theme.ui-scale;
-                cross-axis-alignment: center;
-
-                cb := CompactCheckBox {
-                    horizontal-stretch: 1;
-                    text: algo.name;
-                    checked: algo.checked;
-                    toggled => { root.toggle-ssh-algorithm(algo.name); }
-                    right-clicked(ax, ay) => {
-                        algo-row.ctx-x = ax - algo-row.absolute-position.x;
-                        algo-row.ctx-y = ay - algo-row.absolute-position.y;
-                        ctx-menu.show();
-                    }
-                }
-
-                if algo.weak: Rectangle {
-                    border-radius: 4px * Theme.ui-scale;
-                    background: Theme.danger.with-alpha(0.18);
-                    HorizontalLayout {
-                        padding-left: 6px * Theme.ui-scale;
-                        padding-right: 6px * Theme.ui-scale;
-                        padding-top: 2px * Theme.ui-scale;
-                        padding-bottom: 2px * Theme.ui-scale;
-                        Text {
-                            text: @tr("weak");
-                            color: Theme.danger;
-                            font-size: 10px * Theme.ui-scale;
-                            vertical-alignment: center;
+                    moved => {
+                        if (algo-row.press-dragging) {
+                            if (!algo-row.did-drag
+                                && (abs(self.mouse-x - algo-row.grab-x) > 5px * Theme.ui-scale
+                                || abs(self.mouse-y - algo-row.grab-y) > 5px * Theme.ui-scale)) {
+                                algo-row.did-drag = true;
+                                root.algo-drag-from = index;
+                                root.algo-drag-name = algo.name;
+                                root.algo-drop-before = index;
+                                root.algo-selected-count = algo.selected-count;
+                                root.algo-drag-checked = algo.checked;
+                                root.algo-dragging = true;
+                            }
+                            if (algo-row.did-drag) {
+                                root.update-algo-drop(self.absolute-position.y + self.mouse-y);
+                            }
                         }
                     }
                 }
 
-                Rectangle {
-                    horizontal-stretch: 1;
-                }
-
-                // Always present so ↑↓ has-hover can light the row; collapsed when unchecked.
                 HorizontalLayout {
-                    spacing: 4px * Theme.ui-scale;
-                    opacity: algo.checked ? 1.0 : 0.0;
-                    width: algo.checked ? 56px * Theme.ui-scale : 0px;
+                    spacing: 8px * Theme.ui-scale;
+                    padding-left: 6px * Theme.ui-scale;
+                    padding-right: 4px * Theme.ui-scale;
+                    padding-top: 4px * Theme.ui-scale;
+                    padding-bottom: 4px * Theme.ui-scale;
+                    cross-axis-alignment: center;
 
+                    // Checkbox square (toggle is handled by row-ta click-without-drag).
                     Rectangle {
-                        width: 26px * Theme.ui-scale;
-                        height: 26px * Theme.ui-scale;
-                        border-radius: Theme.radius-sm;
-                        opacity: algo.can-move-up ? 1.0 : 0.35;
-                        background: up-ta.has-hover && algo.can-move-up ? Theme.bg-active : transparent;
-                        up-ta := TouchArea {
-                            enabled: algo.checked;
-                            mouse-cursor: algo.checked && algo.can-move-up ? pointer : default;
-                            clicked => {
-                                if (algo.can-move-up) {
-                                    root.move-ssh-algorithm(algo.name, -1);
-                                }
-                            }
-                        }
+                        width: 16px * Theme.ui-scale;
+                        height: 16px * Theme.ui-scale;
+                        border-radius: 3px * Theme.ui-scale;
+                        border-width: algo.checked ? 0 : 1px * Theme.ui-scale;
+                        border-color: Theme.border-strong;
+                        background: algo.checked ? Theme.accent : transparent;
 
-                        Text {
-                            text: "↑";
-                            color: Theme.text-secondary;
-                            font-size: 12px * Theme.ui-scale;
+                        if algo.checked: Text {
+                            text: "\u{E5CA}";
+                            font-family: "Material Icons";
+                            color: #ffffff;
+                            font-size: 13px * Theme.ui-scale;
                             horizontal-alignment: center;
                             vertical-alignment: center;
-                            width: 100%;
-                            height: 100%;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+                    }
+
+                    Text {
+                        text: algo.name;
+                        color: Theme.text-primary;
+                        font-size: Theme.fs-sm;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+
+                    if algo.weak: Rectangle {
+                        border-radius: 4px * Theme.ui-scale;
+                        background: Theme.danger.with-alpha(0.18);
+                        HorizontalLayout {
+                            padding-left: 6px * Theme.ui-scale;
+                            padding-right: 6px * Theme.ui-scale;
+                            padding-top: 2px * Theme.ui-scale;
+                            padding-bottom: 2px * Theme.ui-scale;
+                            Text {
+                                text: @tr("weak");
+                                color: Theme.danger;
+                                font-size: 10px * Theme.ui-scale;
+                                vertical-alignment: center;
+                            }
                         }
                     }
 
                     Rectangle {
-                        width: 26px * Theme.ui-scale;
-                        height: 26px * Theme.ui-scale;
-                        border-radius: Theme.radius-sm;
-                        opacity: algo.can-move-down ? 1.0 : 0.35;
-                        background: down-ta.has-hover && algo.can-move-down ? Theme.bg-active : transparent;
-                        down-ta := TouchArea {
-                            enabled: algo.checked;
-                            mouse-cursor: algo.checked && algo.can-move-down ? pointer : default;
-                            clicked => {
-                                if (algo.can-move-down) {
-                                    root.move-ssh-algorithm(algo.name, 1);
+                        horizontal-stretch: 1;
+                    }
+
+                    // Always present so ↑↓ has-hover can light the row; collapsed when unchecked.
+                    HorizontalLayout {
+                        spacing: 4px * Theme.ui-scale;
+                        opacity: algo.checked ? 1.0 : 0.0;
+                        width: algo.checked ? 56px * Theme.ui-scale : 0px;
+
+                        Rectangle {
+                            width: 26px * Theme.ui-scale;
+                            height: 26px * Theme.ui-scale;
+                            border-radius: Theme.radius-sm;
+                            opacity: algo.can-move-up ? 1.0 : 0.35;
+                            background: up-ta.has-hover && algo.can-move-up ? Theme.bg-active : transparent;
+                            up-ta := TouchArea {
+                                enabled: algo.checked && !root.algo-dragging;
+                                mouse-cursor: algo.checked && algo.can-move-up ? pointer : default;
+                                clicked => {
+                                    if (algo.can-move-up) {
+                                        root.move-ssh-algorithm(algo.name, -1);
+                                    }
                                 }
                             }
-                        }
 
-                        Text {
-                            text: "↓";
-                            color: Theme.text-secondary;
-                            font-size: 12px * Theme.ui-scale;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            width: 100%;
-                            height: 100%;
-                        }
-                    }
-                }
-            }
-
-            ctx-menu := PopupWindow {
-                x: algo-row.ctx-x;
-                y: algo-row.ctx-y;
-                width: menu-vl.preferred-width;
-                height: menu-vl.preferred-height;
-
-                Rectangle {
-                    background: Theme.popup-bg;
-                    border-radius: Theme.radius-sm;
-                    border-width: 1px * Theme.ui-scale;
-                    border-color: Theme.border-strong;
-                    drop-shadow-blur: 10px * Theme.ui-scale;
-                    drop-shadow-color: #00000050;
-
-                    menu-vl := VerticalLayout {
-                        padding: 4px * Theme.ui-scale;
-                        spacing: 2px * Theme.ui-scale;
-
-                        MenuItem {
-                            icon: "\u{E25A}";
-                            label: @tr("Move to top");
-                            clicked => { root.move-ssh-algorithm-to-top(algo.name); }
-                        }
-
-                        MenuItem {
-                            icon: "\u{E258}";
-                            label: @tr("Move to bottom");
-                            clicked => { root.move-ssh-algorithm-to-bottom(algo.name); }
-                        }
-
-                        MenuItem {
-                            icon: "\u{E837}";
-                            label: @tr("Select only this");
-                            clicked => { root.select-only-ssh-algorithm(algo.name); }
+                            Text {
+                                text: "↑";
+                                color: Theme.text-secondary;
+                                font-size: 12px * Theme.ui-scale;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: 100%;
+                                height: 100%;
+                            }
                         }
 
                         Rectangle {
-                            height: 1px * Theme.ui-scale;
-                            background: Theme.border-subtle;
-                        }
+                            width: 26px * Theme.ui-scale;
+                            height: 26px * Theme.ui-scale;
+                            border-radius: Theme.radius-sm;
+                            opacity: algo.can-move-down ? 1.0 : 0.35;
+                            background: down-ta.has-hover && algo.can-move-down ? Theme.bg-active : transparent;
+                            down-ta := TouchArea {
+                                enabled: algo.checked && !root.algo-dragging;
+                                mouse-cursor: algo.checked && algo.can-move-down ? pointer : default;
+                                clicked => {
+                                    if (algo.can-move-down) {
+                                        root.move-ssh-algorithm(algo.name, 1);
+                                    }
+                                }
+                            }
 
-                        MenuItem {
-                            icon: "\u{E162}";
-                            label: @tr("Select all");
-                            clicked => { root.select-all-ssh-algorithms(); }
+                            Text {
+                                text: "↓";
+                                color: Theme.text-secondary;
+                                font-size: 12px * Theme.ui-scale;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: 100%;
+                                height: 100%;
+                            }
                         }
+                    }
+                }
 
-                        MenuItem {
-                            icon: "\u{E8D4}";
-                            label: @tr("Invert selection");
-                            clicked => { root.invert-ssh-algorithm-selection(algo.name); }
+                ctx-menu := PopupWindow {
+                    x: algo-row.ctx-x;
+                    y: algo-row.ctx-y;
+                    width: menu-vl.preferred-width;
+                    height: menu-vl.preferred-height;
+
+                    Rectangle {
+                        background: Theme.popup-bg;
+                        border-radius: Theme.radius-sm;
+                        border-width: 1px * Theme.ui-scale;
+                        border-color: Theme.border-strong;
+                        drop-shadow-blur: 10px * Theme.ui-scale;
+                        drop-shadow-color: #00000050;
+
+                        menu-vl := VerticalLayout {
+                            padding: 4px * Theme.ui-scale;
+                            spacing: 2px * Theme.ui-scale;
+
+                            MenuItem {
+                                icon: "\u{E25A}";
+                                label: @tr("Move to top");
+                                clicked => { root.move-ssh-algorithm-to-top(algo.name); }
+                            }
+
+                            MenuItem {
+                                icon: "\u{E258}";
+                                label: @tr("Move to bottom");
+                                clicked => { root.move-ssh-algorithm-to-bottom(algo.name); }
+                            }
+
+                            MenuItem {
+                                icon: "\u{E837}";
+                                label: @tr("Select only this");
+                                clicked => { root.select-only-ssh-algorithm(algo.name); }
+                            }
+
+                            Rectangle {
+                                height: 1px * Theme.ui-scale;
+                                background: Theme.border-subtle;
+                            }
+
+                            MenuItem {
+                                icon: "\u{E162}";
+                                label: @tr("Select all");
+                                clicked => { root.select-all-ssh-algorithms(); }
+                            }
+
+                            MenuItem {
+                                icon: "\u{E8D4}";
+                                label: @tr("Invert selection");
+                                clicked => { root.invert-ssh-algorithm-selection(algo.name); }
+                            }
                         }
                     }
                 }

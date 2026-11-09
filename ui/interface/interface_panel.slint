@@ -161,6 +161,7 @@ export component InterfacePanel inherits Rectangle {
     callback move-ssh-algorithm(string, int);
     callback move-ssh-algorithm-to-top(string);
     callback move-ssh-algorithm-to-bottom(string);
+    callback reorder-ssh-algorithm(string, int);
     callback select-all-ssh-algorithms();
     callback invert-ssh-algorithm-selection(string);
     callback select-only-ssh-algorithm(string);
@@ -386,6 +387,7 @@ export component InterfacePanel inherits Rectangle {
                         move-ssh-algorithm(a0, a1) => { root.move-ssh-algorithm(a0, a1); }
                         move-ssh-algorithm-to-top(a0) => { root.move-ssh-algorithm-to-top(a0); }
                         move-ssh-algorithm-to-bottom(a0) => { root.move-ssh-algorithm-to-bottom(a0); }
+                        reorder-ssh-algorithm(a0, a1) => { root.reorder-ssh-algorithm(a0, a1); }
                         select-all-ssh-algorithms => { root.select-all-ssh-algorithms(); }
                         invert-ssh-algorithm-selection(a0) => { root.invert-ssh-algorithm-selection(a0); }
                         select-only-ssh-algorithm(a0) => { root.select-only-ssh-algorithm(a0); }

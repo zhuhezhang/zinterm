@@ -176,6 +176,7 @@ pub(super) fn ssh_algorithm_row_model(
             weak: row.weak,
             can_move_up: row.can_move_up,
             can_move_down: row.can_move_down,
+            selected_count: row.selected_count as i32,
         })
         .collect();
     ModelRc::from(Rc::new(VecModel::from(rows)))

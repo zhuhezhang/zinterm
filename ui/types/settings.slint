@@ -15,4 +15,6 @@ export struct AlgorithmOptionRow {
     weak: bool,
     can-move-up: bool,
     can-move-down: bool,
+    // Length of the selected prefix (same on every row). Used to clamp drag-reorder.
+    selected-count: int,
 }

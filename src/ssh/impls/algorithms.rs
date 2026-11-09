@@ -271,6 +271,29 @@ pub fn move_algorithm(
     list.swap(i, j as usize);
 }
 
+/// Move a selected algorithm to `to_index` within the selected list.
+/// Unselected names and out-of-range targets are ignored.
+pub fn reorder_algorithm(
+    prefs: &mut AlgorithmPreferences,
+    category: AlgorithmCategory,
+    name: &str,
+    to_index: i32,
+) {
+    let list = list_mut(prefs, category);
+    let Some(from) = list.iter().position(|n| n == name) else {
+        return;
+    };
+    if to_index < 0 || to_index as usize >= list.len() {
+        return;
+    }
+    let to = to_index as usize;
+    if from == to {
+        return;
+    }
+    let item = list.remove(from);
+    list.insert(to, item);
+}
+
 /// Ensure `name` is selected, then place it first among selected algorithms.
 pub fn move_algorithm_to_top(
     prefs: &mut AlgorithmPreferences,
@@ -501,6 +524,7 @@ pub fn algorithm_rows(
 ) -> Vec<AlgorithmRow> {
     let prefs = sanitize_algorithm_preferences(prefs);
     let selected = list_ref(&prefs, category);
+    let selected_count = selected.len();
     let mut rows = Vec::new();
     for (i, name) in selected.iter().enumerate() {
         rows.push(AlgorithmRow {
@@ -509,6 +533,7 @@ pub fn algorithm_rows(
             weak: is_weak_algorithm(category, name),
             can_move_up: i > 0,
             can_move_down: i + 1 < selected.len(),
+            selected_count,
         });
     }
     for name in option_pool(category) {
@@ -521,6 +546,7 @@ pub fn algorithm_rows(
             weak: is_weak_algorithm(category, name),
             can_move_up: false,
             can_move_down: false,
+            selected_count,
         });
     }
     rows
@@ -533,6 +559,7 @@ pub struct AlgorithmRow {
     pub weak: bool,
     pub can_move_up: bool,
     pub can_move_down: bool,
+    pub selected_count: usize,
 }
 
 #[cfg(test)]
@@ -622,6 +649,40 @@ mod tests {
         let preferred = to_preferred(&prefs);
         let names: Vec<&str> = preferred.mac.iter().map(|n| n.as_ref()).collect();
         assert_eq!(names, vec!["hmac-md5"]);
+    }
+
+    #[test]
+    fn reorder_moves_within_selected_only() {
+        let mut prefs = AlgorithmPreferences {
+            cipher: vec![
+                "aes128-ctr".into(),
+                "aes256-ctr".into(),
+                "chacha20-poly1305@openssh.com".into(),
+            ],
+            ..AlgorithmPreferences::builtin_default()
+        };
+        reorder_algorithm(&mut prefs, AlgorithmCategory::Cipher, "aes256-ctr", 0);
+        assert_eq!(
+            prefs.cipher,
+            vec![
+                "aes256-ctr".to_string(),
+                "aes128-ctr".to_string(),
+                "chacha20-poly1305@openssh.com".to_string(),
+            ]
+        );
+        reorder_algorithm(&mut prefs, AlgorithmCategory::Cipher, "aes256-ctr", 2);
+        assert_eq!(
+            prefs.cipher,
+            vec![
+                "aes128-ctr".to_string(),
+                "chacha20-poly1305@openssh.com".to_string(),
+                "aes256-ctr".to_string(),
+            ]
+        );
+        // Unselected name and out-of-range index are no-ops.
+        reorder_algorithm(&mut prefs, AlgorithmCategory::Cipher, "3des-cbc", 0);
+        reorder_algorithm(&mut prefs, AlgorithmCategory::Cipher, "aes128-ctr", 99);
+        assert_eq!(prefs.cipher.len(), 3);
     }
 
     #[test]
