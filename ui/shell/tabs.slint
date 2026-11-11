@@ -20,6 +20,8 @@ export struct TabInfo {
 component SingleTab inherits Rectangle {
     in property <TabInfo> info;
     in property <bool> active;
+    // Index in the parent TabBar strip — used to scroll into view on activation.
+    in property <int> tab-index: 0;
     // True while THIS tab id is the one being reordered (may differ from the
     // TouchArea that still holds the pointer after in-place model swaps).
     in property <bool> drag-highlight;
@@ -40,6 +42,16 @@ component SingleTab inherits Rectangle {
     callback drag-dropped(length /* abs-x */, length /* abs-y */);
     // Forward mouse-wheel / trackpad scroll so the parent can pan a horizontal strip.
     callback wheel(length /* delta */);
+    // Ask TabBar to bring this slot into the overflow viewport (Ctrl+Tab, etc.).
+    callback ensure-visible(int /* index */);
+
+    // Keyboard / programmatic activation: keep the tab on-screen in an overflowed
+    // strip. Click selection is already under the pointer; this is a no-op then.
+    changed active => {
+        if (root.active) {
+            root.ensure-visible(root.tab-index);
+        }
+    }
 
     // Where inside the tab the drag began, and whether a drag (vs a click) is in
     // progress. `dragging` suppresses the select-on-release.
@@ -461,10 +473,13 @@ export component TabBar inherits Rectangle {
         }
     }
 
-    // Bring tab `index` into the flickable viewport (all-tabs menu / overflow).
-    // Slot math matches SingleTab.tab-width + strip.spacing.
+    // Bring tab `index` into the flickable viewport (Ctrl+Tab, all-tabs menu,
+    // overflow). Slot math matches SingleTab.tab-width + strip.spacing.
     function scroll-tab-into-view(index: int) {
         if (root.tab-scroll-range <= 0px || index < 0) { return; }
+        // Drag-reorder rotates row data across repeater items; skip so the
+        // viewport does not jump under the grabbed pointer (#122).
+        if (root.drag-id != "") { return; }
         let tab-w = 160px * Theme.ui-scale;
         let slot = tab-w + 2px * Theme.ui-scale;
         let tab-left = index * slot;
@@ -543,6 +558,7 @@ export component TabBar inherits Rectangle {
                 alignment: start;
                 for tab[i] in tabs: SingleTab {
                     info: tab;
+                    tab-index: i;
                     active: tab.id == root.active-id;
                     drag-highlight: tab.id == root.drag-id;
                     selected => { root.tab-selected(tab.id); }
@@ -551,6 +567,7 @@ export component TabBar inherits Rectangle {
                     reorder(id, dir) => { root.tab-reorder(id, dir); }
                     drag-began(id) => { root.drag-id = id; }
                     drag-ended => { root.drag-id = ""; }
+                    ensure-visible(idx) => { root.scroll-tab-into-view(idx); }
                     context-requested(ax, ay) => {
                         root.menu-target = tab.id;
                         root.menu-target-index = i;
