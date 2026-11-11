@@ -588,6 +588,9 @@ msgstr "Next tab"
 msgid "Previous tab"
 msgstr "Previous tab"
 
+msgid "Move horizontal scroll bar of TAB bar"
+msgstr "Move horizontal scroll bar of TAB bar"
+
 msgid "Session search box"
 msgstr "Session search box"
 

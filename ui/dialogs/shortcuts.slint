@@ -138,6 +138,11 @@ export component ShortcutsDialog inherits Rectangle {
                             desc: @tr("Previous tab");
                         }
 
+                        ShortcutRow {
+                            keys: "Scroll";
+                            desc: @tr("Move horizontal scroll bar of TAB bar");
+                        }
+
                         Text {
                             text: @tr("Session search box");
                             color: Theme.text-muted;

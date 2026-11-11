@@ -588,6 +588,9 @@ msgstr "下一个标签页"
 msgid "Previous tab"
 msgstr "上一个标签页"
 
+msgid "Move horizontal scroll bar of TAB bar"
+msgstr "移动标签栏水平滚动条"
+
 msgid "Session search box"
 msgstr "会话搜索框"
 
